@@ -1,15 +1,17 @@
 # web-kit
 
 React 19 관리자 웹 프로젝트가 함께 쓰는 공통 동작·입력 컴포넌트·사용 계약이다.
-정본: https://github.com/taehyung-lab/web-kit · 패키지: `@boosterlab/web-kit` · 현재 버전: `0.3.0`.
+정본: https://github.com/taehyung-lab/web-kit · 패키지: `@boosterlab/web-kit` · 현재 버전: `0.4.0`.
 
 ## 제공하는 공용 기능
 
 | import | 제공 기능 | 프로젝트가 제공하는 것 |
 |---|---|---|
-| `/list` | `useDraftCommit`, `usePageSelection`: 검색 초안·현재 페이지 선택 수명 | 초안 모양, URL 정체성, 검색 확정/페이지 정책 |
+| `/list` | `useDraftCommit`, `usePageSelection`: 검색 초안·현재 페이지 선택 수명·행 활성화 | 초안 모양, URL 정체성, 검색 확정/페이지 정책 |
 | `/filter` | URL 필드별 복구, 기간·사용자 검증, 접근 가능한 FilterError, CheckboxTree와 선택 엔진 | 기본값·schema·기간 변환·문구·스타일·control |
-| `/form` | 전체 검증 후 제출, 서버 오류 제거/배치, 번역 참조 codec | 필드 순서/동적 경로, 번역 참조, 저장 잠금·이탈·성공 이동 |
+| `/form` | 전체 검증 후 제출, 서버 오류 제거/배치, 번역 참조 codec, 제출 잠금·포커스 수명 | 필드 순서/동적 경로, 번역 참조, 기준선·이탈·성공 이동 |
+| `/form/ui` | FieldFrame·FieldFeedback의 라벨·설명·오류 접근성 표현 | 필수 판정·번역·스타일·입력 control |
+| `/dialog` | 확인·실행·성공/실패 상태 수명 | 오류 분류·다이얼로그 UI·실제 작업 |
 | `/detail`, `/detail/ui` | 필수 단건 상태 판정, DetailField의 dt/dd 표현 | queryOptions·오류 분류·placeholder·상태 UI |
 | `/api` | Spring 재귀 query 및 엄격한 목록 query 직렬화 | endpoint·request wrapper·응답 봉투·오류 코드·토큰·QueryClient |
 
@@ -24,8 +26,8 @@ React 19 관리자 웹 프로젝트가 함께 쓰는 공통 동작·입력 컴�
 소스 TS/TSX 패키지다. 소비 앱의 Vite/TypeScript가 컴파일한다. 두 앱은 같은 GitHub release tarball을 `vendor/`에 보관해 개발자 로컬 경로나 설치 시 GitHub 인증에 의존하지 않는다. vendor 내부는 수정하지 않는다.
 
 ```sh
-gh release download v0.3.0 --repo taehyung-lab/web-kit --pattern 'boosterlab-web-kit-0.3.0.tgz' --dir vendor
-pnpm add @boosterlab/web-kit@file:vendor/boosterlab-web-kit-0.3.0.tgz
+gh release download v0.4.0 --repo taehyung-lab/web-kit --pattern 'boosterlab-web-kit-0.4.0.tgz' --dir vendor
+pnpm add @boosterlab/web-kit@file:vendor/boosterlab-web-kit-0.4.0.tgz
 ```
 
 monorepo 하위 package에서는 manifest 위치에 맞는 상대 경로를 사용한다. package.json·lockfile·tarball을 함께 commit한다. 소스 복사·git submodule·branch 최신값 의존성은 사용하지 않는다.
