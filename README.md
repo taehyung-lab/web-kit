@@ -1,37 +1,31 @@
 # web-kit
 
 React 19 관리자 웹 프로젝트가 함께 쓰는 공통 동작·입력 컴포넌트·사용 계약이다.
-정본: https://github.com/taehyung-lab/web-kit · 패키지: `@boosterlab/web-kit` · 현재 버전: `0.2.0`.
+정본: https://github.com/taehyung-lab/web-kit · 패키지: `@boosterlab/web-kit` · 현재 버전: `0.3.0`.
 
 ## 제공하는 공용 기능
 
 | import | 제공 기능 | 프로젝트가 제공하는 것 |
 |---|---|---|
-| `/list` | `useDraftCommit`: 확정값 정체성에 따른 초안 동기화·수정·초기화 | 초안 모양, URL 정체성, 검색 확정/페이지 정책 |
+| `/list` | `useDraftCommit`, `usePageSelection`: 검색 초안·현재 페이지 선택 수명 | 초안 모양, URL 정체성, 검색 확정/페이지 정책 |
 | `/filter` | URL 필드별 복구, 기간·사용자 검증, 접근 가능한 FilterError, CheckboxTree와 선택 엔진 | 기본값·schema·기간 변환·문구·스타일·control |
-| `/form` | 전체 검증 후 제출, 이전 서버 오류만 제거, 화면 순서로 서버 오류 배치 | 필드 순서/동적 경로, 번역 참조, 저장 잠금·이탈·성공 이동 |
-| `/detail` | 필수 단건의 데이터/대기/없음/실패/앱 위임 상태 판정 | queryOptions·오류 분류·placeholder·상태 UI |
+| `/form` | 전체 검증 후 제출, 서버 오류 제거/배치, 번역 참조 codec | 필드 순서/동적 경로, 번역 참조, 저장 잠금·이탈·성공 이동 |
+| `/detail`, `/detail/ui` | 필수 단건 상태 판정, DetailField의 dt/dd 표현 | queryOptions·오류 분류·placeholder·상태 UI |
 | `/api` | Spring 재귀 query 및 엄격한 목록 query 직렬화 | endpoint·request wrapper·응답 봉투·오류 코드·토큰·QueryClient |
 
 루트 import는 0.1.0 목록/필터 공개 항목과 호환된다. React는 peer이며 번들에 포함하지 않는다. `/api`, `/detail`은 React를 import하지 않는다. `/form`의 TanStack Form 1.33.5 peer는 해당 기능을 사용하는 앱만 필요하다.
 
-## 중요한 계약
+## 사용 기준
 
-- URL에서 잘못된 필드는 그 필드만 기본값으로 복구한다. 직접 입력 검증은 실패한 입력을 유지하고 새 검색 확정을 막는다.
-- 트리는 자식 하나라도 선택이면 부모 체크, 모든 leaf를 선택해야 전체 체크다. 체크된 부모 클릭은 그 후손을 해제한다. `emptyMeansAll` 변환은 프로젝트 adapter가 맡는다.
-- 상세의 not-found는 캐시보다 우선한다. 일반 재조회 실패는 데이터를 유지한다. 앱 오류 분류는 프로젝트가 전달한다.
-- 폼의 클라이언트 검증 오류·입력은 서버 오류 갱신으로 지워지지 않는다.
-- 화면 전체 template, 업무 schema, 인증·권한, 서버 통신 전체는 포함하지 않는다. UI 외형은 기존 프로젝트 adapter가 유지한다.
-
-자세한 보존 조건·검사와 프로젝트 차이는 [공통 계약](docs/contracts.md)을 따른다.
+[공통 사용 계약](docs/contracts.md)이 목록/필터·폼·상세·API별 사용 순서와 검사 기준의 정본이다. 프로젝트 역할 스킬은 설치된 패키지의 해당 절을 먼저 읽고 로컬 adapter와 업무 조합을 지시한다. 키트에는 프로젝트별 조합 문서를 복제하지 않는다.
 
 ## 설치와 업그레이드
 
 소스 TS/TSX 패키지다. 소비 앱의 Vite/TypeScript가 컴파일한다. 두 앱은 같은 GitHub release tarball을 `vendor/`에 보관해 개발자 로컬 경로나 설치 시 GitHub 인증에 의존하지 않는다. vendor 내부는 수정하지 않는다.
 
 ```sh
-gh release download v0.2.0 --repo taehyung-lab/web-kit --pattern 'boosterlab-web-kit-0.2.0.tgz' --dir vendor
-pnpm add @boosterlab/web-kit@file:vendor/boosterlab-web-kit-0.2.0.tgz
+gh release download v0.3.0 --repo taehyung-lab/web-kit --pattern 'boosterlab-web-kit-0.3.0.tgz' --dir vendor
+pnpm add @boosterlab/web-kit@file:vendor/boosterlab-web-kit-0.3.0.tgz
 ```
 
 monorepo 하위 package에서는 manifest 위치에 맞는 상대 경로를 사용한다. package.json·lockfile·tarball을 함께 commit한다. 소스 복사·git submodule·branch 최신값 의존성은 사용하지 않는다.

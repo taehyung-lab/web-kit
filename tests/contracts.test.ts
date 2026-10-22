@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { FormApi } from '@tanstack/react-form';
 import { serializeFlatListParams, serializeSpringParams } from '../src/api';
 import { resolveRequiredRecord } from '../src/detail';
-import { submitForm, clearFormServerErrors, setFormServerErrors } from '../src/form';
+import { submitForm, clearFormServerErrors, setFormServerErrors, createFormMessages } from '../src/form';
 import { checkboxTreeSelection } from '../src/checkbox-tree';
 import { validateDateRange, recoverUrlField } from '../src/search';
 
@@ -95,4 +95,15 @@ it('자식 하나 선택은 부모 체크이며 부모 해제는 다른 가지�
   expect(selection.checked(selection.all, true)).toBe(false);
   expect(selection.set(['a1', 'a2'], false)).toEqual(['b']);
   expect(selection.set(selection.all, true)).toEqual(['a1', 'a2', 'b']);
+});
+
+// 서로 다른 기존 marker가 있어도 현재 언어에서 같은 시점에 해소한다.
+it.each(['@form-error:', '@form-validation:'])('오류 참조 %s는 번역 시점과 치환값을 보존한다', (prefix) => {
+  const codec = createFormMessages(prefix);
+  const value = codec.encode('form:required', { max: 3 });
+  expect(value).toBe(prefix + '{"key":"form:required","values":{"max":3}}');
+  expect(codec.resolve({ message: value }, (key, values) => `ko:${key}:${values.max}`)).toBe('ko:form:required:3');
+  expect(codec.resolve(value, key => `en:${key}`)).toBe('en:form:required');
+  expect(codec.resolve('plain', () => 'unexpected')).toBe('plain');
+  expect(codec.resolve({}, () => 'unexpected')).toBeUndefined();
 });
