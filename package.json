@@ -1,6 +1,6 @@
 {
   "name": "@boosterlab/web-kit",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "sideEffects": false,
@@ -11,7 +11,9 @@
     "./form": "./src/form.ts",
     "./detail": "./src/detail.ts",
     "./api": "./src/api.ts",
-    "./detail/ui": "./src/DetailField.tsx"
+    "./detail/ui": "./src/DetailField.tsx",
+    "./form/ui": "./src/form-ui.tsx",
+    "./dialog": "./src/confirmation.ts"
   },
   "files": [
     "src",
