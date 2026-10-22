@@ -1,0 +1,47 @@
+{
+  "name": "@boosterlab/web-kit",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./list": "./src/use-draft-commit.ts",
+    "./filter": "./src/filter.ts",
+    "./form": "./src/form.ts",
+    "./detail": "./src/detail.ts",
+    "./api": "./src/api.ts"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "docs"
+  ],
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "@tanstack/react-form": "1.33.5"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.18",
+    "react": "19.2.8",
+    "@tanstack/react-form": "1.33.5",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11",
+    "react-dom": "19.2.8"
+  },
+  "packageManager": "pnpm@10.33.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/taehyung-lab/web-kit.git"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "check": "pnpm typecheck && pnpm test"
+  },
+  "peerDependenciesMeta": {
+    "@tanstack/react-form": {
+      "optional": true
+    }
+  }
+}
