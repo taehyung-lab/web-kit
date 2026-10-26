@@ -1,8 +1,8 @@
 # web-kit
 
-React 19 + TanStack(Router·Query·Form) + zod 4 + axios/orval + 회사 Spring 응답 규약(`{ header: { resultCode, resultMessage }, data }`)을 쓰는 관리자 웹의 기본 키트다. 이 스택과 스펙을 쓰면 같은 의미의 동작은 이 코드를 공용으로 쓰고, 시각 UI와 업무 정책은 프로젝트가 맡는다.
+React 19 + TanStack(Router·Query·Form) + zod 4 + axios/orval을 쓰고, 서버가 Spring 응답 봉투 `{ header: { resultCode, resultMessage }, data }`로 답하는 관리자 웹의 기본 키트다. 이 응답 규약이 아닌 서버에는 맞지 않는다. 이 스택과 스펙을 쓰면 같은 의미의 동작은 이 코드를 공용으로 쓰고, 시각 UI와 업무 정책은 프로젝트가 맡는다.
 
-정본: https://github.com/taehyung-lab/web-kit · 패키지 `@boosterlab/web-kit` · 버전 `1.0.0` · 결정 기록 [docs/decisions](docs/decisions/).
+정본: https://github.com/taehyung-lab/web-kit · 패키지 `@boosterlab/web-kit` · 버전 `1.0.1` · 결정 기록 [docs/decisions](docs/decisions/).
 
 ## 구조
 
@@ -42,16 +42,16 @@ for s in "$PKG"/node_modules/@boosterlab/web-kit/skills/*/; do ln -sfn "$(python
 
 ## 설치와 업그레이드
 
-소스 TS/TSX 패키지라서 소비 앱의 Vite/TypeScript가 컴파일한다. 두 앱은 같은 GitHub release tarball을 `vendor/`에 보관한다. 개발자 로컬 경로나 설치 시 GitHub 인증에 의존하지 않기 위해서다.
+소스 TS/TSX 패키지라서 소비 앱의 Vite/TypeScript가 컴파일한다. 소비 앱은 GitHub release tarball을 `vendor/`에 보관한다. 개발자 로컬 경로나 설치 시 GitHub 인증에 의존하지 않기 위해서다.
 
 ```sh
-gh release download v1.0.0 --repo taehyung-lab/web-kit --pattern 'boosterlab-web-kit-1.0.0.tgz' --dir vendor
-pnpm add @boosterlab/web-kit@file:vendor/boosterlab-web-kit-1.0.0.tgz
+gh release download v1.0.1 --repo taehyung-lab/web-kit --pattern 'boosterlab-web-kit-1.0.1.tgz' --dir vendor
+pnpm add @boosterlab/web-kit@file:vendor/boosterlab-web-kit-1.0.1.tgz
 ```
 
 - package.json·lockfile·tarball을 함께 commit한다. 소스 복사·submodule·branch 최신값 의존성은 쓰지 않는다.
-- 공통 변경은 이 저장소에서 검사하고 버전을 올린다. `pnpm pack`으로 산출물을 만들고, 같은 commit에 `v<version>` 태그와 release를 발행한다.
-- 이후 두 앱 adapter의 typecheck·test·build를 확인한다. 되돌릴 때는 이전 release와 lockfile을 함께 복원한다.
+- 공통 변경은 이 저장소에서 검사하고 버전을 올린다. `pnpm pack`으로 산출물을 만들고, 같은 commit에 `v<version>` 태그와 release를 발행한다. 발행한 버전 번호로 내용이 다른 tarball을 다시 만들지 않는다.
+- 이후 소비 앱 adapter의 typecheck·test·build를 확인한다. 되돌릴 때는 이전 release와 lockfile을 함께 복원한다.
 
 ## 개발과 검증
 
