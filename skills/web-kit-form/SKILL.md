@@ -18,6 +18,10 @@ description: 등록·수정·다이얼로그 폼의 제출·확인창·저장·d
   - `reveal`: 접힌 섹션을 연다.
   - `onSaved(result)`: 이동·알림. 저장 함수가 돌려준 값을 그대로 받는다(등록 뒤 새 id 등).
 - 입력 control의 id는 `fieldId(name)`을 쓰고, 같은 id를 `FieldFrame`에 넘긴다.
+- 줄을 늘리고 줄이는 입력(연락처 여러 행 등)은 `FormArrayField`로 감싼다.
+  - `canRemove`가 거짓이면(최소 줄 수 이하) 삭제 버튼을 그리지 않는다. 한 줄만 남으면 삭제는 보이지 않는다.
+  - 줄 안 입력의 `onKeyDown`에 `rows.enterAdds(add)`를 건다. Enter가 추가 버튼의 `add`를 그대로 부른다. 폼 제출은 하지 않는다.
+  - `rows.items`는 줄 안의 값이 바뀔 때도 새로 그려진다. 추가 버튼이 마지막 줄을 확인해도 낡은 값을 보지 않는다.
 
 ## 키트 보장
 

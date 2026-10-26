@@ -7,3 +7,5 @@ export {
 } from './save-form';
 
 export { createFormMessages } from './messages';
+
+export { FormArrayField, type ArrayForm, type FormArrayRows } from './array';
