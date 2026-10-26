@@ -474,3 +474,37 @@ it('S16 onSaved는 저장 함수가 돌려준 결과를 받는다(등록 뒤 새
   await flush();
   expect(onSaved).toHaveBeenCalledWith(42);
 });
+
+it('S17 onSaved가 불리는 순간 화면은 이미 저장 결과를 반영해 clean이다(저장 직후 이동에서 이탈 보호가 열리지 않는다)', async () => {
+  const seen: { dirty: boolean; stage: string }[] = [];
+  render(
+    <Screen
+      schema={schema}
+      source={original}
+      save={async (values) => ({ saved: { ...values } })}
+      onSaved={() => seen.push({ dirty: state().dirty, stage: state().stage })}
+    />,
+  );
+  type('name', 'A2');
+  await submit();
+  await flush();
+  expect(seen).toEqual([{ dirty: false, stage: 'idle' }]);
+});
+
+it('S17b 저장 중 입력이 바뀌었다면 onSaved가 불리는 순간에도 dirty로 남는다(바뀐 입력은 이동 때 보호된다)', async () => {
+  const pending = deferred<{ saved: Values }>();
+  const seen: { dirty: boolean; stage: string }[] = [];
+  render(
+    <Screen
+      schema={schema}
+      source={original}
+      save={() => pending.promise}
+      onSaved={() => seen.push({ dirty: state().dirty, stage: state().stage })}
+    />,
+  );
+  type('name', 'A2');
+  await submit();
+  type('name', 'B');
+  await act(async () => pending.resolve({ saved: { name: 'A2', email: 'a@x' } }));
+  expect(seen).toEqual([{ dirty: true, stage: 'idle' }]);
+});
