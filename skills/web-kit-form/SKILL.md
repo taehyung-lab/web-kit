@@ -17,7 +17,7 @@ description: 등록·수정·다이얼로그 폼의 제출·확인창·저장·d
   - `fieldError`: 서버 필드를 폼 경로와 문구로 바꾼다.
   - `reveal`: 접힌 섹션을 연다.
   - `onSaved(result)`: 이동·알림. 저장 함수가 돌려준 값을 그대로 받는다(등록 뒤 새 id 등).
-- 입력 control의 id는 `fieldId(name)`을 쓰고, 같은 id를 `FieldFrame`에 넘긴다.
+- 입력 control의 id는 `fieldId(name)`을 쓰고, 같은 id를 `FieldFrame`에 넘긴다. 체크 트리(`CheckboxTree`)는 그 id를 `id`로 받으며, 검증 오류의 focus가 그 그룹으로 온다.
 - 줄을 추가·삭제하는 입력은 아래 「줄 추가·삭제 입력」을 따른다.
 
 ## 줄 추가·삭제 입력

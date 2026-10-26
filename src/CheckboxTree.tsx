@@ -66,6 +66,8 @@ export function CheckboxTree<T extends string>({
     <div
       role="group"
       id={id}
+      // 검증 오류 focus가 이 그룹으로 올 수 있게 한다(탭 순서에는 넣지 않는다).
+      tabIndex={-1}
       aria-labelledby={labelledBy}
       aria-describedby={describedBy}
       aria-invalid={invalid}
