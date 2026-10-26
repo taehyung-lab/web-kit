@@ -165,9 +165,12 @@ export function useSaveForm<
         typeof result === 'object' && result !== null && 'saved' in result ? (result as { readonly saved?: TInput }).saved : undefined;
       const saved = declared ?? submitted;
       // 저장 중 입력이 그대로면 저장 결과를 입력에도 반영한다. 바뀌었으면 입력을 보존하고 기준선만 바꾼다.
-      if (evaluate(form.state.values, submitted)) replace(saved);
-      else setBaseline(saved);
-      setStage({ kind: 'idle' });
+      // onSaved에서 이동해도 이 화면이 이미 반영된 상태(clean 또는 입력 보존 dirty)로 보이도록 렌더까지 마친다.
+      flushSync(() => {
+        if (evaluate(form.state.values, submitted)) replace(saved);
+        else setBaseline(saved);
+        setStage({ kind: 'idle' });
+      });
       latest.current.onSaved?.(result);
     } catch (error: unknown) {
       if (!current()) return;
