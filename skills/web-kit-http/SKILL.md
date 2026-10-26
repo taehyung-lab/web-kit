@@ -11,6 +11,7 @@ description: API 호출·응답 봉투·실패 처리·토큰 재발급·로그�
 
 - 화면은 생성 endpoint 함수나 queryOptions를 쓰고, 전송 예외를 직접 해석하지 않는다. 받는 실패는 `RequestFailure`(12종 `kind`)다.
 - 쓰기 뒤 다시 읽을 조회는 mutation `meta: { invalidates: [key, …] }`로 선언한다. 성공했을 때와 `resultUnknown`일 때 실행된다.
+- 비밀번호처럼 보관하면 안 되는 입력값이 든 쓰기는 `meta: { sensitive: true }`로 선언한다. 성공이든 실패든 끝나면 요청 보관소의 기록이 지워진다(화면이 쓰기를 지켜보는 중이어도). 오류 전달과 다시 시도는 그대로다.
 - 문구는 `kind`와 `messageKey`로 고른다. 서버 resultMessage는 실패에 담기지 않는다.
 
 ## 키트 보장

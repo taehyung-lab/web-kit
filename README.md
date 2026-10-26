@@ -2,7 +2,7 @@
 
 React 19 + TanStack(Router·Query·Form) + zod 4 + axios/orval을 쓰고, 서버가 Spring 응답 봉투 `{ header: { resultCode, resultMessage }, data }`로 답하는 관리자 웹의 기본 키트다. 이 응답 규약이 아닌 서버에는 맞지 않는다. 이 스택과 스펙을 쓰면 같은 의미의 동작은 이 코드를 공용으로 쓰고, 시각 UI와 업무 정책은 프로젝트가 맡는다.
 
-정본: https://github.com/taehyung-lab/web-kit · 패키지 `@boosterlab/web-kit` · 버전 `1.0.4` · 결정 기록 [docs/decisions](docs/decisions/).
+정본: https://github.com/taehyung-lab/web-kit · 패키지 `@boosterlab/web-kit` · 버전 `1.0.5` · 결정 기록 [docs/decisions](docs/decisions/).
 
 ## 구조
 
@@ -15,7 +15,7 @@ React 19 + TanStack(Router·Query·Form) + zod 4 + axios/orval을 쓰고, 서버
 | `.` / `/failure` | 실패 12종, 결과 코드 표, 봉투 해석 | 서버 enum의 결과 코드 행 |
 | `/session` | 세대, 시작·종료, 다른 탭 변경, 재발급 단일 비행(Web Locks) | 저장 위치 adapter, 재발급 호출 |
 | `/http` | 헤더·토큰, 봉투 해제, 401 재발급 뒤 한 번 재전송, 반영 여부 판정 | 공개 경로, 운영 헤더, axios 기본값 |
-| `/query` | 재시도 대상, 실패 알림 한 번, 선언한 무효화, 세션 전환 시 비움 | 재시도 횟수, 알림 표시, staleTime 등 수치 |
+| `/query` | 재시도 대상, 실패 알림 한 번, 선언한 무효화, 민감한 쓰기의 입력값 기록 지움, 세션 전환 시 비움 | 재시도 횟수, 알림 표시, staleTime 등 수치 |
 | `/search` · `/list` | URL 필드 복구·정규 URL·진입 주소 교정(route `validateSearch`·`beforeLoad`), 검색 확정, 선택지 확인, 결과 출처, 선택·일괄 작업 | 필드 schema·encode·기본값, 조회 함수, 필터 UI |
 | `/filter` | 기간 검증, 오류 표시, 체크 트리 | checkbox·문구·스타일 |
 | `/form` · `/form/ui` · `/dialog` | 제출·확인 관문·저장·기준선·서버 필드 오류·늦은 결과, Field 접근성 | schema·원본·저장 함수, 확인창·이탈 UI |
@@ -55,8 +55,8 @@ done
 소스 TS/TSX 패키지라서 소비 앱의 Vite/TypeScript가 컴파일한다. 소비 앱은 GitHub release tarball을 `vendor/`에 보관한다. 개발자 로컬 경로나 설치 시 GitHub 인증에 의존하지 않기 위해서다.
 
 ```sh
-gh release download v1.0.4 --repo taehyung-lab/web-kit --pattern 'boosterlab-web-kit-1.0.4.tgz' --dir vendor
-pnpm add @boosterlab/web-kit@file:vendor/boosterlab-web-kit-1.0.4.tgz
+gh release download v1.0.5 --repo taehyung-lab/web-kit --pattern 'boosterlab-web-kit-1.0.5.tgz' --dir vendor
+pnpm add @boosterlab/web-kit@file:vendor/boosterlab-web-kit-1.0.5.tgz
 ```
 
 - package.json·lockfile·tarball을 함께 commit한다. 소스 복사·submodule·branch 최신값 의존성은 쓰지 않는다.

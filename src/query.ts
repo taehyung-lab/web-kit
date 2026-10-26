@@ -19,9 +19,13 @@ export type FailureSource =
   | { readonly kind: 'query'; readonly query: Query<unknown, unknown, unknown> }
   | { readonly kind: 'mutation'; readonly mutation: Mutation<unknown, unknown, unknown> };
 
-/** mutation meta에 선언한다: `meta: { invalidates: [key, …] }`. */
+/**
+ * mutation meta에 선언한다: `meta: { invalidates: [key, …] }`.
+ * `sensitive: true`는 비밀번호처럼 보관하면 안 되는 입력값이 든 쓰기다. 성공이든 실패든 끝나면 요청 보관소의 기록을 지운다.
+ */
 export interface WriteMeta {
   readonly invalidates?: readonly QueryKey[];
+  readonly sensitive?: boolean;
 }
 
 function invalidatesOf(mutation: Mutation<unknown, unknown, unknown>): readonly QueryKey[] {
@@ -79,6 +83,16 @@ export function createQueryClient<C extends Credentials>({
       },
       mutations: { retry: false },
     },
+  });
+
+  // meta.sensitive 쓰기는 끝나면 보관소에서 입력값 기록을 지운다. gcTime 0은 화면이 쓰기를 지켜보는 동안 지우지 않아 직접 지운다.
+  const writes = queryClient.getMutationCache();
+  writes.subscribe((event) => {
+    if (event.type !== 'updated' || (event.mutation.options.meta as WriteMeta | undefined)?.sensitive !== true) return;
+    if (event.action.type !== 'success' && event.action.type !== 'error') return;
+    const { mutation } = event;
+    // 알림·무효화·결과 전달이 입력값을 읽는 일이 끝난 다음에 지우도록 한 틱 미룬다.
+    setTimeout(() => writes.remove(mutation), 0);
   });
 
   // 세션이 바뀌면 이전 세션의 데이터 노출과 결과 반영을 막는다. 서버에서 이미 실행된 쓰기의 취소는 보장하지 않는다.
