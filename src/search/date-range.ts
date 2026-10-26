@@ -1,12 +1,4 @@
-// 파일 책임: URL 필드의 개별 복구와 직접 입력한 달력 날짜 쌍의 엄격한 검증을 분리한다.
-export interface RecoverableField<T> {
-  safeParse(value: unknown): { success: true; data: T } | { success: false };
-}
-/** URL 필드 하나만 읽고 실패하면 기본값 해소 단계에 맡긴다. 입력 제출 검증에 쓰지 않는다. */
-export function recoverUrlField<T>(schema: RecoverableField<T>, value: unknown): T | undefined {
-  const result = schema.safeParse(value);
-  return result.success ? result.data : undefined;
-}
+// 파일 책임: 직접 입력한 달력 날짜 쌍을 엄격하게 검증한다. URL 복구는 같은 폴더의 fields가 맡는다.
 export type DateRangeIssue = 'incomplete' | 'invalid' | 'reversed';
 /** 실제 달력에 존재하는 yyyy-MM-dd 값인지 확인한다. */
 function validDate(value: string): boolean {

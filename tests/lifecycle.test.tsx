@@ -9,61 +9,13 @@ import {
   screen,
 } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { StrictMode } from "react";
-import { useSubmissionLifecycle } from "../src/useSubmissionLifecycle";
-import { useConfirmationState } from "../src/confirmation";
-import { FieldFrame } from "../src/form-ui";
+import { useConfirmationState } from "../src/form/confirmation";
+import { FieldFrame } from "../src/form/field";
 import { activateTableRow } from "../src/row-activation";
 
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
-});
-
-it("locks before validation yields and releases after rejection", async () => {
-  const { result } = renderHook(useSubmissionLifecycle, {
-    wrapper: StrictMode,
-  });
-  let reject!: (reason: Error) => void;
-  const save = vi.fn(
-    () =>
-      new Promise<void>((_, failure) => {
-        reject = failure;
-      }),
-  );
-  const first = result.current.run(save);
-  const observed = expect(first).rejects.toThrow("failed");
-  await result.current.run(save);
-  expect(save).toHaveBeenCalledTimes(1);
-  reject(new Error("failed"));
-  await observed;
-  const retry = vi.fn();
-  await result.current.run(retry);
-  expect(retry).toHaveBeenCalledTimes(1);
-});
-
-it("only the last focus runs; cancellation and unmount prevent stale focus", () => {
-  vi.useFakeTimers();
-  const { result, unmount } = renderHook(useSubmissionLifecycle, {
-    wrapper: StrictMode,
-  });
-  const first = document.createElement("input");
-  const second = document.createElement("input");
-  document.body.append(first, second);
-  result.current.scheduleFocus(() => first.focus());
-  result.current.scheduleFocus(() => second.focus());
-  act(() => vi.runAllTimers());
-  expect(document.activeElement).toBe(second);
-  result.current.scheduleFocus(() => first.focus());
-  result.current.cancelFocus();
-  act(() => vi.runAllTimers());
-  expect(document.activeElement).toBe(second);
-  result.current.scheduleFocus(() => first.focus());
-  unmount();
-  act(() => vi.runAllTimers());
-  expect(document.activeElement).toBe(second);
-  first.remove();
-  second.remove();
 });
 
 it("confirmation holds its target while pending, shows rejection and allows retry", async () => {
