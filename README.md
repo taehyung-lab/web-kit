@@ -31,7 +31,7 @@ React는 peer이고 번들에 포함하지 않는다. 라이브러리 peer는 �
 |---|---|
 | `web-kit-http` | API 호출, 실패, 재발급, 로그인/로그아웃, QueryClient, 무효화 |
 | `web-kit-list` | 목록 검색·조회·선택·일괄 작업 |
-| `web-kit-form` | 등록·수정 폼, 확인 실행 |
+| `web-kit-form` | 등록·수정 폼(줄 추가·삭제 입력 포함), 확인 실행 |
 | `web-kit-record` | 상세·수정 원본 단건 |
 
 프로젝트는 설치본의 스킬을 `.agents/skills/`에 링크하고, 업무 정책 문서와 읽는 순서는 자기 AGENTS.md 지도에 둔다. 키트 문장을 프로젝트 문서에 복사하지 않는다. 링크 기준은 web-kit 의존성을 선언한 패키지의 `node_modules`다(monorepo에서 루트 호이스팅에 기대지 않는다). 예: 저장소 루트에서 `PKG=apps/admin`(단일 패키지면 `PKG=.`).
