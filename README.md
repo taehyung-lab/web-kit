@@ -37,8 +37,18 @@ React는 peer이고 번들에 포함하지 않는다. 라이브러리 peer는 �
 프로젝트는 설치본의 스킬을 `.agents/skills/`에 링크하고, 업무 정책 문서와 읽는 순서는 자기 AGENTS.md 지도에 둔다. 키트 문장을 프로젝트 문서에 복사하지 않는다. 링크 기준은 web-kit 의존성을 선언한 패키지의 `node_modules`다(monorepo에서 루트 호이스팅에 기대지 않는다). 예: 저장소 루트에서 `PKG=apps/admin`(단일 패키지면 `PKG=.`).
 
 ```sh
-for s in "$PKG"/node_modules/@boosterlab/web-kit/skills/*/; do ln -sfn "$(python3 -c 'import os,sys;print(os.path.relpath(sys.argv[1],".agents/skills"))' "$s")" ".agents/skills/$(basename "$s")"; done
+mkdir -p .agents/skills
+for name in web-kit-http web-kit-list web-kit-form web-kit-record; do
+  link=".agents/skills/$name"
+  if [ -e "$link" ] || [ -L "$link" ]; then
+    printf '%s\n' "기존 경로를 확인하세요: $link" >&2
+    continue
+  fi
+  ln -s "../../$PKG/node_modules/@boosterlab/web-kit/skills/$name" "$link"
+done
 ```
+
+기존 같은 이름의 스킬이 있으면 덮어쓰지 않고 출처를 확인한다. 업그레이드 뒤 링크가 설치한 버전의 `SKILL.md`로 해소되는지 확인한다. 프로젝트 역할 스킬은 연결 차이·제품 근거·소비 검사 위치만 맡고 키트 보장을 재서술하지 않는다.
 
 ## 설치와 업그레이드
 
