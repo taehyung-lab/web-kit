@@ -1,0 +1,90 @@
+// 파일 책임: TanStack QueryClient를 키트 규칙(재시도 대상·실패 알림 한 번·선언한 무효화·세션 전환 시 비움)으로 만든다.
+import {
+  MutationCache,
+  QueryCache,
+  QueryClient,
+  type DefaultOptions,
+  type Mutation,
+  type Query,
+  type QueryKey,
+} from '@tanstack/react-query';
+import { isRequestFailure, type FailureKind } from './failure';
+import type { Credentials, Session } from './session';
+
+/** 자동 재시도 대상. 나머지(429·contract 포함)는 자동 재시도하지 않는다. */
+const RETRYABLE: ReadonlySet<FailureKind> = new Set(['network', 'timeout', 'server-error']);
+
+/** 알림의 출처. 무엇을 어디에 보일지는 프로젝트가 출처로 고른다. */
+export type FailureSource =
+  | { readonly kind: 'query'; readonly query: Query<unknown, unknown, unknown> }
+  | { readonly kind: 'mutation'; readonly mutation: Mutation<unknown, unknown, unknown> };
+
+/** mutation meta에 선언한다: `meta: { invalidates: [key, …] }`. */
+export interface WriteMeta {
+  readonly invalidates?: readonly QueryKey[];
+}
+
+function invalidatesOf(mutation: Mutation<unknown, unknown, unknown>): readonly QueryKey[] {
+  return ((mutation.options.meta ?? {}) as WriteMeta).invalidates ?? [];
+}
+
+function isCancelled(error: unknown): boolean {
+  return isRequestFailure(error) && error.kind === 'cancelled';
+}
+
+/**
+ * QueryClient를 만든다. retry는 조회 자동 재시도 횟수(프로젝트 값). notify는 조회·쓰기의 최종 실패를 출처와 함께
+ * 한 번 받는 단일 통로다(취소·이전 세션의 쓰기 제외). 표시 방식·대상 선별·화면과의 중복 회피는 프로젝트가 정한다.
+ */
+export function createQueryClient<C extends Credentials>({
+  session,
+  retry,
+  notify,
+  queries,
+}: {
+  readonly session: Session<C>;
+  readonly retry: number;
+  readonly notify?: (failure: unknown, source: FailureSource) => void;
+  /** staleTime·retryDelay 등 프로젝트 수치. retry는 위 규칙이 정한다. */
+  readonly queries?: Omit<NonNullable<DefaultOptions['queries']>, 'retry'>;
+}): QueryClient {
+  const startedIn = new WeakMap<object, number>();
+
+  /** 쓰기를 시작한 세션에서만 후속 효과를 낸다: 실패 알림, 그리고 성공·반영 여부 미확정일 때 선언한 무효화. */
+  function afterWrite(mutation: Mutation<unknown, unknown, unknown>, error: unknown) {
+    if (startedIn.get(mutation) !== session.generation()) return;
+    if (error !== undefined && !isCancelled(error)) notify?.(error, { kind: 'mutation', mutation });
+    if (error !== undefined && !(isRequestFailure(error) && error.resultUnknown)) return;
+    for (const queryKey of invalidatesOf(mutation)) void queryClient.invalidateQueries({ queryKey });
+  }
+
+  const queryClient = new QueryClient({
+    queryCache: new QueryCache({
+      onError: (error, query) => {
+        if (!isCancelled(error)) notify?.(error, { kind: 'query', query });
+      },
+    }),
+    mutationCache: new MutationCache({
+      onMutate: (_variables, mutation) => {
+        startedIn.set(mutation, session.generation());
+      },
+      onSuccess: (_data, _variables, _result, mutation) => afterWrite(mutation, undefined),
+      onError: (error, _variables, _result, mutation) => afterWrite(mutation, error),
+    }),
+    defaultOptions: {
+      queries: {
+        ...queries,
+        retry: (failureCount, error) =>
+          failureCount < retry && isRequestFailure(error) && RETRYABLE.has(error.kind),
+      },
+      mutations: { retry: false },
+    },
+  });
+
+  // 세션이 바뀌면 이전 세션의 데이터 노출과 결과 반영을 막는다. 서버에서 이미 실행된 쓰기의 취소는 보장하지 않는다.
+  session.subscribe(() => {
+    void queryClient.cancelQueries();
+    queryClient.clear();
+  });
+  return queryClient;
+}

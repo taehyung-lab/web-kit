@@ -1,5 +1,3 @@
-// 파일 책임: 목록 초안과 현재 페이지 선택 수명을 공개한다.
-export { useDraftCommit } from './use-draft-commit';
-export { usePageSelection } from './use-page-selection';
-
+// 파일 책임: 목록(검색 확정·조회·결과 출처·행 선택·일괄 작업)과 행 활성화의 공개 항목만 내보낸다.
+export * from './use-list';
 export { activateTableRow } from './row-activation';
