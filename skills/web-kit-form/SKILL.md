@@ -57,6 +57,7 @@ Router 안에 `FormNavigation`을 한 번 설치하고 각 폼을 `SaveForm`으�
 - 실패:
   - 실패는 `failure`에 그대로 담기고 `cancelled`만 빠진다. 입력과 기준선은 유지된다.
   - 서버 필드 오류는 제출 값과 현재 값이 같은 필드에만 붙는다. 붙지 못한 오류(저장 중 바뀐 필드, 폼 경로로 바꾸지 못한 것)는 `unattachedFieldErrors`로 나오며, 폼 수준 한 줄의 근거다. 다음 제출이 지난 서버 오류를 지운다.
+  - 입력 탓인 실패(예: 로그인 아이디·비밀번호 불일치)는 `clearFailureOnEdit(failure)`가 true를 돌려주게 하면, 지금 입력이 실패한 제출 때 입력과 달라지는 동안 `failure`·`unattachedFieldErrors`에서 빠진다. 연결 실패처럼 입력과 무관한 실패는 false로 두어 남긴다. 기본은 지우지 않는다.
   - `failure.resultUnknown`이면 반영 여부를 확인할 수 없다는 뜻이다. 다시 저장하기 전에 다시 읽기를 안내하는 일은 화면이 정한다.
 - 원본 재도착(같은 `id`의 새 `values`):
   - 입력이 기준선과 같으면 교체한다.

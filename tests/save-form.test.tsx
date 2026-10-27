@@ -592,3 +592,47 @@ it('S19 완료 처리 오류는 성공한 저장을 실패로 바꾸지 않는�
   expect(screen.getByTestId('save-failure').textContent).toBe('undefined');
   expect(screen.getByTestId('completion-failure').textContent).toContain('navigation failed');
 });
+
+it('F1 입력 탓으로 정한 실패는 입력을 고치는 순간 사라지고, 입력과 무관한 실패는 고쳐도 남는다', async () => {
+  let failure: RequestFailure = new RequestFailure({ kind: 'business', status: 400, code: 'BadCredential' });
+  render(
+    <Screen
+      schema={schema}
+      source={original}
+      save={async () => {
+        throw failure;
+      }}
+      clearFailureOnEdit={(error) => error instanceof RequestFailure && error.kind === 'business'}
+    />,
+  );
+  await submit();
+  await flush();
+  expect(state().failure).toBe('business (http 400)');
+  type('email', 'b@x');
+  expect(state().failure).toBeUndefined();
+  type('email', 'a@x');
+  expect(state().failure).toBe('business (http 400)');
+
+  failure = new RequestFailure({ kind: 'network' });
+  await submit();
+  await flush();
+  expect(state().failure).toBe('network');
+  type('email', 'c@x');
+  expect(state().failure).toBe('network');
+});
+
+it('F2 clearFailureOnEdit이 없으면 입력을 고쳐도 실패가 남는다', async () => {
+  render(
+    <Screen
+      schema={schema}
+      source={original}
+      save={async () => {
+        throw new RequestFailure({ kind: 'business', status: 400, code: 'BadCredential' });
+      }}
+    />,
+  );
+  await submit();
+  await flush();
+  type('email', 'b@x');
+  expect(state().failure).toBe('business (http 400)');
+});
