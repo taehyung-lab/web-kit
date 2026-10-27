@@ -54,10 +54,10 @@ lockfile에 없는 의존성 추가·lockfile 변경·원격 스크립트 실행
 
 저장소가 관리하는 근거의 위치와 한 줄 설명만 둔다. 작업 상태는 작업 기록이, 역할 선택은 description이 맡아 관리한다. 이 절과 그 아래 저장소별 절은 프로젝트가 관리하며, 위 키트 영역은 고치지 않는다.
 
-- 제품 원문·사용자 결정·결정권자: 키트는 제품 정책을 갖지 않는다(소비 프로젝트가 소유). 키트 결정과 이유·보장의 출처·백엔드 확인 보류(E1–E3)는 `docs/decisions/0001-web-kit-1.0.md`. 결정권자는 사용자.
+- 제품 원문·사용자 결정·결정권자: 키트는 제품 정책을 갖지 않는다(소비 프로젝트가 소유). 수명 결정·보장의 출처·백엔드 확인 보류(E1–E3)는 `docs/decisions/0001-web-kit-1.0.md`, 공통 동작·선택적 기본 UI의 소유 범위는 `docs/decisions/0002-shared-foundation.md`. 결정권자는 사용자.
 - 코드 진입·상태 관리 위치·외부 계약: 구조와 subpath는 `README.md` 「구조」와 `package.json` `exports`, 소스는 `src/`. 사용 계약(보장)은 `skills/web-kit-*`가 코드와 같은 버전으로 배포되는 정본이다. 외부 계약은 Spring 응답 봉투(`README.md` 첫 문단)와 결정 기록의 백엔드 확인.
-- 실행·검사 명령·관찰 환경·시험 데이터: `pnpm check`(typecheck + vitest). CI `.github/workflows/check.yml`의 contracts(검사·pack)와 consumer(그 tarball을 공개 [admin-web-starter](https://github.com/taehyung-lab/admin-web-starter)에 설치해 `check`·브라우저 검사).
-- 권한·보호 대상·작업 한도·질문 통로: 원격 `origin`(public). 발행은 `README.md` 「설치와 업그레이드」 순서대로 consumer가 통과한 artifact만 release로 올리고, 발행한 번호로 다시 포장하지 않는다. 질문은 사용자.
+- 실행·검사 명령·관찰 환경·시험 데이터: `package.json` scripts와 `tests/`·`scripts/*.test.mjs`. CI `.github/workflows/check.yml`은 키트 검사와 공개 [admin-web-starter](https://github.com/taehyung-lab/admin-web-starter)의 tarball 소비 검사를 맡는다. 검증 조합 기록·호환성·발행 기준은 `docs/maintaining.md`.
+- 권한·보호 대상·작업 한도·질문 통로: 원격 `origin`(public). 발행은 `docs/maintaining.md` 「소비 검사와 발행」의 검증한 산출물만 사용한다. 질문은 사용자.
 
 ## 프로젝트 약속
 

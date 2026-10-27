@@ -1,6 +1,6 @@
 ---
 name: web-kit-list
-description: 목록 화면의 URL 검색 조건·필드 기본값 복구·검색 확정·페이지/정렬·조회 상태·선택지 확인·행 선택·일괄 작업을 만들거나 바꿀 때 읽는다. 단건 상세는 web-kit-record, 요청·실패 해석은 web-kit-http로 보낸다.
+description: 목록 필터·기간 프리셋·키워드 칩·표·페이지 이동·URL 검색 조건·필드 기본값 복구·검색 확정·페이지/정렬·조회 상태·선택지 확인·행 선택·일괄 작업을 만들거나 바꿀 때 읽는다. 단건 상세는 web-kit-record, 요청·실패 해석은 web-kit-http로 보낸다.
 ---
 
 # web-kit list · search
@@ -42,16 +42,21 @@ description: 목록 화면의 URL 검색 조건·필드 기본값 복구·검색
 - **선택:**
   - 검색이 바뀌면 선택을 비운다. 사라진 행은 선택에서 뺀다.
   - `selection.run`은 시작하는 순간의 ID 집합으로 실행한다. 실행 중 다시 부르면 두 번째 작업은 실행하지 않는다.
-  - 성공 뒤 선택 정리는 같은 선택 수명일 때만 한다.
+  - `run`의 결과는 `{ completedIds }`다. 같은 선택 수명에서 실제 성공 ID만 선택에서 뺀다. 거절은 throw하고 0건 성공은 빈 배열로 돌려준다. Promise resolve만으로 전체 성공을 추측하지 않는다.
 
-## 프로젝트 연결
+## 기본 UI와 제품 선언
 
-- 필터 UI(기간 preset, 키워드 행)와 검색어 문구는 프로젝트가 맡는다.
-- 표·가상화·정렬 표현은 프로젝트 vendor로 그린다.
-- `FilterError`의 id는 입력의 aria-describedby에 연결한다.
-- `CheckboxTree`에는 프로젝트 checkbox를 넘긴다.
-- 행 클릭은 `activateTableRow`에 연결한다.
-- 부분 성공의 의미와 일괄 작업 문구는 프로젝트가 정한다.
+`ListView model={useList(...)}`의 typed parts로 `Filter`, `Text`, `Select`, `MultiSelect`, `Period`, `Keywords`, `Table`, `Pagination`, `BulkAction`을 조립한다. `/list/ui`와 `/filter/ui`는 같은 상태를 사용한다.
+
+- `Period`는 명시한 시간대·시계·preset으로 날짜를 만들고 검색 전 불완전·역순을 막는다. 일/월 이동은 달력 기준이며 월말을 보정한다. 제품의 기간 한도는 `validateDraft`로 선언한다.
+- `Keywords`는 Enter·추가·검색 시 미확정 텍스트를 같은 방식으로 trim·중복 제거한다. 입력 중인 글자는 페이지/정렬 이동에는 남고 필터 교체·초기화에는 지운다.
+- `MultiSelect`는 `[]`를 제한 없음(전체 체크 표시)으로 사용한다. 기본값과 URL schema도 같은 의미로 선언한다. `Select`는 빈 선택을 해당 기본 표현으로 바꾼다.
+- `Table`은 이전 조건 결과를 읽기 전용으로 보여 준다. 컬럼·업무 출력·선택 가능 조건·행 이동은 소비자 선언이다. 새 컬럼 정렬은 현재 방향을 유지하고 같은 컬럼이면 반전한다.
+- `BulkAction`은 확인 당시 결과와 선택이 바뀌면 실행하지 않는다. 실패는 확인창에 남고 선택은 유지된다. 성공 ID 해석·업무 거절 조건은 소비자가 반환한다. 성공 개수만 있으면 부분 성공 ID를 추측하지 않는다.
+- 상세 필터는 접어도 입력을 유지한다. 문구는 messages·label, 페이지 크기 후보는 sizes로 선언한다.
+- `captureListReturn`/`resolveListReturn`은 목록 주소의 검색·hash를 보존하고 같은 목록 경로에서만 복귀한다. 조회 결과 출처(`isCurrent`)와는 다른 책임이다.
+
+특수 표현에는 기존 `/filter`·`activateTableRow`를 사용할 수 있다. 서버·권한·업무 계산을 공용 UI 안으로 옮기지 않는다.
 
 ## 확인 방법
 

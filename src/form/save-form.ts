@@ -1,13 +1,6 @@
+/** 폼의 검증·제출·확인·저장과 완료 처리의 수명을 소유한다. */
 // 파일 책임: 등록·수정 폼의 제출 → (확인) → 저장 → 기준선/실패 반영 수명을 TanStack Form 위에서 소유한다.
-import {
-  evaluate,
-  getBy,
-  revalidateLogic,
-  useForm,
-  useSelector,
-  type DeepKeys,
-  type StandardSchemaV1,
-} from '@tanstack/react-form';
+import { evaluate, getBy, revalidateLogic, useForm, useSelector, type DeepKeys, type StandardSchemaV1 } from '@tanstack/react-form';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { isRequestFailure, type FieldError } from '../failure';
@@ -25,9 +18,7 @@ export interface SaveFormOptions<TInput, TOutput, TResult = { readonly saved?: T
    */
   readonly save: (values: TOutput, submitted: TInput) => Promise<TResult>;
   /** 서버 필드 오류를 폼 경로와 표시 문구로 바꾼다. undefined면 붙이지 않는다. */
-  readonly fieldError?: (
-    error: FieldError,
-  ) => { readonly field: DeepKeys<TInput>; readonly message: string } | undefined;
+  readonly fieldError?: (error: FieldError) => { readonly field: DeepKeys<TInput>; readonly message: string } | undefined;
   /** 오류 필드가 접힌 영역에 있으면 focus 전에 펼친다. */
   readonly reveal?: (fields: readonly string[]) => void;
   /** 이 폼의 저장이 끝난 직후 저장 함수의 결과로 한 번 실행한다(이동·알림). 늦은 결과에는 실행하지 않는다. */
@@ -49,21 +40,21 @@ export function formFieldControlId(formId: string, field: string): string {
  * 성공하면 저장 결과가 기준선이 되고, 저장 중 입력이 바뀌지 않았을 때만 입력에도 반영한다.
  * 늦은 결과는 고정한 레코드·폼 수명이 같을 때만 반영한다.
  */
-export function useSaveForm<
-  TInput,
-  TOutput,
-  TResult = { readonly saved?: TInput } | void,
->(options: SaveFormOptions<TInput, TOutput, TResult>) {
+export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput } | void>(
+  options: SaveFormOptions<TInput, TOutput, TResult>,
+) {
   const latest = useRef(options);
   latest.current = options;
   const { source } = options;
   const [defaults, setDefaults] = useState(source.values);
-  const [baseline, setBaseline] = useState(source.values);
+  const [baseline, setBaselineState] = useState(source.values);
+  const baselineRef = useRef(source.values);
+  const [completionFailure, setCompletionFailure] = useState<unknown>();
   const [stage, setStageState] = useState<SaveStage<TInput>>({ kind: 'idle' });
   /** 마지막 저장 실패와, 그중 필드에 붙이지 못한 서버 필드 오류. 둘은 함께 바뀐다. */
-  const [rejection, setRejection] = useState<
-    { readonly failure: unknown; readonly unattached: readonly FieldError[] } | undefined
-  >(undefined);
+  const [rejection, setRejection] = useState<{ readonly failure: unknown; readonly unattached: readonly FieldError[] } | undefined>(
+    undefined,
+  );
   const stageRef = useRef(stage);
   /** 지금 진행 중인 제출. 잠금이자 늦은 결과를 거르는 기준 하나다. 레코드가 바뀌면 비운다. */
   const submission = useRef<object | undefined>(undefined);
@@ -75,22 +66,24 @@ export function useSaveForm<
 
   const form = useForm({
     defaultValues: defaults,
+    onSubmitMeta: undefined as object | undefined,
     validationLogic: revalidateLogic(),
     validators: { onDynamic: options.schema },
-    onSubmit: async ({ value }) => {
+    onSubmit: async ({ value, meta }) => {
+      if (meta === undefined || !isCurrent(meta)) return;
       // TanStack Form은 값을 바꿀 때마다 새 객체를 만든다. 제출 순간의 참조가 곧 고정된 S다(File 등은 그대로 유지).
       const submitted = value;
       const result = await latest.current.schema['~standard'].validate(submitted);
-      if (result.issues !== undefined) return;
+      if (!isCurrent(meta) || result.issues !== undefined) return;
       if (latest.current.confirm === true) {
         pendingOutput.current = result.value;
         setStage({ kind: 'confirming', values: submitted });
         return;
       }
-      const token = submission.current;
-      if (token !== undefined) await execute(token, submitted, result.value);
+      await execute(meta, submitted, result.value);
     },
-    onSubmitInvalid: ({ formApi }) => {
+    onSubmitInvalid: ({ formApi, meta }) => {
+      if (meta === undefined || !isCurrent(meta)) return;
       const invalid = Object.keys(formApi.state.fieldMeta).filter(
         (name) => (formApi.getFieldMeta(name as DeepKeys<TInput>)?.errors.length ?? 0) > 0,
       );
@@ -98,6 +91,17 @@ export function useSaveForm<
     },
   });
   const values = useSelector(form.store, (state) => state.values);
+
+  /** 렌더 이전 이탈 판정도 최신 저장 기준선을 읽게 한다. */
+  function setBaseline(next: TInput) {
+    baselineRef.current = next;
+    setBaselineState(next);
+  }
+
+  /** 제출이 시작된 폼 수명과 현재 대상이 같은지 비동기 경계마다 확인한다. */
+  function isCurrent(token: object) {
+    return mounted.current && submission.current === token && Object.is(identity.current, latest.current.source.id);
+  }
 
   /** 렌더 전 연속 호출도 최신 단계를 보게 한다. */
   function setStage(next: SaveStage<TInput>) {
@@ -156,22 +160,12 @@ export function useSaveForm<
 
   /** 저장 한 번. 이 제출이 아직 현재 제출일 때만 결과를 반영한다. */
   async function execute(token: object, submitted: TInput, output: TOutput) {
-    const current = () => mounted.current && submission.current === token;
+    const current = () => isCurrent(token);
+    if (!current()) return;
     setStage({ kind: 'saving', values: submitted });
+    let result: TResult;
     try {
-      const result = await latest.current.save(output, submitted);
-      if (!current()) return;
-      const declared =
-        typeof result === 'object' && result !== null && 'saved' in result ? (result as { readonly saved?: TInput }).saved : undefined;
-      const saved = declared ?? submitted;
-      // 저장 중 입력이 그대로면 저장 결과를 입력에도 반영한다. 바뀌었으면 입력을 보존하고 기준선만 바꾼다.
-      // onSaved에서 이동해도 이 화면이 이미 반영된 상태(clean 또는 입력 보존 dirty)로 보이도록 렌더까지 마친다.
-      flushSync(() => {
-        if (evaluate(form.state.values, submitted)) replace(saved);
-        else setBaseline(saved);
-        setStage({ kind: 'idle' });
-      });
-      latest.current.onSaved?.(result);
+      result = await latest.current.save(output, submitted);
     } catch (error: unknown) {
       if (!current()) return;
       setStage({ kind: 'idle' });
@@ -179,6 +173,21 @@ export function useSaveForm<
       const { attached, unattached } = attachFieldErrors(error, submitted);
       setRejection({ failure: error, unattached });
       focusFirst(attached);
+      return;
+    }
+    if (!current()) return;
+    const declared =
+      typeof result === 'object' && result !== null && 'saved' in result ? (result as { readonly saved?: TInput }).saved : undefined;
+    const saved = declared ?? submitted;
+    flushSync(() => {
+      if (evaluate(form.state.values, submitted)) replace(saved);
+      else setBaseline(saved);
+      setStage({ kind: 'idle' });
+    });
+    try {
+      await latest.current.onSaved?.(result);
+    } catch (error: unknown) {
+      if (current()) setCompletionFailure(error);
     }
   }
 
@@ -190,13 +199,17 @@ export function useSaveForm<
     cancelFocus();
     clearServerErrors();
     setRejection(undefined);
+    setCompletionFailure(undefined);
     try {
       // 이미 떠 있는 blur 오류가 있으면 TanStack 제출은 전체 검증 없이 멈춘다. 필드 단위 blur 검증과 폼 검증을
       // 먼저 다시 돌려, 고친 값의 오류는 지우고 남은 오류는 모두 보인다.
       await form.validateAllFields('blur');
+      if (!isCurrent(token)) return;
       await form.validate('blur');
+      if (!isCurrent(token)) return;
       await form.validate('submit');
-      await form.handleSubmit();
+      if (!isCurrent(token)) return;
+      await form.handleSubmit(token);
     } finally {
       release(token);
     }
@@ -239,6 +252,7 @@ export function useSaveForm<
       cancelFocus();
       setStage({ kind: 'idle' });
       setRejection(undefined);
+      setCompletionFailure(undefined);
       replace(source.values);
       return;
     }
@@ -266,6 +280,8 @@ export function useSaveForm<
     stage,
     /** 저장 실패 원본. 표시 방식은 화면이 kind로 정한다. */
     failure: rejection?.failure,
+    /** 저장은 성공했지만 완료 후 이동·알림이 실패했다. 재저장 실패와 구분한다. */
+    completionFailure,
     /** 필드에 붙이지 못한 서버 필드 오류(저장 중 바뀐 필드·폼 경로로 바꾸지 못한 것). 폼 수준 표시의 근거다. */
     unattachedFieldErrors: rejection?.unattached ?? [],
     /** 기준선(마지막으로 확정된 원본 또는 저장 결과). 차이로 요청을 만드는 화면이 읽는다. 바꾸지 않는다. */
@@ -273,6 +289,12 @@ export function useSaveForm<
     /** 현재 입력이 기준선과 다른가. */
     isDirty: !evaluate(values, baseline),
     isSaving: stage.kind === 'saving',
+    /** 같은 이벤트 안의 이동도 현재 입력과 기준선으로 판정한다. */
+    getState: () => ({
+      stage: stageRef.current.kind,
+      isDirty: !evaluate(form.state.values, baselineRef.current),
+      isSaving: stageRef.current.kind === 'saving',
+    }),
     fieldId: (field: DeepKeys<TInput>) => formFieldControlId(form.formId, field),
     submit,
     confirm,

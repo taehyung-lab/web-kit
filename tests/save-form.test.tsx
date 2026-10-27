@@ -74,8 +74,12 @@ function Screen(props: SaveFormOptions<Values, Output>) {
       {save.stage.kind === 'confirming' && (
         <div role="dialog">
           <span data-testid="confirm-name">{save.stage.values.name}</span>
-          <button type="button" onClick={() => void save.confirm()}>ok</button>
-          <button type="button" onClick={save.cancel}>cancel</button>
+          <button type="button" onClick={() => void save.confirm()}>
+            ok
+          </button>
+          <button type="button" onClick={save.cancel}>
+            cancel
+          </button>
         </div>
       )}
       <output data-testid="state">
@@ -183,9 +187,7 @@ it('S4 저장 결과가 있으면 그것이 기준선이고, 저장 중 입력�
 });
 
 it('S4b 저장 중 입력이 그대로면 저장 결과가 기준선과 입력에 함께 들어가 clean이다', async () => {
-  render(
-    <Screen schema={schema} source={original} save={async (values) => ({ saved: { ...values } })} />,
-  );
+  render(<Screen schema={schema} source={original} save={async (values) => ({ saved: { ...values } })} />);
   type('name', ' 홍길동 ');
   await submit();
   await flush();
@@ -262,7 +264,13 @@ it('S7 다음 제출은 지난 서버 필드 오류와 실패를 지운다', asy
 
 it('S8 취소된 저장은 실패로 보이지 않는다', async () => {
   render(
-    <Screen schema={schema} source={original} save={async () => { throw new RequestFailure({ kind: 'cancelled' }); }} />,
+    <Screen
+      schema={schema}
+      source={original}
+      save={async () => {
+        throw new RequestFailure({ kind: 'cancelled' });
+      }}
+    />,
   );
   type('name', 'B');
   await submit();
@@ -336,9 +344,7 @@ it('S12 A 저장 중 B로 바뀌면 B는 바로 저장할 수 있고, 늦게 끝
   expect(saves.map((save) => save.name)).toEqual(['A', 'B']);
 
   await act(async () =>
-    saves[0]!.pending.reject(
-      new RequestFailure({ kind: 'validation', status: 400, fieldErrors: [{ field: 'name', code: 'Dup' }] }),
-    ),
+    saves[0]!.pending.reject(new RequestFailure({ kind: 'validation', status: 400, fieldErrors: [{ field: 'name', code: 'Dup' }] })),
   );
   await flush();
   expect(state()).toMatchObject({ stage: 'saving' });
@@ -380,11 +386,21 @@ it('S14 필드 blur 오류가 떠 있어도 제출은 전체 검증을 돌려 �
   function BlurScreen() {
     const form = useSaveForm({ schema, source: { id: 1, values: { name: '', email: '' } }, save });
     return (
-      <form onSubmit={(event) => { event.preventDefault(); void form.submit(); }}>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          void form.submit();
+        }}
+      >
         <form.form.Field name="name">
           {(field) => (
             <>
-              <input id={form.fieldId('name')} aria-label="name" value={field.state.value} onChange={(event) => field.handleChange(event.target.value)} />
+              <input
+                id={form.fieldId('name')}
+                aria-label="name"
+                value={field.state.value}
+                onChange={(event) => field.handleChange(event.target.value)}
+              />
               <span data-testid="name-error">{errorText(field.state.meta.errors)}</span>
             </>
           )}
@@ -392,7 +408,13 @@ it('S14 필드 blur 오류가 떠 있어도 제출은 전체 검증을 돌려 �
         <form.form.Field name="email" validators={{ onBlur: ({ value }) => (value.includes('@') ? undefined : 'email') }}>
           {(field) => (
             <>
-              <input id={form.fieldId('email')} aria-label="email" value={field.state.value} onBlur={field.handleBlur} onChange={(event) => field.handleChange(event.target.value)} />
+              <input
+                id={form.fieldId('email')}
+                aria-label="email"
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(event) => field.handleChange(event.target.value)}
+              />
               <span data-testid="email-error">{errorText(field.state.meta.errors)}</span>
             </>
           )}
@@ -432,11 +454,23 @@ it('S14b 필드 blur 오류를 고친 뒤 칸을 떠나지 않고 제출(Enter)�
   function EnterScreen() {
     const form = useSaveForm({ schema, source: { id: 1, values: { name: 'A', email: '' } }, save });
     return (
-      <form data-testid="enter-form" onSubmit={(event) => { event.preventDefault(); void form.submit(); }}>
+      <form
+        data-testid="enter-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void form.submit();
+        }}
+      >
         <form.form.Field name="email" validators={{ onBlur: ({ value }) => (value.includes('@') ? undefined : 'email') }}>
           {(field) => (
             <>
-              <input id={form.fieldId('email')} aria-label="email" value={field.state.value} onBlur={field.handleBlur} onChange={(event) => field.handleChange(event.target.value)} />
+              <input
+                id={form.fieldId('email')}
+                aria-label="email"
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(event) => field.handleChange(event.target.value)}
+              />
               <span data-testid="email-error">{errorText(field.state.meta.errors)}</span>
             </>
           )}
@@ -507,4 +541,54 @@ it('S17b 저장 중 입력이 바뀌었다면 onSaved가 불리는 순간에도 
   type('name', 'B');
   await act(async () => pending.resolve({ saved: { name: 'A2', email: 'a@x' } }));
   expect(seen).toEqual([{ dirty: true, stage: 'idle' }]);
+});
+
+// 제출 검증과 완료 처리는 저장 요청 수명과 다른 실패 지점이다.
+it('S18 검증 대기 중 대상 변경은 이전 제출을 새 대상 저장으로 넘기지 않는다', async () => {
+  const pending = deferred<string | undefined>();
+  const save = vi.fn(async () => undefined);
+  function DelayedScreen({ id }: { id: number }) {
+    const editor = useSaveForm({ schema, source: { id, values: { name: String(id), email: 'a@x' } }, save, confirm: true });
+    return (
+      <>
+        <editor.form.Field name="name" validators={{ onBlurAsync: () => pending.promise }}>
+          {(field) => <input aria-label="delayed" value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} />}
+        </editor.form.Field>
+        <button onClick={() => void editor.submit()}>submit delayed</button>
+        <output data-testid="delayed-stage">{editor.stage.kind}</output>
+      </>
+    );
+  }
+  const view = render(<DelayedScreen id={1} />);
+  fireEvent.change(screen.getByLabelText('delayed'), { target: { value: 'edited' } });
+  fireEvent.click(screen.getByText('submit delayed'));
+  view.rerender(<DelayedScreen id={2} />);
+  await act(async () => pending.resolve(undefined));
+  expect(save).not.toHaveBeenCalled();
+  expect(screen.getByTestId('delayed-stage').textContent).toBe('idle');
+  expect((screen.getByLabelText('delayed') as HTMLInputElement).value).toBe('2');
+});
+
+it('S19 완료 처리 오류는 성공한 저장을 실패로 바꾸지 않는다', async () => {
+  function CompletionScreen() {
+    const editor = useSaveForm({
+      schema,
+      source: original,
+      save: async () => undefined,
+      onSaved: () => {
+        throw new Error('navigation failed');
+      },
+    });
+    return (
+      <>
+        <button onClick={() => void editor.submit()}>save</button>
+        <output data-testid="save-failure">{String(editor.failure)}</output>
+        <output data-testid="completion-failure">{String(editor.completionFailure)}</output>
+      </>
+    );
+  }
+  render(<CompletionScreen />);
+  await submit();
+  expect(screen.getByTestId('save-failure').textContent).toBe('undefined');
+  expect(screen.getByTestId('completion-failure').textContent).toContain('navigation failed');
 });

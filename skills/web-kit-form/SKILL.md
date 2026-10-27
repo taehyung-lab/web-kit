@@ -1,11 +1,25 @@
 ---
 name: web-kit-form
-description: 등록·수정·다이얼로그 폼의 제출·확인창·저장·dirty·서버 필드 오류·오류 focus·원본 재도착과, 줄(행)을 추가·삭제하는 입력을 만들거나 바꿀 때 읽는다. 요청·실패 해석은 web-kit-http, 원본 단건 상태는 web-kit-record로 보낸다.
+description: 등록·수정·다이얼로그 폼의 저장·이탈 보호·필드 오류·원본 갱신·줄 추가/삭제 입력, 폼 없는 삭제·상태 변경 확인, Field·확인창 adapter를 만들거나 바꿀 때 읽는다. 요청·실패 해석은 web-kit-http, 원본 단건 상태는 web-kit-record로 보낸다.
 ---
 
 # web-kit form
 
 `/form`의 `useSaveForm`과 `/form/ui`, 그리고 `/testing`의 폼 검사를 쓰는 기준이다. 인자와 타입은 설치된 소스를 따른다.
+
+## 기본 폼 UI
+
+Router 안에 `FormNavigation`을 한 번 설치하고 각 폼을 `SaveForm`으로 선언한다. `source`, 동기 `schema`, `save`가 필수다. children의 타입 연결된 `Text`, `Checkbox`, `Select`, `TextArea`, `Array`, `Actions`가 값·id·라벨·오류·focus를 연결한다. 파일·특수 입력은 `Field` render 함수로 연결한다.
+
+- `required`는 표시와 aria만 맡는다. 조건부 필수는 같은 업무 predicate를 schema와 required 함수에 쓴다. 필수 검증을 표시에서 추측하지 않는다.
+- `confirm`을 선언하면 한 앱에서 하나의 저장 확인을 소유한다. 확인값은 제출 snapshot이고 실행 중 닫기·중복 실행은 막힌다.
+- `completion(result)`은 `{kind:'navigate', destination}` 또는 다이얼로그의 `{kind:'close'}` 의도를 돌려준다. 저장 결과를 먼저 반영하고 일반 이탈 경로로 실행한다. 후속 작업 실패는 `completionFailure`로 저장 실패와 구별된다.
+- 변경된 폼이 있으면 이동 확인, 저장 중이면 이동 차단이 기본이다. `FormDialog` 닫기는 그 안의 폼만 확인한다. 여러 폼·중첩 창도 보호를 한 곳에서 조정한다. 로그인 같은 제품 예외만 `protect={false}`를 명시한다.
+- 문구는 `messages`·label·`formatError`·`renderFailure`, 모양은 CSS 토큰으로 바꾼다. 새 화면마다 Field·LeaveGuard·확인창을 복사하지 않는다.
+
+## headless 연결
+
+특수 표현 때문에 `useSaveForm`을 직접 쓰는 경우 아래 계약에 맞춰 연결한다. 기본 폼 UI는 이 연결을 이미 포함한다.
 
 ## 화면 선언
 
@@ -24,7 +38,7 @@ description: 등록·수정·다이얼로그 폼의 제출·확인창·저장·d
 
 연락처처럼 줄을 늘렸다 줄이는 입력은 항상 `FormArrayField`로 만든다. 폼 라이브러리의 배열 필드(`mode="array"`)를 직접 조립하지 않는다.
 
-- 한 줄뿐이면 삭제 버튼을 그리지 않는다(`rows.canRemove`). 두 줄 이상이면 모든 줄에 그린다.
+- 삭제 버튼은 `rows.canRemove`가 참일 때 각 줄에 그린다. 현재 줄 수가 `minItems`보다 클 때만 삭제할 수 있다. 최소 한 줄이 필요한 프로젝트는 `minItems={1}`을 지정한다. 최소 줄 수를 생략하면 마지막 줄도 삭제할 수 있다.
 - 줄 안 입력의 `onKeyDown`에 `rows.enterAdds(add)`를 건다. Enter는 추가 버튼의 `add`를 그대로 부른다. 그래서 추가 버튼이 빈 값에서 오류를 보이면 Enter도 같은 오류를 보인다. 폼 제출은 하지 않고, 한글 조합 중이거나 최대 줄 수일 때는 추가하지 않는다.
 - `rows.items`는 줄 안의 값이 바뀔 때도 새로 그려져, 추가 버튼이 낡은 값을 보지 않는다.
 - 프로젝트가 정하는 것: 빈 줄의 값, 최소·최대 줄 수(`minItems`·`maxItems`), 줄의 모양과 문구.
@@ -39,7 +53,7 @@ description: 등록·수정·다이얼로그 폼의 제출·확인창·저장·d
   - 저장 결과가 있으면 그것이, 없으면 S가 기준선이 된다.
   - 저장 중에 입력이 그대로였다면 저장 결과를 입력에도 넣는다. 바뀌었다면 입력을 보존하고 기준선만 바꾼다.
   - `isDirty`는 현재 값이 기준선과 다른지를 뜻한다. 차이로 요청을 만드는 화면은 `baseline`을 읽는다(직접 따로 들지 않는다).
-  - `onSaved`는 저장이 끝난 직후 한 번 실행된다. 재조회를 기다리지 않는다.
+  - `onSaved`는 저장이 끝난 직후 한 번 실행된다. 재조회를 기다리지 않는다. 후속 callback 오류는 `completionFailure`이며 성공한 저장을 되돌리지 않는다.
 - 실패:
   - 실패는 `failure`에 그대로 담기고 `cancelled`만 빠진다. 입력과 기준선은 유지된다.
   - 서버 필드 오류는 제출 값과 현재 값이 같은 필드에만 붙는다. 붙지 못한 오류(저장 중 바뀐 필드, 폼 경로로 바꾸지 못한 것)는 `unattachedFieldErrors`로 나오며, 폼 수준 한 줄의 근거다. 다음 제출이 지난 서버 오류를 지운다.
@@ -52,7 +66,7 @@ description: 등록·수정·다이얼로그 폼의 제출·확인창·저장·d
 
 ## 프로젝트 연결
 
-- 확인창·이탈 질문·완료 알림 UI와 문구는 프로젝트 vendor로 그린다. 저장 중 이탈을 막을지·묻을지·허용할지는 프로젝트가 정하며 키트는 `isDirty`·`isSaving`을 준다. `onSaved`가 불리는 순간 화면은 이미 저장 결과를 반영한다(저장 중 입력이 그대로면 clean, 바뀌었으면 입력을 보존한 dirty). 그러므로 저장 직후 이동에서 이탈 보호를 우회하지 않는다.
+- headless 화면만 확인창·이탈 연결을 직접 맡는다. 기본 UI를 쓰는 화면에는 별도 보호를 겹치지 않는다. `onSaved`가 불리는 순간 화면은 이미 저장 결과를 반영한다(저장 중 입력이 그대로면 clean, 바뀌었으면 입력을 보존한 dirty). 그러므로 저장 직후 이동에서 이탈 보호를 우회하지 않는다.
 - 오류 문구는 `createFormMessages(prefix)`로 번역 참조를 저장하고, 렌더할 때 해소한다.
 - 서버 필드 이름과 폼 경로의 대응은 `fieldError`가 정한다.
 

@@ -168,7 +168,10 @@ it('L6 첫 진입 미조회는 조회 0회인 조회 안 함 상태이고 재개
 });
 
 /** 선택지 조회 하나를 확인으로 선언한다. key는 상위 값마다 다르다. */
-function optionsCheck(fetch: (parents: Record<string, unknown>) => Promise<readonly string[]>, options: { parents?: string[] } = {}): FieldCheck<readonly string[]> {
+function optionsCheck(
+  fetch: (parents: Record<string, unknown>) => Promise<readonly string[]>,
+  options: { parents?: string[] } = {},
+): FieldCheck<readonly string[]> {
   return {
     parents: options.parents,
     options: (parents) => ({ queryKey: ['options', parents], queryFn: () => fetch(parents) }),
@@ -347,7 +350,11 @@ it('L12 상위 필드 값이 바뀌면 하위 선택지를 새 상위 값으로 
 });
 
 it('L13 검색 변경은 선택을 비우고, 재조회에서 사라진 행은 선택에서 빠지며, 선택 불가 행은 무시한다', async () => {
-  const fetchRows = vi.fn().mockResolvedValueOnce(page('1', '2', 'locked')).mockResolvedValueOnce(page('2')).mockResolvedValue(page('9'));
+  const fetchRows = vi
+    .fn()
+    .mockResolvedValueOnce(page('1', '2', 'locked'))
+    .mockResolvedValueOnce(page('2'))
+    .mockResolvedValue(page('9'));
   mount({ definition: makeDefinition(), initial: {}, fetchRows });
   await flush();
   act(() => latest.selection.togglePage(true));
@@ -369,20 +376,20 @@ it('L14 일괄 작업은 시작 순간의 선택 ID로 실행하고, 같은 선�
     latest.selection.toggleRow('1', true);
     latest.selection.toggleRow('2', true);
   });
-  const work = deferred<string>();
+  const work = deferred<{ completedIds: readonly string[]; value: string }>();
   const action = vi.fn((_ids: readonly string[]) => work.promise);
-  let result!: Promise<string | undefined>;
+  let result!: Promise<{ completedIds: readonly string[]; value: string } | undefined>;
   act(() => {
     result = latest.selection.run(action);
   });
   act(() => latest.selection.toggleRow('3', true));
   expect(action).toHaveBeenCalledWith(['1', '2']);
-  await act(async () => work.resolve('done'));
-  await expect(result).resolves.toBe('done');
+  await act(async () => work.resolve({ completedIds: ['1', '2'], value: 'done' }));
+  await expect(result).resolves.toEqual({ completedIds: ['1', '2'], value: 'done' });
   expect(latest.selection.selectedIds).toEqual([]);
 
   act(() => latest.selection.toggleRow('1', true));
-  const second = deferred<void>();
+  const second = deferred<{ completedIds: readonly string[] }>();
   act(() => void latest.selection.run(() => second.promise));
   act(() => latest.patchDraft({ q: 'other' }));
   act(() => latest.submit());
@@ -390,12 +397,15 @@ it('L14 일괄 작업은 시작 순간의 선택 ID로 실행하고, 같은 선�
     await vi.waitFor(() => expect(latest.status.kind === 'rows' && latest.isCurrent).toBe(true));
   });
   act(() => latest.selection.toggleRow('3', true));
-  await act(async () => second.resolve());
+  await act(async () => second.resolve({ completedIds: ['1'] }));
   expect(latest.selection.selectedIds).toEqual(['3']);
 });
 
 it('L15 취소된 조회는 실패가 아니라 조회 안 함이고 재개할 수 있다', async () => {
-  const fetchRows = vi.fn().mockRejectedValueOnce(new RequestFailure({ kind: 'cancelled' })).mockResolvedValue(page('1'));
+  const fetchRows = vi
+    .fn()
+    .mockRejectedValueOnce(new RequestFailure({ kind: 'cancelled' }))
+    .mockResolvedValue(page('1'));
   mount({ definition: makeDefinition(), initial: {}, fetchRows });
   await flush();
   expect(latest.status).toMatchObject({ kind: 'idle', reason: 'cancelled' });
@@ -470,7 +480,11 @@ it('L19 보기 키 이름은 선언을 따른다(pageSize)', async () => {
     return null;
   }
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(<QueryClientProvider client={client}><Sized /></QueryClientProvider>);
+  render(
+    <QueryClientProvider client={client}>
+      <Sized />
+    </QueryClientProvider>,
+  );
   act(() => current.setSize(50));
   expect(navigations.at(-1)?.next).toEqual({ pageSize: 50 });
 });
@@ -523,7 +537,11 @@ it('L21 초안 모양이 URL과 달라도(기간 preset) 변환으로 다루고,
     return null;
   }
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(<QueryClientProvider client={client}><Period /></QueryClientProvider>);
+  render(
+    <QueryClientProvider client={client}>
+      <Period />
+    </QueryClientProvider>,
+  );
   expect(current.draft).toEqual({ preset: 'CUSTOM', from: '2026-10-01', to: '2026-10-23' });
   act(() => {
     current.patchDraft({ preset: 'TODAY' });
@@ -576,20 +594,30 @@ it('L24 목록 응답에 다른 필드가 함께 있으면 page로 그대로 노
     readonly counts: { readonly open: number };
   }
   const definition = makeDefinition();
-  let current!: ReturnType<typeof useList<typeof definition.fields, Row, Error, readonly unknown[], ReturnType<typeof definition.resolve>, CountedPage>>;
+  let current!: ReturnType<
+    typeof useList<typeof definition.fields, Row, Error, readonly unknown[], ReturnType<typeof definition.resolve>, CountedPage>
+  >;
   function Counted() {
     const [search] = useState(() => definition.validateSearch({}));
     current = useList({
       definition,
       search,
       navigate: () => undefined,
-      query: () => queryOptions({ queryKey: ['counted'] as const, queryFn: async (): Promise<CountedPage> => ({ ...page('1'), counts: { open: 3 } }) }),
+      query: () =>
+        queryOptions({
+          queryKey: ['counted'] as const,
+          queryFn: async (): Promise<CountedPage> => ({ ...page('1'), counts: { open: 3 } }),
+        }),
       rowId: (row) => row.id,
     });
     return null;
   }
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(<QueryClientProvider client={client}><Counted /></QueryClientProvider>);
+  render(
+    <QueryClientProvider client={client}>
+      <Counted />
+    </QueryClientProvider>,
+  );
   await act(async () => {
     await vi.waitFor(() => expect(current.page?.counts.open).toBe(3));
   });
@@ -602,17 +630,17 @@ it('L25 일괄 작업 실행 중 다시 run을 부르면 두 번째 작업은 �
     await vi.waitFor(() => expect(latest.status.kind).toBe('rows'));
   });
   act(() => latest.selection.toggleRow('1', true));
-  const work = deferred<string>();
+  const work = deferred<{ completedIds: readonly string[]; value: string }>();
   const first = vi.fn(() => work.promise);
-  const second = vi.fn(async () => 'second');
-  let again!: Promise<string | undefined>;
+  const second = vi.fn(async () => ({ completedIds: [], value: 'second' }));
+  let again!: Promise<{ completedIds: readonly string[]; value: string } | undefined>;
   act(() => {
     void latest.selection.run(first);
     again = latest.selection.run(second);
   });
   await expect(again).resolves.toBeUndefined();
   expect(second).not.toHaveBeenCalled();
-  await act(async () => work.resolve('done'));
+  await act(async () => work.resolve({ completedIds: ['1'], value: 'done' }));
   expect(first).toHaveBeenCalledTimes(1);
 });
 
@@ -629,4 +657,39 @@ it('L26 같은 조건 재조회와 refresh는 진행 중인 요청에 합류한�
   await act(async () => slow.resolve(page('1')));
   await flush();
   expect(fetchRows).toHaveBeenCalledTimes(2);
+});
+
+it('L31 부분 성공은 실제 완료 ID만 선택에서 빼고 0건 성공은 유지한다', async () => {
+  mount({ definition: makeDefinition(), initial: {}, fetchRows: async () => page('1', '2') });
+  await flush();
+  act(() => latest.selection.togglePage(true));
+  await act(async () => {
+    await latest.selection.run(async () => ({ completedIds: [] as string[] }));
+  });
+  expect(latest.selection.selectedIds).toEqual(['1', '2']);
+  await act(async () => {
+    await latest.selection.run(async () => ({ completedIds: ['1'] }));
+  });
+  expect(latest.selection.selectedIds).toEqual(['2']);
+});
+it('L32 실행 snapshot 밖 성공 ID를 반환하면 선택을 보존하고 오류로 처리한다', async () => {
+  mount({ definition: makeDefinition(), initial: {}, fetchRows: async () => page('1', '2') });
+  await flush();
+  act(() => latest.selection.toggleRow('1', true));
+  await act(async () => {
+    await expect(latest.selection.run(async () => ({ completedIds: ['2'] }))).rejects.toThrow('subset');
+  });
+  expect(latest.selection.selectedIds).toEqual(['1']);
+});
+
+it('L33 성공 ID 없는 런타임 결과는 전체 성공으로 처리하지 않는다', async () => {
+  mount({ definition: makeDefinition(), initial: {}, fetchRows: async () => page('1') });
+  await flush();
+  act(() => latest.selection.toggleRow('1', true));
+  await act(async () => {
+    // JavaScript 소비자의 잘못된 결과도 선택 삭제로 이어지지 않아야 한다.
+    // @ts-expect-error 완료 ID는 공개 타입에서도 필수다.
+    await expect(latest.selection.run(async () => ({ count: 0 }))).rejects.toThrow('subset');
+  });
+  expect(latest.selection.selectedIds).toEqual(['1']);
 });

@@ -152,10 +152,7 @@ describe('재발급', () => {
     const changes: SessionChange[] = [];
     session.subscribe((change) => changes.push(change));
     const generation = session.generation();
-    const results = await Promise.allSettled([
-      session.refresh(generation, 't1', origin),
-      session.refresh(generation, 't1', origin),
-    ]);
+    const results = await Promise.allSettled([session.refresh(generation, 't1', origin), session.refresh(generation, 't1', origin)]);
     for (const result of results) {
       expect(result.status).toBe('rejected');
       expect((result as PromiseRejectedResult).reason).toMatchObject({ kind: 'cancelled' });
@@ -167,7 +164,12 @@ describe('재발급', () => {
   it('일시 실패는 세션을 유지하고 그 실패를 돌려준다', async () => {
     const memory = memoryStore();
     const transient = new RequestFailure({ kind: 'server-error', status: 503 });
-    const session = createSession({ store: memory.store, reissue: async () => { throw transient; } });
+    const session = createSession({
+      store: memory.store,
+      reissue: async () => {
+        throw transient;
+      },
+    });
     session.start({ accessToken: 't1', loginId: 'u' });
     await expect(session.refresh(session.generation(), 't1', origin)).rejects.toBe(transient);
     expect(session.current()?.credentials.accessToken).toBe('t1');
@@ -242,7 +244,12 @@ describe('재발급', () => {
     vi.stubGlobal('navigator', {});
     const memory = memoryStore();
     const terminal = new RequestFailure({ kind: 'business', status: 200, code: '4001', messageKey: 'duplicatedLogin', endsSession: true });
-    const session = createSession({ store: memory.store, reissue: async () => { throw terminal; } });
+    const session = createSession({
+      store: memory.store,
+      reissue: async () => {
+        throw terminal;
+      },
+    });
     session.start({ accessToken: 't1', loginId: 'u' });
     const changes: SessionChange[] = [];
     session.subscribe((change) => changes.push(change));
@@ -254,11 +261,85 @@ describe('재발급', () => {
     vi.stubGlobal('navigator', {});
     const memory = memoryStore();
     const rejected = new RequestFailure({ kind: 'unauthorized', status: 401 });
-    const session = createSession({ store: memory.store, reissue: async () => { throw rejected; } });
+    const session = createSession({
+      store: memory.store,
+      reissue: async () => {
+        throw rejected;
+      },
+    });
     session.start({ accessToken: 't1', loginId: 'u' });
     const changes: SessionChange[] = [];
     session.subscribe((change) => changes.push(change));
     await expect(session.refresh(session.generation(), 't1')).rejects.toMatchObject({ kind: 'cancelled' });
     expect(changes).toEqual([{ kind: 'ended', by: 'server', cause: rejected }]);
   });
+});
+
+it.each([null, { sessionId: 'other', credentials: { accessToken: 'external', loginId: 'other' } }])(
+  '이벤트보다 먼저 발견한 외부 세션 %j로 재발급을 취소한다',
+  async (external) => {
+    vi.stubGlobal('navigator', {});
+    const memory = memoryStore();
+    const reissue = vi.fn();
+    const session = createSession({ store: memory.store, reissue });
+    session.start({ accessToken: 'initial', loginId: 'one' });
+    const generation = session.generation();
+    memory.store.write(external);
+    await expect(session.refresh(generation, 'initial')).rejects.toMatchObject({ kind: 'cancelled' });
+    expect(reissue).not.toHaveBeenCalled();
+    expect(session.current()).toEqual(external);
+    session.dispose();
+  },
+);
+it('늦은 재발급은 이벤트가 대기 중인 외부 계정을 덮지 않는다', async () => {
+  vi.stubGlobal('navigator', {});
+  const memory = memoryStore();
+  const pending = deferred<Credentials>();
+  const session = createSession({ store: memory.store, reissue: () => pending.promise });
+  session.start({ accessToken: 'initial', loginId: 'one' });
+  const refresh = session.refresh(session.generation(), 'initial');
+  const other = { sessionId: 'other', credentials: { accessToken: 'external', loginId: 'other' } };
+  memory.store.write(other);
+  pending.resolve({ accessToken: 'late', loginId: 'one' });
+  await expect(refresh).rejects.toMatchObject({ kind: 'cancelled' });
+  expect(memory.value).toEqual(other);
+  session.dispose();
+});
+it('dispose는 영속 로그아웃 없이 구독과 늦은 결과를 해제한다', async () => {
+  vi.stubGlobal('navigator', {});
+  const memory = memoryStore();
+  const pending = deferred<Credentials>();
+  const session = createSession({ store: memory.store, reissue: () => pending.promise });
+  session.start({ accessToken: 'initial', loginId: 'one' });
+  const saved = memory.value;
+  const refresh = session.refresh(session.generation(), 'initial');
+  const listener = vi.fn();
+  session.subscribe(listener);
+  session.dispose();
+  session.dispose();
+  pending.resolve({ accessToken: 'late', loginId: 'one' });
+  await expect(refresh).rejects.toMatchObject({ kind: 'cancelled' });
+  expect(memory.value).toEqual(saved);
+  memory.external(null);
+  expect(listener).not.toHaveBeenCalled();
+  expect(session.current()).toBeNull();
+});
+
+it.each([
+  new RequestFailure({ kind: 'unauthorized', status: 401 }),
+  new RequestFailure({ kind: 'business', status: 200, endsSession: true }),
+])('이전 재발급의 인증 실패는 이벤트 대기 중인 새 계정을 종료하지 않는다', async (failure) => {
+  vi.stubGlobal('navigator', {});
+  const memory = memoryStore();
+  const pending = deferred<Credentials>();
+  const session = createSession({ store: memory.store, reissue: () => pending.promise });
+  session.start({ accessToken: 'initial', loginId: 'one' });
+  const refresh = session.refresh(session.generation(), 'initial');
+  const other = { sessionId: 'other', credentials: { accessToken: 'external', loginId: 'other' } };
+  memory.store.write(other);
+  pending.reject(failure);
+  await expect(refresh).rejects.toMatchObject({ kind: 'cancelled' });
+  expect(memory.value).toEqual(other);
+  expect(session.current()).toEqual(other);
+  session.dispose();
 });
