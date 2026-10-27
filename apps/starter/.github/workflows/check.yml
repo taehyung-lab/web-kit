@@ -1,0 +1,22 @@
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      # 실제 브라우저 검사(mock 모드): 여러 탭 세션, 진입 주소 정규화와 요청 순서, 재조회 실패 표시
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
