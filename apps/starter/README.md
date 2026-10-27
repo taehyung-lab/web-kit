@@ -1,11 +1,8 @@
 # admin-web-starter
 
-> The default starting point for an admin web app on web-kit 2.0 candidate and agent-workflow-kit.
-> Clone it, run `pnpm install && pnpm dev:mock`, then replace the sample spec and screens with your own.
+web-kit 저장소의 `apps/starter`. 새 관리자 웹의 틀이자, 키트를 바꿀 때 함께 고치는 소비 검사 앱이다. 새 프로젝트를 시작하는 순서는 [저장소 README](../../README.md#새-프로젝트-시작)를 따른다.
 
-**이 스택으로 프론트를 시작하면 이 저장소로 시작한다.**
-
-관리자 웹을 새로 만들 때 쓰는 기본 저장소다. 키트 연결(세션·요청·QueryClient), 키트 기본 UI, 예시 기능 하나(상품 목록·상세·등록·수정·로그인), mock API, 화면 테스트, CI까지 갖춰 두었다. 예시 기능의 값(검색 기본값·문구·업무 규칙)은 스타터가 정한 예시이며 제품 결정이 아니다.
+관리자 웹을 새로 만들 때 쓰는 기본 앱이다. 키트 연결(세션·요청·QueryClient), 키트 기본 UI, 예시 기능 하나(상품 목록·상세·등록·수정·로그인), mock API, 화면 테스트, CI까지 갖춰 두었다. 예시 기능의 값(검색 기본값·문구·업무 규칙)은 스타터가 정한 예시이며 제품 결정이 아니다.
 
 ## 스택
 
@@ -19,17 +16,13 @@
 | 검사 | TypeScript 5.9, ESLint 10(typescript-eslint, react-hooks), Vitest 4 + Testing Library + jsdom, msw 2 |
 | 실행 | Node 24, pnpm 10.33 |
 
-두 키트가 이 저장소에 들어와 있다. 설치·고정·갱신·기존 프로젝트에 넣는 방법은 각 키트 README가 정본이다.
-
-- **[web-kit](https://github.com/taehyung-lab/web-kit)**: 이 스택의 공통 동작 코드와 사용 스킬. `vendor/`의 release tarball과 `package.json`의 `file:` 의존, `.agents/skills/web-kit-*`로 보인다.
-- **[agent-workflow-kit](https://github.com/taehyung-lab/agent-workflow-kit)**: 에이전트가 일하는 방법. `AGENTS.md`의 키트 표시 영역, `CLAUDE.md`, `.agents/skills/wf-*`로 보이며, 이 저장소에서 고치지 않는다.
-
-새 프로젝트는 이 저장소의 GitHub "Use this template"로 시작한다. `pnpm install` 뒤 `pnpm check`로 확인하고, `AGENTS.md`의 프로젝트 지도를 이 저장소 사실로 채운다(모르는 것은 `미확인`).
+- **web-kit**: `package.json`의 `file:vendor/boosterlab-web-kit.tgz` 의존과 `.agents/skills/web-kit-*` 링크로 쓴다. 이 저장소 안에서는 `vendor/`가 커밋되지 않으며, 저장소 루트의 `pnpm starter:sync`가 지금 키트를 포장해 넣는다. 처음 받은 뒤에도 이것부터 실행한다.
+- **agent-workflow-kit**: 이 앱에는 설치하지 않는다. web-kit 저장소 루트의 것을 쓰고, 복사한 새 프로젝트에서 새로 설치한다.
 
 ## 빠른 시작
 
 ```sh
-pnpm install
+(cd ../.. && pnpm starter:sync)   # 키트를 포장해 설치(의존성 설치 포함)
 pnpm dev:mock      # msw mock API로 실행. 계정 admin / password
 ```
 
@@ -40,7 +33,7 @@ pnpm dev:mock      # msw mock API로 실행. 계정 admin / password
 | `pnpm build` | 프로덕션 빌드 |
 | `pnpm typecheck` · `pnpm lint` · `pnpm test` | 타입·lint·테스트 |
 | `pnpm api:generate` | `openapi/sample.json` → `src/api/generated` |
-| `pnpm check` | typecheck + lint + test + build. CI(`.github/workflows/check.yml`)도 이것을 돌린다 |
+| `pnpm check` | typecheck + lint + test + build. 저장소 CI(`../../.github/workflows/check.yml`)가 키트 tarball을 설치한 뒤 이것을 돌린다 |
 | `pnpm test:e2e` | 실제 브라우저(chromium, mock 모드) 검사. 처음 한 번 `pnpm exec playwright install chromium`. CI는 `check` 뒤에 돌린다 |
 
 mock 모드에서는 access 토큰이 2분 뒤 만료되고, 새로고침하면 mock 서버 상태가 초기화된다. 그래서 401 → 재발급 → 재전송 흐름을 바로 볼 수 있다.
@@ -70,8 +63,8 @@ src/
   mocks/                     msw handler·메모리 DB(테스트와 dev:mock 공용)
   test/                      테스트 준비·앱 렌더 도우미
 docs/product/                제품 정책 문서 자리(비어 있음)
-vendor/                      web-kit release tarball
-.agents/skills/              wf-*(작업 기준) + web-kit-*(node_modules로 가는 링크)
+vendor/                      web-kit tarball(커밋하지 않음, `pnpm starter:sync`가 넣음)
+.agents/skills/              web-kit-*(node_modules로 가는 링크)
 ```
 
 `src/shared`는 `app`·`features`·`api`·`routes`를 import하지 않는다(ESLint로 검사). `features`는 `routes`를 모른다.
@@ -100,7 +93,7 @@ vendor/                      web-kit release tarball
 
 ## 화면 추가하기
 
-근거를 찾는 순서와 필요한 단계는 `AGENTS.md`의 키트 영역과 프로젝트 지도가 정한다. `src/features/products/`의 `api/` · `model/` · `screens/`가 화면 연결 예시다.
+이 저장소 안에서는 근거를 찾는 순서와 필요한 단계를 저장소 루트 `AGENTS.md`가 정한다. `src/features/products/`의 `api/` · `model/` · `screens/`가 화면 연결 예시다.
 
 ## 실제 API 연결하기
 

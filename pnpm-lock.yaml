@@ -6,7 +6,9 @@ settings:
 
 importers:
 
-  .:
+  .: {}
+
+  packages/web-kit:
     devDependencies:
       '@base-ui/react':
         specifier: 1.7.0
