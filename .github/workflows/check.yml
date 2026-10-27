@@ -1,5 +1,14 @@
 name: check
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      consumer_ref:
+        description: 'Starter revision (use a commit SHA to repeat a verified combination)'
+        required: true
+        default: 'main'
+        type: string
 permissions:
   contents: read
 jobs:
@@ -16,7 +25,6 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm check
-      - run: pnpm pack --pack-destination dist
   # 발행할 산출물 그대로 공개 starter에 설치해 소비 쪽 검사(check·브라우저)를 돌린다. 통과한 tarball을 artifact로 남기고 release에는 이것을 올린다.
   consumer:
     needs: contracts
@@ -28,6 +36,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: taehyung-lab/admin-web-starter
+          ref: ${{ inputs.consumer_ref || 'main' }}
           path: starter
       - uses: pnpm/action-setup@v4
         with:
@@ -52,7 +61,11 @@ jobs:
         working-directory: starter
       - run: pnpm test:e2e
         working-directory: starter
+      - name: 검증한 버전 조합과 산출물 기록
+        run: node web-kit/scripts/write-verification.mjs web-kit starter dist
       - uses: actions/upload-artifact@v4
         with:
           name: web-kit-tarball
-          path: dist/boosterlab-web-kit-*.tgz
+          path: |
+            dist/boosterlab-web-kit-*.tgz
+            dist/verification.json

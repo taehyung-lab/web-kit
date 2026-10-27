@@ -1,6 +1,6 @@
 ---
 name: web-kit-http
-description: API 호출·응답 봉투·실패 처리·토큰 재발급·로그인/로그아웃·QueryClient·조회 재시도·쓰기 뒤 무효화를 만들거나 바꿀 때 읽는다. 폼 저장 수명은 web-kit-form, 단건 상태는 web-kit-record로 보낸다.
+description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동기화·토큰 재발급·로그인/로그아웃·QueryClient·조회 재시도·쓰기 뒤 무효화를 만들거나 바꿀 때 읽는다. 폼 저장 수명은 web-kit-form, 단건 상태는 web-kit-record로 보낸다.
 ---
 
 # web-kit http · session · failure · query
@@ -38,7 +38,9 @@ description: API 호출·응답 봉투·실패 처리·토큰 재발급·로그�
 키트 초기 연결의 진입점은 한 곳이다(기본 `app/web-kit.ts`): session·http·QueryClient를 만들고 아래 adapter를 넘긴다. adapter 구현은 각자 자리에 둔다.
 
 - 결과 코드 표는 서버 enum에 있는 행만 옮겨 적는다. 이름만 보고 행을 더하지 않는다.
-- `SessionStore`: 저장 위치와 다른 탭 변경 알림(예: localStorage + storage 이벤트).
+- 기본 브라우저 저장은 `/session/browser`의 `createBrowserSessionStore({key, credentials, unreadable})`를 쓴다. 자격증명은 동기 Standard Schema로 검증하며 읽기 불가 정책은 `memory` 또는 `empty`를 명시한다. 저장 실패의 최신 논리 상태·옛 이벤트 거절·현재 외부 변경은 키트가 처리한다. 각 쓰기에 revision을 붙여 같은 값의 새 쓰기도 구별한다. revision 없는 이전 envelope도 읽지만 쓰기 실패 후 같은 바이트를 다시 쓴 외부 변경은 새 쓰기임을 증명할 수 없어 보수적으로 무시한다. 저장 형식 이전은 소비자 책임이다.
+- 앱 또는 격리된 수명이 끝나면 `session.dispose()`와 `store.dispose()`로 구독을 해제한다. dispose는 영속 로그아웃이 아니다.
+- 다른 환경의 `SessionStore`: 저장 위치와 다른 탭 변경 알림(예: localStorage + storage 이벤트). 영속 저장에 실패했으면 다음 읽기에 오래된 값을 새 회전으로 내보내지 않는다(최신 논리 값 또는 null). 이 탭의 종료 뒤 읽기는 다른 탭의 실제 쓰기 전까지 null이며, 이 탭의 쓰기를 다른 탭 변경으로 알리지 않는다. 저장소 읽기 자체가 불가능할 때의 유지/종료·이전 형식 이전은 프로젝트 정책이다.
 - `reissue(credentials)`: 재발급 endpoint 호출. 공개 요청으로 보낸다. 재발급 응답의 결과 코드 의미가 일반 요청과 다르면, 이 adapter가 실패에 `endsSession`·`messageKey`를 실어 던진다(결과 코드 표는 일반 요청용이다).
 - `isPublic`: 로그인 전·재발급·로그아웃 경로. 공개 요청에는 토큰이 실리지 않고, 세션도 건드리지 않는다.
 - `prepare`: 언어·메뉴 같은 운영 헤더.
@@ -51,6 +53,7 @@ description: API 호출·응답 봉투·실패 처리·토큰 재발급·로그�
 
 ## 확인 방법
 
+- 저장 adapter는 `/testing/session`의 `checkSessionStoreAdapter`로 저장 실패 뒤 재발급·다른 탭 변경·종료를 확인한다. 실제 adapter에 실패를 주입하는 fixture 연결은 [소비 안내](../../docs/consuming.md#저장-adapter-검사)를 따른다.
 - 실제 adapter로 다음을 관찰한다.
   - 보낸 Authorization 헤더와 운영 헤더
   - 401 → 재발급 1회 → 재전송 1회

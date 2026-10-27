@@ -1,14 +1,9 @@
+/** 목록의 확정 조건·초안·결과 출처·선택과 일괄 실행 수명을 소유한다. */
 // 파일 책임: 목록 화면 하나의 검색 초안·확정, 선택지 확인, 조회 상태, 이전 결과, 행 선택·일괄 작업 수명을 소유한다.
 import { useQueries, useQuery, type QueryKey, type UseQueryOptions } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { isRequestFailure } from './failure';
-import {
-  sameSearchValue,
-  type FullSearch,
-  type SearchDefinition,
-  type SearchField,
-  type UrlSearch,
-} from './search/fields';
+import { sameSearchValue, type FullSearch, type SearchDefinition, type SearchField, type UrlSearch } from './search/fields';
 
 type AnyFields = Record<string, SearchField<any>>;
 
@@ -138,7 +133,13 @@ export function useList<
   const judged: readonly Judged[] = checked.map((item, index) => {
     const result = optionResults[index]!;
     if (result.data === undefined)
-      return { field: item.field, key: item.key, status: result.isError ? 'failed' : 'running', failure: result.error, refetch: result.refetch };
+      return {
+        field: item.field,
+        key: item.key,
+        status: result.isError ? 'failed' : 'running',
+        failure: result.error,
+        refetch: result.refetch,
+      };
     const allowed = item.check.allowed(result.data);
     const listed = (one: unknown) => allowed.some((option) => sameSearchValue(option, one));
     const value = values[item.field];
@@ -197,7 +198,7 @@ export function useList<
     enabled: typeof screenEnabled === 'function' ? (current) => own && screenEnabled(current) : enabled,
   });
   const previous = useRef<TPage | undefined>(undefined);
-  const isCurrent = enabled && query.data !== undefined;
+  const isCurrent = enabled && query.data !== undefined && !query.isPlaceholderData;
   if (isCurrent) previous.current = query.data;
   const page = isCurrent ? query.data : previous.current;
   const rows = page?.rows ?? [];
@@ -255,9 +256,11 @@ export function useList<
   const selectedIds = isCurrent ? [...selectionCurrent.selected] : [];
   const [runningAction, setRunningAction] = useState(false);
   const actionLock = useRef(false);
+  const actionLifetime = useRef<string | undefined>(undefined);
 
   /** 현재 조건의 선택 가능한 행에만 반영한다. */
   function toggle(ids: readonly string[], on: boolean) {
+    if (actionLock.current && actionLifetime.current === urlKey) return;
     setSelection((prev) => {
       if (prev.lifetime !== urlKey) return prev;
       const next = new Set(prev.selected);
@@ -271,16 +274,25 @@ export function useList<
   }
 
   /** 시작 순간의 선택 ID로 실행하고, 같은 선택 수명일 때만 성공 뒤 선택을 비운다. */
-  async function run<T>(action: (ids: readonly string[]) => Promise<T>): Promise<T | undefined> {
-    if (actionLock.current) return undefined;
+  async function run<T extends { readonly completedIds: readonly string[] }>(
+    action: (ids: readonly string[]) => Promise<T>,
+  ): Promise<T | undefined> {
+    if (actionLock.current || !isCurrent || selectedIds.length === 0) return undefined;
     actionLock.current = true;
+    actionLifetime.current = urlKey;
     setRunningAction(true);
     const ids = selectedIds;
     const lifetime = urlKey;
     try {
       const result = await action(ids);
+      // completedIds는 업무 결과이고, 선택 수명 적용은 이 module이 맡는다.
+      const completed = typeof result === 'object' && result !== null && 'completedIds' in result ? result.completedIds : undefined;
+      if (!Array.isArray(completed) || completed.some((id) => typeof id !== 'string' || !ids.includes(id)))
+        throw new Error('completedIds must be a subset of the submitted selection');
       if (mounted.current)
-        setSelection((prev) => (prev.lifetime === lifetime ? { ...prev, selected: new Set() } : prev));
+        setSelection((prev) =>
+          prev.lifetime === lifetime ? { ...prev, selected: new Set([...prev.selected].filter((id) => !completed.includes(id))) } : prev,
+        );
       return result;
     } finally {
       actionLock.current = false;
@@ -291,8 +303,7 @@ export function useList<
   // ── 상태 ──
   let status: ListStatus;
   if (!full.searched) status = { kind: 'idle', reason: 'not-searched', resume: submit };
-  else if (stuck.length > 0)
-    status = { kind: 'idle', reason: 'check-stuck', fields: stuck.map((item) => item.field), resume: retryChecks };
+  else if (stuck.length > 0) status = { kind: 'idle', reason: 'check-stuck', fields: stuck.map((item) => item.field), resume: retryChecks };
   else if (failed.length > 0)
     status = {
       kind: 'idle',
@@ -311,6 +322,8 @@ export function useList<
   return {
     /** 현재 URL을 기본값으로 채운 확정 검색. */
     search: full,
+    defaults: definition.defaults,
+    view: definition.view,
     status,
     /** 보여 줄 행. isCurrent가 false면 이전 조건의 결과이며 읽기용이다. */
     rows,
@@ -324,8 +337,7 @@ export function useList<
     failure: isCurrent && query.isError && !cancelled ? query.error : undefined,
     draft: draftCurrent.draft,
     issues: draftCurrent.issues,
-    patchDraft: (patch: Partial<D>) =>
-      setDraft({ ...draftLatest.current, draft: { ...draftLatest.current.draft, ...patch } }),
+    patchDraft: (patch: Partial<D>) => setDraft({ ...draftLatest.current, draft: { ...draftLatest.current.draft, ...patch } }),
     submit,
     /** 선언한 기본값(첫 진입 상태)으로 되돌린다. */
     reset: () => {
@@ -339,6 +351,7 @@ export function useList<
     setSort: (sort: string, order: 'asc' | 'desc') => commit({ ...full, ...firstPage(), [keys.sort]: sort, [keys.order]: order }),
     selection: {
       selectedIds,
+      canSelect: (id: string) => allowed.includes(id),
       isChecked: (id: string) => selectedIds.includes(id),
       isAllChecked: allowed.length > 0 && selectedIds.length === allowed.length,
       isMixed: selectedIds.length > 0 && selectedIds.length < allowed.length,

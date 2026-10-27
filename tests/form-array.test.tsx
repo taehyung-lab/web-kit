@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// 파일 책임: 행을 늘리고 줄이는 입력의 규칙(Enter = 추가 버튼, 한 줄뿐이면 삭제 없음)을 실제 DOM으로 검사한다.
+// 파일 책임: 행을 늘리고 줄이는 입력의 규칙(Enter = 추가 버튼, 프로젝트가 정한 최소·최대 줄 수)을 실제 DOM으로 검사한다.
 import { useForm } from '@tanstack/react-form';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
@@ -43,13 +43,37 @@ function Harness({ maxItems, onSubmit }: { readonly maxItems?: number; readonly 
                   {rows.canRemove ? <button type="button" onClick={() => rows.remove(i)}>{`삭제 ${i + 1}`}</button> : null}
                 </div>
               ))}
-              <button type="button" onClick={add}>추가</button>
+              <button type="button" onClick={add}>
+                추가
+              </button>
               <p role="alert">{error}</p>
             </>
           );
         }}
       </FormArrayField>
     </form>
+  );
+}
+
+/** 최소 줄 수의 기본값과 프로젝트 지정값을 실제 추가·삭제 버튼으로 관찰한다. */
+function MinimumHarness({ minItems, initialNames }: { readonly minItems?: number; readonly initialNames: readonly string[] }) {
+  const form = useForm({ defaultValues: { rows: initialNames.map((name) => ({ name })) } });
+  return (
+    <FormArrayField form={form} name="rows" minItems={minItems}>
+      {(rows) => (
+        <>
+          {rows.items.map((item, i) => (
+            <div key={i}>
+              <input aria-label={`이름 ${i + 1}`} value={item.name} readOnly />
+              {rows.canRemove ? <button type="button" onClick={() => rows.remove(i)}>{`삭제 ${i + 1}`}</button> : null}
+            </div>
+          ))}
+          <button type="button" onClick={() => rows.append({ name: '새 줄' })}>
+            추가
+          </button>
+        </>
+      )}
+    </FormArrayField>
   );
 }
 
@@ -99,7 +123,7 @@ it('F5 최대 줄 수에서는 Enter가 추가도 제출도 하지 않는다', (
   expect(onSubmit).not.toHaveBeenCalled();
 });
 
-it('F6 한 줄뿐이면 삭제가 없고, 두 줄이 되면 모두 삭제가 있고, 하나를 지우면 다시 없다', () => {
+it('F6 최소 한 줄을 지정하면 한 줄뿐일 때 삭제가 없고, 두 줄에서 하나를 지우면 다시 없다', () => {
   render(<Harness />);
   expect(screen.queryByText(/^삭제/)).toBeNull();
   type('이름 1', 'Kim');
@@ -108,4 +132,29 @@ it('F6 한 줄뿐이면 삭제가 없고, 두 줄이 되면 모두 삭제가 있
   fireEvent.click(screen.getByText('삭제 1'));
   expect(rowCount()).toBe(1);
   expect(screen.queryByText(/^삭제/)).toBeNull();
+});
+
+it('F7 최소 줄 수를 생략하면 마지막 줄을 삭제하고 빈 목록에서 다시 추가할 수 있다', () => {
+  render(<MinimumHarness initialNames={['Kim']} />);
+  fireEvent.click(screen.getByRole('button', { name: '삭제 1' }));
+  expect(screen.queryAllByLabelText(/^이름 \d+$/)).toHaveLength(0);
+  expect(screen.queryByRole('button', { name: /^삭제/ })).toBeNull();
+
+  fireEvent.click(screen.getByRole('button', { name: '추가' }));
+  expect(rowCount()).toBe(1);
+  expect((screen.getByLabelText('이름 1') as HTMLInputElement).value).toBe('새 줄');
+  expect(screen.getByRole('button', { name: '삭제 1' })).toBeDefined();
+});
+
+it('F8 최소 두 줄을 지정하면 세 번째 줄을 추가한 뒤 어느 줄이든 삭제해 두 줄까지만 줄일 수 있다', () => {
+  render(<MinimumHarness minItems={2} initialNames={['Kim', 'Lee']} />);
+  expect(rowCount()).toBe(2);
+  expect(screen.queryByRole('button', { name: /^삭제/ })).toBeNull();
+
+  fireEvent.click(screen.getByRole('button', { name: '추가' }));
+  expect(screen.getAllByRole('button', { name: /^삭제/ })).toHaveLength(3);
+  fireEvent.click(screen.getByRole('button', { name: '삭제 1' }));
+  expect(rowCount()).toBe(2);
+  expect((screen.getByLabelText('이름 1') as HTMLInputElement).value).toBe('Lee');
+  expect(screen.queryByRole('button', { name: /^삭제/ })).toBeNull();
 });

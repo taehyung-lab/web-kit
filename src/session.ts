@@ -13,7 +13,12 @@ export interface StoredSession<C extends Credentials> {
   readonly credentials: C;
 }
 
-/** 저장 위치 adapter. 다른 탭에서 저장값이 바뀌었다는 사실과 그 값만 알린다. 판정은 하지 않는다. */
+/**
+ * 저장 위치 adapter. 다른 탭의 실제 변경만 subscribe로 알리고, 이 탭의 write는 알리지 않는다.
+ * 영속 저장 실패 뒤 read는 최신 논리 값 또는 null을 반환해야 하며 이전 값을 새 회전으로 내보내지 않는다.
+ * write(null) 뒤에는 다른 탭의 실제 쓰기가 오기 전까지 read도 null이다.
+ * 저장 오류 처리는 adapter가 맡는다. 저장소 읽기 불가 때의 세션 유지/종료는 프로젝트 정책이다.
+ */
 export interface SessionStore<C extends Credentials> {
   readonly read: () => StoredSession<C> | null;
   readonly write: (value: StoredSession<C> | null) => void;
@@ -35,6 +40,8 @@ export interface Session<C extends Credentials> {
   /** 서버 인증 계약이 세션 종료를 알렸을 때(결과 코드 표의 종료 행). http가 부른다. */
   readonly expire: (cause: unknown) => void;
   readonly current: () => StoredSession<C> | null;
+  /** 앱 소유 수명을 끝낸다. 영속 세션을 로그아웃하지 않고 외부 구독과 늦은 결과만 해제한다. */
+  readonly dispose: () => void;
   readonly generation: () => number;
   /** 그 세대에서 usedToken으로는 안 될 때 새 access token을 얻는다. origin은 재발급을 일으킨 요청 실패(없을 수 있음). 세대가 바뀌면 cancelled. */
   readonly refresh: (generation: number, usedToken: string, origin?: RequestFailure) => Promise<string>;
@@ -66,6 +73,7 @@ export function createSession<C extends Credentials>({
 }): Session<C> {
   let current = store.read();
   let generation = 0;
+  let disposed = false;
   let inFlight: { readonly generation: number; readonly promise: Promise<string> } | undefined;
   const listeners = new Set<(change: SessionChange) => void>();
 
@@ -76,8 +84,9 @@ export function createSession<C extends Credentials>({
     for (const listener of [...listeners]) listener(change);
   }
 
-  // 다른 탭의 저장값: 같은 sessionId면 회전, 아니면 세션 교체 또는 종료다.
-  store.subscribe((value) => {
+  /** 다른 탭 알림과 lock 안 저장 재확인이 같은 세대 판정을 쓴다. */
+  function acceptStored(value: StoredSession<C> | null) {
+    if (disposed) return;
     if (value !== null && current !== null && value.sessionId === current.sessionId) {
       current = value;
       return;
@@ -85,9 +94,11 @@ export function createSession<C extends Credentials>({
     if (value === null && current === null) return;
     current = value;
     advance(value === null ? { kind: 'ended', by: 'other-tab' } : { kind: 'replaced' });
-  });
+  }
+  const unsubscribeStore = store.subscribe(acceptStored);
 
   function start(credentials: C) {
+    if (disposed) return;
     current = { sessionId: newSessionId(), credentials };
     store.write(current);
     advance({ kind: 'started' });
@@ -105,6 +116,10 @@ export function createSession<C extends Credentials>({
   async function reissueOnce(started: number, usedToken: string, origin: RequestFailure | undefined): Promise<string> {
     if (generation !== started || current === null) throw cancelled();
     const stored = store.read();
+    if (stored?.sessionId !== current.sessionId) {
+      acceptStored(stored);
+      throw cancelled();
+    }
     if (stored !== null && stored.sessionId === current.sessionId && stored.credentials.accessToken !== usedToken) {
       current = stored;
       return stored.credentials.accessToken;
@@ -115,6 +130,11 @@ export function createSession<C extends Credentials>({
       next = await reissue(session.credentials);
     } catch (error: unknown) {
       if (generation !== started) throw cancelled();
+      const latest = store.read();
+      if (latest?.sessionId !== session.sessionId) {
+        acceptStored(latest);
+        throw cancelled();
+      }
       if (isRequestFailure(error) && (error.status === 401 || error.endsSession)) {
         endBy('server', error.endsSession ? error : (origin ?? error));
         throw cancelled();
@@ -125,6 +145,12 @@ export function createSession<C extends Credentials>({
       throw error;
     }
     if (generation !== started) throw cancelled();
+    // storage 이벤트가 큐에 남아 있어도 다른 계정·종료 값을 덮지 않는다.
+    const latest = store.read();
+    if (latest?.sessionId !== session.sessionId) {
+      acceptStored(latest);
+      throw cancelled();
+    }
     current = { sessionId: session.sessionId, credentials: next };
     store.write(current);
     return next.accessToken;
@@ -148,6 +174,15 @@ export function createSession<C extends Credentials>({
     end: (cause) => endBy('local', cause),
     expire: (cause) => endBy('server', cause),
     current: () => current,
+    dispose: () => {
+      if (disposed) return;
+      disposed = true;
+      unsubscribeStore();
+      current = null;
+      generation += 1;
+      inFlight = undefined;
+      listeners.clear();
+    },
     generation: () => generation,
     refresh,
     subscribe: (listener) => {

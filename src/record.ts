@@ -36,12 +36,7 @@ function failureOf(error: unknown): unknown {
  * 식별이 바뀌면 이전 내용을 보이지 않는다. 식별이 같고 key만 바뀌면 내용을 유지한 채 갱신 중으로 둔다.
  * 숨김 근거는 이 조회의 실패뿐이다. 다른 요청(보조 선택지·저장)의 실패는 여기에 들어오지 않는다.
  */
-export function useRecord<
-  TQueryFnData,
-  TError = unknown,
-  TData = TQueryFnData,
-  TQueryKey extends QueryKey = QueryKey,
->(
+export function useRecord<TQueryFnData, TError = unknown, TData = TQueryFnData, TQueryKey extends QueryKey = QueryKey>(
   options: UseQueryOptions<TQueryFnData, TError, TData, TQueryKey>,
   identity: unknown,
 ): RecordState<TData> {
@@ -63,8 +58,9 @@ export function useRecord<
   };
   if (hidesContent(query.error)) return { kind: 'missing', failure: query.error, wasReady: wasReady || hasData };
   const failure = failureOf(query.error);
-  if (query.data !== undefined)
-    return { kind: 'ready', data: query.data, refresh: { refreshing: query.isFetching, failure, retry } };
+  if (query.data !== undefined) return { kind: 'ready', data: query.data, refresh: { refreshing: query.isFetching, failure, retry } };
   if (failure !== undefined) return { kind: 'failed', failure, retry };
   return { kind: 'pending' };
 }
+
+export { maskText } from './masking';
