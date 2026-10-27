@@ -3,7 +3,7 @@ export const appResources = {
   ko: {
     app: {
       title: '관리자',
-      nav: { products: '상품' },
+      nav: { products: '상품', members: '회원' },
       signOut: '로그아웃',
       language: '언어',
       routeNotFound: '페이지를 찾을 수 없습니다.',
@@ -15,7 +15,7 @@ export const appResources = {
   en: {
     app: {
       title: 'Admin',
-      nav: { products: 'Products' },
+      nav: { products: 'Products', members: 'Members' },
       signOut: 'Sign out',
       language: 'Language',
       routeNotFound: 'This page does not exist.',

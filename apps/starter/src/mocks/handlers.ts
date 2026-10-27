@@ -2,6 +2,7 @@
 import type { Product, ProductUpsertRequest } from '@/api/generated/models';
 import { delay, http, HttpResponse, type DefaultBodyType } from 'msw';
 import { mockDb } from './db';
+import { MEMBERS } from './members';
 
 const API = '*/api';
 /** 일괄 작업 한도(mock 업무 규칙). 넘으면 HTTP 200 봉투에 업무 거절 코드를 준다. */
@@ -91,6 +92,34 @@ export const handlers = [
       });
     const content = rows.slice(page * size, page * size + size).map(({ stock: _stock, description: _description, options: _options, updatedAt: _updatedAt, ...summary }) => summary);
     return ok({ content, totalElements: rows.length });
+  }),
+
+  http.get(`${API}/members`, async ({ request }) => {
+    await latency();
+    const denied = unauthorized(request);
+    if (denied) return denied;
+    const query = new URL(request.url).searchParams;
+    const keywords = query.getAll('keyword').map((item) => item.split(':') as [keyof (typeof MEMBERS)[number], string]);
+    const methods = query.getAll('signupMethod');
+    const statuses = query.getAll('accountStatus');
+    const periodType = (query.get('periodType') ?? 'joinedAt') as 'joinedAt' | 'lastLoginAt';
+    const from = query.get('from');
+    const to = query.get('to');
+    const [sortKey = 'joinedAt', direction = 'desc'] = (query.get('sort') ?? '').split(',');
+    const page = Number(query.get('page') ?? 0);
+    const size = Number(query.get('size') ?? 100);
+    const rows = MEMBERS.filter((member) => keywords.every(([field, value]) => String(member[field]).toLowerCase().includes(value.toLowerCase())))
+      .filter((member) => methods.length === 0 || methods.includes(member.signupMethod))
+      .filter((member) => statuses.length === 0 || statuses.includes(member.accountStatus))
+      .filter((member) => from === null || member[periodType].slice(0, 10) >= from)
+      .filter((member) => to === null || member[periodType].slice(0, 10) <= to)
+      .sort((a, b) => {
+        const left = a[sortKey as keyof (typeof MEMBERS)[number]];
+        const right = b[sortKey as keyof (typeof MEMBERS)[number]];
+        const order = left < right ? -1 : left > right ? 1 : 0;
+        return direction === 'asc' ? order : -order;
+      });
+    return ok({ content: rows.slice(page * size, page * size + size), totalElements: rows.length });
   }),
 
   http.post(`${API}/products`, async ({ request }) => {

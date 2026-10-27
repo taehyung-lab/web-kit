@@ -1,6 +1,6 @@
 {
   "name": "@boosterlab/web-kit",
-  "version": "3.0.0-dev.1",
+  "version": "3.0.0-dev.2",
   "private": true,
   "type": "module",
   "sideEffects": [
@@ -24,7 +24,7 @@
     "./testing": "./src/testing.tsx",
     "./testing/session": "./src/session-testing.ts",
     "./list/ui": "./src/list-ui.tsx",
-    "./filter/ui": "./src/list-ui.tsx",
+    "./permission": "./src/permission.tsx",
     "./session/browser": "./src/browser-session-store.ts",
     "./session/idle": "./src/session-idle.ts",
     "./styles.css": "./src/ui/styles.css"
@@ -37,19 +37,21 @@
     "README.md"
   ],
   "peerDependencies": {
+    "@base-ui/react": "1.7.0",
     "@tanstack/react-form": "1.33.5",
     "@tanstack/react-query": "5.102.6",
     "@tanstack/react-router": "1.170.32",
     "axios": "1.20.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "@base-ui/react": "1.7.0"
+    "@tanstack/react-virtual": "^3.14.9"
   },
   "devDependencies": {
     "@base-ui/react": "1.7.0",
     "@tanstack/react-form": "1.33.5",
     "@tanstack/react-query": "5.102.6",
     "@tanstack/react-router": "1.170.32",
+    "@tanstack/react-virtual": "3.14.9",
     "@testing-library/react": "16.3.2",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.5",
@@ -85,6 +87,9 @@
       "optional": true
     },
     "@base-ui/react": {
+      "optional": true
+    },
+    "@tanstack/react-virtual": {
       "optional": true
     }
   }

@@ -9,9 +9,16 @@ export function addKeyword(items: readonly Keyword[], field: string, input: stri
   if (value === '' || items.some((item) => item.field === field && item.value === value)) return items;
   return [...items, { field, value }];
 }
-/** 같은 열은 방향을 바꾸고 새 열은 현재 방향을 유지한다. */
-export function nextSort(current: { readonly sort: string; readonly order: 'asc' | 'desc' }, sort: string) {
-  return { sort, order: current.sort === sort ? (current.order === 'asc' ? 'desc' : 'asc') : current.order } as const;
+/** 처음 누른 머리글의 정렬 방향. current는 지금 방향을 그대로 쓴다. 화면마다 정하는 값이다. */
+export type SortFirst = 'asc' | 'desc' | 'current';
+/** 같은 열은 방향을 바꾸고 새 열은 화면이 정한 첫 방향으로 정렬한다. */
+export function nextSort(
+  current: { readonly sort: string; readonly order: 'asc' | 'desc' },
+  sort: string,
+  first: SortFirst = 'current',
+) {
+  if (current.sort === sort) return { sort, order: current.order === 'asc' ? 'desc' : 'asc' } as const;
+  return { sort, order: first === 'current' ? current.order : first } as const;
 }
 /** 검색용 전체 선택을 빈 배열로 정규화한다. 권한/등록 입력에는 사용하지 않는다. */
 export function normalizeFilterSelection<T>(selected: readonly T[], options: readonly T[]): readonly T[] {

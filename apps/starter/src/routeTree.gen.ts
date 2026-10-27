@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppMembersIndexRouteImport } from './routes/_app/members/index'
 import { Route as AppProductsIndexRouteImport } from './routes/_app/products/index'
 import { Route as AppProductsNewRouteImport } from './routes/_app/products/new'
 import { Route as AppProductsProductIdIndexRouteImport } from './routes/_app/products/$productId/index'
@@ -29,6 +30,11 @@ const LoginRoute = LoginRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMembersIndexRoute = AppMembersIndexRouteImport.update({
+  id: '/members/',
+  path: '/members/',
   getParentRoute: () => AppRoute,
 } as any)
 const AppProductsIndexRoute = AppProductsIndexRouteImport.update({
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
   '/products/new': typeof AppProductsNewRoute
+  '/members/': typeof AppMembersIndexRoute
   '/products/': typeof AppProductsIndexRoute
   '/products/$productId/edit': typeof AppProductsProductIdEditRoute
   '/products/$productId/': typeof AppProductsProductIdIndexRoute
@@ -66,6 +73,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/': typeof AppIndexRoute
   '/products/new': typeof AppProductsNewRoute
+  '/members': typeof AppMembersIndexRoute
   '/products': typeof AppProductsIndexRoute
   '/products/$productId/edit': typeof AppProductsProductIdEditRoute
   '/products/$productId': typeof AppProductsProductIdIndexRoute
@@ -76,6 +84,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_app/': typeof AppIndexRoute
   '/_app/products/new': typeof AppProductsNewRoute
+  '/_app/members/': typeof AppMembersIndexRoute
   '/_app/products/': typeof AppProductsIndexRoute
   '/_app/products/$productId/edit': typeof AppProductsProductIdEditRoute
   '/_app/products/$productId/': typeof AppProductsProductIdIndexRoute
@@ -86,6 +95,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/products/new'
+    | '/members/'
     | '/products/'
     | '/products/$productId/edit'
     | '/products/$productId/'
@@ -94,6 +104,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/'
     | '/products/new'
+    | '/members'
     | '/products'
     | '/products/$productId/edit'
     | '/products/$productId'
@@ -103,6 +114,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/_app/'
     | '/_app/products/new'
+    | '/_app/members/'
     | '/_app/products/'
     | '/_app/products/$productId/edit'
     | '/_app/products/$productId/'
@@ -134,6 +146,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/members/': {
+      id: '/_app/members/'
+      path: '/members'
+      fullPath: '/members/'
+      preLoaderRoute: typeof AppMembersIndexRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/products/': {
@@ -170,6 +189,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
   AppProductsNewRoute: typeof AppProductsNewRoute
+  AppMembersIndexRoute: typeof AppMembersIndexRoute
   AppProductsIndexRoute: typeof AppProductsIndexRoute
   AppProductsProductIdEditRoute: typeof AppProductsProductIdEditRoute
   AppProductsProductIdIndexRoute: typeof AppProductsProductIdIndexRoute
@@ -178,6 +198,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppIndexRoute: AppIndexRoute,
   AppProductsNewRoute: AppProductsNewRoute,
+  AppMembersIndexRoute: AppMembersIndexRoute,
   AppProductsIndexRoute: AppProductsIndexRoute,
   AppProductsProductIdEditRoute: AppProductsProductIdEditRoute,
   AppProductsProductIdIndexRoute: AppProductsProductIdIndexRoute,

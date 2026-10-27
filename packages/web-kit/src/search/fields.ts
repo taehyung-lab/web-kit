@@ -1,6 +1,7 @@
 // 파일 책임: 목록 URL 검색 선언 하나에서 필드별 복구·기본값·정규 URL·route 연결(validateSearch·진입 주소 교정)을 만든다.
 import type { FetchQueryOptions } from '@tanstack/react-query';
 import { redirect } from '@tanstack/react-router';
+import type { SortFirst } from './interactions';
 
 type StandardResult<T> =
   | { readonly value: T; readonly issues?: undefined }
@@ -69,6 +70,8 @@ export interface ViewKeys {
 export interface SearchDefinition<F extends AnyFields> {
   readonly fields: F;
   readonly view: ViewKeys;
+  /** 처음 누른 머리글의 정렬 방향(화면 값). */
+  readonly sortFirst: SortFirst;
   readonly groups: readonly SearchGroup[];
   readonly gated: boolean;
   readonly defaults: FullSearch<F>;
@@ -120,6 +123,8 @@ export function defineSearch<const F extends AnyFields>(spec: {
   readonly gated?: boolean;
   /** 페이지·크기·정렬 필드 이름. 생략하면 page·size·sort·order. */
   readonly view?: Partial<Record<keyof ViewKeys, keyof F & string>>;
+  /** 처음 누른 머리글의 정렬 방향. 생략하면 지금 방향을 유지한다. */
+  readonly sortFirst?: SortFirst;
 }): SearchDefinition<F> {
   const keys = Object.keys(spec.fields);
   const groups = spec.groups ?? [];
@@ -177,6 +182,7 @@ export function defineSearch<const F extends AnyFields>(spec: {
   return {
     fields: spec.fields,
     view: { page: 'page', size: 'size', sort: 'sort', order: 'order', ...spec.view },
+    sortFirst: spec.sortFirst ?? 'current',
     groups,
     gated,
     defaults,

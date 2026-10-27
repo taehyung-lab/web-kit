@@ -21,8 +21,9 @@ React 19 + TanStack(Router·Query·Form) + zod 4 + axios/orval을 쓰고, 서버
 | `/session/browser` | 브라우저 저장 장애 복구·외부 이벤트 판별·해제 | 저장 key·동기 schema·읽기 불가 정책 |
 | `/http` | 헤더·토큰, 봉투 해제, 401 재발급 뒤 한 번 재전송, 반영 여부 판정 | 공개 경로, 운영 헤더, axios 기본값 |
 | `/query` | 재시도 대상, 실패 알림 한 번, 선언한 무효화, 민감한 쓰기의 입력값 기록 지움, 세션 전환 시 비움 | 재시도 횟수, 알림 표시, staleTime 등 수치 |
-| `/search` · `/list` | URL 필드 복구·정규 URL·진입 주소 교정(route `validateSearch`·`beforeLoad`), 검색 확정, 선택지 확인, 결과 출처, 선택·일괄 작업 | 필드 schema·encode·기본값, 조회 함수 |
-| `/list/ui` · `/filter/ui` | 검색·초기화·기간·키워드·표·페이지 이동·일괄 확인 | 필드·시간대·컬럼·성공한 ID·문구 |
+| `/search` · `/list` | URL 필드 복구·정규 URL·진입 주소 교정(route `validateSearch`·`beforeLoad`), 검색 확정(기간 검증·입력 중 키워드 포함), 정렬 전이, 선택지 확인, 결과 출처, 선택·일괄 작업, 다운로드 대상 고정 | 필드 schema·encode·기본값·조회 시작 조건·첫 정렬 방향, 조회 함수, 다운로드 요청 |
+| `/list/ui` | `List` 묶음 부품: 필터·기간·키워드·다중 선택·결과 상태·표(가상화)·총건수·정렬·페이지 이동·쓰기 잠금·일괄 확인·다운로드 | 배치·필드·시간대·컬럼·성공한 ID·문구·실패 문구 |
+| `/permission` | 진입 거부·메뉴 숨김·버튼 비활성의 닫힘 기본 판정 | 권한 상태·판정 함수·권한 목록 |
 | `/filter` | 기간 검증, 오류 표시, 체크 트리 | checkbox·문구·스타일 |
 | `/form` · `/form/ui` · `/dialog` | 제출·확인 관문·저장·기준선·서버 필드 오류·늦은 결과, 기본 필드·단일 확인·이탈 조정 | schema·원본·저장 함수·완료 의도·문구 |
 | `/record` · `/detail/ui` | 단건 상태·재시도·항목·이력 표현·선언적 마스킹 | queryOptions·업무 항목·노출 정책 |
@@ -30,14 +31,15 @@ React 19 + TanStack(Router·Query·Form) + zod 4 + axios/orval을 쓰고, 서버
 | `/testing` | 프로젝트 Field·확인창·재시도 focus adapter 검사 | 자기 UI adapter |
 | `/testing/session` | 저장 실패·다른 탭 변경·종료의 adapter 검사(React/Form import 없음) | 자기 저장 adapter와 격리된 검사 환경 |
 
-React는 peer이고 번들에 포함하지 않는다. 현재 React·ReactDOM peer는 필수이며 TanStack·axios·Base UI peer는 optional이다. 루트 소스가 React를 import하지 않는 것과 React 없는 독립 패키지인 것은 다르다.
+React는 peer이고 번들에 포함하지 않는다. 현재 React·ReactDOM peer는 필수이며 TanStack(react-virtual 포함)·axios·Base UI peer는 optional이다. `/list/ui`를 쓰면 `@base-ui/react`와 `@tanstack/react-virtual`이 필요하다. 루트 소스가 React를 import하지 않는 것과 React 없는 독립 패키지인 것은 다르다.
 
 ## 스킬
 
 | 스킬 | 언제 읽나 |
 |---|---|
 | `web-kit-http` | API 호출, 실패, 재발급, 로그인/로그아웃, QueryClient, 무효화 |
-| `web-kit-list` | 목록 검색·조회·선택·일괄 작업 |
+| `web-kit-list` | 목록 검색·조회·선택·일괄 작업·엑셀 다운로드 흐름·목록 부품 |
+| `web-kit-permission` | 경로 진입 차단·메뉴 숨김·버튼 비활성 연결 |
 | `web-kit-form` | 등록·수정 폼(줄 추가·삭제 입력 포함), 확인 실행 |
 | `web-kit-record` | 상세·수정 원본 단건 |
 
@@ -47,7 +49,7 @@ React는 peer이고 번들에 포함하지 않는다. 현재 React·ReactDOM pee
 
 ```sh
 mkdir -p .agents/skills
-for name in web-kit-http web-kit-list web-kit-form web-kit-record; do
+for name in web-kit-http web-kit-list web-kit-permission web-kit-form web-kit-record; do
   link=".agents/skills/$name"
   if [ -e "$link" ] || [ -L "$link" ]; then
     printf '%s\n' "기존 경로를 확인하세요: $link" >&2

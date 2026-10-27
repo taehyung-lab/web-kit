@@ -113,3 +113,32 @@ it.each([...entriesWithoutIdle, '../src/use-list.ts'])(
     }
   },
 );
+
+/** 목록·폼은 권한 판정과 결합하지 않는다(0005). 권한 결과는 프로젝트가 연결한다. */
+it.each([
+  '../src/form/index.ts',
+  '../src/form/ui.tsx',
+  '../src/use-list.ts',
+  '../src/list.ts',
+  '../src/list-ui.tsx',
+  '../src/record.ts',
+  '../src/search/index.ts',
+])(
+  '%s는 권한을 import하지 않는다',
+  (entry) => {
+    const queue = [entry];
+    const visited = new Set<string>();
+    while (queue.length) {
+      const file = queue.pop()!;
+      if (visited.has(file)) continue;
+      visited.add(file);
+      expect(file).not.toMatch(/permission/);
+      for (const [, specifier] of sources[file]!.matchAll(/(?:from|import)\s+['"]([^'"]+)['"]/g)) {
+        if (!specifier!.startsWith('.')) continue;
+        const target = resolve(file, specifier!);
+        expect(target).toBeDefined();
+        queue.push(target!);
+      }
+    }
+  },
+);

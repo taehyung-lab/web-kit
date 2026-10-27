@@ -1,7 +1,6 @@
 // 파일 책임: 상품 목록 URL 검색 선언(web-kit defineSearch)과, 확정 검색 → 목록 요청 변환.
 import type { ListProductsParams } from '@/api/generated/models';
 import { validateDateRange } from '@boosterlab/web-kit';
-import type { DraftIssue } from '@boosterlab/web-kit/list';
 import { defineSearch, type FullSearch } from '@boosterlab/web-kit/search';
 import { z } from 'zod';
 import { categoryOptionsQuery } from '../api/categories';
@@ -46,15 +45,13 @@ export const productListSearch = defineSearch({
   },
   groups: [{ fields: ['from', 'to'], valid: ({ from, to }) => validateDateRange(from as string | undefined, to as string | undefined) !== 'reversed' }],
   view: { size: 'pageSize' },
+  sortFirst: 'desc',
 });
 
 export type ProductListSearch = FullSearch<typeof productListSearch.fields>;
 
-/** 검색 확정 전 직접 입력 검증. 기간이 반쯤 비었거나 역순이면 확정하지 않는다. */
-export function validateProductListDraft(draft: ProductListSearch): readonly DraftIssue[] {
-  const issue = validateDateRange(draft.from, draft.to);
-  return issue === undefined ? [] : [{ field: 'period', code: issue }];
-}
+/** 직접 입력하는 기간 쌍. 반쯤 비었거나 역순이면 검색을 확정하지 않는다(useList periods). */
+export const PRODUCT_LIST_PERIODS = [['from', 'to']] as const;
 
 /** 확정 검색 → 서버 요청. 서버 page는 0부터, 정렬은 Spring "필드,방향" 형식이다. */
 export function toListProductsParams(search: ProductListSearch): ListProductsParams {

@@ -1,9 +1,12 @@
 /** 목록의 확정 조건·초안·결과 출처·선택과 일괄 실행 수명을 소유한다. */
-// 파일 책임: 목록 화면 하나의 검색 초안·확정, 선택지 확인, 조회 상태, 이전 결과, 행 선택·일괄 작업 수명을 소유한다.
+// 파일 책임: 목록 화면 하나의 검색 초안·확정(기간 검증·입력 중 키워드 포함), 선택지 확인, 조회 상태, 이전 결과, 정렬 전이,
+// 행 선택·일괄 작업 수명을 소유한다. 화면 부품을 바꾸거나 숨겨도 검색 직전 보장이 남도록 UI가 아닌 여기서 한다.
 import { useQueries, useQuery, type QueryKey, type UseQueryOptions } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { isRequestFailure } from './failure';
+import { validateDateRange } from './search/date-range';
 import { sameSearchValue, type FullSearch, type SearchDefinition, type SearchField, type UrlSearch } from './search/fields';
+import { addKeyword, nextSort, type Keyword } from './search/interactions';
 
 type AnyFields = Record<string, SearchField<any>>;
 
@@ -66,9 +69,27 @@ export interface ListOptions<
   readonly selectable?: (row: TRow) => boolean;
   /** 초안 모양이 URL 값과 다를 때만 선언한다. 없으면 초안은 검색 값 그대로다. */
   readonly draft?: DraftCodec<F, D>;
-  /** 검색 확정 직전의 직접 입력 검증(역순 기간 등). 초안 모양을 받는다. */
+  /** 검색 확정 직전의 직접 입력 검증(제품의 기간 한도 등). 초안 모양을 받는다. */
   readonly validateDraft?: (draft: NoInfer<D>) => readonly DraftIssue[];
+  /**
+   * 직접 입력하는 기간 쌍 [시작 필드, 끝 필드](초안 키). 검색 직전 한쪽만·없는 날짜·역순이면 확정하지 않고
+   * `{ field: 시작 필드, code: 'incomplete' | 'invalid' | 'reversed' }`를 낸다. 입력 UI와 무관하게 지킨다.
+   */
+  readonly periods?: readonly (readonly [NoInfer<keyof D & string>, NoInfer<keyof D & string>])[];
 }
+
+/** 키워드 필드 하나의 입력 중 상태. 추가를 누르지 않아도 검색이 합친다. */
+export interface KeywordInput {
+  readonly choice: string;
+  readonly text: string;
+  readonly setChoice: (choice: string) => void;
+  readonly setText: (text: string) => void;
+  /** 입력 중 글자를 칩으로 추가한다(trim·같은 대상 중복 제거). */
+  readonly add: () => void;
+}
+
+/** 입력 중 글자. 초안과 같은 수명이라 페이지·정렬 이동에는 남고 필터 교체·초기화에는 지워진다. */
+type PendingKeywords = Readonly<Record<string, { readonly choice: string; readonly text: string }>>;
 
 /** 선택지 확인 하나의 판정. kept는 배열 값 중 선택지에 있는 항목이다. */
 type Judged = {
@@ -207,8 +228,9 @@ export function useList<
   const refetch = () => void query.refetch({ cancelRefetch: false });
 
   // ── 초안과 확정 ──
-  const [draftState, setDraftState] = useState(() => ({ key: filterKey, draft: codec.from(full), issues: [] as readonly DraftIssue[] }));
-  const draftCurrent = draftState.key === filterKey ? draftState : { key: filterKey, draft: codec.from(full), issues: [] };
+  const fresh = () => ({ key: filterKey, draft: codec.from(full), issues: [] as readonly DraftIssue[], inputs: {} as PendingKeywords });
+  const [draftState, setDraftState] = useState(fresh);
+  const draftCurrent = draftState.key === filterKey ? draftState : fresh();
   if (draftCurrent !== draftState) setDraftState(draftCurrent);
   // 같은 이벤트 안의 patchDraft → submit도 최신 초안을 보게 한다.
   const draftLatest = useRef(draftCurrent);
@@ -234,13 +256,56 @@ export function useList<
   const keys = definition.view;
   const firstPage = () => (keys.page in definition.fields ? { [keys.page]: definition.fields[keys.page]!.default } : {});
 
-  /** 초안을 검증하고 첫 페이지로 확정한다. 보기 상태(size·sort·order)는 초안에 든 값 그대로다. */
+  /** 입력 중 키워드를 초안에 합친다. 대상이 없거나 빈 글자는 그대로 둔다. */
+  function withInputs(state: typeof draftCurrent): typeof draftCurrent {
+    let draft = state.draft as Record<string, unknown>;
+    for (const [name, input] of Object.entries(state.inputs)) {
+      if (input.text.trim() === '' || input.choice === '') continue;
+      const items = Array.isArray(draft[name]) ? (draft[name] as readonly Keyword[]) : [];
+      draft = { ...draft, [name]: addKeyword(items, input.choice, input.text) };
+    }
+    return { ...state, draft: draft as D, inputs: {} };
+  }
+
+  /** 기간 선언과 화면 검증을 합친 검색 직전 오류. */
+  function issuesOf(draft: D): readonly DraftIssue[] {
+    const values = draft as Record<string, unknown>;
+    const periodIssues = (latest.current.periods ?? []).flatMap(([from, to]) => {
+      const code = validateDateRange(values[from] as string | undefined, values[to] as string | undefined);
+      return code === undefined ? [] : [{ field: from, code }];
+    });
+    return [...periodIssues, ...(latest.current.validateDraft?.(draft) ?? [])];
+  }
+
+  /** 입력 중 키워드를 합치고 검증한 뒤 첫 페이지로 확정한다. 보기 상태(size·sort·order)는 지금 값 그대로다. */
   function submit() {
-    const draft = draftLatest.current;
-    const issues = latest.current.validateDraft?.(draft.draft) ?? [];
-    setDraft({ ...draft, issues });
+    const merged = withInputs(draftLatest.current);
+    const issues = issuesOf(merged.draft);
+    setDraft({ ...merged, issues });
     if (issues.length > 0) return;
-    commit({ ...full, ...codec.to(draft.draft), ...firstPage(), searched: true });
+    commit({ ...full, ...codec.to(merged.draft), ...firstPage(), searched: true });
+  }
+
+  /** 키워드 필드 하나의 입력 중 상태. choices는 고를 수 있는 검색 대상이고 첫 항목이 기본이다. */
+  function keywordInput(name: keyof D & string, choices: readonly string[]): KeywordInput {
+    const saved = draftCurrent.inputs[name];
+    const choice = saved !== undefined && choices.includes(saved.choice) ? saved.choice : (choices[0] ?? '');
+    const text = saved?.text ?? '';
+    const put = (next: { choice: string; text: string }) =>
+      setDraft({ ...draftLatest.current, inputs: { ...draftLatest.current.inputs, [name]: next } });
+    return {
+      choice,
+      text,
+      setChoice: (value) => put({ choice: value, text: draftLatest.current.inputs[name]?.text ?? '' }),
+      setText: (value) => put({ choice: draftLatest.current.inputs[name]?.choice ?? choice, text: value }),
+      add: () => {
+        const state = draftLatest.current;
+        const input = state.inputs[name];
+        if (input === undefined) return;
+        const others = Object.fromEntries(Object.entries(state.inputs).filter(([key]) => key !== name));
+        setDraft({ ...withInputs({ ...state, inputs: { [name]: input } }), inputs: others });
+      },
+    };
   }
 
   // ── 선택 ──
@@ -253,7 +318,8 @@ export function useList<
   else if (isCurrent && selection.sourceKey !== sourceKey)
     selectionCurrent = { lifetime: urlKey, sourceKey, selected: new Set([...selection.selected].filter((id) => allowed.includes(id))) };
   if (selectionCurrent !== selection) setSelection(selectionCurrent);
-  const selectedIds = isCurrent ? [...selectionCurrent.selected] : [];
+  // 화면에 보이는 행 순서로 낸다(다운로드·일괄 작업 대상 순서).
+  const selectedIds = isCurrent ? rows.map(options.rowId).filter((id) => selectionCurrent.selected.has(id)) : [];
   const [runningAction, setRunningAction] = useState(false);
   const actionLock = useRef(false);
   const actionLifetime = useRef<string | undefined>(undefined);
@@ -341,14 +407,24 @@ export function useList<
     submit,
     /** 선언한 기본값(첫 진입 상태)으로 되돌린다. */
     reset: () => {
-      setDraft({ key: filterKey, draft: codec.from(definition.defaults), issues: [] });
+      setDraft({ key: filterKey, draft: codec.from(definition.defaults), issues: [], inputs: {} });
       commit(definition.defaults);
     },
+    keywordInput,
     /** 현재 조건을 다시 읽는다(결과가 있는 상태의 재조회 실패 뒤 다시 시도 등). */
     refresh: refetch,
     goToPage: (value: number) => commit({ ...full, [keys.page]: value }),
     setSize: (value: number) => commit({ ...full, ...firstPage(), [keys.size]: value }),
     setSort: (sort: string, order: 'asc' | 'desc') => commit({ ...full, ...firstPage(), [keys.sort]: sort, [keys.order]: order }),
+    /** 머리글 정렬: 같은 열은 방향을 바꾸고 새 열은 선언한 첫 방향(sortFirst)이다. */
+    toggleSort: (sort: string) => {
+      const next = nextSort(
+        { sort: String(values[keys.sort] ?? ''), order: values[keys.order] === 'asc' ? 'asc' : 'desc' },
+        sort,
+        definition.sortFirst,
+      );
+      commit({ ...full, ...firstPage(), [keys.sort]: next.sort, [keys.order]: next.order });
+    },
     selection: {
       selectedIds,
       canSelect: (id: string) => allowed.includes(id),

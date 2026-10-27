@@ -118,3 +118,160 @@
   display: grid;
   gap: var(--wk-space);
 }
+/* 목록 부품(List.*). 배치는 소비자가 정하고 여기서는 부품 안쪽 모양만 둔다. */
+.wk-button-primary {
+  background: var(--wk-accent);
+  border-color: var(--wk-accent);
+  color: var(--wk-accent-fg, #fff);
+}
+.wk-button[aria-pressed='true'],
+.wk-button[aria-current='page'] {
+  border-color: var(--wk-accent);
+  font-weight: 600;
+}
+.wk-options,
+.wk-period,
+.wk-keywords,
+.wk-inline {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.wk-check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.wk-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid var(--wk-border);
+  border-radius: 4px;
+  background: var(--wk-bg);
+  cursor: pointer;
+}
+.wk-check[data-checked],
+.wk-check[data-indeterminate] {
+  background: var(--wk-accent);
+  border-color: var(--wk-accent);
+}
+.wk-check[data-disabled] {
+  opacity: 0.5;
+  cursor: default;
+}
+.wk-check-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--wk-accent-fg, #fff);
+}
+.wk-check-indicator[data-unchecked] {
+  display: none;
+}
+.wk-check:focus-visible {
+  outline: 2px solid var(--wk-accent);
+  outline-offset: 2px;
+}
+.wk-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--wk-border);
+  border-radius: 999px;
+}
+.wk-chip-remove {
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.wk-state {
+  display: flex;
+  min-height: 8rem;
+  align-items: center;
+  justify-content: center;
+  gap: var(--wk-space);
+  color: color-mix(in srgb, var(--wk-fg) 65%, transparent);
+}
+.wk-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--wk-space);
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--wk-danger) 30%, transparent);
+  border-radius: var(--wk-radius);
+  background: color-mix(in srgb, var(--wk-danger) 5%, transparent);
+}
+.wk-table-viewport {
+  overflow: auto;
+  border: 1px solid var(--wk-border);
+  border-radius: var(--wk-radius);
+}
+.wk-table-viewport[data-virtual] {
+  max-height: 576px;
+}
+.wk-table-viewport[data-virtual] thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--wk-bg);
+}
+.wk-table tr[data-selected] {
+  background: color-mix(in srgb, var(--wk-accent) 10%, transparent);
+}
+.wk-row-link {
+  cursor: pointer;
+}
+.wk-row-link:hover {
+  background: color-mix(in srgb, var(--wk-fg) 4%, transparent);
+}
+.wk-cell-select {
+  width: 1%;
+}
+.wk-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+.wk-sort-glyph {
+  font-size: 0.75em;
+  opacity: 0.3;
+}
+.wk-sort-glyph[data-active] {
+  opacity: 1;
+}
+.wk-total {
+  margin: 0;
+}
+.wk-pagination {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+}
+.wk-fieldset {
+  margin: 0;
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}

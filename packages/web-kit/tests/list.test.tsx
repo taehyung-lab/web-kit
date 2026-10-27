@@ -693,3 +693,106 @@ it('L33 성공 ID 없는 런타임 결과는 전체 성공으로 처리하지 �
   });
   expect(latest.selection.selectedIds).toEqual(['1']);
 });
+
+it('L34 늦게 도착한 이전 조건 응답은 현재 결과·선택·상태를 덮지 않는다', async () => {
+  const first = deferred<ListPage<Row>>();
+  const fetchRows = vi.fn((search: unknown) => ((search as { page: number }).page === 1 ? first.promise : Promise.resolve(page('p2'))));
+  mount({ definition: makeDefinition(), initial: {}, fetchRows });
+  act(() => latest.goToPage(2));
+  await flush();
+  act(() => latest.selection.toggleRow('p2', true));
+  await act(async () => first.resolve(page('late')));
+  await flush();
+  expect(latest.rows.map((row) => row.id)).toEqual(['p2']);
+  expect(latest.isCurrent).toBe(true);
+  expect(latest.status.kind).toBe('rows');
+  expect(latest.selection.selectedIds).toEqual(['p2']);
+});
+
+/** 키워드·기간 필드를 가진 목록. 입력 중 키워드와 기간 선언을 검사한다. */
+function KeywordHarness(props: { onSearch: (search: unknown) => void }) {
+  const definition = keywordDefinition;
+  const [search, setSearch] = useState(() => definition.validateSearch({}));
+  keywordLatest = useList({
+    definition,
+    search,
+    navigate: (next) => setSearch(definition.validateSearch(next as Record<string, unknown>)),
+    query: (full) => ({
+      queryKey: ['kw', full],
+      queryFn: async () => {
+        props.onSearch(full);
+        return page('1');
+      },
+    }),
+    rowId: (row) => row.id,
+    periods: [['from', 'to']],
+  });
+  return null;
+}
+const keywordDefinition = defineSearch({
+  fields: {
+    page: { schema: z.number().int().min(1), default: 1 },
+    size: { schema: z.number().int(), default: 20 },
+    words: { schema: z.array(z.object({ field: z.string(), value: z.string() })), default: [] },
+    q: { schema: z.string(), default: '' },
+    from: { schema: z.string(), default: undefined },
+    to: { schema: z.string(), default: undefined },
+  },
+});
+let keywordLatest!: ReturnType<typeof useList<(typeof keywordDefinition)['fields'], Row>>;
+function mountKeywords() {
+  const searches: unknown[] = [];
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={client}>
+      <KeywordHarness onSearch={(search) => searches.push(search)} />
+    </QueryClientProvider>,
+  );
+  return searches;
+}
+
+it('L35 입력 중 키워드는 페이지 이동에는 남고 필터 교체에는 지워지며, 추가하지 않아도 검색이 합친다', async () => {
+  const searches = mountKeywords();
+  await act(async () => {});
+  act(() => keywordLatest.keywordInput('words', ['name', 'phone']).setChoice('phone'));
+  act(() => keywordLatest.keywordInput('words', ['name', 'phone']).setText(' 010 '));
+  act(() => keywordLatest.goToPage(2));
+  expect(keywordLatest.keywordInput('words', ['name', 'phone'])).toMatchObject({ choice: 'phone', text: ' 010 ' });
+  act(() => keywordLatest.patchDraft({ q: 'x' }));
+  act(() => keywordLatest.submit());
+  await act(async () => {});
+  expect(searches.at(-1)).toMatchObject({ words: [{ field: 'phone', value: '010' }], q: 'x', page: 1 });
+  expect(keywordLatest.keywordInput('words', ['name', 'phone']).text).toBe('');
+  act(() => keywordLatest.keywordInput('words', ['name']).setText('typed'));
+  act(() => keywordLatest.reset());
+  expect(keywordLatest.keywordInput('words', ['name']).text).toBe('');
+});
+
+it('L36 기간 선언은 UI 없이도 한쪽만·없는 날짜·역순을 막고 요청하지 않는다', async () => {
+  const searches = mountKeywords();
+  await act(async () => {});
+  const before = searches.length;
+  for (const [from, to, code] of [
+    ['2026-01-02', undefined, 'incomplete'],
+    ['2026-02-30', '2026-03-01', 'invalid'],
+    ['2026-03-02', '2026-03-01', 'reversed'],
+  ] as const) {
+    act(() => keywordLatest.patchDraft({ from, to }));
+    act(() => keywordLatest.submit());
+    expect(keywordLatest.issues).toEqual([{ field: 'from', code }]);
+  }
+  await act(async () => {});
+  expect(searches.length).toBe(before);
+  act(() => keywordLatest.patchDraft({ from: '2026-03-01', to: '2026-03-02' }));
+  act(() => keywordLatest.submit());
+  await act(async () => {});
+  expect(searches.at(-1)).toMatchObject({ from: '2026-03-01', to: '2026-03-02' });
+});
+
+it('L37 선택 ID는 화면에 보이는 행 순서다', async () => {
+  mount({ definition: makeDefinition(), initial: {}, fetchRows: async () => page('1', '2', '3') });
+  await flush();
+  act(() => latest.selection.toggleRow('3', true));
+  act(() => latest.selection.toggleRow('1', true));
+  expect(latest.selection.selectedIds).toEqual(['1', '3']);
+});
