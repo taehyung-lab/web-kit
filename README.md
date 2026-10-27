@@ -2,7 +2,7 @@
 
 React 19 + TanStack(Router·Query·Form) + zod 4 + axios/orval을 쓰고, 서버가 Spring 응답 봉투 `{ header: { resultCode, resultMessage }, data }`로 답하는 관리자 웹의 기본 키트다. 이 응답 규약이 아닌 서버에는 맞지 않는다. 이 스택과 스펙을 쓰면 같은 의미의 동작은 이 코드를 공용으로 쓰고, 시각 UI와 업무 정책은 프로젝트가 맡는다.
 
-정본: https://github.com/taehyung-lab/web-kit · 패키지 `@boosterlab/web-kit` · 버전 `1.0.5` · 결정 기록 [docs/decisions](docs/decisions/).
+정본: https://github.com/taehyung-lab/web-kit · 패키지 `@boosterlab/web-kit` · 버전 `1.0.6` · 결정 기록 [docs/decisions](docs/decisions/).
 
 ## 구조
 
@@ -55,8 +55,8 @@ done
 소스 TS/TSX 패키지라서 소비 앱의 Vite/TypeScript가 컴파일한다. 소비 앱은 GitHub release tarball을 `vendor/`에 보관한다. 개발자 로컬 경로나 설치 시 GitHub 인증에 의존하지 않기 위해서다.
 
 ```sh
-gh release download v1.0.5 --repo taehyung-lab/web-kit --pattern 'boosterlab-web-kit-1.0.5.tgz' --dir vendor
-pnpm add @boosterlab/web-kit@file:vendor/boosterlab-web-kit-1.0.5.tgz
+gh release download v1.0.6 --repo taehyung-lab/web-kit --pattern 'boosterlab-web-kit-1.0.6.tgz' --dir vendor
+pnpm add @boosterlab/web-kit@file:vendor/boosterlab-web-kit-1.0.6.tgz
 ```
 
 - package.json·lockfile·tarball을 함께 commit한다. 소스 복사·submodule·branch 최신값 의존성은 쓰지 않는다.

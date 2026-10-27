@@ -30,6 +30,12 @@ export interface SaveFormOptions<TInput, TOutput, TResult = { readonly saved?: T
   ) => { readonly field: DeepKeys<TInput>; readonly message: string } | undefined;
   /** 오류 필드가 접힌 영역에 있으면 focus 전에 펼친다. */
   readonly reveal?: (fields: readonly string[]) => void;
+  /**
+   * 실패 하나가 "입력 탓"이라 입력을 고치면 사라져야 하는지 정한다(예: 로그인 아이디·비밀번호 불일치). 기본은 사라지지 않는다.
+   * true를 돌려준 실패는 지금 입력이 실패한 제출 때 입력과 달라지는 순간부터 failure·unattachedFieldErrors에서 빠진다.
+   * 연결 실패처럼 입력과 무관한 실패는 false로 두면 고쳐도 남는다. 입력을 제출 때 값으로 되돌리면 다시 보인다.
+   */
+  readonly clearFailureOnEdit?: (failure: unknown) => boolean;
   /** 이 폼의 저장이 끝난 직후 저장 함수의 결과로 한 번 실행한다(이동·알림). 늦은 결과에는 실행하지 않는다. */
   readonly onSaved?: (result: TResult) => void;
 }
@@ -62,7 +68,13 @@ export function useSaveForm<
   const [stage, setStageState] = useState<SaveStage<TInput>>({ kind: 'idle' });
   /** 마지막 저장 실패와, 그중 필드에 붙이지 못한 서버 필드 오류. 둘은 함께 바뀐다. */
   const [rejection, setRejection] = useState<
-    { readonly failure: unknown; readonly unattached: readonly FieldError[] } | undefined
+    | {
+        readonly failure: unknown;
+        readonly unattached: readonly FieldError[];
+        /** 입력을 고치면 이 실패를 지워야 할 때만 그 실패를 낸 제출의 입력이다. */
+        readonly clearWhenEdited?: { readonly submitted: TInput };
+      }
+    | undefined
   >(undefined);
   const stageRef = useRef(stage);
   /** 지금 진행 중인 제출. 잠금이자 늦은 결과를 거르는 기준 하나다. 레코드가 바뀌면 비운다. */
@@ -177,7 +189,8 @@ export function useSaveForm<
       setStage({ kind: 'idle' });
       if (isRequestFailure(error) && error.kind === 'cancelled') return;
       const { attached, unattached } = attachFieldErrors(error, submitted);
-      setRejection({ failure: error, unattached });
+      const clearWhenEdited = latest.current.clearFailureOnEdit?.(error) === true ? { submitted } : undefined;
+      setRejection({ failure: error, unattached, clearWhenEdited });
       focusFirst(attached);
     }
   }
@@ -261,13 +274,19 @@ export function useSaveForm<
     };
   }, []);
 
+  // 입력을 고치면 지우기로 한 실패는 지금 입력이 제출 때 입력과 달라진 동안 보이지 않는다.
+  const visibleRejection =
+    rejection?.clearWhenEdited !== undefined && !evaluate(values, rejection.clearWhenEdited.submitted)
+      ? undefined
+      : rejection;
+
   return {
     form,
     stage,
     /** 저장 실패 원본. 표시 방식은 화면이 kind로 정한다. */
-    failure: rejection?.failure,
+    failure: visibleRejection?.failure,
     /** 필드에 붙이지 못한 서버 필드 오류(저장 중 바뀐 필드·폼 경로로 바꾸지 못한 것). 폼 수준 표시의 근거다. */
-    unattachedFieldErrors: rejection?.unattached ?? [],
+    unattachedFieldErrors: visibleRejection?.unattached ?? [],
     /** 기준선(마지막으로 확정된 원본 또는 저장 결과). 차이로 요청을 만드는 화면이 읽는다. 바꾸지 않는다. */
     baseline,
     /** 현재 입력이 기준선과 다른가. */

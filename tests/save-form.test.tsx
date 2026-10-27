@@ -508,3 +508,47 @@ it('S17b 저장 중 입력이 바뀌었다면 onSaved가 불리는 순간에도 
   await act(async () => pending.resolve({ saved: { name: 'A2', email: 'a@x' } }));
   expect(seen).toEqual([{ dirty: true, stage: 'idle' }]);
 });
+
+it('S13 입력 탓으로 정한 실패는 입력을 고치는 순간 사라지고, 입력과 무관한 실패는 고쳐도 남는다', async () => {
+  let failure: RequestFailure = new RequestFailure({ kind: 'business', status: 400, code: 'BadCredential' });
+  render(
+    <Screen
+      schema={schema}
+      source={original}
+      save={async () => {
+        throw failure;
+      }}
+      clearFailureOnEdit={(error) => error instanceof RequestFailure && error.kind === 'business'}
+    />,
+  );
+  await submit();
+  await flush();
+  expect(state().failure).toBe('business (http 400)');
+  type('email', 'b@x');
+  expect(state().failure).toBeUndefined();
+  type('email', 'a@x');
+  expect(state().failure).toBe('business (http 400)');
+
+  failure = new RequestFailure({ kind: 'network' });
+  await submit();
+  await flush();
+  expect(state().failure).toBe('network');
+  type('email', 'c@x');
+  expect(state().failure).toBe('network');
+});
+
+it('S14 옵션이 없으면 입력을 고쳐도 실패가 남는다', async () => {
+  render(
+    <Screen
+      schema={schema}
+      source={original}
+      save={async () => {
+        throw new RequestFailure({ kind: 'business', status: 400, code: 'BadCredential' });
+      }}
+    />,
+  );
+  await submit();
+  await flush();
+  type('email', 'b@x');
+  expect(state().failure).toBe('business (http 400)');
+});
