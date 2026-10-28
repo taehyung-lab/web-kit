@@ -13,7 +13,7 @@
 | 요청 번호 ↔ 폼 번호 | — | `save-error.ts`가 서버 `events[i]` → `basic.events[i]`. 요청 변환은 완전히 빈 이벤트 줄을 빼지만(`savedEventRows`) schema가 이벤트명·연결 회차를 필수로 막아 저장 때 빠지는 줄이 없다. 등급·할인도 schema가 빈 줄을 막는다 | `fieldError(error)` | **바꾸지 않는다**. 저장 때 요청 배열 = 폼 배열임을 확인했다. 제출 값을 `fieldError`에 넘기는 입력을 검토했지만 쓰는 곳이 없어 두지 않았다. 요청이 줄을 빼고 보내는 폼이 생기면 그때 더한다 |
 | 모달 하위 폼 | portal + `<form>` 없음, 확인 = 자체 검증 후 바깥 값에 씀, 닫기는 묻지 않음 | DT `FormDialog` + 제출 전파 차단 | `<Form>` 제출 전파 차단 + `Form.Dialog` 범위 | **5단계 구조 유지, 보장을 검사로 고정**(Enter·바깥 오류·바깥 dirty·결과 반영). 1.5처럼 묻지 않고 닫는 대화창은 `<Form protect={false}>` 값으로 하고 새 옵션을 두지 않는다 |
 | 파일 칸 | `File[]`을 폼 상태에, 이름은 상태에서, 재마운트 가드, 저장 실패 뒤 유지 | DT `FormFileField`(비어 있음·기존·새 파일·제거, 선택 창 취소는 값 유지) | 없음 | **`Form.File` + `FormFileValue`(DT 네 상태 모델)**. 1.5의 보존 결과를 유지하면서, 선택 창 취소로 기존 파일을 잃지 않는 DT 규칙이 사용자에게 낫다. 네이티브 입력은 다시 그려지면 비므로 이름은 상태에서 그린다. 업로드는 `save`(1.5·DT 모두 저장 때 따로 올림) |
-| 필수 표시 | 칸마다 `required` prop | `field-required.ts`가 zod 필드 schema를 읽음(조건부 필수 누락) | 칸마다 `required` 값·함수 | **schema 하나: 그 칸만 비운 지금 값을 schema가 거부하면 필수**(`editor.isRequired`). DT 사용자 규칙 "필수 표시는 검증 schema를 단일 출처"를 따른다. zod 내부 구조를 읽지 않고 Standard Schema 검증만 쓰므로 객체 refine의 조건부 필수(기획사 유형일 때 기획사)도 같은 규칙에서 나온다. 조건부 규칙은 다른 칸 오류가 있어도 돌게 쓴다(zod 4 `when`) |
+| 필수 표시 | 칸마다 `required` prop | `field-required.ts`가 zod 필드 schema를 읽음(조건부 필수 누락) | 칸마다 `required` 값·함수 | **schema 하나: 그 칸만 비운 지금 값을 schema가 거부하면 필수**(`editor.isRequired`). 검증과 필수 표시를 같은 규칙에서 얻는다. zod 내부 구조를 읽지 않고 Standard Schema 검증만 쓰므로 객체 refine의 조건부 필수(기획사 유형일 때 기획사)도 같은 규칙에서 나온다. 조건부 규칙은 다른 칸 오류가 있어도 돌게 쓴다(zod 4 `when`) |
 | disabled 칸의 서버 오류 | — | field order 밖이면 한 줄 | 칸에 붙었다고 세고 칸은 숨김 → 안내 0 | **붙지 못한 오류로 센다**(5단계 독립 검증 F4). 고칠 수 없는 칸은 오류를 숨기는 규칙은 유지하고, 그 오류는 폼 한 줄로 알린다 |
 | 저장 중 표시 | 버튼 `disabled`만 | 버튼 `disabled`만 | `aria-disabled`만 | **잠금 + 버튼 옆 `.wk-spinner`(문구는 `.wk-visually-hidden`)**. 등록·수정 폼 저장은 [0008](0008-blocking-progress.md)이 화면 전체 덮개로 대체했다(2026-10-28 사용자 요청). 아래는 덮개를 선언하지 않은 폼(로그인·대화창 폼)과 다운로드에 남는 규칙이다. 사용자 결정. 4단계 다운로드 진행 표시와 같은 마크업이며 새 클래스를 만들지 않는다. 확인창·완료 확인창의 `pending`도 같은 표시 |
 | 진행 표시 부품 공개(3.0.0-dev.8) | — | 공연 폼이 키트 `.wk-spinner` 마크업을 손으로 복사(`PerformanceForm.tsx`) | 표시 부품 `Pending`이 비공개(`ui/dialog.tsx`), 목록 다운로드는 같은 마크업을 따로 씀 | **`/ui`의 `Pending` 하나로 공개하고 목록 다운로드·`Form.Submit`·확인창이 같은 부품을 쓴다**. 키트 폼으로 아직 옮기지 않은 화면도 같은 부품을 써서 마크업이 갈라지지 않는다(`core-boundary.test.ts`가 `.wk-spinner`를 쓰는 소스를 `ui/pending.tsx` 하나로 고정) |
@@ -22,12 +22,9 @@
 | 화면 절차 거절(3.0.0-dev.10) | 요청 전 거절은 토스트 | `SaveRejection`을 `useAppSaveForm`이 받아 칸에 직접 붙이고 `revealFormSections`·자기 포커스 타이머를 따로 둠(화면 순서 정렬·제출 값 대조·줄 이동 추적·지난 포커스 취소를 거치지 않음) | 저장 흐름 밖 필드 거절을 받는 공개 입구 없음(`revealFormSections`만 공개) | **사용자 결정(2026-10-28): 참조 프로젝트 `useSaveForm`의 `reject(outcome)` 한 길을 키트로**. `save`가 `FormRejection(칸·문구 목록, root?)`을 던지면 키트가 서버 필드 오류와 같은 길(칸 부착 → 구역·`reveal` 펼침 → 지난 포커스 취소 → 화면 순서 첫 오류 포커스)로 처리한다. 프로젝트는 무엇을 거절할지와 문구만 정한다. 복제 입구였던 `revealFormSections`는 공개에서 뺐다. 프로젝트 고유 접힘(DT 언어 탭)도 같은 사건(`reveal`)으로 열고 제출 횟수를 세지 않는다 |
 | 기본 여백 초기화 | — | — | `.wk-field`·`.wk-section`·`.wk-form-failure`에 클래스 우선순위 `margin: 0` | **`:where(...)`로 0 우선순위**. 클래스 우선순위 초기화가 Tailwind v4 `space-y-*`(`:where` 선택자)를 지워 DT 운영자 등록에서 오류 문구 아래에 다음 라벨이 붙었다 |
 
-## DT에 남긴 공용과 이유
+## 소비 프로젝트의 이행 책임
 
-- `shared/ui/form/FormFileField.tsx`: 공연 폼 바깥(좌석배치도)이 아직 DT `useAppSaveForm`이라 키트 `Form` context가 없다. 바깥 폼을 키트로 옮길 때 `Form.File`로 바꾸고 지운다. 보존 결과는 DT 화면 테스트로 확인했다.
-- `shared/ui/form/field-required.ts`: 공연 폼 등 키트로 옮기지 않은 폼이 쓴다. 키트 폼은 쓰지 않는다.
-- DT 공연 판매처 API 대화창은 키트 `Form.Dialog`·`Form.Array`로 옮겼다. 바깥 공연 폼의 줄 작업 호출은 키트 `appendRow`·`removeRow`를 쓴다.
-- DT 공연 폼 저장 중 표시: 3.0.0-dev.11부터 버튼 옆 `Pending` 대신 화면 전체 덮개([0008](0008-blocking-progress.md), `useSaveForm`의 `progress`)다.
+프로젝트별 교체 화면·남겨 둔 부품·삭제 시점은 소비 프로젝트의 결정 기록에서 관리한다. 공용 패키지에는 해당 프로젝트의 경로·업무 값·화면 배치를 기준으로 넣지 않는다. 기존 구현 비교는 위 근거 표에만 남긴다.
 
 ## 검토한 대안
 

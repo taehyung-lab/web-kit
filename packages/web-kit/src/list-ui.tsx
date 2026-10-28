@@ -1,5 +1,8 @@
 // 파일 책임: 목록 기본 UI의 묶음 부품(List.*). 각 부품은 같은 목록 상태(useList)를 context로 읽어서, 필터·표·페이지 이동을
 // 어디에 두어도 조회·정렬·선택 연결을 다시 쓰지 않는다. 검색 직전 보장(기간 검증·입력 중 키워드)은 상태가 맡고 부품은 표시만 한다.
+import { useQuery } from '@tanstack/react-query';
+import { Choice as ChoiceInput, type ChoiceProps } from './ui/choice';
+import type { FieldCheck } from './search/fields';
 import { Checkbox } from '@base-ui/react/checkbox';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { createContext, useContext, useId, useRef, useState, type ReactNode, type RefObject } from 'react';
@@ -17,7 +20,13 @@ export interface ListModel<Row = any, D extends object = any> {
   readonly defaults: Readonly<Record<string, unknown>>;
   readonly view: ViewKeys;
   readonly draft: D;
+  readonly draftSearch?: Readonly<Record<string, unknown>>;
   readonly issues: readonly DraftIssue[];
+  readonly required?: (name: string) => boolean;
+  readonly blockedReason?: string;
+  readonly resetVersion?: number;
+  readonly submitVersion?: number;
+  readonly checks?: Readonly<Record<string, FieldCheck | undefined>>;
   readonly patchDraft: (patch: Partial<D>) => void;
   // 메서드 표기: 소비자 초안의 좁은 키 타입을 받아들이기 위해서다.
   keywordInput(name: keyof D & string, choices: readonly string[]): KeywordInput;
@@ -58,6 +67,7 @@ const defaultMessages = {
   notSearched: '검색 조건을 입력하고 검색해 주세요.',
   notReady: '조회 조건을 확인해 주세요.',
   optionsFailed: '선택지를 불러오지 못해 조회하지 않았습니다.',
+  fieldOptionsFailed: '선택지를 불러오지 못했습니다.',
   loading: '불러오는 중입니다.',
   failed: '목록을 불러오지 못했습니다.',
   empty: '조회 결과가 없습니다.',
@@ -90,7 +100,7 @@ const defaultMessages = {
   downloading: '다운로드 중입니다.',
   downloadFailed: '다운로드하지 못했습니다.',
 };
-export type ListMessages = typeof defaultMessages;
+export type ListMessages = Omit<typeof defaultMessages, 'fieldOptionsFailed'> & { readonly fieldOptionsFailed?: string };
 
 /** 실패가 보이는 자리. list는 결과 없는 조회 실패, refresh는 이전 결과 유지 중 실패, action·download는 쓰기 실패다. */
 export type FailurePlace = 'list' | 'refresh' | 'action' | 'download';
@@ -101,7 +111,7 @@ export type FailurePlace = 'list' | 'refresh' | 'action' | 'download';
 export type RenderFailure = (failure: unknown, place: FailurePlace) => ReactNode | null | undefined;
 type Context = {
   readonly model: ListModel;
-  readonly copy: ListMessages;
+  readonly copy: typeof defaultMessages;
   readonly renderFailure: RenderFailure;
 };
 const ListContext = createContext<Context | undefined>(undefined);
@@ -114,12 +124,13 @@ function useListContext(): Context {
 }
 
 /** 프로젝트 입력칸을 같은 초안에 연결한다. 검색 직전 보장은 상태가 맡으므로 입력칸을 바꿔도 남는다. */
-export function useListField<T = unknown>(name: string) {
+export function useListField<T = unknown>(name: string, searchName: string = name) {
   const { model } = useListContext();
   return {
+    required: model.required?.(searchName) ?? false,
     value: (model.draft as Record<string, unknown>)[name] as T,
     set: (value: T) => model.patchDraft({ [name]: value }),
-    issues: model.issues.filter((issue) => issue.field === name),
+    issues: model.issues.filter((issue) => issue.field === name || issue.field === searchName),
   };
 }
 
@@ -168,15 +179,17 @@ function Filter({ children, className }: { readonly children: ReactNode; readonl
 /** 검색·초기화 버튼. Filter 안에 둔다. */
 function FilterActions({ className, children }: { readonly className?: string; readonly children?: ReactNode }) {
   const { model, copy } = useListContext();
+  const reasonId = useId();
   return (
     <div className={join('wk-actions', className)}>
       {children}
       <button type="button" className="wk-button" onClick={model.reset}>
         {copy.reset}
       </button>
-      <button type="submit" className="wk-button wk-button-primary">
+      <button type="submit" className="wk-button wk-button-primary" aria-disabled={model.blockedReason !== undefined || undefined} aria-describedby={model.blockedReason === undefined ? undefined : reasonId}>
         {copy.search}
       </button>
+      {model.blockedReason !== undefined && <span id={reasonId}>{model.blockedReason}</span>}
     </div>
   );
 }
@@ -186,14 +199,21 @@ function Detail({ keys, children }: { readonly keys: readonly string[]; readonly
   const { model, copy } = useListContext();
   const hasValue = (value: unknown) =>
     value !== undefined && value !== null && value !== '' && value !== false && (!Array.isArray(value) || value.length > 0);
-  const signature = JSON.stringify(keys.map((key) => model.search[key]));
+  const invalid = keys.some((key) => model.issues.some((issue) => issue.field === key));
+  const signature = JSON.stringify([keys.map((key) => model.search[key]), model.resetVersion]);
   const active = keys.some((key) => hasValue(model.search[key]));
   const [open, setOpen] = useState(active);
   const [seen, setSeen] = useState(signature);
   const id = useId();
+  const validation = model.submitVersion ?? JSON.stringify(model.issues);
+  const [seenValidation, setSeenValidation] = useState(validation);
+  if (seenValidation !== validation) {
+    setSeenValidation(validation);
+    if (invalid) setOpen(true);
+  }
   if (signature !== seen) {
     setSeen(signature);
-    setOpen(active);
+    setOpen(active || invalid);
   }
   return (
     <>
@@ -207,6 +227,25 @@ function Detail({ keys, children }: { readonly keys: readonly string[]; readonly
   );
 }
 
+/** 선택지 조회와 URL 확인이 같은 선언을 쓰는 목록 선택 칸. */
+function Choice({ name, searchName = name, nodes, ...props }: Omit<ChoiceProps, 'value' | 'onValueChange' | 'nodes'> & { readonly name: string; readonly searchName?: string; readonly nodes?: ChoiceProps['nodes'] }) {
+  const field = useListField<ChoiceProps['value']>(name, searchName);
+  const { model, copy } = useListContext();
+  const id = useId();
+  const check = model.checks?.[searchName];
+  const parents = Object.fromEntries((check?.parents ?? []).map((parent) => [parent, (model.draftSearch ?? model.draft as Record<string, unknown>)[parent]]));
+  const options = useQuery(check === undefined ? { queryKey: ['web-kit-no-options', id], enabled: false, queryFn: () => [] } : check.options(parents));
+  const choices = nodes ?? (options.data === undefined ? [] : check?.tree?.(options.data) ?? []);
+  const message = field.issues[0]?.message;
+  return <div className="wk-field">
+    <label className="wk-label" htmlFor={id}>{props.label}{field.required && <span aria-hidden="true"> *</span>}</label>
+    <ChoiceInput {...props} id={id} nodes={choices} value={field.value} onValueChange={field.set} aria-required={field.required} aria-invalid={message !== undefined} aria-describedby={message === undefined ? undefined : `${id}-error`} />
+    {check !== undefined && options.isFetching && <span role="status">{copy.loading}</span>}
+    {check !== undefined && options.isError && <span role="alert">{copy.fieldOptionsFailed}<button type="button" onClick={() => void options.refetch()}>{copy.retry}</button></span>}
+    {message !== undefined && <span id={`${id}-error`} role="alert">{message}</span>}
+  </div>;
+}
+
 /** 문자열 입력 하나. 빈 값은 기본값이 없을 때 undefined로 둔다. */
 function Text({ name, label }: { readonly name: string; readonly label: string }) {
   const field = useListField<string | undefined>(name);
@@ -215,14 +254,18 @@ function Text({ name, label }: { readonly name: string; readonly label: string }
   return (
     <div className="wk-field">
       <label className="wk-label" htmlFor={id}>
-        {label}
+        {label}{field.required && <span aria-hidden="true"> *</span>}
       </label>
       <input
         id={id}
+        aria-required={field.required || undefined}
+        aria-invalid={field.issues.length > 0 || undefined}
+        aria-describedby={field.issues.length > 0 ? `${id}-error` : undefined}
         className="wk-input"
         value={field.value ?? ''}
         onChange={(event) => field.set(event.target.value === '' && model.defaults[name] === undefined ? undefined : event.target.value)}
       />
+      {field.issues[0]?.message !== undefined && <span id={`${id}-error`} role="alert">{field.issues[0].message}</span>}
     </div>
   );
 }
@@ -248,10 +291,13 @@ function Select({
   return (
     <div className="wk-field">
       <label className="wk-label" htmlFor={id}>
-        {label}
+        {label}{field.required && <span aria-hidden="true"> *</span>}
       </label>
       <select
         id={id}
+        aria-required={field.required || undefined}
+        aria-invalid={field.issues.length > 0 || undefined}
+        aria-describedby={field.issues.length > 0 ? `${id}-error` : undefined}
         className="wk-input"
         disabled={disabled}
         value={field.value ?? ''}
@@ -264,6 +310,7 @@ function Select({
           </option>
         ))}
       </select>
+      {field.issues[0]?.message !== undefined && <span id={`${id}-error`} role="alert">{field.issues[0].message}</span>}
     </div>
   );
 }
@@ -1029,6 +1076,7 @@ function join(...names: readonly (string | undefined)[]): string {
 /** 목록 기본 UI. <List model={useList(...)}> 안에 부품을 원하는 배치로 둔다. */
 export const List = Object.assign(ListRoot, {
   Filter,
+  Choice,
   FilterActions,
   Detail,
   Text,
@@ -1047,3 +1095,27 @@ export const List = Object.assign(ListRoot, {
   Download,
   Check,
 });
+
+/** 같은 목록 상태를 일반 JSX 이름으로 조립하는 입구. 기존 List.*와 구현·수명이 같다. */
+export {
+  ListRoot as ListProvider,
+  Filter as FilterPanel,
+  FilterActions,
+  Detail as FilterDetails,
+  Text as TextFilter,
+  Choice as ChoiceFilter,
+  Select as SelectFilter,
+  MultiSelect as MultiChoiceFilter,
+  Period as PeriodFilter,
+  Keywords as KeywordFilter,
+  Result as ListResult,
+  Table as ResultTable,
+  Total as ResultTotal,
+  PageSize,
+  SortSelect,
+  Pagination,
+  Actions as ListActions,
+  BulkAction,
+  Download as ListDownload,
+  Check as ListCheck,
+};

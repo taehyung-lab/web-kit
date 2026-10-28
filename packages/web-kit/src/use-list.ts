@@ -21,6 +21,7 @@ export interface ListPage<TRow> {
 export interface DraftIssue {
   readonly field: string;
   readonly code: string;
+  readonly message?: string;
 }
 
 /** 목록의 조회 상태. idle은 "조회 안 함" 하나이고 reason과 재개 수단을 함께 준다. */
@@ -110,6 +111,20 @@ type Judged = {
 /** 확인할 값이 없는(빈) 필드는 확인하지 않는다. */
 function isEmpty(value: unknown): boolean {
   return value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
+}
+
+/** codec의 정리 전후에 달라진 경로만 초안에 적용해 관련 없는 직접 입력을 보존한다. */
+function applyCodecDelta(current: unknown, before: unknown, after: unknown): unknown {
+  if (sameSearchValue(before, after)) return current;
+  const object = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+  if (!object(current) || !object(before) || !object(after)) return after;
+  const result = { ...current };
+  for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
+    if (sameSearchValue(before[key], after[key])) continue;
+    if (!(key in after)) delete result[key];
+    else result[key] = applyCodecDelta(current[key], before[key], after[key]);
+  }
+  return result;
 }
 
 /**
@@ -218,7 +233,14 @@ export function useList<
   const screenQuery = options.query(full);
   const screenEnabled = screenQuery.enabled;
   const ready = screenEnabled !== false;
-  const own = full.searched && allValid;
+  /** 선언된 필수 조건을 URL 조회와 검색 확정에 똑같이 적용한다. */
+  function requiredIssues(input: Readonly<Record<string, unknown>>): readonly DraftIssue[] {
+    return Object.entries(definition.fields).flatMap(([field, spec]) =>
+      spec.required !== undefined && spec.required.when?.(input) !== false && isEmpty(input[field])
+        ? [{ field, code: 'required', message: spec.required.message }] : []);
+  }
+  const missingRequired = requiredIssues(full);
+  const own = full.searched && allValid && missingRequired.length === 0;
   const enabled = own && ready;
   const query = useQuery({
     ...screenQuery,
@@ -236,6 +258,8 @@ export function useList<
   // ── 초안과 확정 ──
   const fresh = () => ({ key: filterKey, draft: codec.from(full), issues: [] as readonly DraftIssue[], inputs: {} as PendingKeywords });
   const [draftState, setDraftState] = useState(fresh);
+  const [resetVersion, setResetVersion] = useState(0);
+  const [submitVersion, setSubmitVersion] = useState(0);
   const draftCurrent = draftState.key === filterKey ? draftState : fresh();
   if (draftCurrent !== draftState) setDraftState(draftCurrent);
   // 같은 이벤트 안의 patchDraft → submit도 최신 초안을 보게 한다.
@@ -288,9 +312,10 @@ export function useList<
 
   /** 입력 중 키워드를 합치고 기간을 정리·검증한 뒤 첫 페이지로 확정한다. 보기 상태(size·sort·order)는 지금 값 그대로다. */
   function submit() {
+    setSubmitVersion((version) => version + 1);
     const merged = withInputs(draftLatest.current);
     const draft = withValidPeriods(merged.draft);
-    const issues = latest.current.validateDraft?.(draft) ?? [];
+    const issues = [...requiredIssues({ ...full, ...codec.to(draft) }), ...(latest.current.validateDraft?.(draft) ?? [])];
     setDraft({ ...merged, draft, issues });
     if (issues.length > 0) return;
     commit({ ...full, ...codec.to(draft), ...firstPage(), searched: true });
@@ -379,6 +404,7 @@ export function useList<
   // ── 상태 ──
   let status: ListStatus;
   if (!full.searched) status = { kind: 'idle', reason: 'not-searched', resume: submit };
+  else if (missingRequired.length > 0) status = { kind: 'idle', reason: 'not-ready' };
   else if (stuck.length > 0) status = { kind: 'idle', reason: 'check-stuck', fields: stuck.map((item) => item.field), resume: retryChecks };
   else if (failed.length > 0)
     status = {
@@ -402,6 +428,7 @@ export function useList<
     search: full,
     defaults: definition.defaults,
     view: definition.view,
+    checks: Object.fromEntries(Object.entries(definition.fields).map(([name, field]) => [name, field.check])),
     status,
     /** 보여 줄 행. isCurrent가 false면 이전 조건의 결과이며 읽기용이다. */
     rows,
@@ -413,12 +440,41 @@ export function useList<
     isFetching: query.isFetching,
     /** 현재 결과가 있는 상태의 재조회 실패(취소 제외). */
     failure: isCurrent && query.isError && !cancelled ? query.error : undefined,
+    resetVersion,
+    submitVersion,
     draft: draftCurrent.draft,
+    draftSearch: { ...full, ...codec.to(draftCurrent.draft) },
     issues: draftCurrent.issues,
-    patchDraft: (patch: Partial<D>) => setDraft({ ...draftLatest.current, draft: { ...draftLatest.current.draft, ...patch } }),
+    required: (name: string) => {
+      const rule = definition.fields[name]?.required;
+      return rule !== undefined && rule.when?.({ ...full, ...codec.to(draftCurrent.draft) }) !== false;
+    },
+    blockedReason: requiredIssues({ ...full, ...codec.to(withInputs(draftCurrent).draft) })[0]?.message,
+    patchDraft: (patch: Partial<D>) => {
+      const previous = draftLatest.current;
+      const draft = { ...previous.draft, ...patch } as D;
+      const old = { ...full, ...codec.to(previous.draft) } as Record<string, unknown>;
+      const next = { ...full, ...codec.to(draft) } as Record<string, unknown>;
+      const before = codec.from({ ...next } as FullSearch<F>);
+      const changed = new Set(Object.keys(definition.fields).filter((key) => !sameSearchValue(old[key], next[key])));
+      // 상위에서 하위로 전파한다. 순환 선언도 같은 필드를 한 번만 정리하므로 멈춘다.
+      let again = true;
+      while (again) {
+        again = false;
+        for (const [name, spec] of Object.entries(definition.fields)) {
+          if (changed.has(name) || !spec.check?.parents?.some((parent) => changed.has(parent))) continue;
+          next[name] = spec.default;
+          changed.add(name);
+          again = true;
+        }
+      }
+      const cleaned = applyCodecDelta(draft, before, codec.from(next as FullSearch<F>)) as D;
+      setDraft({ ...previous, draft: cleaned, issues: previous.issues.filter((issue) => !changed.has(issue.field)) });
+    },
     submit,
     /** 선언한 기본값(첫 진입 상태)으로 되돌린다. */
     reset: () => {
+      setResetVersion((version) => version + 1);
       setDraft({ key: filterKey, draft: codec.from(definition.defaults), issues: [], inputs: {} });
       commit(definition.defaults);
     },

@@ -1,8 +1,8 @@
 # web-kit
 
-React 19 + TanStack(Router·Query·Form) + zod 4 + axios/orval을 쓰고, 서버가 Spring 응답 봉투 `{ header: { resultCode, resultMessage }, data }`로 답하는 관리자 웹의 기본 키트다. 이 응답 규약이 아닌 서버에는 맞지 않는다. 같은 의미의 동작과 선택적 공통 기본 UI를 키트가 제공하고, 제품 표현·업무 정책·서버 연결 차이는 프로젝트가 맡는다. 현재 제공 범위는 아래 표와 `package.json` exports다([3.0 재설계 결정](../../docs/decisions/0003-web-kit-3-redesign.md)).
+React 19 + TanStack(Router·Query·Form) + zod 4 + axios/orval을 쓰는 웹 프로젝트의 공용 키트다. 서버 응답 구조와 코드 의미는 프로젝트의 `ResponseContract`가 해석한다. 기존 Spring 응답 봉투 도우미도 선택해서 쓸 수 있다. 같은 의미의 동작과 선택적 공통 기본 UI를 키트가 제공하고, 제품 표현·업무 정책·서버 연결 차이는 프로젝트가 맡는다. 현재 제공 범위는 아래 표와 `package.json` exports다([3.0 재설계 결정](../../docs/decisions/0003-web-kit-3-redesign.md)).
 
-정본: https://github.com/taehyung-lab/web-kit · 패키지 `@boosterlab/web-kit` · 최신 발행 `3.0.0` · 결정 기록 [docs/decisions](../../docs/decisions/). 이 패키지는 저장소의 `packages/web-kit`이고, 사용 예이자 소비 검사 앱은 같은 저장소의 [`apps/starter`](../../apps/starter)다.
+정본: https://github.com/taehyung-lab/web-kit · 패키지 `@boosterlab/web-kit` · 이 문서의 대상 버전 `3.1.0` · 결정 기록 [docs/decisions](../../docs/decisions/). 이 패키지는 저장소의 `packages/web-kit`이고, 사용 예이자 소비 검사 앱은 같은 저장소의 [`apps/starter`](../../apps/starter)다.
 
 ## 구조
 
@@ -19,10 +19,10 @@ React 19 + TanStack(Router·Query·Form) + zod 4 + axios/orval을 쓰고, 서버
 | `/session` | 세대, 시작·종료와 종료 순서(정리 → 안내 → 서버 로그아웃), 다른 탭 변경, 재발급 단일 비행(Web Locks) | 저장 adapter·재발급·서버 로그아웃 호출 |
 | `/session/idle` | 유휴 마감(로그인과 서버 연장만 변경: 경고 밖 활동은 서버 연장, 경고 안은 연장 버튼만, API 응답·재발급은 연장 안 함), 경고 구간·대기, 활동 연장, 대표 탭, 만료 종료 | 시간 정책·저장 key·서버 연장 호출·응답의 서버 시각 표본·경고 디자인 |
 | `/session/browser` | 브라우저 저장 장애 복구·외부 이벤트 판별·해제 | 저장 key·동기 schema·읽기 불가 정책 |
-| `/http` | 헤더·토큰, 봉투 해제, 401 재발급 뒤 한 번 재전송, 반영 여부 판정 | 공개 경로, 운영 헤더, axios 기본값 |
+| `/http` | 헤더·토큰, 봉투 해제, 401 재발급 뒤 한 번 재전송, 반영 여부 판정 | 응답 해석·코드 의미·공개 경로·운영 헤더·axios 기본값 |
 | `/query` | 재시도 대상, 실패 알림 한 번, 선언한 무효화, 민감한 쓰기의 입력값 기록 지움, 세션 전환 시 비움 | 재시도 횟수, 알림 표시, staleTime 등 수치 |
 | `/search` · `/list` | URL 필드 복구·정규 URL·진입 주소 교정(route `validateSearch`·`beforeLoad`), 검색 확정(맞지 않는 기간 쌍은 기본값으로 정리·입력 중 키워드 포함), 정렬 전이, 선택지 확인, 결과 출처, 선택·일괄 작업, 다운로드 대상 고정 | 필드 schema·encode·기본값·조회 시작 조건·첫 정렬 방향, 조회 함수, 다운로드 요청 |
-| `/list/ui` | `List` 묶음 부품: 필터·기간·키워드·다중 선택·결과 상태·표(가상화)·총건수·정렬·페이지 이동·쓰기 잠금·일괄 확인·다운로드 | 배치·필드·시간대·컬럼·성공한 ID·문구·실패 문구 |
+| `/list/ui` | `ListProvider`와 이름 있는 부품(기존 `List.*`도 유지): 필터·기간·키워드·다중 선택·결과 상태·표(가상화)·총건수·정렬·페이지 이동·쓰기 잠금·일괄 확인·다운로드 | 배치·필드·시간대·컬럼·성공한 ID·문구·실패 문구 |
 | `/permission` | 진입 거부·메뉴 숨김·버튼 비활성의 닫힘 기본 판정 | 권한 상태·판정 함수·권한 목록 |
 | `/filter` | 기간 검증, 오류 표시, 체크 트리 | checkbox·문구·스타일 |
 | `/form` · `/form/ui` · `/dialog` | 제출·확인 관문·저장·기준선·서버 필드 오류·늦은 결과·저장 뒤 완료 처리, `Form` 묶음 부품(칸·선택지 상태·오류 줄·저장 확인·저장 완료 확인·대화창 폼)·`FormGuard` 이탈 확인 | schema·원본·저장 함수·완료 동작·배치·문구·실패 문구 |
@@ -66,11 +66,11 @@ done
 
 소스 TS/TSX 패키지라서 소비 앱의 Vite/TypeScript가 컴파일한다. 소비 앱은 GitHub release tarball을 `vendor/`에 보관한다. 개발자 로컬 경로나 설치 시 GitHub 인증에 의존하지 않기 위해서다.
 
-아래 명령은 발행된 3.0.0을 설치한다. Vite 소비 앱은 `optimizeDeps: { extensions: ['.tsx'] }`를 둔다.
+아래 명령은 3.1.0 정식 Release 산출물을 설치한다. Vite 소비 앱은 `optimizeDeps: { extensions: ['.tsx'] }`를 둔다.
 
 ```sh
-gh release download v3.0.0 --repo taehyung-lab/web-kit --pattern 'boosterlab-web-kit-3.0.0.tgz' --dir vendor
-pnpm add @boosterlab/web-kit@file:vendor/boosterlab-web-kit-3.0.0.tgz
+gh release download v3.1.0 --repo taehyung-lab/web-kit --pattern 'boosterlab-web-kit-3.1.0.tgz' --dir vendor
+pnpm add @boosterlab/web-kit@file:vendor/boosterlab-web-kit-3.1.0.tgz
 ```
 
 - package.json·lockfile·tarball을 함께 commit한다. 소스 복사·submodule·branch 최신값 의존성은 쓰지 않는다.
@@ -94,3 +94,7 @@ pnpm check
 
 - 키트 검사는 module 보장을 확인한다. 실제 화면·URL·요청은 소비 앱이 검사한다.
 - 실제 서버 수용, 브라우저 E2E, 미확인 외부 계약(E1–E3)은 키트 검사로 대신하지 않는다.
+
+## 3.0에서 3.1로
+
+기존 입구는 유지한다. 신규 화면은 이름 있는 목록 부품과 `ChoiceFilter`·`Form.Choice`를 사용할 수 있다. 서버 응답이 다르면 `createHttp({ response })`, 실제 데이터 타입을 그대로 받으려면 `http.requestData<T>`를 사용한다. 오류 종류·처리는 키트, 서버 코드 의미·메시지 키·번역은 프로젝트가 소유한다. 필수 검색 조건은 검색 선언의 `required`에 두고 칸과 버튼에서 같은 판정을 사용한다.

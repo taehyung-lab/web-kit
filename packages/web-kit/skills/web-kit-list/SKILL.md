@@ -79,3 +79,13 @@ description: 목록 필터·기간 프리셋·키워드 칩·표·페이지 이�
 - 기간 입력칸을 바꾸거나 숨겨도 역순 기간은 그 쌍만 기본값으로 돌아간 채 요청에 들어간다(역순 값은 요청에 없다). 추가하지 않은 키워드가 요청에 들어간다.
 
 최종 URL의 키·값·인코딩은 실제 요청에서 확인한다.
+
+## 이름 있는 부품과 공용 선택
+
+새 화면은 `/list/ui`의 `ListProvider`, `FilterPanel`, `FilterActions`, `TextFilter`, `ChoiceFilter`, `PeriodFilter`, `ListResult`, `ResultTable`, `PageSize`, `Pagination`으로 조립할 수 있다. 기존 `List.*`와 같은 상태·구현을 쓴다. 화면은 제목·필터·업무 작업·결과로 읽히도록 나누고 열 선언과 요청 변환은 해당 책임에 둔다.
+
+`ChoiceFilter`(`List.Choice`)는 단일/다중을 같은 트리로 표현한다. 다중 값은 leaf ID 배열이며 부모는 삼상태다. `appearance`를 바꿔도 값·검색 수명은 같다. 선택지 조회는 검색 필드 `check.options`와 표시 트리 `check.tree`에 선언한다. 칸은 그 선언을 구독하며 URL 확인과 요청을 공유한다. 상위 `check.parents` 값이 바뀌면 하위 초안을 기본값으로 정리한다.
+
+검색 필드 `required: { message, when? }`는 필수 별표와 실행 차단의 같은 근거다. `when`은 현재 조건을 받아 조건부 필수를 정하며 `message`는 프로젝트 문구다. 비어 있으면 검색 버튼은 `aria-disabled`와 안내를 보여 키보드로 닿을 수 있고, Enter·직접 submit·URL 진입도 빈 조건으로 요청하지 않는다. 상세 필터 오류가 생기면 상세 구역을 펼친다. 직접 그리는 칸도 `useListField`의 required/value/set/issues를 쓴다.
+
+`Choice`의 단일 선택 해제는 `clearLabel`을 지정했을 때만 제공한다. `placeholder`만으로 해제를 허용하지 않는다. 서버 검색 함수가 다시 만들어져도 진행 중 검색은 유지한다. 검색 범위가 상위 값에 따라 달라지면 `searchKey`에 해당 원시 값 배열을 전달해 이전 검색을 취소하고 다시 조회한다.

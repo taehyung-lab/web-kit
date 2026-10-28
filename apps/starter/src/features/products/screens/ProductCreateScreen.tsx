@@ -5,7 +5,14 @@ import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useFormCopy } from '@/shared/lib/form-messages';
 import { useCreateProduct } from '../api/products';
-import { emptyProductForm, productFieldError, productFormSchema, toProductFormValues, toProductUpsertRequest } from '../model/form';
+import {
+  emptyProductForm,
+  productFieldError,
+  productFormSchema,
+  toProductFormValues,
+  toProductUpsertRequest,
+  type ProductFormOutput,
+} from '../model/form';
 import { ProductFields } from './ProductForm';
 
 const SOURCE = { id: 'new', values: emptyProductForm } as const;
@@ -16,15 +23,17 @@ export function ProductCreateScreen() {
   const navigate = useNavigate();
   const create = useCreateProduct();
   const copy = useFormCopy();
+  /** 제출 값을 등록 요청으로 바꾸고 새 상품의 편집 기준을 돌려준다. */
+  async function saveProduct(output: ProductFormOutput) {
+    const created = await create.mutateAsync(toProductUpsertRequest(output));
+    return { saved: toProductFormValues(created), id: created.id };
+  }
   const editor = useSaveForm({
     schema: productFormSchema,
     source: SOURCE,
     progress: 'create',
     fieldError: productFieldError,
-    save: async (output) => {
-      const created = await create.mutateAsync(toProductUpsertRequest(output));
-      return { saved: toProductFormValues(created), id: created.id };
-    },
+    save: saveProduct,
     onSaved: (result) => navigate({ to: '/products/$productId', params: { productId: result.id } }),
   });
   return (

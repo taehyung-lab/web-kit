@@ -36,16 +36,18 @@ export function ShowCreateScreen() {
   const navigate = useNavigate();
   const copy = useFormCopy();
   const [keysOpen, setKeysOpen] = useState(false);
+  /** 좌석도를 올린 뒤 파일 식별자를 공연 등록 요청에 연결한다. */
+  async function saveShow(_values: ShowFormInput, submitted: ShowFormInput) {
+    const { fileId } = await uploadFile(selectedFile(submitted.seat));
+    return createShow(toShowRequest(submitted, fileId));
+  }
   const editor = useSaveForm({
     schema: showFormSchema,
     source: SOURCE,
     acknowledge: true,
     progress: 'create',
     fieldError: showFieldError,
-    save: async (_values, submitted) => {
-      const { fileId } = await uploadFile(selectedFile(submitted.seat));
-      return createShow(toShowRequest(submitted, fileId));
-    },
+    save: saveShow,
     onSaved: () => navigate({ to: '/products' }),
   });
   const vendorKeys = editor.form.state.values.vendorKeys;
@@ -59,11 +61,21 @@ export function ShowCreateScreen() {
           {(rows) => (
             <F.Section title={t('shows.fields.rounds')} fields={['rounds']}>
               {rows.items.map((item, index) => (
-                <div key={item.key} role="group" aria-label={t('shows.round', { index: index + 1 })} className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+                <div
+                  key={item.key}
+                  role="group"
+                  aria-label={t('shows.round', { index: index + 1 })}
+                  className="grid gap-3 md:grid-cols-[1fr_1fr_auto]"
+                >
                   <F.Text name={`rounds[${index}].date`} type="date" label={t('shows.fields.date', { index: index + 1 })} />
                   <F.Text name={`rounds[${index}].time`} type="time" label={t('shows.fields.time', { index: index + 1 })} />
                   <div className="wk-actions">
-                    <button type="button" className="wk-button wk-button-secondary" disabled={index === 0} onClick={() => rows.move(index, index - 1)}>
+                    <button
+                      type="button"
+                      className="wk-button wk-button-secondary"
+                      disabled={index === 0}
+                      onClick={() => rows.move(index, index - 1)}
+                    >
                       {t('shows.moveUp', { index: index + 1 })}
                     </button>
                     <button
@@ -130,7 +142,10 @@ function VendorKeysForm({
 }) {
   const { t } = useTranslation();
   const copy = useFormCopy();
-  const [source] = useState(() => ({ id: 'vendor-keys', values: { keys: initial.length === 0 ? [{ key: crypto.randomUUID(), value: '' }] : [...initial] } }));
+  const [source] = useState(() => ({
+    id: 'vendor-keys',
+    values: { keys: initial.length === 0 ? [{ key: crypto.randomUUID(), value: '' }] : [...initial] },
+  }));
   const editor = useSaveForm({
     schema: vendorKeysSchema,
     source,
@@ -152,7 +167,11 @@ function VendorKeysForm({
               </div>
             ))}
             <div className="wk-actions">
-              <button type="button" className="wk-button wk-button-secondary" onClick={() => rows.append({ key: crypto.randomUUID(), value: '' })}>
+              <button
+                type="button"
+                className="wk-button wk-button-secondary"
+                onClick={() => rows.append({ key: crypto.randomUUID(), value: '' })}
+              >
                 {t('shows.addVendorKey')}
               </button>
             </div>

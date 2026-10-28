@@ -34,7 +34,7 @@ export const productListSearch = defineSearch({
     categoryId: {
       schema: z.string().min(1),
       default: undefined,
-      check: { options: () => categoryOptionsQuery(), allowed: (categories: readonly Category[]) => categories.map((category) => category.id) },
+      check: { options: () => categoryOptionsQuery(), allowed: (categories: readonly Category[]) => categories.map((category) => category.id), tree: (categories: readonly Category[]) => categories.map((category) => ({value: category.id, label: category.name})) },
     },
     from: { schema: isoDate, default: undefined },
     to: { schema: isoDate, default: undefined },

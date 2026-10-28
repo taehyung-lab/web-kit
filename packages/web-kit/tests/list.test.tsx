@@ -796,3 +796,44 @@ it('L37 선택 ID는 화면에 보이는 행 순서다', async () => {
   act(() => latest.selection.toggleRow('1', true));
   expect(latest.selection.selectedIds).toEqual(['1', '3']);
 });
+
+it('필수 필터는 직접 진입·검색·직접 submit에서도 빈 요청을 보내지 않고 조건을 채우면 조회한다', async () => {
+  const base = makeDefinition();
+  const definition = defineSearch({ fields: { ...base.fields, q: { ...base.fields.q, required: { message: '검색어를 입력해 주세요.' } } } });
+  const fetchRows = vi.fn(async () => page('one'));
+  mount({ definition, initial: {}, fetchRows });
+  await flush();
+  expect(fetchRows).not.toHaveBeenCalled();
+  expect(latest.blockedReason).toBe('검색어를 입력해 주세요.');
+  act(() => latest.submit());
+  await flush();
+  expect(fetchRows).not.toHaveBeenCalled();
+  act(() => { latest.patchDraft({ q: 'ready' }); latest.submit(); });
+  await flush();
+  expect(fetchRows).toHaveBeenCalledWith(expect.objectContaining({ q: 'ready' }));
+});
+it('상위 초안을 바꾸면 하위와 그 후손 값이 즉시 정리된다', async () => {
+  const childCheck = { parents: ['code'], options: () => queryOptions({ queryKey: ['child-options'], queryFn: async () => ['old'] }), allowed: (data: string[]) => data };
+  const fetchRows = vi.fn(async () => page('one'));
+  mount({ definition: makeDefinition({ childCheck }), initial: { code: 'A', child: 'old' }, fetchRows });
+  await flush();
+  act(() => latest.patchDraft({ code: 'B' }));
+  expect(latest.draft.child).toBe('');
+});
+
+it('초안 키가 다른 codec에서도 하위만 정리하고 다른 입력은 보존한다', async () => {
+  const definition = makeDefinition({ childCheck: { parents: ['code'], options: () => queryOptions({ queryKey: ['mapped-child'], queryFn: async () => ['old'] }), allowed: (data: string[]) => data } });
+  let mapped!: ReturnType<typeof useList<Definition['fields'], Row, Error, readonly string[], { parent: string; childValue: string; note: string }>>;
+  /** 확정 검색과 다른 이름을 쓰는 소비자의 연결을 재현한다. */
+  function Mapped() {
+    mapped = useList({ definition, search: { code: 'A', child: 'old' }, navigate: () => undefined,
+      query: () => ({queryKey: ['mapped-rows'], queryFn: async () => page('one')}), rowId: (row: Row) => row.id,
+      draft: { from: (value) => ({parent: value.code, childValue: value.child, note: value.q}), to: (draft) => ({code: draft.parent, child: draft.childValue, q: draft.note}) },
+    });
+    return null;
+  }
+  client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(<QueryClientProvider client={client}><Mapped /></QueryClientProvider>);
+  act(() => mapped.patchDraft({ note: 'keep me', parent: 'B' }));
+  expect(mapped.draft).toEqual({parent:'B', childValue:'', note:'keep me'});
+});

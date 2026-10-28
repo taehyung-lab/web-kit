@@ -35,6 +35,8 @@ export interface TransportEvent {
 }
 
 export interface Http {
+  /** 프로젝트 해석 뒤 실제 데이터 타입을 그대로 받는다. data라는 속성도 일반 데이터로 유지한다. */
+  readonly requestData: <T>(config: AxiosRequestConfig, options?: AxiosRequestConfig) => Promise<T>;
   /** 요청 하나. 성공은 봉투를 푼 data(JSON이 아니면 원본), 실패는 RequestFailure다. orval mutator로 쓴다. */
   readonly request: <T>(config: AxiosRequestConfig, options?: AxiosRequestConfig) => Promise<Unwrapped<T>>;
 }
@@ -94,6 +96,12 @@ function awaitUnlessAborted<T>(promise: Promise<T>, signal: AxiosRequestConfig['
   });
 }
 
+/** 프로젝트가 JSON 응답을 공통 성공·실패 형태로 해석한다. 문구 대신 프로젝트의 문구 키를 실패에 담는다. */
+export interface ResponseContract {
+  readonly read: (body: unknown, status: number, requestId: string | undefined) =>
+    { readonly ok: true; readonly data: unknown } | { readonly ok: false; readonly failure: RequestFailure };
+}
+
 /**
  * 요청 처리를 만든다. isPublic은 세션에 속하지 않는 요청(로그인 전·재발급·로그아웃)을 가린다:
  * 토큰을 자동으로 싣지 않고, 그 실패는 세션을 건드리지 않고 그대로 돌려준다.
@@ -101,14 +109,17 @@ function awaitUnlessAborted<T>(promise: Promise<T>, signal: AxiosRequestConfig['
  */
 export function createHttp<C extends Credentials>({
   session,
-  results,
+  results = { lookup: () => undefined },
+  response: contract,
   isPublic,
   prepare,
   observe,
   defaults,
 }: {
   readonly session: Session<C>;
-  readonly results: ResultCodeTable;
+  readonly results?: ResultCodeTable;
+  /** 서버 응답 형식·성공 코드·업무 실패는 프로젝트가 해석한다. 생략하면 기존 봉투 규약을 사용한다. */
+  readonly response?: ResponseContract;
   readonly isPublic: (config: AxiosRequestConfig) => boolean;
   readonly prepare?: (headers: AxiosHeaders, config: AxiosRequestConfig) => void;
   /** 전송 시도마다(재전송·공개 요청 포함, 취소 제외) 한 번. 연결 상태·서버 시각 같은 프로젝트 관찰용이다. */
@@ -143,10 +154,29 @@ export function createHttp<C extends Credentials>({
     }
   }
 
+  /** 프로젝트는 코드 의미를 정하고 실제 HTTP 상태와 요청 식별자는 전송 관찰을 보존한다. */
+  function readResponse(body: unknown, status: number, requestId: string | undefined) {
+    if (contract === undefined) return readEnvelope(body, results, requestId);
+    const result = contract.read(body, status, requestId);
+    if (result.ok) return result;
+    const failure = result.failure;
+    return { ok: false as const, failure: new RequestFailure({
+      kind: failure.kind, status, requestId: requestId ?? failure.requestId,
+      code: failure.code, messageKey: failure.messageKey, endsSession: failure.endsSession,
+      fieldErrors: failure.fieldErrors, resultUnknown: failure.resultUnknown,
+    }) };
+  }
+
   /** axios 오류 하나를 실패 12종으로 바꾼다. */
   function failureOf(error: unknown): RequestFailure {
     const outcome = outcomeOf(error);
-    return outcome === undefined ? new RequestFailure({ kind: 'contract' }) : toRequestFailure(outcome, results);
+    if (outcome === undefined) return new RequestFailure({ kind: 'contract' });
+    if (outcome.type === 'response' && contract !== undefined) {
+      const result = readResponse(outcome.body, outcome.status, outcome.requestId);
+      // HTTP 자체가 거절한 요청을 프로젝트의 성공 코드만으로 성공 처리하지 않는다.
+      return result.ok ? new RequestFailure({ kind: 'contract', status: outcome.status, requestId: outcome.requestId }) : result.failure;
+    }
+    return toRequestFailure(outcome, results);
   }
 
   /**
@@ -206,17 +236,20 @@ export function createHttp<C extends Credentials>({
     }
     if (generation !== session.generation()) throw cancelled();
     if (!isJson(response)) return response.data;
-    const result = readEnvelope(response.data, results, header(response, 'x-request-id'));
+    const result = readResponse(response.data, response.status, header(response, 'x-request-id'));
     if (result.ok) return result.data;
     return recover(result.failure, config, generation, token, resent);
   }
 
+  /** 두 타입 입구가 같은 전송·세션·응답 해석 경로를 사용한다. */
+  async function requestData<T>(config: AxiosRequestConfig, options?: AxiosRequestConfig): Promise<T> {
+    const merged = { ...config, ...options };
+    return (!isPublic(merged) ? send(merged, session.generation(), false) : sendPublic(merged)) as Promise<T>;
+  }
+
   return {
-    request: async <T>(config: AxiosRequestConfig, options?: AxiosRequestConfig) => {
-      const merged = { ...config, ...options };
-      if (!isPublic(merged)) return send(merged, session.generation(), false) as Promise<Unwrapped<T>>;
-      return sendPublic(merged) as Promise<Unwrapped<T>>;
-    },
+    requestData,
+    request: <T>(config: AxiosRequestConfig, options?: AxiosRequestConfig) => requestData<Unwrapped<T>>(config, options),
   };
 
   /** 세션 밖 요청. 실패는 해석만 하고 세션에 영향을 주지 않는다. */
@@ -228,7 +261,7 @@ export function createHttp<C extends Credentials>({
       throw failureOf(error);
     }
     if (!isJson(response)) return response.data;
-    const result = readEnvelope(response.data, results, header(response, 'x-request-id'));
+    const result = readResponse(response.data, response.status, header(response, 'x-request-id'));
     if (result.ok) return result.data;
     throw result.failure;
   }

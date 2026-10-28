@@ -26,7 +26,10 @@ describe('product list', () => {
 
     expect(await screen.findByRole('cell', { name: 'Desk Lamp' })).toBeTruthy();
     expect(router.state.location.search).toEqual({ keyword: 'lamp' });
-    expect(requests.map((request) => request.line).sort()).toEqual(['GET /api/categories', 'GET /api/products?keyword=lamp&page=0&size=20&sort=createdAt,desc']);
+    expect(requests.map((request) => request.line).sort()).toEqual([
+      'GET /api/categories',
+      'GET /api/products?keyword=lamp&page=0&size=20&sort=createdAt,desc',
+    ]);
   });
 
   it('waits for the server options, then drops a category that is not among them', async () => {
@@ -35,7 +38,10 @@ describe('product list', () => {
     await waitFor(() => expect(router.state.location.search).toEqual({ keyword: 'a' }));
     await screen.findAllByRole('cell');
     // 선택지를 받기 전에는 목록을 조회하지 않고, 없는 분류는 요청에 싣지 않는다.
-    expect(requests.map((request) => request.line)).toEqual(['GET /api/categories', 'GET /api/products?keyword=a&page=0&size=20&sort=createdAt,desc']);
+    expect(requests.map((request) => request.line)).toEqual([
+      'GET /api/categories',
+      'GET /api/products?keyword=a&page=0&size=20&sort=createdAt,desc',
+    ]);
   });
 
   it('keeps a category that exists and sends it', async () => {
@@ -46,10 +52,26 @@ describe('product list', () => {
     expect(requests.map((request) => request.line)).toContain('GET /api/products?categoryId=c-living&page=0&size=20&sort=createdAt,desc');
   });
 
+  it('clears only the category while keeping the keyword and status filters', async () => {
+    const user = userEvent.setup();
+    const { router } = renderApp('/products?keyword=lamp&statuses=ACTIVE&categoryId=c-living');
+    await screen.findByRole('cell', { name: 'Desk Lamp' });
+    expect(screen.getByText('총 1개')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: '분류' }));
+    await user.click(screen.getByRole('button', { name: '전체' }));
+    await user.keyboard('{Escape}');
+    await user.click(screen.getByRole('button', { name: '검색' }));
+    await waitFor(() => expect(router.state.location.search).toEqual({ keyword: 'lamp', statuses: 'ACTIVE' }));
+  });
+
   it('holds the list when the options cannot be loaded and retries both on request', async () => {
     const user = userEvent.setup();
     let fail = true;
-    server.use(http.get('*/api/categories', () => (fail ? HttpResponse.json({ header: { resultCode: 500, resultMessage: 'Error' }, data: null }, { status: 500 }) : undefined)));
+    server.use(
+      http.get('*/api/categories', () =>
+        fail ? HttpResponse.json({ header: { resultCode: 500, resultMessage: 'Error' }, data: null }, { status: 500 }) : undefined,
+      ),
+    );
     const { router, requests } = renderApp('/products?categoryId=c-living');
 
     expect(await screen.findByText('분류 선택지를 불러오지 못해 목록을 조회하지 않았습니다.', {}, { timeout: 5000 })).toBeTruthy();
@@ -57,7 +79,8 @@ describe('product list', () => {
     expect(requests.some((request) => request.line.startsWith('GET /api/products'))).toBe(false);
 
     fail = false;
-    await user.click(screen.getByRole('button', { name: '다시 시도' }));
+    // 칸 자리의 재시도가 같은 선언의 URL 확인과 목록 조회까지 재개한다.
+    await user.click(screen.getByText('선택지를 불러오지 못했습니다.').querySelector('button')!);
     expect(await screen.findByRole('cell', { name: 'Desk Lamp' })).toBeTruthy();
   });
 

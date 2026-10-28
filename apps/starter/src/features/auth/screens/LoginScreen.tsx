@@ -28,10 +28,14 @@ export function LoginScreen({
 }) {
   const { t } = useTranslation();
   const message = useFieldMessage();
+  /** 입력한 자격증명으로 로그인하고 세션 시작에 쓸 토큰을 돌려준다. */
+  async function submitLogin(values: z.output<typeof schema>) {
+    return { accessToken: await signIn(values.loginId, values.password) };
+  }
   const editor = useSaveForm({
     schema,
     source: SOURCE,
-    save: async (values: { loginId: string; password: string }) => ({ accessToken: await signIn(values.loginId, values.password) }),
+    save: submitLogin,
     onSaved: (result) => onSignedIn(result.accessToken),
   });
 

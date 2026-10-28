@@ -211,9 +211,7 @@ it('정렬: 새 머리글은 선언한 첫 방향, 같은 머리글은 반전, �
   act(() => model.goToPage(2));
   fireEvent.change(screen.getByRole('textbox', { name: '키워드' }), { target: { value: 'x' } });
   fireEvent.click(screen.getByRole('button', { name: '검색' }));
-  await waitFor(() =>
-    expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ sort: 'name', order: 'asc', size: 50, page: 1 })),
-  );
+  await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ sort: 'name', order: 'asc', size: 50, page: 1 })));
 });
 
 it('일괄 요청 실패는 확인창과 선택을 보존하고 부분 성공은 성공한 선택만 비운다', async () => {
@@ -267,7 +265,10 @@ it('이전 조건 결과를 보이는 동안 총건수는 …, 선택·액션은
   await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
   expect(screen.getByText('…')).toBeTruthy();
   expect((screen.getByRole('button', { name: '쓰기' }).closest('fieldset') as HTMLFieldSetElement).disabled).toBe(true);
-  expect(screen.getByRole('checkbox', { name: '행 선택' }).getAttribute('aria-disabled') ?? screen.getByRole('checkbox', { name: '행 선택' }).hasAttribute('data-disabled')).toBeTruthy();
+  expect(
+    screen.getByRole('checkbox', { name: '행 선택' }).getAttribute('aria-disabled') ??
+      screen.getByRole('checkbox', { name: '행 선택' }).hasAttribute('data-disabled'),
+  ).toBeTruthy();
   await act(async () => release());
   await screen.findByText('z');
   expect((screen.getByRole('button', { name: '쓰기' }).closest('fieldset') as HTMLFieldSetElement).disabled).toBe(false);
@@ -485,4 +486,41 @@ it('다운로드 실패는 원인을 남기고 종류를 바꾸면 지운다', a
   expect((await screen.findByRole('alert')).textContent).toContain('다운로드하지 못했습니다');
   fireEvent.change(screen.getByRole('combobox', { name: '다운로드 종류' }), { target: { value: 'selected' } });
   expect(screen.queryByRole('alert')).toBeNull();
+});
+
+it('필수 필터는 별표·aria와 안내를 연결하며 검색 버튼은 초점을 받을 수 있고 요청은 차단한다', async () => {
+  const def = defineSearch({
+    fields: { ...definition.fields, from: { ...definition.fields.from, required: { message: '시작 날짜가 필요합니다.' } } },
+  });
+  const { fetch } = mount(
+    () => (
+      <List.Filter>
+        <List.Text name="to" label="다른 조건" />
+        <List.Detail keys={['from']}>
+          <List.Text name="from" label="시작" />
+        </List.Detail>
+        <List.FilterActions />
+      </List.Filter>
+    ),
+    { def },
+  );
+  const search = screen.getByRole('button', { name: '검색' });
+  expect(search.getAttribute('aria-disabled')).toBe('true');
+  expect((search as HTMLButtonElement).disabled).toBe(false);
+  search.focus();
+  expect(document.activeElement).toBe(search);
+  fireEvent.click(search);
+  expect(screen.getByRole('button', { name: '상세 검색' }).getAttribute('aria-expanded')).toBe('true');
+  const input = screen.getByLabelText('시작 *');
+  expect(input.getAttribute('aria-required')).toBe('true');
+  expect(input.getAttribute('aria-invalid')).toBe('true');
+  fireEvent.click(screen.getByRole('button', { name: '상세 검색' }));
+  expect(screen.getByRole('button', { name: '상세 검색' }).getAttribute('aria-expanded')).toBe('false');
+  fireEvent.change(screen.getByLabelText('다른 조건'), { target: { value: 'a' } });
+  expect(screen.getByRole('button', { name: '상세 검색' }).getAttribute('aria-expanded')).toBe('false');
+  fireEvent.click(search);
+  expect(screen.getByRole('button', { name: '상세 검색' }).getAttribute('aria-expanded')).toBe('true');
+  fireEvent.click(screen.getByRole('button', { name: '초기화' }));
+  expect(screen.getByRole('button', { name: '상세 검색' }).getAttribute('aria-expanded')).toBe('false');
+  expect(fetch).not.toHaveBeenCalled();
 });

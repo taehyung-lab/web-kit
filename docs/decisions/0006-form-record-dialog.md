@@ -1,6 +1,6 @@
 # 0006. 폼·상세·대화창: 저장 수명은 상태가, 배치는 부품 묶음이, 포커스는 대화창이 맡는다
 
-- 상태: 채택 (2026-10-28, 3.0 5단계 구현). 「필수 별표」 행은 [0007](0007-complex-form-fit.md)이 대체한다(필수 표시는 schema 하나에서, DT 사용자 규칙).
+- 상태: 채택 (2026-10-28, 3.0 5단계 구현). 「필수 별표」 행은 [0007](0007-complex-form-fit.md)이 대체한다(필수 표시는 schema 하나에서).
 - 관련 결정: [0003](0003-web-kit-3-redesign.md) §3 form·record 행, §4 구조 규칙, 순서 5단계 행. [0005](0005-list-filter-table-permission.md)의 부품 구조(`<List model>` + `List.*`)를 폼·상세에도 쓴다. 보장 내용의 정본은 `packages/web-kit/skills/web-kit-form`·`web-kit-record`이며 여기에는 결정·이유·출처만 둔다.
 - 근거 자료: DT v2 운영자 등록·수정·상세(`apps/admin/src/features/settings/screens/operator-form`·`operator-detail`)와 DT 공용(`shared/ui/form/*`·`shared/ui/dialog/*`·`shared/ui/detail/*`), 레퍼런스(`src/shared/ui/form/FormSaveDialogs.tsx`·`submit-form.ts`·`FormField.tsx`·`useInitialFocus.ts`, 약관 등록 `src/features/terms/screens/terms-form`), DT 1.5(`v1.5` 태그) 운영자 폼, web-kit 2.0 `form/ui.tsx`·`ui/dialog.tsx`·`detail-ui.tsx`, Base UI 1.7.0 `floating-ui-react/components/FloatingFocusManager.js`.
 
@@ -32,16 +32,9 @@
 
 - `/form`(로직)·`/record`는 UI를 import하지 않는다. `/form`·`/form/ui`는 목록(`/list`·`/search`)을, 목록은 폼을 import하지 않는다. 폼·상세·`/ui`는 세션 타이머·권한을 import하지 않는다(`tests/core-boundary.test.ts`).
 
-## DT에 남긴 공용과 이유
+## 소비 프로젝트의 이행 책임
 
-운영자 등록·수정·상세는 아래를 import하지 않는다. 다른 화면이 아직 쓰므로 그 화면이 키트로 옮겨질 때 지운다. 키트에 옛 API 호환 래퍼는 두지 않았다.
-
-- `shared/ui/form/use-app-save-form.ts`·`SaveForm.tsx`·`FormField.tsx`·`FieldFeedback.tsx`·`field-required.ts`·`FormTextField.tsx`·`FormSelectField.tsx`·`options-state.tsx`·`FormErrorLine.tsx`·`FormFileField.tsx`: 공연 폼·공연 대화창(판매처 API·3차 인증)·인증 화면(로그인·2단계 인증·비밀번호 변경·인증기 등록).
-- `shared/ui/form/UnsavedChangesGuard.tsx`: 공연 등록·수정과 인증 화면, 사이드바. 이행 기간에는 키트 `FormGuard`와 함께 마운트되며 각자 자기 폼만 본다.
-- `shared/ui/dialog/SavedDialog.tsx`: 공연 등록·수정. `useConfirmation.tsx`·`ConfirmDialog.tsx`: 공연 상세·예매 목록. `AppDialog.tsx`: 세션·권한 모달 등 다수.
-- `shared/ui/detail/RecordBoundary.tsx`·`DetailField.tsx`·`UpdateHistory.tsx`: 공연 상세·수정·3차 인증 대화창.
-- 새로 둔 것: `shared/ui/form/kit-form.ts`(DT 문구표·앱 경계·필드 순서 → 키트 값), `kit-form-guard.tsx`(DT 문구의 `FormGuard`), `shared/ui/detail/kit-record.ts`. 제품 정책을 값으로 바꾸는 곳이라 키트로 옮기지 않는다.
-- 바꾼 것: `shared/ui/form/form-error-message.ts`는 키트 `createFormMessages('@form-error:')`를 쓴다(같은 인코딩의 두 번째 구현을 없앰).
+프로젝트별 교체 화면·남겨 둔 부품·삭제 시점은 소비 프로젝트의 결정 기록에서 관리한다. 공용 패키지에는 해당 프로젝트의 경로·업무 값·화면 배치를 기준으로 넣지 않는다. 기존 구현 비교는 위 근거 표에만 남긴다.
 
 ## 검토한 대안
 

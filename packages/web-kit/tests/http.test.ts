@@ -1,8 +1,8 @@
 // 파일 책임: http 요청 처리(헤더·봉투·실패 변환·401 재발급 뒤 한 번 재전송·세대·반영 여부)를 axios adapter로 검사한다.
 import { AxiosError, AxiosHeaders, type AxiosAdapter, type InternalAxiosRequestConfig } from 'axios';
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, expectTypeOf, it, vi } from 'vitest';
 import { createResultCodeTable, RequestFailure } from '../src/failure';
-import { createHttp } from '../src/http';
+import { createHttp, type ResponseContract } from '../src/http';
 import { createSession, type SessionStore, type StoredSession } from '../src/session';
 
 interface Credentials {
@@ -46,7 +46,13 @@ const adapter: AxiosAdapter = async (config: InternalAxiosRequestConfig) => {
 
 function store(): SessionStore<Credentials> {
   let value: StoredSession<Credentials> | null = null;
-  return { read: () => value, write: (next) => { value = next; }, subscribe: () => () => undefined };
+  return {
+    read: () => value,
+    write: (next) => {
+      value = next;
+    },
+    subscribe: () => () => undefined,
+  };
 }
 
 function ok(data: unknown, resultCode = 200) {
@@ -57,13 +63,14 @@ function fail(status: number, resultCode?: number) {
 }
 
 let reissue: ReturnType<typeof vi.fn<(credentials: Credentials) => Promise<Credentials>>>;
-function setup() {
+function setup(response?: ResponseContract) {
   reissue = vi.fn(async (_credentials: Credentials) => ({ accessToken: 't2' }));
   const session = createSession<Credentials>({ store: store(), reissue: (c) => reissue(c) });
   session.start({ accessToken: 't1' });
   const http = createHttp({
     session,
     results: table,
+    response,
     isPublic: (config) => config.url?.startsWith('/auth/') === true,
     prepare: (headers) => headers.set('Accept-Language', 'ko'),
     defaults: { adapter },
@@ -95,7 +102,10 @@ it('H1b 파일로 받는 요청도 JSON 실패 응답은 resultCode로 해석한
     { status: 200, data: new Blob(['xlsx']), contentType: 'application/octet-stream' },
   ];
   await expect(http.request({ url: '/file', method: 'post', responseType: 'blob' })).rejects.toMatchObject({ status: 500, code: '2100' });
-  await expect(http.request({ url: '/file', method: 'post', responseType: 'blob' })).rejects.toMatchObject({ kind: 'business', messageKey: 'notExist' });
+  await expect(http.request({ url: '/file', method: 'post', responseType: 'blob' })).rejects.toMatchObject({
+    kind: 'business',
+    messageKey: 'notExist',
+  });
   await expect(http.request({ url: '/file', method: 'post', responseType: 'blob' })).resolves.toBeInstanceOf(Blob);
 });
 
@@ -173,7 +183,12 @@ it('H9 요청 중 세션이 바뀌면 성공 응답도 취소로 끝난다', asy
     session,
     results: table,
     isPublic: () => false,
-    defaults: { adapter: async (config) => { await gate; return adapter(config); } },
+    defaults: {
+      adapter: async (config) => {
+        await gate;
+        return adapter(config);
+      },
+    },
   });
   void http;
   const pending = slow.request({ url: '/items' });
@@ -194,7 +209,12 @@ it('H10 공개 요청은 토큰을 싣지 않고 401을 재발급하지 않는�
 it('H11 호출자가 취소하면 cancelled다. 재발급을 기다리던 요청만 끝나고 재발급은 계속된다', async () => {
   const { http } = setup();
   let finish!: (value: Credentials) => void;
-  reissue.mockImplementationOnce(() => new Promise<Credentials>((resolve) => { finish = resolve; }));
+  reissue.mockImplementationOnce(
+    () =>
+      new Promise<Credentials>((resolve) => {
+        finish = resolve;
+      }),
+  );
   replies = [fail(401, 4002), fail(401, 4002), ok('second')];
   const controller = new AbortController();
   const first = http.request({ url: '/a', signal: controller.signal });
@@ -213,8 +233,13 @@ function rotatingSetup(rotateAt: Record<number, string>) {
   const listeners = new Set<(next: StoredSession<Credentials> | null) => void>();
   const rotating: SessionStore<Credentials> = {
     read: () => value,
-    write: (next) => { value = next; },
-    subscribe: (listener) => { listeners.add(listener); return () => listeners.delete(listener); },
+    write: (next) => {
+      value = next;
+    },
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
   };
   reissue = vi.fn(async () => ({ accessToken: 't2' }));
   const session = createSession<Credentials>({ store: rotating, reissue: (c) => reissue(c) });
@@ -273,7 +298,13 @@ it('H13 모든 전송 시도(재전송 포함)를 응답 헤더·status·보낸 
     session,
     results: table,
     isPublic: () => false,
-    observe: (event) => events.push({ url: event.url, status: event.response?.status, expires: event.response?.header('x-request-id'), sentAt: event.sentAt }),
+    observe: (event) =>
+      events.push({
+        url: event.url,
+        status: event.response?.status,
+        expires: event.response?.header('x-request-id'),
+        sentAt: event.sentAt,
+      }),
     defaults: { adapter },
   });
   replies = [fail(401, 4002), ok('done'), 'network'];
@@ -304,4 +335,86 @@ it('H15 쓰기의 인증 거절은 토큰이 회전돼 있어도 다시 보내�
   expect(sent).toHaveLength(1);
   expect(reissue).not.toHaveBeenCalled();
   expect(session.current()).not.toBeNull();
+});
+
+/** 다른 서버 규약도 공통 실패·전송 수명을 사용한다. */
+it('프로젝트가 성공 코드와 같은 코드의 문구를 각각 정한다', async () => {
+  function contract(messageKey: string): ResponseContract {
+    return {
+      read(body, status, requestId) {
+        const value = body as { code: string; payload?: unknown };
+        return value.code === 'OK'
+          ? { ok: true, data: value.payload }
+          : { ok: false, failure: new RequestFailure({ kind: 'business', status, code: value.code, requestId, messageKey }) };
+      },
+    };
+  }
+  const first = setup(contract('first.rejected')).http;
+  const second = setup(contract('second.rejected')).http;
+  replies = [
+    { status: 200, data: { code: 'OK', payload: { id: 7 } } },
+    { status: 200, data: { code: '1001' } },
+    { status: 200, data: { code: '1001' } },
+  ];
+  await expect(first.request({ url: '/items' })).resolves.toEqual({ id: 7 });
+  await expect(first.request({ url: '/items' })).rejects.toMatchObject({ kind: 'business', code: '1001', messageKey: 'first.rejected' });
+  await expect(second.request({ url: '/auth/sign-in' })).rejects.toMatchObject({
+    kind: 'business',
+    code: '1001',
+    messageKey: 'second.rejected',
+  });
+});
+
+it('프로젝트 응답 해석 뒤에도 401 재발급과 재전송을 공통 처리한다', async () => {
+  const { http } = setup({
+    read: (body, status, requestId) =>
+      status === 401 ? { ok: false, failure: new RequestFailure({ kind: 'unauthorized', status, requestId }) } : { ok: true, data: body },
+  });
+  replies = [
+    { status: 401, data: {} },
+    { status: 200, data: { id: 9 } },
+  ];
+  await expect(http.request({ url: '/items' })).resolves.toEqual({ id: 9 });
+  expect(reissue).toHaveBeenCalledTimes(1);
+  expect(sent.map((request) => request.authorization)).toEqual(['Bearer t1', 'Bearer t2']);
+});
+
+it('프로젝트 해석 결과의 data 속성도 실제 반환 타입에 보존한다', async () => {
+  const { http } = setup({ read: (body) => ({ ok: true, data: body }) });
+  replies = [{ status: 200, data: { id: 3, data: '내용' } }];
+  const result = http.requestData<{ id: number; data: string }>({ url: '/items' });
+  expectTypeOf(result).toEqualTypeOf<Promise<{ id: number; data: string }>>();
+  await expect(result).resolves.toEqual({ id: 3, data: '내용' });
+});
+
+it('프로젝트가 status를 빠뜨려도 실제 401은 재발급하고 코드·문구는 보존한다', async () => {
+  const { http } = setup({
+    read: (body, status) =>
+      status === 401
+        ? { ok: false, failure: new RequestFailure({ kind: 'unauthorized', code: 'expired', messageKey: 'project.expired' }) }
+        : { ok: true, data: body },
+  });
+  replies = [
+    { status: 401, data: {} },
+    { status: 200, data: { id: 11 } },
+  ];
+  await expect(http.requestData({ url: '/items' })).resolves.toEqual({ id: 11 });
+  expect(reissue).toHaveBeenCalledTimes(1);
+});
+it('프로젝트의 다른 status로 실제 비401 응답을 재발급하지 않는다', async () => {
+  const { http } = setup({
+    read: () => ({
+      ok: false,
+      failure: new RequestFailure({ kind: 'business', status: 401, code: 'denied', messageKey: 'project.denied', requestId: 'invented' }),
+    }),
+  });
+  replies = [{ status: 403, data: {} }];
+  await expect(http.requestData({ url: '/items' })).rejects.toMatchObject({
+    kind: 'business',
+    status: 403,
+    code: 'denied',
+    messageKey: 'project.denied',
+    requestId: 'rid',
+  });
+  expect(reissue).not.toHaveBeenCalled();
 });
