@@ -4,7 +4,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { StandardSchemaV1 } from '@tanstack/react-form';
 import { afterEach, expect, it, vi } from 'vitest';
 import { RequestFailure } from '../src/failure';
-import { useSaveForm, type SaveFormOptions } from '../src/form/save-form';
+import { FormRejection, useSaveForm, type SaveFormOptions } from '../src/form/save-form';
 
 interface Values {
   readonly name: string;
@@ -720,4 +720,65 @@ it('S22 서버 필드 오류가 모두 칸에 붙으면 폼 수준 실패는 없
   await submit();
   await flush();
   expect(editor.formFailure).toBe(failure);
+});
+
+it('S23 save가 던진 화면 절차 거절(FormRejection)은 서버 필드 오류와 같은 길: 제출 값 그대로인 칸에만 붙고 화면 순서 첫 오류 칸에 포커스한다', async () => {
+  const pending = deferred<undefined>();
+  render(<Screen schema={schema} source={original} save={() => pending.promise} />);
+  type('name', 'B');
+  type('email', 'b@x');
+  await submit();
+  // 화면 절차(사전 조회 등)가 끝나기 전에 이름을 고쳤다. 이름 거절은 지금 값과 맞지 않아 칸에 붙지 않는다.
+  type('name', 'C');
+  await act(async () =>
+    pending.reject(
+      new FormRejection([
+        { field: 'name', message: '이미 있는 이름' },
+        { field: 'email', message: '쓸 수 없는 메일' },
+      ]),
+    ),
+  );
+  await flush();
+  expect(screen.getByTestId('name-error').textContent).toBe('');
+  expect(screen.getByTestId('email-error').textContent).toBe('쓸 수 없는 메일');
+  expect(document.activeElement).toBe(screen.getByLabelText('email'));
+  expect(state()).toMatchObject({ stage: 'idle', failure: 'save rejected before request', unattached: [] });
+});
+
+it('S24 FormRejection의 폼 수준 실패: 칸이 모두 붙고 root가 없으면 없음, root가 있거나 붙지 못한 칸이 있으면 남음, 칸·root 모두 없으면 조용한 중단', async () => {
+  let rejection = new FormRejection([{ field: 'name', message: '거절' }]);
+  let editor!: ReturnType<typeof useSaveForm<Values, Output>>;
+  function FieldScreen() {
+    editor = useSaveForm({
+      schema,
+      source: original,
+      save: async () => {
+        throw rejection;
+      },
+    });
+    return (
+      <>
+        <editor.form.Field name="name">{(field) => <input aria-label="name" value={field.state.value} readOnly />}</editor.form.Field>
+        <button onClick={() => void editor.submit()}>save</button>
+      </>
+    );
+  }
+  render(<FieldScreen />);
+  await submit();
+  await flush();
+  expect(editor.failure).toBe(rejection);
+  expect(editor.formFailure).toBeUndefined();
+  rejection = new FormRejection([{ field: 'name', message: '거절' }], '공연장을 불러오지 못했습니다');
+  await submit();
+  await flush();
+  expect(editor.formFailure).toBe(rejection);
+  rejection = new FormRejection([{ field: 'email', message: '화면에 없는 칸' }]);
+  await submit();
+  await flush();
+  expect(editor.formFailure).toBe(rejection);
+  rejection = new FormRejection();
+  await submit();
+  await flush();
+  expect(editor.failure).toBe(rejection);
+  expect(editor.formFailure).toBeUndefined();
 });

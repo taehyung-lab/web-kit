@@ -22,7 +22,7 @@ import { FormArrayField, type FormArrayRows } from './array';
 import { FieldFrame, type FieldControlProps } from './field';
 import type { FormFileValue } from './file';
 import { createFormNavigation, type FormNavigation as Navigation, type LeaveReason } from './navigation';
-import { lockField, type SaveFormEditor } from './save-form';
+import { FormRejection, lockField, type SaveFormEditor } from './save-form';
 import { useFormSection } from './sections';
 
 // ─── 이탈 보호 ───────────────────────────────────────────────────────────────
@@ -621,18 +621,28 @@ function ArrayField({
 function Section({
   title,
   fields,
+  errorMarker,
   children,
   className,
 }: {
   readonly title?: ReactNode;
   readonly fields?: readonly string[];
+  /** 머리글 오류 표시를 바꾼다(FormSection과 같다). 없으면 「!」 + 낭독 `messages.sectionErrors`. */
+  readonly errorMarker?: (errorCount: number) => ReactNode;
   readonly children: ReactNode;
   readonly className?: string;
 }) {
   const { editor, copy } = useFormContext();
   if (fields !== undefined) {
     return (
-      <FormSection form={editor.form} fields={fields} title={title} errorLabel={copy.sectionErrors} className={className}>
+      <FormSection
+        form={editor.form}
+        fields={fields}
+        title={title}
+        errorLabel={copy.sectionErrors}
+        errorMarker={errorMarker}
+        className={className}
+      >
         {children}
       </FormSection>
     );
@@ -647,21 +657,25 @@ function Section({
 
 /**
  * 접을 수 있는 구역(열림·오류 표시·제출 뒤 펼침). `Form.Section fields`가 이것을 쓰고, 키트 `Form` 밖의 폼(useSaveForm의 form만 있는 화면)도
- * 같은 부품을 직접 쓴다. 닫혀도 칸은 마운트된 채 숨긴다(값·검증 유지). 오류 표시는 1.5처럼 머리글의 「!」이고, 화면 낭독기는 오류 수(`errorLabel`)를 읽는다.
+ * 같은 부품을 직접 쓴다. 닫혀도 칸은 마운트된 채 숨긴다(값·검증 유지). 열림·오류 수·거절 때 펼침은 키트가, 머리글에 오류를 어떻게 보일지는 프로젝트가 정한다:
+ * 기본은 1.5처럼 머리글의 「!」이고 화면 낭독기는 오류 수(`errorLabel`)를 읽는다. `errorMarker`를 주면 그 표시로 바꾼다(예: 보이는 "오류 2개" 배지).
  */
 export function FormSection({
   form,
   fields,
   title,
   errorLabel,
+  errorMarker,
   className,
   children,
 }: {
   readonly form: AnyFormApi;
   readonly fields: readonly string[];
   readonly title: ReactNode;
-  /** 오류 수 → 화면 낭독기 문구. */
+  /** 오류 수 → 화면 낭독기 문구(기본 표시가 쓴다). */
   readonly errorLabel: (count: number) => string;
+  /** 오류가 있을 때 머리글 제목 뒤에 그릴 표시(오류 수를 받는다). 화면 낭독기가 읽을 문구도 이 표시가 책임진다. 없으면 기본 표시. */
+  readonly errorMarker?: (errorCount: number) => ReactNode;
   readonly className?: string;
   readonly children: ReactNode;
 }) {
@@ -673,7 +687,8 @@ export function FormSection({
         <button type="button" className="wk-section-toggle" aria-expanded={section.open} aria-controls={contentId} onClick={section.toggle}>
           {title}
           {section.errorCount > 0 ? ' ' : null}
-          {section.errorCount > 0 ? (
+          {section.errorCount > 0 && errorMarker !== undefined ? errorMarker(section.errorCount) : null}
+          {section.errorCount > 0 && errorMarker === undefined ? (
             <span className="wk-section-badge">
               <span aria-hidden="true">!</span>
               <span className="wk-visually-hidden">{errorLabel(section.errorCount)}</span>
@@ -701,7 +716,7 @@ function Failure({ className }: { readonly className?: string }) {
     <>
       {editor.formFailure !== undefined && save !== null ? (
         <p role="alert" className={join('wk-form-failure', className)}>
-          {save ?? copy.saveFailed}
+          {save ?? (editor.formFailure instanceof FormRejection ? editor.formFailure.root : undefined) ?? copy.saveFailed}
         </p>
       ) : null}
       {showCompletion ? (

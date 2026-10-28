@@ -16,7 +16,7 @@ description: 등록·수정·대화창 폼의 저장·저장 확인·저장 완�
 - 고칠 수 없는 칸(`disabled`)은 오류를 숨긴다. 서버 필드 오류가 그 칸으로 대응되면 칸에 붙은 것으로 세지 않고 폼 한 줄(`Form.Failure`)로 알린다.
 - `Form.Text`·`TextArea`의 `maxLength`는 길어지는 편집만 거부한다(한글 조합 커밋도). 서버가 준 초과 초기값은 줄일 수 있다. `showCount`면 글자 수를 보인다.
 - `Form.Select`는 값이 비었을 때만 빈 선택지(`placeholder`)를 둔다. 서버 선택지는 `status`('loading'·'ready'·`{ failure }`)와 `onRetry`로 그 칸 자리에 불러오는 중·실패·다시 시도를 보인다. `onChange`는 사용자가 고른 직후에만 불린다(함께 비울 값).
-- `Form.Section`: 칸 묶음. `fields`(이 구역 칸의 정확한 경로나 접두, 예 `['order.grades']`)를 주면 접을 수 있는 구역이다. 처음엔 펼침, 머리글 버튼으로 닫고 연다(닫혀도 칸은 마운트된 채 숨김). 열림 규칙(참조 프로젝트 `use-form-sections`의 사건 방식): 제출이 거절될 때마다(클라이언트 검증 실패, 서버 필드 오류 도착) 실패한 칸을 가진 구역을 모두 펼친 다음 화면 순서 첫 오류 칸에 포커스한다. 저장 중에 사용자가 닫은 구역도 그 저장의 서버 오류가 오면 펼친다. 그 밖의 열고 닫기는 사용자 상태라, 펼쳐진 구역은 고쳐도 열린 채이고 사용자가 닫으면 다음 거절까지 닫힌 채다. 표시(1.5 공연 폼 구역과 같다): 구역 칸에 오류(클라이언트·서버)가 있으면 머리글에 「!」, 화면 낭독기는 `messages.sectionErrors(count)`(기본 `오류 N개`)를 읽는다. 키트 저장 흐름 밖에서 칸에 오류를 붙이는 화면은 포커스 전에 `revealFormSections(form, 칸 목록)`을 부른다. 키트 `Form` 밖의 폼은 `FormSection`(`form`·`fields`·`title`·`errorLabel`)을 같은 규칙으로 쓴다. 구역 열림·오류 수를 프로젝트가 따로 만들지 않는다.
+- `Form.Section`: 칸 묶음. `fields`(이 구역 칸의 정확한 경로나 접두, 예 `['order.grades']`)를 주면 접을 수 있는 구역이다. 처음엔 펼침, 머리글 버튼으로 닫고 연다(닫혀도 칸은 마운트된 채 숨김). 열림 규칙(참조 프로젝트 `use-form-sections`의 사건 방식): 제출이 거절될 때마다(클라이언트 검증 실패, 서버 필드 오류 도착, `save`가 던진 `FormRejection`) 실패한 칸을 가진 구역을 모두 펼친 다음(실패 칸이 없는 구역은 그대로) 화면 순서 첫 오류 칸에 포커스한다. 저장 중에 사용자가 닫은 구역도 그 저장의 서버 오류가 오면 펼친다. 그 밖의 열고 닫기는 사용자 상태라, 펼쳐진 구역은 고쳐도 열린 채이고 사용자가 닫으면 다음 거절까지 닫힌 채다. 머리글 오류 표시는 프로젝트가 고른다. 기본(1.5 공연 폼 구역과 같다): 구역 칸에 오류(클라이언트·서버)가 있으면 머리글에 「!」, 화면 낭독기는 제목과 `messages.sectionErrors(count)`(기본 `오류 N개`)를 읽는다. `errorMarker={(errorCount) => …}`를 주면 그 표시로 바꾼다(예: 보이는 "오류 2개" 배지). 바꾼 표시는 화면 낭독기가 읽을 문구까지 책임진다. 키트 `Form` 밖의 폼은 `FormSection`(`form`·`fields`·`title`·`errorLabel`, 선택 `errorMarker`)을 같은 규칙으로 쓴다. 구역 열림·오류 수를 프로젝트가 따로 만들지 않는다.
 - `Form.Failure`: 폼 수준 한 줄. 칸에 붙지 못한 저장 실패와, 저장 뒤 완료 처리 실패(다시 시도 = 완료 처리만)를 보인다. 서버 필드 오류가 모두 칸에 붙은 검증 실패는 그리지 않는다. 위치는 놓는 곳이 정한다.
 - `Form.File`: 값은 `FormFileValue`(`empty`·`existing{name}`·`selected{file}`·`removed`). 지금 파일 이름을 상태에서 그리고 입력의 설명으로 잇는다. 선택 창을 열었다 취소해도 값은 그대로이고, 지우는 길은 제거 버튼 하나다(기존 파일이면 `removed`). 고른 File은 다른 칸 오류·재마운트·대화창 열고 닫기·저장 실패 뒤에도 같은 객체로 남아 다시 저장하면 그대로 보낸다. 업로드와 `removed`의 요청 변환은 `save`가 한다.
 - `Form.Submit`은 저장 중·확인 대기·완료 처리 중에 `aria-disabled`로 잠긴다(`disabled`로 바꾸지 않아 포커스가 남는다). 저장 요청이나 완료 처리(이동 등)가 진행 중이면 버튼 바로 뒤에 진행 표시(`.wk-spinner`, 문구 `messages.saving`은 화면 낭독기용 `.wk-visually-hidden`)가 선다. `Form.Cancel`도 그동안 잠긴다.
@@ -42,11 +42,11 @@ description: 등록·수정·대화창 폼의 저장·저장 확인·저장 완�
 
 - schema: 동기 Standard Schema(zod 4). 비동기 검증은 받지 않는다. 폼 값의 File·Blob은 복사되지 않고 그대로 저장 함수까지 간다.
 - `source { id, values }`: 원본을 폼 값으로 바꾼 것. 등록 화면이면 기본값이다.
-- `save(values, submitted)`: 서버가 저장 결과를 주면 폼 값으로 바꿔 `{ saved }`로 돌려준다.
+- `save(values, submitted)`: 서버가 저장 결과를 주면 폼 값으로 바꿔 `{ saved }`로 돌려준다. 요청 전에 화면 절차가 거절하면(먼저 조회가 필요한 검사·업로드 실패·확인창 취소) `throw new FormRejection(칸 목록 [{ field, message }], root?)`. 키트가 서버 필드 오류와 같은 길로 처리하므로(아래 「실패」) 화면이 칸에 오류를 직접 붙이거나 구역을 열거나 포커스를 예약하지 않는다.
 - 필요할 때만 선언하는 것:
   - `confirm`
   - `fieldError`: 서버 필드를 폼 경로와 문구로 바꾼다. 돌려준 경로는 제출 때 기준이고, 그 뒤 줄 작업은 키트가 따라간다.
-  - `reveal`: 키트 구역(`Form.Section fields`·`FormSection`)이 아닌 프로젝트 고유의 접힌 영역(탭 등)을 오류 포커스 전에 연다. 키트 구역은 스스로 열린다.
+  - `reveal(fields)`: 키트 구역(`Form.Section fields`·`FormSection`)이 아닌 프로젝트 고유의 접힌 영역(탭 등)을 오류 포커스 전에 연다. 거절마다(클라이언트 검증 실패·서버 필드 오류 도착(늦은 도착 포함)·`FormRejection`) 실패 칸 목록으로 한 번 불린다. 제출 횟수를 세어 열지 않는다. 키트 구역은 스스로 열린다.
   - `onSaved(result)`: 이동·알림. 저장 함수가 돌려준 값을 그대로 받는다(등록 뒤 새 id 등).
   - `acknowledge`: 저장 뒤 사용자 확인(`complete()`)을 기다린 다음 `onSaved`를 실행한다.
 - 입력 control의 id는 `fieldId(name)`을 쓰고, 같은 id를 `FieldFrame`에 넘긴다. 체크 트리(`CheckboxTree`)는 그 id를 `id`로 받으며, 검증 오류의 focus가 그 그룹으로 온다.
@@ -80,7 +80,8 @@ description: 등록·수정·대화창 폼의 저장·저장 확인·저장 완�
 - 실패:
   - 실패는 `failure`에 그대로 담기고 `cancelled`만 빠진다. 입력과 기준선은 유지된다.
   - 서버 필드 오류는 화면에 있고 고칠 수 있으며 제출 값과 현재 값이 같은 필드에만 붙는다(배열 경로는 제출 뒤 줄 작업을 따라 옮긴 위치). 붙지 못한 오류(저장 중 바뀐 필드, 지워진 줄, 폼 경로로 바꾸지 못한 것, 화면에 없는 필드, disabled 칸)는 `unattachedFieldErrors`로 나온다. 다음 제출이 지난 서버 오류를 지운다.
-  - `formFailure`는 폼 수준에 보일 실패다. 서버 필드 오류가 모두 칸에 붙은 검증 실패면 `undefined`다.
+  - `save`가 던진 `FormRejection`도 같다: 칸 문구는 서버 오류와 같은 자리에 같은 조건(제출 값 = 지금 값, 줄 작업 추적, 화면에 있고 고칠 수 있는 칸)으로 붙고, 구역·`reveal`을 펼친 뒤 화면 순서 첫 오류 칸에 포커스한다. 다음 제출이 지운다.
+  - `formFailure`는 폼 수준에 보일 실패다. 서버 필드 오류가 모두 칸에 붙은 검증 실패면 `undefined`다. `FormRejection`은 root가 있거나 붙지 못한 칸이 있으면 남고, 칸이 모두 붙고 root가 없으면(칸도 없으면 조용한 중단) `undefined`다. `Form.Failure`는 `renderFailure`가 정하지 않으면 root 문구를 보인다.
   - 입력 탓인 실패(예: 로그인 아이디·비밀번호 불일치)는 `clearFailureOnEdit(failure)`가 true를 돌려주게 하면, 지금 입력이 실패한 제출 때 입력과 달라지는 동안 `failure`·`unattachedFieldErrors`에서 빠진다. 연결 실패처럼 입력과 무관한 실패는 false로 두어 남긴다. 기본은 지우지 않는다.
   - `failure.resultUnknown`이면 반영 여부를 확인할 수 없다는 뜻이다. 다시 저장하기 전에 다시 읽기를 안내하는 일은 화면이 정한다.
 - 원본 재도착(같은 `id`의 새 `values`):

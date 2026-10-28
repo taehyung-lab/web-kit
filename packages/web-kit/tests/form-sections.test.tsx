@@ -8,7 +8,7 @@ import type { ReactNode } from 'react';
 import { afterEach, beforeAll, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { RequestFailure } from '../src/failure';
-import { useSaveForm } from '../src/form';
+import { FormRejection, useSaveForm } from '../src/form';
 import { Form, FormGuard, FormSection } from '../src/form/ui';
 
 afterEach(cleanup);
@@ -166,4 +166,80 @@ it('키트 Form 밖의 폼도 FormSection으로 같은 규칙을 쓴다(useSaveF
   await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText('제목')));
   expect(header('기본').getAttribute('aria-expanded')).toBe('true');
   expect(header('기본').textContent).toContain('errors 1');
+});
+
+it('거절 때 실패 칸이 없는 닫힌 구역은 닫힌 채 둔다(클라이언트 검증 실패·서버 필드 오류 모두)', async () => {
+  const save = vi.fn(() => Promise.reject(rejectGrade()));
+  await mount(() => <Screen values={{ ...VALID, order: { grades: [{ key: 'a', name: '' }] } }} save={save} />);
+  fireEvent.click(header('기본'));
+  fireEvent.click(header('주문'));
+  await act(async () => fireEvent.click(screen.getByText('저장')));
+  await waitFor(() => expect(document.activeElement).toBe(grade()));
+  expect(header('주문').getAttribute('aria-expanded')).toBe('true');
+  expect(header('기본').getAttribute('aria-expanded')).toBe('false');
+  expect(save).not.toHaveBeenCalled();
+
+  // 서버 거절도 같다: 고쳐서 저장하면 서버가 등급만 거절하고, 닫아 둔 기본 구역은 그대로 닫혀 있다.
+  fireEvent.change(grade(), { target: { value: 'VIP' } });
+  fireEvent.click(header('주문'));
+  await act(async () => fireEvent.click(screen.getByText('저장')));
+  await waitFor(() => expect(header('주문').getAttribute('aria-expanded')).toBe('true'));
+  await waitFor(() => expect(document.activeElement).toBe(grade()));
+  expect(save).toHaveBeenCalledTimes(1);
+  expect(header('기본').getAttribute('aria-expanded')).toBe('false');
+});
+
+it('save가 던진 화면 절차 거절(FormRejection): 닫힌 오류 구역을 펼치고 문구를 붙여 그 칸에 포커스, 저장 중 닫은 구역도 다시 펼친다', async () => {
+  let reject: (error: unknown) => void = () => undefined;
+  const save = () =>
+    new Promise<never>((_, fail) => {
+      reject = fail;
+    });
+  await mount(() => <Screen values={VALID} save={save} />);
+  fireEvent.click(header('기본'));
+  await act(async () => fireEvent.click(screen.getByText('저장')));
+  fireEvent.click(header('주문'));
+  expect(header('주문').getAttribute('aria-expanded')).toBe('false');
+  await act(async () => reject(new FormRejection([{ field: 'order.grades[0].name', message: '판매처 등급이 아닙니다' }])));
+  await waitFor(() => expect(document.activeElement).toBe(grade()));
+  expect(header('주문').getAttribute('aria-expanded')).toBe('true');
+  expect(header('기본').getAttribute('aria-expanded')).toBe('false');
+  expect(grade().getAttribute('aria-invalid')).toBe('true');
+  expect(screen.getByText('판매처 등급이 아닙니다')).toBeTruthy();
+  expect(header('주문').textContent).toContain('오류 1개');
+});
+
+it('머리글 오류 표시는 프로젝트가 바꿀 수 있다: 기본은 「!」 + 낭독 "<제목> 오류 N개", errorMarker를 주면 그 표시(보이는 "오류 N개" 배지)', async () => {
+  const twoErrors: Values = { title: '', order: { grades: [{ key: 'a', name: '' }] } };
+  const marker = (count: number) => <span className="badge">{`오류 ${count}개`}</span>;
+  function Marked() {
+    const editor = useSaveForm({ schema, source: { id: 1, values: twoErrors }, save: async () => undefined });
+    return (
+      <F editor={editor}>
+        <F.Section title="기본" fields={['title']}>
+          <F.Text name="title" label="제목" />
+        </F.Section>
+        <F.Section title="주문" fields={['order.grades', 'title']} errorMarker={marker}>
+          <F.Text name="order.grades[0].name" label="등급" />
+        </F.Section>
+        <FormSection form={editor.form} fields={['title', 'order.grades']} title="전체" errorLabel={(count) => `errors ${count}`} errorMarker={marker}>
+          <span />
+        </FormSection>
+        <F.Submit />
+      </F>
+    );
+  }
+  await mount(() => <Marked />);
+  await act(async () => fireEvent.click(screen.getByText('저장')));
+  await waitFor(() => expect(header('기본').textContent).toContain('!'));
+  // 기본 표시: 보이는 「!」(낭독 제외) + 화면 낭독기 문구.
+  const visible = header('기본').querySelector('[aria-hidden="true"]');
+  expect(visible?.textContent).toBe('!');
+  expect(header('기본').querySelector('.wk-visually-hidden')?.textContent).toBe('오류 1개');
+  // 바꾼 표시: 「!」 없이 보이는 배지가 오류 수를 받는다(Form.Section·FormSection 모두).
+  expect(header('주문').textContent).toBe('주문 오류 2개');
+  expect(header('주문').querySelector('.badge')?.getAttribute('aria-hidden')).toBeNull();
+  expect(header('주문').textContent).not.toContain('!');
+  expect(header('전체').textContent).toBe('전체 오류 2개');
+  expect(header('전체').textContent).not.toContain('errors');
 });

@@ -7,7 +7,7 @@ import { useState, type ReactNode } from 'react';
 import { afterEach, beforeAll, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { RequestFailure } from '../src/failure';
-import { useSaveForm, type FormFileValue } from '../src/form';
+import { FormRejection, useSaveForm, type FormFileValue } from '../src/form';
 import { Form, FormGuard } from '../src/form/ui';
 
 afterEach(cleanup);
@@ -186,6 +186,18 @@ it('C3 저장 중 옮긴 줄은 옮긴 자리에서, 지운 줄의 서버 오류
   await act(async () => second.reject(rejected('rows[1].v')));
   await screen.findByText('저장하지 못했습니다. 입력을 확인해 주세요.');
   expect(['회차 w', '회차 y', '회차 z'].filter(invalid)).toEqual([]);
+});
+
+it('C3 화면 절차 거절(FormRejection)도 저장 중 옮긴 줄을 따라 지금 자리에 붙고, root는 폼 한 줄에 보인다', async () => {
+  const pending = deferred();
+  await mount(() => <FlatEditor save={() => pending.promise} initial={FLAT} />);
+  await act(async () => fireEvent.click(screen.getByText('저장')));
+  await act(async () => fireEvent.click(screen.getByText('맨 아래로 y')));
+  await act(async () => pending.reject(new FormRejection([{ field: 'rows[2].v', message: '절차 거절' }], '입장 정보를 확인하지 못했습니다')));
+  await waitFor(() => expect(invalid('회차 y')).toBe(true));
+  expect(['회차 w', '회차 x', '회차 z'].filter(invalid)).toEqual([]);
+  expect(within(screen.getByLabelText('회차 y', { exact: false }).parentElement!).getByRole('alert').textContent).toBe('절차 거절');
+  await screen.findByText('입장 정보를 확인하지 못했습니다');
 });
 
 // ─── 모달 하위 폼 ───────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 // 파일 책임: 접을 수 있는 폼 구역의 규칙 — 구역 칸(정확한 경로나 접두)으로 센 오류 수와 열림 상태, 거절된 제출의 구역 펼침.
-// 열림은 사용자가 열고 닫는 평범한 상태다(처음엔 펼침, 닫혀도 칸은 마운트). 제출이 거절될 때마다(클라이언트 검증 실패, 서버 필드 오류 도착)
+// 열림은 사용자가 열고 닫는 평범한 상태다(처음엔 펼침, 닫혀도 칸은 마운트). 제출이 거절될 때마다(클라이언트 검증 실패, 서버 필드 오류 도착, 화면 절차 거절 FormRejection)
 // useSaveForm이 실패한 칸 목록으로 revealFormSections를 부르고, 그 칸을 가진 구역이 모두 펼쳐진다. 제출 횟수 같은 기록은 두지 않는다
 // (참조 프로젝트 use-form-sections의 revealInvalid와 같은 사건 방식). 포커스는 펼친 뒤 useSaveForm이 화면 순서 첫 오류 칸에 옮긴다. UI는 import하지 않는다.
 import { useStore, type AnyFormApi } from '@tanstack/react-form';
@@ -26,8 +26,8 @@ const revealers = new WeakMap<object, Set<Revealer>>();
 const storeOf = (form: object) => (form as { readonly store: object }).store;
 
 /**
- * 거절된 제출 하나를 알린다: 실패한 칸을 가진 구역을 모두 펼친다. useSaveForm이 클라이언트 검증 실패와 서버 필드 오류 도착 때
- * 포커스 직전에 부른다. 키트 저장 흐름 밖에서 칸에 오류를 붙이는 화면(자기 절차의 거절 등)도 포커스 전에 같은 함수를 부른다.
+ * 거절된 제출 하나를 알린다: 실패한 칸을 가진 구역을 모두 펼친다. useSaveForm이 거절(클라이언트 검증 실패·서버 필드 오류 도착·
+ * save가 던진 FormRejection)마다 포커스 직전에 부른다. 공개하지 않는다 — 화면 절차의 거절은 FormRejection으로 같은 길을 탄다.
  */
 export function revealFormSections(form: object, failed: readonly string[]): void {
   if (failed.length === 0) return;

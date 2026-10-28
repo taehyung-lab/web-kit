@@ -27,6 +27,7 @@ export interface SaveFormOptions<TInput, TOutput, TResult = { readonly saved?: T
   /**
    * 저장 작업. 서버가 저장 결과를 주면 폼 값으로 바꿔 saved로 돌려준다(없으면 제출한 S가 저장 결과다).
    * 그 밖의 결과(새 id·토큰 등)도 함께 돌려주면 onSaved가 받는다.
+   * 요청 전에 화면 절차가 칸을 거절하면 `FormRejection`을 던진다(서버 필드 오류와 같은 길로 처리된다).
    */
   readonly save: (values: TOutput, submitted: TInput) => Promise<TResult>;
   /**
@@ -58,6 +59,24 @@ export type SaveStage<TInput> =
   | { readonly kind: 'saving'; readonly values: TInput }
   /** 저장은 끝났고 완료 처리(onSaved)를 기다리거나 실행 중이거나 실패했다. 이 동안 제출은 잠긴다. */
   | { readonly kind: 'saved'; readonly completing: boolean };
+
+/**
+ * 저장 함수(save)가 요청 전에 화면 절차로 거절했음을 알린다(먼저 조회가 필요한 검사·업로드 실패·확인창 취소 등). save 안에서 던진다.
+ * 키트는 서버 필드 오류와 같은 길로 처리한다: 제출 값과 지금 값이 같은 칸에 문구를 붙이고(줄 작업은 지금 위치로 따라감),
+ * 그 칸을 가진 구역·reveal을 펼친 뒤 화면 순서 첫 오류 칸에 포커스한다. 붙지 못한 칸이 있거나 root가 있으면 폼 수준 실패(formFailure)로 남고,
+ * 칸도 root도 없으면 아무것도 보이지 않는 조용한 중단이다. 저장으로 치지 않으므로 기준선·입력은 그대로다.
+ */
+export class FormRejection extends Error {
+  constructor(
+    /** 거절한 칸(폼 경로)과 칸 아래 표시 문구. */
+    readonly fields: readonly { readonly field: string; readonly message: string }[] = [],
+    /** 칸에 붙일 수 없는 거절을 알리는 한 줄 문구. */
+    readonly root?: string,
+  ) {
+    super('save rejected before request');
+    this.name = 'FormRejection';
+  }
+}
 
 const lockedFields = new WeakMap<object, Map<string, number>>();
 
@@ -132,6 +151,8 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
     | {
         readonly failure: unknown;
         readonly unattached: readonly FieldError[];
+        /** 칸에 붙지 못한 화면 절차 거절(FormRejection) 칸이 있는가. */
+        readonly missed: boolean;
         /** 입력을 고치면 이 실패를 지워야 할 때만 그 실패를 낸 제출의 입력이다. */
         readonly clearWhenEdited?: { readonly submitted: TInput };
       }
@@ -221,7 +242,7 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
   }
 
   /**
-   * 거절된 제출 하나(클라이언트 검증 실패·서버 필드 오류 도착)를 알린다: 실패한 칸을 가진 키트 구역과 화면의 접힌 영역(reveal)을 펼친 뒤,
+   * 거절된 제출 하나(클라이언트 검증 실패·서버 필드 오류 도착·화면 절차 거절)를 알린다: 실패한 칸을 가진 키트 구역과 화면의 접힌 영역(reveal)을 펼친 뒤,
    * disabled가 풀린 다음 작업에서 화면 순서의 첫 필드로 focus한다.
    */
   function focusFirst(fields: readonly string[]) {
@@ -251,15 +272,21 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
   }
 
   /**
-   * 제출 값과 지금 값이 같은 필드에만 서버 오류를 붙인다. 붙인 필드와 붙이지 못한 오류를 돌려준다.
-   * 배열 경로는 제출 뒤 줄 작업(mark 이후 기록)을 따라 지금 위치로 옮긴다. 그 줄이 지워졌으면 붙이지 않는다.
+   * 거절의 칸 오류(서버 필드 오류는 fieldError로 바꾼 것, 화면 절차 거절은 FormRejection.fields)를 같은 규칙으로 붙인다:
+   * 제출 값과 지금 값이 같은 칸에만 붙이고, 배열 경로는 제출 뒤 줄 작업(mark 이후 기록)을 따라 지금 위치로 옮긴다. 그 줄이 지워졌으면 붙이지 않는다.
+   * 붙인 칸, 붙이지 못한 서버 오류, 붙이지 못한 화면 절차 거절 칸이 있었는지를 돌려준다.
    */
   function attachFieldErrors(error: unknown, submitted: TInput, mark: number) {
     const attached: string[] = [];
     const unattached: FieldError[] = [];
-    if (!isRequestFailure(error)) return { attached, unattached };
-    for (const item of error.fieldErrors) {
-      const target = latest.current.fieldError?.(item);
+    let missed = false;
+    const entries: { readonly item?: FieldError; readonly target: { readonly field: string; readonly message: string } | undefined }[] =
+      isRequestFailure(error)
+        ? error.fieldErrors.map((item) => ({ item, target: latest.current.fieldError?.(item) }))
+        : error instanceof FormRejection
+          ? error.fields.map((target) => ({ target }))
+          : [];
+    for (const { item, target } of entries) {
       const now = target === undefined ? undefined : (followRows(form, target.field, mark) as DeepKeys<TInput> | undefined);
       // 화면에 없는 칸(등록되지 않은 필드)·고칠 수 없는 칸에는 붙여도 보이지 않으므로 붙이지 못한 오류로 남긴다.
       if (
@@ -269,7 +296,8 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
         isLocked(form, now) ||
         !evaluate(getBy(form.state.values, now), getBy(submitted, target.field))
       ) {
-        unattached.push(item);
+        if (item === undefined) missed = true;
+        else unattached.push(item);
         continue;
       }
       form.setFieldMeta(now, (meta) => ({
@@ -278,7 +306,7 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
       }));
       attached.push(now);
     }
-    return { attached, unattached };
+    return { attached, unattached, missed };
   }
 
   /** 저장 한 번. 이 제출이 아직 현재 제출일 때만 결과를 반영한다. */
@@ -293,9 +321,9 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
       if (!current()) return;
       setStage({ kind: 'idle' });
       if (isRequestFailure(error) && error.kind === 'cancelled') return;
-      const { attached, unattached } = attachFieldErrors(error, submitted, mark);
+      const { attached, unattached, missed } = attachFieldErrors(error, submitted, mark);
       const clearWhenEdited = latest.current.clearFailureOnEdit?.(error) === true ? { submitted } : undefined;
-      setRejection({ failure: error, unattached, clearWhenEdited });
+      setRejection({ failure: error, unattached, missed, clearWhenEdited });
       focusFirst(attached);
       return;
     }
@@ -427,9 +455,11 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
 
   const failure = visibleRejection?.failure;
   const unattached = visibleRejection?.unattached ?? [];
-  // 서버가 지목한 필드 오류가 모두 칸에 붙은 검증 실패는 칸이 이미 알린다. 그 밖의 실패만 폼 수준에 남는다.
+  // 서버가 지목한 필드 오류가 모두 칸에 붙은 검증 실패와, 칸이 모두 붙고 root가 없는 화면 절차 거절(칸이 없으면 조용한 중단)은
+  // 칸이 이미 알린다. 그 밖의 실패만 폼 수준에 남는다.
   const allAttached =
-    isRequestFailure(failure) && failure.kind === 'validation' && failure.fieldErrors.length > 0 && unattached.length === 0;
+    (isRequestFailure(failure) && failure.kind === 'validation' && failure.fieldErrors.length > 0 && unattached.length === 0) ||
+    (failure instanceof FormRejection && failure.root === undefined && visibleRejection?.missed !== true);
 
   return {
     form,
