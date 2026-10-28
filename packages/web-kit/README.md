@@ -2,7 +2,7 @@
 
 React 19 + TanStack(Router·Query·Form) + zod 4 + axios/orval을 쓰고, 서버가 Spring 응답 봉투 `{ header: { resultCode, resultMessage }, data }`로 답하는 관리자 웹의 기본 키트다. 이 응답 규약이 아닌 서버에는 맞지 않는다. 같은 의미의 동작과 선택적 공통 기본 UI를 키트가 제공하고, 제품 표현·업무 정책·서버 연결 차이는 프로젝트가 맡는다. 현재 제공 범위는 아래 표와 `package.json` exports다([3.0 재설계 결정](../../docs/decisions/0003-web-kit-3-redesign.md)).
 
-정본: https://github.com/taehyung-lab/web-kit · 패키지 `@boosterlab/web-kit` · 최신 발행 `2.0.0` · 개발 중 `3.0.0` · 결정 기록 [docs/decisions](../../docs/decisions/). 이 패키지는 저장소의 `packages/web-kit`이고, 사용 예이자 소비 검사 앱은 같은 저장소의 [`apps/starter`](../../apps/starter)다.
+정본: https://github.com/taehyung-lab/web-kit · 패키지 `@boosterlab/web-kit` · 최신 발행 `3.0.0` · 결정 기록 [docs/decisions](../../docs/decisions/). 이 패키지는 저장소의 `packages/web-kit`이고, 사용 예이자 소비 검사 앱은 같은 저장소의 [`apps/starter`](../../apps/starter)다.
 
 ## 구조
 
@@ -66,11 +66,11 @@ done
 
 소스 TS/TSX 패키지라서 소비 앱의 Vite/TypeScript가 컴파일한다. 소비 앱은 GitHub release tarball을 `vendor/`에 보관한다. 개발자 로컬 경로나 설치 시 GitHub 인증에 의존하지 않기 위해서다.
 
-아래 명령은 발행된 2.0.0을 설치한다. 개발 중인 3.0.0은 소비 검증과 발행 전까지 이 명령을 바꾸지 않는다.
+아래 명령은 발행된 3.0.0을 설치한다. Vite 소비 앱은 `optimizeDeps: { extensions: ['.tsx'] }`를 둔다.
 
 ```sh
-gh release download v2.0.0 --repo taehyung-lab/web-kit --pattern 'boosterlab-web-kit-2.0.0.tgz' --dir vendor
-pnpm add @boosterlab/web-kit@file:vendor/boosterlab-web-kit-2.0.0.tgz
+gh release download v3.0.0 --repo taehyung-lab/web-kit --pattern 'boosterlab-web-kit-3.0.0.tgz' --dir vendor
+pnpm add @boosterlab/web-kit@file:vendor/boosterlab-web-kit-3.0.0.tgz
 ```
 
 - package.json·lockfile·tarball을 함께 commit한다. 소스 복사·submodule·branch 최신값 의존성은 쓰지 않는다.
