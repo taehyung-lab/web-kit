@@ -29,14 +29,19 @@ export interface SessionStore<C extends Credentials> {
 export type SessionChange =
   | { readonly kind: 'started' }
   | { readonly kind: 'replaced' }
-  /** by: 이 탭이 끝냄(local), 다른 탭이 끝냄(other-tab), 서버 인증 계약으로 끝남(server). */
-  | { readonly kind: 'ended'; readonly by: 'local' | 'other-tab' | 'server'; readonly cause?: unknown };
+  /** by: 이 탭이 끝냄(local), 유휴 마감으로 끝남(idle), 다른 탭이 끝냄(other-tab), 서버 인증 계약으로 끝남(server). */
+  | { readonly kind: 'ended'; readonly by: 'local' | 'idle' | 'other-tab' | 'server'; readonly cause?: unknown };
+
+/** 구독 순서. cleanup(캐시 비움 같은 정리)은 notify(안내·이동)보다 항상 먼저 돈다. */
+export type SessionListenerPhase = 'cleanup' | 'notify';
 
 export interface Session<C extends Credentials> {
   /** 로그인·계정 교체. 새 세대를 연다. */
   readonly start: (credentials: C) => void;
   /** 로그아웃 등 이 탭의 종료. 세대마다 한 번만 알린다. */
   readonly end: (cause?: unknown) => void;
+  /** 유휴 마감으로 끝낸다. `/session/idle`이 부른다. */
+  readonly expireIdle: (cause?: unknown) => void;
   /** 서버 인증 계약이 세션 종료를 알렸을 때(결과 코드 표의 종료 행). http가 부른다. */
   readonly expire: (cause: unknown) => void;
   readonly current: () => StoredSession<C> | null;
@@ -45,7 +50,7 @@ export interface Session<C extends Credentials> {
   readonly generation: () => number;
   /** 그 세대에서 usedToken으로는 안 될 때 새 access token을 얻는다. origin은 재발급을 일으킨 요청 실패(없을 수 있음). 세대가 바뀌면 cancelled. */
   readonly refresh: (generation: number, usedToken: string, origin?: RequestFailure) => Promise<string>;
-  readonly subscribe: (listener: (change: SessionChange) => void) => () => void;
+  readonly subscribe: (listener: (change: SessionChange) => void, phase?: SessionListenerPhase) => () => void;
 }
 
 /** 탭 간 재발급 직렬화에 쓰는 Web Locks 이름. 같은 origin의 탭끼리만 공유된다. */
@@ -63,25 +68,31 @@ function newSessionId(): string {
  * 세션 수명을 만든다. reissue는 프로젝트의 재발급 호출이며 같은 세션의 새 자격증명을 돌려준다.
  * 재발급 실패는 인증 계약으로 판정한다: 401(자격증명 거부) 또는 결과 코드 표의 세션 종료 행이면 끝낸다(E2 확인 대상).
  * 종료 사유는 종료 행이면 그 재발급 실패, 아니면 원 요청 실패(없으면 재발급 실패)다. 그 밖의 실패는 세션을 유지한다.
+ * signOut은 이 탭이 끝낸 세션(local·idle)의 서버 로그아웃이다. 로컬 종료와 알림이 끝난 뒤 한 번 보내고, 실패는 종료를 되돌리지 않는다.
  */
 export function createSession<C extends Credentials>({
   store,
   reissue,
+  signOut,
 }: {
   readonly store: SessionStore<C>;
   readonly reissue: (credentials: C) => Promise<C>;
+  readonly signOut?: (credentials: C) => Promise<unknown>;
 }): Session<C> {
   let current = store.read();
   let generation = 0;
   let disposed = false;
   let inFlight: { readonly generation: number; readonly promise: Promise<string> } | undefined;
-  const listeners = new Set<(change: SessionChange) => void>();
+  const listeners: Record<SessionListenerPhase, Set<(change: SessionChange) => void>> = {
+    cleanup: new Set(),
+    notify: new Set(),
+  };
 
-  /** 세대를 올리고 구독자에게 알린다. */
+  /** 세대를 올리고 정리 구독 → 앱 구독 순서로 알린다. */
   function advance(change: SessionChange) {
     generation += 1;
     inFlight = undefined;
-    for (const listener of [...listeners]) listener(change);
+    for (const listener of [...listeners.cleanup, ...listeners.notify]) listener(change);
   }
 
   /** 다른 탭 알림과 lock 안 저장 재확인이 같은 세대 판정을 쓴다. */
@@ -104,12 +115,19 @@ export function createSession<C extends Credentials>({
     advance({ kind: 'started' });
   }
 
-  /** 세대마다 한 번만 끝낸다. */
-  function endBy(by: 'local' | 'server', cause: unknown) {
+  /** 세대마다 한 번만 끝낸다. 이 탭이 끝낸 세션은 잡아 둔 자격증명으로 서버 로그아웃을 한 번 보낸다. */
+  function endBy(by: 'local' | 'idle' | 'server', cause: unknown) {
     if (current === null) return;
+    const ended = current.credentials;
     current = null;
     store.write(null);
     advance(cause === undefined ? { kind: 'ended', by } : { kind: 'ended', by, cause });
+    if (by === 'server' || signOut === undefined) return;
+    try {
+      void signOut(ended).catch(() => undefined);
+    } catch {
+      // 서버 로그아웃 실패는 로컬 종료를 되돌리지 않는다.
+    }
   }
 
   /** lock 안에서 한 번 실행한다. 저장값을 다시 읽어 다른 탭의 회전 결과가 있으면 재사용한다. */
@@ -172,6 +190,7 @@ export function createSession<C extends Credentials>({
   return {
     start,
     end: (cause) => endBy('local', cause),
+    expireIdle: (cause) => endBy('idle', cause),
     expire: (cause) => endBy('server', cause),
     current: () => current,
     dispose: () => {
@@ -181,13 +200,14 @@ export function createSession<C extends Credentials>({
       current = null;
       generation += 1;
       inFlight = undefined;
-      listeners.clear();
+      listeners.cleanup.clear();
+      listeners.notify.clear();
     },
     generation: () => generation,
     refresh,
-    subscribe: (listener) => {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
+    subscribe: (listener, phase = 'notify') => {
+      listeners[phase].add(listener);
+      return () => listeners[phase].delete(listener);
     },
   };
 }

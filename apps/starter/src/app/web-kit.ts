@@ -7,6 +7,7 @@ import { createSession, type Credentials } from '@boosterlab/web-kit/session';
 import { createBrowserSessionStore } from '@boosterlab/web-kit/session/browser';
 import { z } from 'zod';
 import type { AxiosRequestConfig } from 'axios';
+import { signOut } from '@/features/auth/api/auth';
 import { env } from './env';
 import { i18n } from './i18n';
 import { notices } from './notices';
@@ -47,6 +48,8 @@ export const session = createSession<Credentials>({
   store,
   // refresh 토큰은 httpOnly 쿠키(서버 계약)라 본문이 없다. 공개 요청으로 보낸다.
   reissue: async () => ({ accessToken: readAccessToken(await http.request<unknown>({ url: REISSUE_PATH, method: 'POST' })) }),
+  // 로그아웃·유휴 종료 뒤 키트가 잡아 둔 토큰으로 한 번 보낸다. 실패해도 로컬 종료는 그대로다.
+  signOut: (credentials) => signOut(credentials.accessToken),
 });
 
 export const http: Http = createHttp({

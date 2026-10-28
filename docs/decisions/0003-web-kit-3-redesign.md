@@ -88,7 +88,7 @@ DT의 [세션 결정](https://github.com/boosterlab-dev/dt-admin-web/blob/v2/doc
 | 1 | 이 결정 기록, 정리 대상 확인 |
 | 2 | 저장소 구조(`packages/web-kit` + `apps/starter`), starter가 실제 tgz를 설치하는 검사 |
 | 3 | 로그인·세션: 공용 수명 + DT 서버 adapter |
-| 4 | 목록·필터·표: 공연 목록 |
+| 4 | 목록·필터·표·엑셀 다운로드·권한 틀(진입 차단·메뉴 숨김·버튼 비활성): 공연 목록 |
 | 5 | 폼·상세: 운영자 등록·수정·상세. 2.0 확인창은 열린 직후 Tab 포커스가 밖에 남는 간헐 실패가 있다(starter `tests/e2e/browser.spec.ts` 「save confirmation traps focus」, 2단계 이전부터 3회 중 2회 실패). 새 확인창에서 해소한다 |
 | 6 | 복잡한 폼 적합성: 공연 폼의 배열 오류 위치, 모달 제출 격리, 파일 보존 (공연 폼 전체 이관은 아님) |
 | 7 | 실제 API 검증 후 web-kit 3.0.0 배포 |

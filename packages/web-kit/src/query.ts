@@ -96,9 +96,10 @@ export function createQueryClient<C extends Credentials>({
   });
 
   // 세션이 바뀌면 이전 세션의 데이터 노출과 결과 반영을 막는다. 서버에서 이미 실행된 쓰기의 취소는 보장하지 않는다.
+  // 정리 구독이라 앱의 종료 안내·이동보다 먼저 돈다.
   session.subscribe(() => {
     void queryClient.cancelQueries();
     queryClient.clear();
-  });
+  }, 'cleanup');
   return queryClient;
 }

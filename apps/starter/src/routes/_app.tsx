@@ -44,7 +44,7 @@ function AppLayout() {
                 </button>
               ))}
             </div>
-            <Button variant="ghost" onClick={() => void auth.signOut()}>
+            <Button variant="ghost" onClick={() => auth.signOut()}>
               {t('app.signOut')}
             </Button>
           </div>

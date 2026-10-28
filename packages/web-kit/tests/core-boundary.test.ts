@@ -53,3 +53,23 @@ it.each(['../src/form/save-form.ts', '../src/form/navigation.ts', '../src/use-li
     }
   },
 );
+
+it.each(['../src/form/index.ts', '../src/use-list.ts', '../src/list.ts', '../src/record.ts', '../src/search/index.ts'])(
+  '%s는 세션 유휴 타이머를 import하지 않는다',
+  (entry) => {
+    const queue = [entry];
+    const visited = new Set<string>();
+    while (queue.length) {
+      const file = queue.pop()!;
+      if (visited.has(file)) continue;
+      visited.add(file);
+      expect(file).not.toMatch(/session-idle/);
+      for (const [, specifier] of sources[file]!.matchAll(/(?:from|import)\s+['"]([^'"]+)['"]/g)) {
+        if (!specifier!.startsWith('.')) continue;
+        const target = resolve(file, specifier!);
+        expect(target).toBeDefined();
+        queue.push(target!);
+      }
+    }
+  },
+);

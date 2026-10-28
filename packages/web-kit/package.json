@@ -1,6 +1,6 @@
 {
   "name": "@boosterlab/web-kit",
-  "version": "2.0.0",
+  "version": "3.0.0-dev.1",
   "private": true,
   "type": "module",
   "sideEffects": [
@@ -26,6 +26,7 @@
     "./list/ui": "./src/list-ui.tsx",
     "./filter/ui": "./src/list-ui.tsx",
     "./session/browser": "./src/browser-session-store.ts",
+    "./session/idle": "./src/session-idle.ts",
     "./styles.css": "./src/ui/styles.css"
   },
   "files": [

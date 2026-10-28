@@ -6,7 +6,7 @@ export async function signIn(loginId: string, password: string): Promise<string>
   return (await signInRequest({ loginId, password })).accessToken;
 }
 
-/** 로그아웃. 공개 요청이라 토큰이 자동으로 실리지 않으므로, 세션을 끝내기 전에 캡처한 토큰을 직접 싣는다. */
+/** 로그아웃. 공개 요청이라 토큰이 자동으로 실리지 않으므로, 세션이 잡아 둔 종료 세션의 토큰을 직접 싣는다. */
 export async function signOut(accessToken: string): Promise<void> {
   await signOutRequest({ headers: { Authorization: `Bearer ${accessToken}` } });
 }
