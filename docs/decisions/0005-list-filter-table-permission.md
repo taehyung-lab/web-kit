@@ -27,7 +27,7 @@
 공연 목록은 아래를 import하지 않는다. 운영자 목록(`settings/screens/operator-list`)·예매 목록(`reservations/screens/reservation-list`)이 아직 쓰므로 두 화면이 키트 UI로 옮겨질 때 지운다. 키트에 옛 API 호환 래퍼는 두지 않았다.
 
 - `shared/lib/list/use-app-list.ts`, `shared/ui/list/DataTable.tsx`·`ListResult.tsx`·`SortSelect.tsx`, `shared/lib/search/header-sort.ts`: 운영자·예매 목록.
-- `shared/ui/filter/FilterPanel`·`KeywordField`·`PeriodField`·`MultiSelectField`·`period-presets`: 운영자·예매 목록. `SelectField`는 폼·업체 필터도 쓴다.
+- `shared/ui/filter/FilterPanel`·`KeywordField`·`PeriodField`·`MultiSelectField`·`period-presets`: 운영자·예매 목록. `SelectField`는 filter 부품 안과 업체 필터(`vendors/model/vendor-filter.ts`의 타입 import)가 쓴다.
 - `shared/lib/download/download-file.ts`: 예매 목록.
 - `shared/lib/search/search-fields.ts`: 남긴다(삭제 대상 아님). URL 키·인코딩(`field:kw|…` 등)은 제품 계약이라 DT가 소유하는 어휘다. 검색어 항목 모양은 키트와 같은 `{ field, value }`로 맞췄다.
 - 지운 것: `app/shell/filter-navigation.ts`(→ `filterAllowed`), route-guard의 자체 거부 오류(→ `AccessDeniedError`).
