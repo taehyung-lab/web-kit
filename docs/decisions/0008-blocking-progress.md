@@ -1,6 +1,6 @@
 # 0008. 저장·페이지 첫 조회 중 화면 전체 진행 덮개: 상태는 키트, 문구·배치는 프로젝트
 
-- 상태: 채택 (2026-10-28, 3.0.0-dev.11)
+- 상태: 채택 (2026-10-28, 3.0.0-dev.11; 진행 표시 교체 `indicator` 3.0.0-dev.12)
 - 관련 결정: [0007](0007-complex-form-fit.md) 「저장 중 표시」 행의 등록·수정 폼 저장 부분을 이 기록이 대체한다(다운로드·대화창 폼·로그인은 그 행 그대로). 보장 내용의 정본은 `skills/web-kit-form` 「화면 전체 진행 덮개」와 `web-kit-list`·`web-kit-record`의 `progress` 줄이다.
 - 사용자 요청(2026-10-28): "저장 하거나 수정할 때 전체 등록중입니다... 혹은 수정중입니다... 이런 전체 모달이 나오면서 input을 막는식으로. 또 페이지 진입 시 조회가 있다면 [Figma 0.2. 공통화면] 이런거 참고"
 - 근거 자료: REF `src/app/shell/AppShell.tsx`·`AppShell.test.tsx`·`src/api/query-meta.ts`·`shared/ui/primitives/BlockingProgress.tsx`, DT 1.5 `components/ui/loading-modal.tsx`·`features/concerts/form/hooks/submit/use-performance-submit-pipeline.ts`·`components/errors/query-state-gate.tsx`, DT Figma `0.2.1 데이터 호출중`·`0.2.2 데이터 등록중`.
@@ -17,7 +17,7 @@
 | 포커스 | 처음·돌려줄 포커스 끔(복원 없음) | 없음 | 해당 없음 | **닫힐 때 포커스가 본문 밖(문서 본문)으로 밀려나 있으면 본문 마지막 포커스로 돌린다.** 완료 창·오류 칸·대화창 포커스는 건드리지 않는다 |
 | 삭제 | 모든 mutation이라 "등록 중"으로 덮음 | 공연 상세 삭제 `LoadingModal method="D"` | 확인창 안 진행 표시 | **확인창을 거친 삭제만 덮는다(`useConfirmationState({ progress: 'delete' })`, 문구 `messages.delete`).** 사용자 결정(2026-10-28, 작업 기록 7b Q1 (다)): 목록 일괄 삭제·상세 삭제는 덮개 "삭제 중입니다. 잠시만 기다려 주세요.", 상태 변경·대화창 폼 저장은 지금처럼 버튼 잠금 + 옆 진행 표시. DT의 삭제는 셋 다 `useConfirmationState`를 거치므로 그 자리에서 등록한다. 키트 `List.BulkAction`(`selection.run`)은 지금 삭제에 쓰는 소비자가 없어 선언을 두지 않았다 |
 | 최소 표시·지연 | 없음 | 없음 | 해당 없음 | **없음.** 지연은 짧은 저장 동안 입력을 열어 두고, 최소 표시는 끝난 뒤에도 막는다 |
-| 모양·문구 | 카드 + 회전 표시, 문구 두 개 | 어두운 전체 + 회전 표시 + 주·보조 문구 | 해당 없음 | **Figma 0.2.1·0.2.2**(회색 반투명 전체, 가운데 회전 표시와 두 줄, 카드 없음)를 키트 기본 모양으로, 문구는 프로젝트 `messages`(`loading`·`create`·`edit`·`delete`·`wait`). 층은 `--wk-blocking-layer`(기본은 키트 대화창 아래) |
+| 모양·문구 | 카드 + 회전 표시, 문구 두 개 | 어두운 전체 + 회전 표시 + 주·보조 문구 | 해당 없음 | **Figma 0.2.1·0.2.2**(회색 반투명 전체, 가운데 회전 표시와 두 줄, 카드 없음)를 키트 기본 모양으로, 문구는 프로젝트 `messages`(`loading`·`create`·`edit`·`delete`·`wait`). 층은 `--wk-blocking-layer`(기본은 키트 대화창 아래). **가운데 진행 표시는 프로젝트 선택**(사용자 결정 2026-10-28, 7b 후속): 기본은 키트 원형 회전 표시, `indicator`로 바꾼다(DT는 Figma의 막대 8개 표시를 준다). 모양은 프로젝트의 디자인 소유라 키트가 특정 Figma 모양을 기본으로 삼지 않는다 |
 
 ## 결과
 

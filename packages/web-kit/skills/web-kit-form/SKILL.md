@@ -35,7 +35,7 @@ description: 등록·수정·대화창 폼의 저장·저장 확인·저장 완�
 
 `/ui`의 `BlockingProgress messages={{ loading, create, edit, delete, wait? }}`를 앱 셸(로그인 뒤 화면 골격)에 한 번 두고 셸 본문을 children으로 감싼다. 문구는 프로젝트가 준다(`wait`는 둘째 줄).
 - 무엇이 덮는가: 등록·수정 폼 저장(`useSaveForm({ progress })`), 확인창을 거친 삭제 실행(`useConfirmationState({ progress: 'delete' })`, 아래 「폼 없는 확인」), 페이지 진입 조회(`useList({ progress: 'page' })`·`useRecord(options, id, { progress: 'page' })` — 각 skill), 화면 고유의 진입 대기(`useBlockingProgress('loading', active)`, 예: 수정 폼을 열기 전 보조 조회). 쓰기(등록·수정·삭제)가 조회보다 앞선다. 덮개 밖(셸 없는 화면·단위 시험)에서는 아무 일도 하지 않는다.
-- 덮는 동안 children은 `inert`·`aria-busy`(클릭·포커스·낭독에서 빠짐)이고, `role="status"` 영역이 문구를 읽는다. 대화창(portal)은 children 밖이라 덮개 위에서 조작된다(세션 경고·만료, 저장 완료 창). 덮개 층은 `--wk-blocking-layer`(기본 999, 키트 대화창 아래)로, 프로젝트 대화창의 층보다 낮게 둔다. 배경·글자색은 `--wk-blocking-backdrop`·`--wk-blocking-fg`.
+- 덮는 동안 children은 `inert`·`aria-busy`(클릭·포커스·낭독에서 빠짐)이고, `role="status"` 영역이 문구를 읽는다. 대화창(portal)은 children 밖이라 덮개 위에서 조작된다(세션 경고·만료, 저장 완료 창). 덮개 층은 `--wk-blocking-layer`(기본 999, 키트 대화창 아래)로, 프로젝트 대화창의 층보다 낮게 둔다. 배경·글자색은 `--wk-blocking-backdrop`·`--wk-blocking-fg`. 가운데 진행 표시는 기본이 키트 원형 회전 표시이고 `indicator`(ReactNode)를 주면 그 표시로 바뀐다(덮개째 낭독기에서 숨김, 움직임 줄이기 설정은 표시를 준 프로젝트가 맞춘다).
 - 닫힐 때 포커스가 문서 본문으로 밀려나 있으면(inert) 덮기 전 본문에서 마지막으로 포커스한 요소로 돌린다. 완료 창·오류 칸·대화창이 가진 포커스는 건드리지 않는다.
 - 덮지 않는 것: 목록 검색·정렬·페이지 이동(이전 결과를 보인 채 조회), 단건 언어 전환·재조회, 선택지 조회(그 칸의 상태), 다운로드(버튼 잠금 + 옆 진행 표시), 선언하지 않은 쓰기(상태 변경·대화창 폼 저장·`List.BulkAction`).
 

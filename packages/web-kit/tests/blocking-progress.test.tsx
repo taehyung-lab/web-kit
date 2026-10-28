@@ -265,6 +265,33 @@ it('P10 덮개는 본문만 막고 덮개 밖(portal) 대화창은 막지 않는
   expect(body().hasAttribute('inert')).toBe(true);
 });
 
+it('가운데 진행 표시: 기본은 키트 원형 회전 표시, indicator를 주면 그 표시로 바뀌고 문구·본문 막기는 같다', () => {
+  function Probe() {
+    useBlockingProgress('loading', true);
+    return null;
+  }
+  const { unmount } = render(
+    <Host>
+      <Probe />
+    </Host>,
+  );
+  const box = () => document.querySelector('.wk-blocking-box')!;
+  expect(box().querySelector('.wk-spinner.wk-spinner-large')).not.toBeNull();
+  unmount();
+  render(
+    <BlockingProgress messages={MESSAGES} indicator={<svg data-testid="bars" />}>
+      <div data-testid="app-body">
+        <Probe />
+      </div>
+    </BlockingProgress>,
+  );
+  expect(box().querySelector('[data-testid="bars"]')).not.toBeNull();
+  expect(box().querySelector('.wk-spinner')).toBeNull();
+  expect(box().closest('[aria-hidden="true"]')).not.toBeNull();
+  expect(status().textContent).toContain('데이터를 불러오는 중입니다.');
+  expect(body().hasAttribute('inert')).toBe(true);
+});
+
 it('저장과 조회가 겹치면 저장 문구가 이긴다, 등록소 밖 훅은 아무 일도 하지 않는다', () => {
   function Probe({ kind }: { readonly kind: 'loading' | 'create' }) {
     useBlockingProgress(kind, true);
