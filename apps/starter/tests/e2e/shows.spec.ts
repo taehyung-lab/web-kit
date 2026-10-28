@@ -1,5 +1,5 @@
 // 파일 책임: 공연 예시(DT 공연 폼의 복잡한 부분 재현)를 실제 브라우저에서 관찰한다 — 회차 서버 오류 위치·이동 뒤 위치,
-// 대화창 하위 폼 Enter 제출 격리, 저장 실패 뒤 좌석도 파일 보존과 재업로드(multipart), 저장 중 버튼 잠금과 진행 표시.
+// 대화창 하위 폼 Enter 제출 격리, 일반 칸 Enter = 제출, 저장 실패 뒤 좌석도 파일 보존과 재업로드(multipart), 저장 중 버튼 잠금과 진행 표시.
 import { expect, test, type Page } from '@playwright/test';
 
 async function signIn(page: Page) {
@@ -27,6 +27,12 @@ test('show example keeps errors on their round, isolates the dialog, keeps the f
   await expect(dialog).toBeHidden();
   await expect(page.getByText('YES24-K1')).toBeVisible();
   await expect(page.getByLabel(/공연명/)).not.toHaveAttribute('aria-invalid', 'true');
+  expect(api).toEqual([]);
+
+  // 일반 칸의 Enter는 제출(저장 버튼 클릭)이다: 공연명이 비어 있어 검증이 돌고 요청은 없다.
+  await page.getByLabel(/^1회차 날짜/).press('Enter');
+  await expect(page.getByLabel(/공연명/)).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.getByLabel(/공연명/)).toBeFocused();
   expect(api).toEqual([]);
 
   await page.getByLabel(/공연명/).fill('E2E-실패 공연');

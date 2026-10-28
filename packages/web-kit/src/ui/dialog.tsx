@@ -2,6 +2,7 @@
 // 열린 직후부터 닫힐 때까지 키보드 포커스가 창 밖으로 한 순간도 나가지 않게 한다(Base UI의 focus guard 경유를 막는다).
 import { Dialog as BaseDialog } from '@base-ui/react/dialog';
 import { useCallback, useRef, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
+import { Pending } from './pending';
 
 const TABBABLE =
   'a[href],button:not([disabled]),input:not([disabled]):not([type="hidden"]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
@@ -215,15 +216,6 @@ export function AlertDialog({
     >
       {children}
     </Dialog>
-  );
-}
-
-/** 진행 중 표시: 버튼 옆 회전 표시와 화면 낭독기용 문구(목록 다운로드·폼 저장과 같은 마크업). */
-export function Pending({ label }: { readonly label: string }) {
-  return (
-    <span role="status" className="wk-spinner">
-      <span className="wk-visually-hidden">{label}</span>
-    </span>
   );
 }
 

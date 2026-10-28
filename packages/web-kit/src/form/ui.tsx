@@ -15,7 +15,8 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from 'react';
-import { AlertDialog, ConfirmDialog, Dialog, Pending } from '../ui/dialog';
+import { AlertDialog, ConfirmDialog, Dialog } from '../ui/dialog';
+import { Pending } from '../ui/pending';
 import { FormArrayField, type FormArrayRows } from './array';
 import { FieldFrame, type FieldControlProps } from './field';
 import type { FormFileValue } from './file';

@@ -16,6 +16,8 @@
 | 필수 표시 | 칸마다 `required` prop | `field-required.ts`가 zod 필드 schema를 읽음(조건부 필수 누락) | 칸마다 `required` 값·함수 | **schema 하나: 그 칸만 비운 지금 값을 schema가 거부하면 필수**(`editor.isRequired`). DT 사용자 규칙 "필수 표시는 검증 schema를 단일 출처"를 따른다. zod 내부 구조를 읽지 않고 Standard Schema 검증만 쓰므로 객체 refine의 조건부 필수(기획사 유형일 때 기획사)도 같은 규칙에서 나온다. 조건부 규칙은 다른 칸 오류가 있어도 돌게 쓴다(zod 4 `when`) |
 | disabled 칸의 서버 오류 | — | field order 밖이면 한 줄 | 칸에 붙었다고 세고 칸은 숨김 → 안내 0 | **붙지 못한 오류로 센다**(5단계 독립 검증 F4). 고칠 수 없는 칸은 오류를 숨기는 규칙은 유지하고, 그 오류는 폼 한 줄로 알린다 |
 | 저장 중 표시 | 버튼 `disabled`만 | 버튼 `disabled`만 | `aria-disabled`만 | **잠금 + 버튼 옆 `.wk-spinner`(문구는 `.wk-visually-hidden`)**. 사용자 결정. 4단계 다운로드 진행 표시와 같은 마크업이며 새 클래스를 만들지 않는다. 확인창·완료 확인창의 `pending`도 같은 표시 |
+| 진행 표시 부품 공개(3.0.0-dev.8) | — | 공연 폼이 키트 `.wk-spinner` 마크업을 손으로 복사(`PerformanceForm.tsx`) | 표시 부품 `Pending`이 비공개(`ui/dialog.tsx`), 목록 다운로드는 같은 마크업을 따로 씀 | **`/ui`의 `Pending` 하나로 공개하고 목록 다운로드·`Form.Submit`·확인창이 같은 부품을 쓴다**. 키트 폼으로 아직 옮기지 않은 화면도 같은 부품을 써서 마크업이 갈라지지 않는다(`core-boundary.test.ts`가 `.wk-spinner`를 쓰는 소스를 `ui/pending.tsx` 하나로 고정) |
+| 폼 안 Enter | 판매처 API 대화창에 `<form>`이 없어 Enter로 아무 일도 없었다. 바깥 폼 칸은 브라우저 암묵 제출, 검색어 칩 입력은 Enter = 추가(`search-field-input.tsx`) | 대화창 Enter = 대화창 확인 | `rows.enterAdds`, `List.Keywords` Enter = 추가, `Form.Dialog` 제출 격리 | **사용자 결정(2026-10-28): 폼에서 Enter는 기본적으로 제출(submit 클릭)이다. 단, [추가] 버튼이 딸린 입력칸(form-field-array, 검색어 칩 등)에서는 Enter가 제출 대신 [추가] 클릭으로 동작한다. 모달 안 입력칸의 Enter는 그 모달의 확인(모달 폼 제출)이며 바깥 폼은 제출되지 않는다.** 판매처 API 대화창 Enter = 확인은 이 규칙이다(1.5와 다른 점: 1.5는 대화창 Enter 무반응). 키트는 새 옵션 없이 기존 값(`enterAdds`·`Form.Dialog`)으로 지키고 세 갈래를 `tests/form-enter.test.tsx`로 고정했다 |
 | 기본 여백 초기화 | — | — | `.wk-field`·`.wk-section`·`.wk-form-failure`에 클래스 우선순위 `margin: 0` | **`:where(...)`로 0 우선순위**. 클래스 우선순위 초기화가 Tailwind v4 `space-y-*`(`:where` 선택자)를 지워 DT 운영자 등록에서 오류 문구 아래에 다음 라벨이 붙었다 |
 
 ## DT에 남긴 공용과 이유
@@ -23,6 +25,7 @@
 - `shared/ui/form/FormFileField.tsx`: 공연 폼 바깥(좌석배치도)이 아직 DT `useAppSaveForm`이라 키트 `Form` context가 없다. 바깥 폼을 키트로 옮길 때 `Form.File`로 바꾸고 지운다. 보존 결과는 DT 화면 테스트로 확인했다.
 - `shared/ui/form/field-required.ts`: 공연 폼 등 키트로 옮기지 않은 폼이 쓴다. 키트 폼은 쓰지 않는다.
 - DT 공연 판매처 API 대화창은 키트 `Form.Dialog`·`Form.Array`로 옮겼다. 바깥 공연 폼의 줄 작업 호출은 키트 `appendRow`·`removeRow`를 쓴다.
+- DT 공연 폼 저장 버튼 옆 진행 표시: 바깥 폼이 DT `SaveForm`이라 `Form.Submit`이 그리지 않는다. 3.0.0-dev.8부터 키트 `/ui`의 `Pending`을 쓴다(그전에는 마크업을 복사했다). 바깥 폼을 키트로 옮기면 `Form.Submit`이 그리므로 그 줄을 지운다.
 
 ## 검토한 대안
 

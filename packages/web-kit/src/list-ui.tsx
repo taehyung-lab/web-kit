@@ -8,6 +8,7 @@ import { activateTableRow } from './row-activation';
 import type { ViewKeys } from './search/fields';
 import { calendarDate, normalizeFilterSelection, shiftCalendarDate, type Keyword, type PeriodPreset } from './search/interactions';
 import { ConfirmDialog } from './ui/dialog';
+import { Pending } from './ui/pending';
 import type { DraftIssue, KeywordInput, ListStatus } from './use-list';
 
 /** 기본 UI가 읽는 목록 상태(useList 결과와 같은 모양). */
@@ -1010,11 +1011,7 @@ function Download({
         {label ?? copy.download}
       </button>
       {/* 진행 중에는 종류·버튼을 잠그고 옆에 로딩 표시만 둔다. 문구는 화면 낭독기에만 읽힌다. */}
-      {running && (
-        <span role="status" className="wk-spinner">
-          <span className="wk-visually-hidden">{copy.downloading}</span>
-        </span>
-      )}
+      {running && <Pending label={copy.downloading} />}
       {failure !== null && (
         <span role="alert" className="wk-error">
           {failure}

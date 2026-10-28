@@ -3,11 +3,13 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { useListDownload, type DownloadTarget } from '../src/list-download';
 import { List, useListField, type ListColumn } from '../src/list-ui';
 import { defineSearch, type SearchDefinition } from '../src/search/fields';
+import { Pending } from '../src/ui';
 import { useList, type ListPage } from '../src/use-list';
 
 interface Row {
@@ -115,8 +117,14 @@ it('입력 중인 키워드를 검색에 포함하고 같은 칩은 중복하지
   await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ keywords: [{ field: 'name', value: 'hello' }] })));
   expect((screen.getByRole('textbox', { name: '키워드' }) as HTMLInputElement).value).toBe('');
   fireEvent.change(screen.getByRole('textbox', { name: '키워드' }), { target: { value: 'hello' } });
-  fireEvent.keyDown(screen.getByRole('textbox', { name: '키워드' }), { key: 'Enter' });
+  // 검색어 칸의 Enter는 [추가]다(1.5 search-field-input과 같다). 브라우저처럼 막히지 않은 Enter는 검색 영역 폼을 제출하므로 그것까지 흉내 낸다.
+  const searches = fetch.mock.calls.length;
+  const keyword = screen.getByRole('textbox', { name: '키워드' }) as HTMLInputElement;
+  await act(async () => {
+    if (fireEvent.keyDown(keyword, { key: 'Enter' })) keyword.form?.requestSubmit();
+  });
   expect(screen.getAllByRole('button', { name: 'hello 제거' })).toHaveLength(1);
+  expect(fetch.mock.calls.length).toBe(searches);
   fireEvent.click(screen.getByRole('button', { name: '초기화' }));
   await waitFor(() => expect(screen.queryByRole('button', { name: 'hello 제거' })).toBeNull());
 });
@@ -444,6 +452,8 @@ it('다운로드: 누른 순간의 확정 조건·선택을 고정하고, 입력
   expect(progress.className).toContain('wk-spinner');
   expect(progress.textContent).toBe('다운로드 중입니다.');
   expect(progress.querySelector('.wk-visually-hidden')?.textContent).toBe('다운로드 중입니다.');
+  // 공개 부품 /ui Pending과 같은 표시다(프로젝트가 버튼 옆 진행 표시를 그릴 때 쓰는 그 부품).
+  expect(progress.outerHTML).toBe(renderToStaticMarkup(<Pending label="다운로드 중입니다." />));
   await act(async () => finish());
   expect(screen.queryByRole('status')).toBeNull();
   expect((kind as HTMLSelectElement).disabled).toBe(false);

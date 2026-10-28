@@ -169,3 +169,12 @@ it.each(['../src/form/index.ts', '../src/form/ui.tsx'])('%s는 목록(list·sear
 it.each(['../src/use-list.ts', '../src/list.ts', '../src/list-ui.tsx'])('%s는 폼을 import하지 않는다', (entry) => {
   for (const file of reach(entry)) expect(file).not.toMatch(/\/form\//);
 });
+
+it('진행 표시 마크업(.wk-spinner)은 /ui의 Pending 한 곳에만 있고, 목록 다운로드·폼 저장·확인창은 그 부품을 쓴다', () => {
+  const owners = Object.entries(sources)
+    .filter(([, source]) => source.includes('wk-spinner'))
+    .map(([file]) => file);
+  expect(owners).toEqual(['../src/ui/pending.tsx']);
+  for (const file of ['../src/list-ui.tsx', '../src/form/ui.tsx', '../src/ui/dialog.tsx']) expect(sources[file], file).toMatch(/<Pending label=/);
+  expect(sources['../src/ui/index.ts']).toMatch(/export \{ Pending \} from '\.\/pending'/);
+});
