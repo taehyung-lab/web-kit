@@ -29,6 +29,7 @@ export function MemberListScreen({
     definition: memberListSearch,
     search,
     navigate,
+    progress: 'page',
     query: (full) => memberListQuery(toMemberListParams(full)),
     rowId: (row) => row.id,
     periods: MEMBER_LIST_PERIODS,

@@ -1,6 +1,6 @@
 ---
 name: web-kit-form
-description: 등록·수정·대화창 폼의 저장·저장 확인·저장 완료 확인·저장 중 표시·이탈 보호·필드 오류·필수 표시·선택지 상태·원본 갱신·줄 추가/삭제/이동 입력·파일 칸, 폼 없는 삭제·상태 변경 확인, 기본 부품(버튼·입력·대화창)을 만들거나 바꿀 때 읽는다. 요청·실패 해석은 web-kit-http, 원본 단건 상태는 web-kit-record로 보낸다.
+description: 등록·수정·대화창 폼의 저장·저장 확인·저장 완료 확인·저장 중 표시(화면 전체 진행 덮개 포함)·이탈 보호·필드 오류·필수 표시·선택지 상태·원본 갱신·줄 추가/삭제/이동 입력·파일 칸, 폼 없는 삭제·상태 변경 확인, 기본 부품(버튼·입력·대화창)을 만들거나 바꿀 때 읽는다. 요청·실패 해석은 web-kit-http, 원본 단건 상태는 web-kit-record로 보낸다.
 ---
 
 # web-kit form
@@ -19,19 +19,30 @@ description: 등록·수정·대화창 폼의 저장·저장 확인·저장 완�
 - `Form.Section`: 칸 묶음. `fields`(이 구역 칸의 정확한 경로나 접두, 예 `['order.grades']`)를 주면 접을 수 있는 구역이다. 처음엔 펼침, 머리글 버튼으로 닫고 연다(닫혀도 칸은 마운트된 채 숨김). 열림 규칙(참조 프로젝트 `use-form-sections`의 사건 방식): 제출이 거절될 때마다(클라이언트 검증 실패, 서버 필드 오류 도착, `save`가 던진 `FormRejection`) 실패한 칸을 가진 구역을 모두 펼친 다음(실패 칸이 없는 구역은 그대로) 화면 순서 첫 오류 칸에 포커스한다. 저장 중에 사용자가 닫은 구역도 그 저장의 서버 오류가 오면 펼친다. 그 밖의 열고 닫기는 사용자 상태라, 펼쳐진 구역은 고쳐도 열린 채이고 사용자가 닫으면 다음 거절까지 닫힌 채다. 머리글 오류 표시는 프로젝트가 고른다. 기본(1.5 공연 폼 구역과 같다): 구역 칸에 오류(클라이언트·서버)가 있으면 머리글에 「!」, 화면 낭독기는 제목과 `messages.sectionErrors(count)`(기본 `오류 N개`)를 읽는다. `errorMarker={(errorCount) => …}`를 주면 그 표시로 바꾼다(예: 보이는 "오류 2개" 배지). 바꾼 표시는 화면 낭독기가 읽을 문구까지 책임진다. 키트 `Form` 밖의 폼은 `FormSection`(`form`·`fields`·`title`·`errorLabel`, 선택 `errorMarker`)을 같은 규칙으로 쓴다. 구역 열림·오류 수를 프로젝트가 따로 만들지 않는다.
 - `Form.Failure`: 폼 수준 한 줄. 칸에 붙지 못한 저장 실패와, 저장 뒤 완료 처리 실패(다시 시도 = 완료 처리만)를 보인다. 서버 필드 오류가 모두 칸에 붙은 검증 실패는 그리지 않는다. 위치는 놓는 곳이 정한다.
 - `Form.File`: 값은 `FormFileValue`(`empty`·`existing{name}`·`selected{file}`·`removed`). 지금 파일 이름을 상태에서 그리고 입력의 설명으로 잇는다. 선택 창을 열었다 취소해도 값은 그대로이고, 지우는 길은 제거 버튼 하나다(기존 파일이면 `removed`). 고른 File은 다른 칸 오류·재마운트·대화창 열고 닫기·저장 실패 뒤에도 같은 객체로 남아 다시 저장하면 그대로 보낸다. 업로드와 `removed`의 요청 변환은 `save`가 한다.
-- `Form.Submit`은 저장 중·확인 대기·완료 처리 중에 `aria-disabled`로 잠긴다(`disabled`로 바꾸지 않아 포커스가 남는다). 저장 요청이나 완료 처리(이동 등)가 진행 중이면 버튼 바로 뒤에 진행 표시(`.wk-spinner`, 문구 `messages.saving`은 화면 낭독기용 `.wk-visually-hidden`)가 선다. `Form.Cancel`도 그동안 잠긴다.
+- `Form.Submit`은 저장 중·확인 대기·완료 처리 중에 `aria-disabled`로 잠긴다(`disabled`로 바꾸지 않아 포커스가 남는다). `Form.Cancel`도 그동안 잠긴다. 저장 중 표시는 폼 종류로 갈린다.
+  - 등록·수정 폼은 `useSaveForm({ progress: 'create' | 'edit' })`로 종류를 선언한다. 저장하는 동안(완료 창이 없으면 완료 처리·이동이 끝날 때까지) 앱 셸의 `BlockingProgress`가 화면 전체를 덮고 그 종류의 문구를 띄운다. 버튼 옆 진행 표시는 그리지 않는다. 최소 표시·지연은 없다.
+  - 선언하지 않은 폼(로그인·대화창 폼)은 덮개 없이 저장 요청·완료 처리 중 버튼 바로 뒤에 진행 표시(`Pending`, 문구 `messages.saving`은 화면 낭독기용)가 선다.
+  - 저장 함수가 저장 도중 사용자에게 묻는다면(예: 지워질 회차 확인) 그 물음을 `save`의 세 번째 인자 `step.waitForUser(물음)`으로 감싼다. 묻는 동안 덮개가 내려가고 답한 뒤 저장이 이어지면 다시 덮는다. 감싸지 않으면 물음 창 뒤에 "수정 중" 덮개가 남는다.
 - `Form.Cancel to={...}`: 입력이 있으면 취소 문구로 한 번 묻고 이동한다. `Form.Dialog` 안이면 그 대화창을 닫는다. 저장 중이면 아무것도 하지 않는다.
-- `Form.Confirm`: `useSaveForm({ confirm: true })`의 저장 전 확인창. 제출한 값(snapshot)을 children에 주고 그 값으로 저장한다. 저장 중에는 닫히지 않는다.
+- `Form.Confirm`: `useSaveForm({ confirm: true })`의 저장 전 확인창. 제출한 값(snapshot)을 children에 주고 그 값으로 저장한다. 덮개를 선언한 폼은 확인하면 닫히고 덮개가 저장 중을 맡는다(확인창 → 덮개 → 완료 창). 선언하지 않은 폼은 저장 중에 닫히지 않고 확인 버튼 옆에 진행 표시를 둔다.
 - `Form.Saved`: `useSaveForm({ acknowledge: true })`의 저장 완료 확인창. 확인이 `onSaved`(보통 이동)를 한 번 실행한다. Esc·바깥 클릭으로 닫히지 않는다.
 - Enter: 폼에서 Enter는 기본적으로 제출(저장 버튼 클릭)이다. 단, 입력한 값을 [추가] 버튼이 목록에 넣는 입력칸(검색어 칩, 제목 입력 + [추가]로 목록에 넣는 칸 등)에서는 Enter가 제출 대신 [추가] 클릭으로 동작한다. 줄마다 자기 칸이고 [추가]가 빈 줄만 더하는 배열 줄 입력(등급명·회차 날짜 등)은 일반 칸이라 Enter가 폼 제출이다. 모달 안 입력칸의 Enter는 그 모달의 확인(모달 폼 제출)이며 바깥 폼은 제출되지 않는다. 키트에서: 일반 칸은 `Form.Submit`이 있는 `<Form>`이 받으므로 칸에서 Enter를 막지 않는다. 값을 목록에 넣는 [추가] 칸은 `onKeyDown={rows.enterAdds(add)}`(목록 `List.Keywords`는 기본). 모달은 `Form.Dialog` 안에 자기 `<Form>`과 `Form.Submit`을 둔다.
 - `Form.Dialog`: 대화창 안 하위 폼(자기 `useSaveForm`). 안쪽 제출(버튼·Enter)은 안쪽만 검증·저장하고 바깥 폼의 저장·검증 오류·확인창을 건드리지 않는다. 바깥에 오류가 있어도 안쪽 제출은 막히지 않는다. 닫기·취소는 그 안의 폼만 보고 묻는다(바깥이 dirty여도 바깥 이탈 확인은 뜨지 않는다). 하위 결과를 바깥 값에 넣으면 바깥이 dirty가 되어 이후 이탈은 바깥 기준으로 묻는다. 입력이 있어도 묻지 않고 닫는 대화창은 안쪽을 `<Form protect={false}>`로 둔다.
 - 이탈: `FormGuard`가 등록된 폼 중 하나라도 입력이 기준선과 다르면 Router 이동·브라우저 이탈을 한 번 묻고, 저장 중이면 묻지 않고 막는다. 저장 성공 뒤 이동은 묻지 않는다. Router를 거치지 않는 이탈(같은 메뉴 다시 누르기)은 `useLeave()(run, reason)`로 같은 판정을 받는다. 확인 뒤 `run`이 이동하면 `ignoreBlocker: true`로 이동한다. 로그인 같은 제품 예외만 `<Form protect={false}>`.
 - 문구는 `FormGuard messages`(까닭별: navigate·cancel)·`Form messages`·`formatError`(칸 오류 값 → 문구)·`renderFailure(failure, place)`(place: save·completion·options, `null`이면 그 자리에 그리지 않음), 모양은 `--wk-*` 토큰으로 바꾼다. 새 화면마다 Field·이탈 확인·확인창을 다시 만들지 않는다.
 
+## 화면 전체 진행 덮개
+
+`/ui`의 `BlockingProgress messages={{ loading, create, edit, delete, wait? }}`를 앱 셸(로그인 뒤 화면 골격)에 한 번 두고 셸 본문을 children으로 감싼다. 문구는 프로젝트가 준다(`wait`는 둘째 줄).
+- 무엇이 덮는가: 등록·수정 폼 저장(`useSaveForm({ progress })`), 확인창을 거친 삭제 실행(`useConfirmationState({ progress: 'delete' })`, 아래 「폼 없는 확인」), 페이지 진입 조회(`useList({ progress: 'page' })`·`useRecord(options, id, { progress: 'page' })` — 각 skill), 화면 고유의 진입 대기(`useBlockingProgress('loading', active)`, 예: 수정 폼을 열기 전 보조 조회). 쓰기(등록·수정·삭제)가 조회보다 앞선다. 덮개 밖(셸 없는 화면·단위 시험)에서는 아무 일도 하지 않는다.
+- 덮는 동안 children은 `inert`·`aria-busy`(클릭·포커스·낭독에서 빠짐)이고, `role="status"` 영역이 문구를 읽는다. 대화창(portal)은 children 밖이라 덮개 위에서 조작된다(세션 경고·만료, 저장 완료 창). 덮개 층은 `--wk-blocking-layer`(기본 999, 키트 대화창 아래)로, 프로젝트 대화창의 층보다 낮게 둔다. 배경·글자색은 `--wk-blocking-backdrop`·`--wk-blocking-fg`.
+- 닫힐 때 포커스가 문서 본문으로 밀려나 있으면(inert) 덮기 전 본문에서 마지막으로 포커스한 요소로 돌린다. 완료 창·오류 칸·대화창이 가진 포커스는 건드리지 않는다.
+- 덮지 않는 것: 목록 검색·정렬·페이지 이동(이전 결과를 보인 채 조회), 단건 언어 전환·재조회, 선택지 조회(그 칸의 상태), 다운로드(버튼 잠금 + 옆 진행 표시), 선언하지 않은 쓰기(상태 변경·대화창 폼 저장·`List.BulkAction`).
+
 ## 기본 부품
 
-`/ui`: `Button`·`Input`·`TextArea`·`Select`·`Checkbox`·`Dialog`·`ConfirmDialog`·`AlertDialog`·`Pending`. 대화창은 열린 순간 첫 칸에 포커스하고 Tab·Shift+Tab 순환을 창 안에서 같은 이벤트로 처리한다(포커스가 창 밖에 한 순간도 나가지 않는다). `ConfirmDialog`는 실행 중(`pending`) 닫기·재실행을 막고, `AlertDialog`는 확인만 받으며 연타해도 한 번만 알린다. 둘 다 `pending`이면 버튼 뒤에 진행 표시(`pendingLabel`은 화면 낭독기 문구)가 선다.
-- `Pending`(`label` = 화면 낭독기 문구): 진행 중 표시 하나(회전 표시 `.wk-spinner` + `.wk-visually-hidden` 문구). 목록 다운로드·`Form.Submit`·확인창이 쓰는 그 부품이다. 키트 폼으로 아직 옮기지 않은 화면도 진행 중이면 버튼을 잠그고 바로 뒤에 이 부품을 둔다. 마크업을 복사하지 않는다.
+`/ui`: `Button`·`Input`·`TextArea`·`Select`·`Checkbox`·`Dialog`·`ConfirmDialog`·`AlertDialog`·`Pending`·`BlockingProgress`·`useBlockingProgress`. 대화창은 열린 순간 첫 칸에 포커스하고 Tab·Shift+Tab 순환을 창 안에서 같은 이벤트로 처리한다(포커스가 창 밖에 한 순간도 나가지 않는다). `ConfirmDialog`는 실행 중(`pending`) 닫기·재실행을 막고, `AlertDialog`는 확인만 받으며 연타해도 한 번만 알린다. 둘 다 `pending`이면 버튼 뒤에 진행 표시(`pendingLabel`은 화면 낭독기 문구)가 선다.
+- `Pending`(`label` = 화면 낭독기 문구): 진행 중 표시 하나(회전 표시 `.wk-spinner` + `.wk-visually-hidden` 문구). 목록 다운로드·덮개를 선언하지 않은 `Form.Submit`·확인창이 쓰는 그 부품이다. 키트 폼으로 아직 옮기지 않은 화면도 같은 규칙이다: 등록·수정 저장이면 `useSaveForm`에 `progress`를 주고 버튼만 잠근다, 그 밖의 진행이면 버튼을 잠그고 바로 뒤에 이 부품을 둔다. 마크업을 복사하지 않는다.
 - 칸·구역·폼 한 줄의 기본 여백 초기화는 0 우선순위(`:where`)라 프로젝트의 간격 유틸리티(`space-y-*` 등)가 그대로 적용된다.
 
 ## headless 연결
@@ -98,7 +109,7 @@ description: 등록·수정·대화창 폼의 저장·저장 확인·저장 완�
 
 ## 폼 없는 확인 실행
 
-삭제·상태 변경처럼 입력 없이 확인만 받는 작업은 `/dialog`의 `useConfirmationState`에 실행 함수와 실패 처리를 연결한다. `request`로 대상을 정하고 `confirm`으로 실행한다. 실행 중에는 재실행·닫기·대상 교체가 막힌다. 성공하면 닫힌다. 실패는 `onError`가 닫기 또는 보이기를 정한다. 표시는 `/ui`의 `ConfirmDialog`에 `state`를 연결한다.
+삭제·상태 변경처럼 입력 없이 확인만 받는 작업은 `/dialog`의 `useConfirmationState`에 실행 함수와 실패 처리를 연결한다. `request`로 대상을 정하고 `confirm`으로 실행한다. 실행 중에는 재실행·닫기·대상 교체가 막힌다. 성공하면 닫힌다. 실패는 `onError`가 닫기 또는 보이기를 정한다. 표시는 `/ui`의 `ConfirmDialog`에 `state`를 연결한다. 삭제면 `progress: 'delete'`를 준다: 실행하는 동안 화면 전체 진행 덮개가 `messages.delete` 문구로 덮고 `covered`가 true이므로 확인창은 `open={state.kind === 'open' && !covered}`로 내린다(확인창 → 덮개 → 이동, 실패하면 덮개가 닫히고 확인창이 실패 문구와 함께 다시 열린다). 상태 변경 등 그 밖의 확인 실행은 선언하지 않는다(확인창 안 진행 표시).
 
 ## 확인 방법
 

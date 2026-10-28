@@ -19,6 +19,7 @@ export function ProductCreateScreen() {
   const editor = useSaveForm({
     schema: productFormSchema,
     source: SOURCE,
+    progress: 'create',
     fieldError: productFieldError,
     save: async (output) => {
       const created = await create.mutateAsync(toProductUpsertRequest(output));

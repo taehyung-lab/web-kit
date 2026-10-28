@@ -4,6 +4,7 @@
 import { useQueries, useQuery, type QueryKey, type UseQueryOptions } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { isRequestFailure } from './failure';
+import { useBlockingProgress } from './progress';
 import { validateDateRange } from './search/date-range';
 import { sameSearchValue, type FullSearch, type SearchDefinition, type SearchField, type UrlSearch } from './search/fields';
 import { addKeyword, nextSort, type Keyword } from './search/interactions';
@@ -55,6 +56,11 @@ export interface ListOptions<
   TPage extends ListPage<TRow> = ListPage<TRow>,
 > {
   readonly definition: SearchDefinition<F>;
+  /**
+   * 'page'면 이 목록이 페이지 진입 조회다: 보여 줄 결과가 아직 없고 조회(주소 값 확인 조회 포함) 중인 동안 화면 전체 진행 덮개(`/ui` BlockingProgress)를 띄운다.
+   * 검색·페이지 이동은 이전 결과를 보인 채 다시 조회하므로 덮지 않는다.
+   */
+  readonly progress?: 'page';
   /** route가 검증한 현재 URL 값(Route.useSearch(), 정규 URL 표현). 값으로 읽는 일은 목록이 한다. */
   readonly search: UrlSearch;
   /** URL 이동. 값은 정규 URL(encode 적용 뒤)이다. 확정은 push, 복구는 replace로 부른다. */
@@ -388,6 +394,8 @@ export function useList<
   else if (query.isError)
     status = cancelled ? { kind: 'idle', reason: 'cancelled', resume: refetch } : { kind: 'failed', failure: query.error, retry: refetch };
   else status = { kind: 'pending' };
+  // 페이지 진입 조회: 보여 줄 결과가 아직 없고 실제로 받고 있는 동안만 덮는다(이전 결과가 있으면 덮지 않는다).
+  useBlockingProgress('loading', options.progress === 'page' && page === undefined && status.kind === 'pending' && (running || query.isFetching));
 
   return {
     /** 현재 URL을 기본값으로 채운 확정 검색. */

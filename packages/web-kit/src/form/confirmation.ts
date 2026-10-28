@@ -1,5 +1,6 @@
 /** 확인 대상과 실행 상태를 소유하고 오류 정책·다이얼로그 표현은 프로젝트에 맡긴다. */
 import { useEffect, useRef, useState } from "react";
+import { useBlockingProgress } from "../progress";
 
 type ConfirmationState<T, F> =
   | { readonly kind: "closed" }
@@ -10,11 +11,17 @@ type ConfirmationState<T, F> =
       readonly failure: F | undefined;
     };
 
-/** 확인 → 실행 → 닫기/재시도를 한 수명으로 관리한다. */
+/**
+ * 확인 → 실행 → 닫기/재시도를 한 수명으로 관리한다.
+ * `progress: 'delete'`면 실행하는 동안 화면 전체 진행 덮개(`/ui` BlockingProgress)를 삭제 문구로 띄우고 `covered`가 true다.
+ * 그동안 확인창은 그리지 않는다(확인창 → 덮개 → 이동, 실패하면 덮개가 닫히고 확인창이 실패 문구와 함께 다시 보인다).
+ */
 export function useConfirmationState<T, F>({
   run,
   onError,
+  progress,
 }: {
+  readonly progress?: "delete";
   readonly run: (values: T) => void | Promise<unknown>;
   readonly onError: (
     error: unknown,
@@ -70,5 +77,14 @@ export function useConfirmationState<T, F>({
       );
     }
   }
-  return { state, request, close, confirm };
+  const covered = progress !== undefined && state.kind === "open" && state.pending;
+  useBlockingProgress(progress ?? "delete", covered);
+  return {
+    state,
+    /** 실행 중 덮개가 화면을 가리고 있다. 확인창은 `state.kind === 'open' && !covered`일 때 그린다. */
+    covered,
+    request,
+    close,
+    confirm,
+  };
 }

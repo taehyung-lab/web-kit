@@ -40,6 +40,7 @@ export function ShowCreateScreen() {
     schema: showFormSchema,
     source: SOURCE,
     acknowledge: true,
+    progress: 'create',
     fieldError: showFieldError,
     save: async (_values, submitted) => {
       const { fileId } = await uploadFile(selectedFile(submitted.seat));

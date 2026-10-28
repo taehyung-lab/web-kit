@@ -27,7 +27,7 @@ React 19 + TanStack(Router·Query·Form) + zod 4 + axios/orval을 쓰고, 서버
 | `/filter` | 기간 검증, 오류 표시, 체크 트리 | checkbox·문구·스타일 |
 | `/form` · `/form/ui` · `/dialog` | 제출·확인 관문·저장·기준선·서버 필드 오류·늦은 결과·저장 뒤 완료 처리, `Form` 묶음 부품(칸·선택지 상태·오류 줄·저장 확인·저장 완료 확인·대화창 폼)·`FormGuard` 이탈 확인 | schema·원본·저장 함수·완료 동작·배치·문구·실패 문구 |
 | `/record` · `/detail/ui` | 단건 상태·재시도·갱신 실패, `Record` 묶음 부품(항목·이력)·선언적 마스킹 | queryOptions·업무 항목·노출 정책·실패 문구 |
-| `/ui` | 기본 부품: 버튼·입력·선택·체크박스·대화창(포커스 가두기)·확인창·알림 | 값·문구·업무 행동 |
+| `/ui` | 기본 부품: 버튼·입력·선택·체크박스·대화창(포커스 가두기)·확인창·알림·진행 표시, 화면 전체 진행 덮개(저장·페이지 첫 조회 중 본문 막기·포커스 복원) | 값·문구·셸 배치·덮개 층·업무 행동 |
 | `/api` | Spring query 직렬화 | 적용 endpoint |
 | `/testing` | 프로젝트 Field·확인창·재시도 focus adapter 검사 | 자기 UI adapter |
 | `/testing/session` | 저장 실패·다른 탭 변경·종료의 adapter 검사(React/Form import 없음) | 자기 저장 adapter와 격리된 검사 환경 |

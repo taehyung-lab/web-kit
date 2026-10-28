@@ -21,6 +21,7 @@ export function TermsCreateScreen() {
     schema: termsFormSchema,
     source: SOURCE,
     confirm: true,
+    progress: 'create',
     acknowledge: true,
     fieldError: termsFieldError,
     save: async (values) => ({ id: (await create.mutateAsync(values)).termsId }),

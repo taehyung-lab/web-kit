@@ -32,6 +32,7 @@ export function ProductListScreen({
     definition: productListSearch,
     search,
     navigate,
+    progress: 'page',
     query: (full) => productListQuery(toListProductsParams(full)),
     rowId: (row) => row.id,
     selectable: (row) => row.status !== 'INACTIVE',

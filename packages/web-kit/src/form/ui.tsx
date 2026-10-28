@@ -734,7 +734,8 @@ function Failure({ className }: { readonly className?: string }) {
 /**
  * 저장 버튼. 저장 중·확인 대기·완료 처리 중에는 aria-disabled로 잠근다. disabled로 바꾸면 포커스가 본문으로 떨어져
  * 확인창을 닫은 뒤 돌아올 자리가 사라지고, 열린 직후 Tab이 창 밖에서 시작한다.
- * 저장 요청·완료 처리가 진행 중이면 버튼 바로 뒤에 진행 표시(문구는 화면 낭독기용 `messages.saving`)를 둔다(사용자 결정 2026-10-28).
+ * 저장 요청·완료 처리가 진행 중이면 버튼 바로 뒤에 진행 표시(문구는 화면 낭독기용 `messages.saving`)를 둔다.
+ * 등록·수정 폼(`useSaveForm({ progress })`)은 화면 전체 진행 덮개가 대신하므로 그리지 않는다(사용자 결정 2026-10-28, 0008).
  */
 function Submit({ children, className }: { readonly children?: ReactNode; readonly className?: string }) {
   const { editor, copy } = useFormContext();
@@ -744,7 +745,7 @@ function Submit({ children, className }: { readonly children?: ReactNode; readon
       <button type="submit" className={join('wk-button wk-button-primary', className)} aria-disabled={locked || undefined}>
         {children ?? copy.submit}
       </button>
-      {inProgress(editor) ? <Pending label={copy.saving} /> : null}
+      {editor.progress === undefined && inProgress(editor) ? <Pending label={copy.saving} /> : null}
     </>
   );
 }
@@ -788,7 +789,10 @@ function Cancel({
   );
 }
 
-/** 저장 전 확인창. useSaveForm({ confirm: true })일 때 확인 대기·저장 중에 열리고, 보여 준 값으로 저장한다. */
+/**
+ * 저장 전 확인창. useSaveForm({ confirm: true })일 때 확인 대기·저장 중에 열리고, 보여 준 값으로 저장한다.
+ * 등록·수정 폼(progress)은 확인하면 닫히고 화면 전체 진행 덮개가 저장 중을 맡는다(확인창 → 덮개 → 완료 창 순서).
+ */
 function Confirm({
   title,
   confirmLabel,
@@ -806,7 +810,7 @@ function Confirm({
   if (editor.stage.kind === 'confirming') viaConfirm.current = true;
   else if (editor.stage.kind !== 'saving') viaConfirm.current = false;
   const stage = editor.stage;
-  const open = stage.kind === 'confirming' || (stage.kind === 'saving' && viaConfirm.current);
+  const open = stage.kind === 'confirming' || (stage.kind === 'saving' && viaConfirm.current && editor.progress === undefined);
   return (
     <ConfirmDialog
       open={open}

@@ -17,7 +17,7 @@ const F = Form.of<ProductFormValues>();
 /** 준비된 단건 상태만 수정 폼으로 보낸다. */
 export function ProductEditScreen({ productId, onBack }: { readonly productId: string; readonly onBack: () => void }) {
   const { t } = useTranslation();
-  const state = useRecord(productQuery(productId), productId);
+  const state = useRecord(productQuery(productId), productId, { progress: 'page' });
   return (
     <div>
       <h1>{t('products.form.editTitle')}</h1>
@@ -50,6 +50,7 @@ function ProductEditForm({ product }: { readonly product: Product }) {
     schema: productFormSchema,
     source: { id: product.id, values: toProductFormValues(product) },
     confirm: true,
+    progress: 'edit',
     fieldError: productFieldError,
     save: async (output) => ({ saved: toProductFormValues(await update.mutateAsync(toProductUpsertRequest(output))) }),
     onSaved: () => navigate({ to: '/products/$productId', params: { productId: product.id } }),

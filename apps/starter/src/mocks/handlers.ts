@@ -10,7 +10,7 @@ const BULK_LIMIT = 5;
 
 /** 브라우저 mock에서만 응답을 조금 늦춰 대기 상태를 볼 수 있게 한다. */
 async function latency() {
-  if (typeof window !== 'undefined' && import.meta.env.MODE === 'mock') await delay(250);
+  if (typeof window !== 'undefined' && import.meta.env.MODE === 'mock') await delay(mockDb.latencyMs);
 }
 
 function envelope(status: number, resultCode: number, resultMessage: string, data: DefaultBodyType) {

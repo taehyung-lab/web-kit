@@ -19,6 +19,7 @@ description: 목록 필터·기간 프리셋·키워드 칩·표·페이지 이�
   - `check.options`에는 필터 UI가 쓰는 선택지 queryOptions를 그대로 준다. 확인은 그 query의 observer라서 요청·상태를 필터 UI와 함께 쓴다. 상위 필드에 따라 선택지가 바뀌면 `parents`에 적는다.
 - route에는 `validateSearch`와 `beforeLoad`를 연결한다. `validateSearch`는 정규 URL 표현을 내고 Router가 그대로 URL로 쓴다. 처음 진입한 주소가 정규형이 아니면(역순 기간·틀린 값·모르는 키) `beforeLoad`가 정규형으로 replace한다. 화면은 `Route.useSearch()`(URL 값)와 navigate를 `useList`에 넘기고, 값으로 읽는 일은 `useList`가 한다.
 - `useList`에 넘기는 것: 조회 queryOptions 생성 함수, `rowId`, 필요하면 `selectable`, 직접 입력 기간 쌍 `periods: [[시작, 끝]]`, 제품 검증 `validateDraft`(기간 한도 등). 선택지 준비 같은 화면 조건은 queryOptions의 `enabled`(boolean)로 주면 목록 조건과 함께 지켜지고, 충족 전에는 `idle`(`not-ready`)이다.
+- 페이지의 주 목록이면 `useList({ progress: 'page' })`로 선언한다. 보여 줄 결과가 아직 없고 조회(주소 값 확인 조회 포함) 중인 동안만 앱 셸의 화면 전체 진행 덮개(`/ui` `BlockingProgress`, web-kit-form 「화면 전체 진행 덮개」)가 덮는다. 검색·정렬·페이지 이동은 이전 결과를 보인 채 조회하므로 덮지 않는다. 대화창 안 목록은 선언하지 않는다.
 - 입력 초안 모양이 URL 값과 다르면(기간 preset처럼 URL에는 날짜만 있는 화면) `useList({ draft: { from(search) → 초안, to(초안) → 필터 값 } })`로 선언한다. `draft`·`patchDraft`·`validateDraft`는 그 초안 모양을 쓴다.
 - 페이지·크기·정렬 필드 이름은 `defineSearch({ view: { size: 'pageSize', … } })`로 선언한다(기본 page·size·sort·order). URL key는 제품 계약이다.
 

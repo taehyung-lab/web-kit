@@ -59,6 +59,38 @@ fieldset.wk-field {
   border-radius: 50%;
   animation: wk-spin 0.8s linear infinite;
 }
+/* 화면 전체 진행 덮개(BlockingProgress). 모양은 DT Figma 0.2.1·0.2.2(회색 반투명 전체 + 가운데 회전 표시와 두 줄 문구, 카드 없음).
+   층은 --wk-blocking-layer(기본은 키트 대화창 1000 아래라 대화창이 위에 뜬다), 배경은 --wk-blocking-backdrop. */
+.wk-blocking {
+  position: fixed;
+  inset: 0;
+  z-index: var(--wk-blocking-layer, 999);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--wk-blocking-backdrop, rgb(174 174 178 / 80%));
+}
+.wk-blocking-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 25px;
+  color: var(--wk-blocking-fg, #000);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+}
+.wk-spinner-large {
+  width: 30px;
+  height: 30px;
+  border-width: 3px;
+}
+.wk-blocking-text {
+  display: grid;
+}
+:where(.wk-blocking-text p) {
+  margin: 0;
+}
 @keyframes wk-spin {
   to {
     transform: rotate(360deg);

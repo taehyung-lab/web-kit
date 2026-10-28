@@ -14,6 +14,7 @@ import {
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { isRequestFailure, type FieldError } from '../failure';
+import { useBlockingProgress } from '../progress';
 import { followRows, rowMark } from './rows';
 import { revealFormSections } from './sections';
 
@@ -28,8 +29,9 @@ export interface SaveFormOptions<TInput, TOutput, TResult = { readonly saved?: T
    * 저장 작업. 서버가 저장 결과를 주면 폼 값으로 바꿔 saved로 돌려준다(없으면 제출한 S가 저장 결과다).
    * 그 밖의 결과(새 id·토큰 등)도 함께 돌려주면 onSaved가 받는다.
    * 요청 전에 화면 절차가 칸을 거절하면 `FormRejection`을 던진다(서버 필드 오류와 같은 길로 처리된다).
+   * 저장 도중 사용자에게 묻는 일(확인창)은 `step.waitForUser(물음)`으로 감싼다. 그동안 화면 전체 진행 덮개를 내린다.
    */
-  readonly save: (values: TOutput, submitted: TInput) => Promise<TResult>;
+  readonly save: (values: TOutput, submitted: TInput, step: SaveStep) => Promise<TResult>;
   /**
    * 서버 필드 오류를 폼 경로와 표시 문구로 바꾼다. undefined면 붙이지 않는다.
    * 돌려준 경로는 제출 때 기준이다. 그 뒤 키트 줄 작업으로 줄이 옮겨졌으면 키트가 지금 위치로 옮긴다.
@@ -51,6 +53,17 @@ export interface SaveFormOptions<TInput, TOutput, TResult = { readonly saved?: T
   readonly onSaved?: (result: TResult) => unknown;
   /** true면 저장 성공 뒤 `saved`에서 멈추고, 사용자가 확인해 `complete()`를 부를 때 onSaved를 실행한다(저장 완료 확인창). */
   readonly acknowledge?: boolean;
+  /**
+   * 등록·수정 폼이면 그 종류. 저장하는 동안(완료 창이 없으면 완료 처리까지) 화면 전체 진행 덮개(`/ui` BlockingProgress)를 그 종류의 문구로 띄우고,
+   * 저장 버튼 옆 진행 표시는 그리지 않는다. 없으면 덮개 없이 버튼 옆 진행 표시다(로그인·대화창 폼).
+   */
+  readonly progress?: 'create' | 'edit';
+}
+
+/** 저장 함수가 받는 진행 도구. */
+export interface SaveStep {
+  /** 저장 도중 사용자에게 묻는 동안(확인창) 진행 덮개를 내리고, 물음의 답을 그대로 돌려준다. */
+  readonly waitForUser: <T>(question: Promise<T>) => Promise<T>;
 }
 
 export type SaveStage<TInput> =
@@ -170,6 +183,8 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
   const focusTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   /** 저장이 성공해 완료 처리를 기다리는 결과. 완료 처리를 다시 시도할 때 같은 결과를 쓴다. */
   const savedResult = useRef<{ readonly result: TResult; readonly identity: unknown } | undefined>(undefined);
+  /** 저장 도중 사용자에게 묻고 있는 물음 수. 0보다 크면 진행 덮개를 내린다. */
+  const [asking, setAsking] = useState(0);
 
   const form = useForm({
     defaultValues: defaults,
@@ -309,6 +324,16 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
     return { attached, unattached, missed };
   }
 
+  /** 물음이 끝날 때까지 덮개를 내린다. 폼이 내려간 뒤 끝난 물음은 상태를 건드리지 않는다. */
+  async function waitForUser<T>(question: Promise<T>): Promise<T> {
+    setAsking((count) => count + 1);
+    try {
+      return await question;
+    } finally {
+      if (mounted.current) setAsking((count) => count - 1);
+    }
+  }
+
   /** 저장 한 번. 이 제출이 아직 현재 제출일 때만 결과를 반영한다. */
   async function execute(token: object, submitted: TInput, output: TOutput, mark: number) {
     const current = () => isCurrent(token);
@@ -316,7 +341,7 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
     setStage({ kind: 'saving', values: submitted });
     let result: TResult;
     try {
-      result = await latest.current.save(output, submitted);
+      result = await latest.current.save(output, submitted, { waitForUser });
     } catch (error: unknown) {
       if (!current()) return;
       setStage({ kind: 'idle' });
@@ -449,6 +474,11 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
     };
   }, []);
 
+  // 등록·수정 폼의 저장(완료 창이 없으면 완료 처리까지)을 진행 덮개에 알린다. 사용자에게 묻는 동안은 내린다.
+  const blocking =
+    (stage.kind === 'saving' && asking === 0) || (stage.kind === 'saved' && stage.completing && options.acknowledge !== true);
+  useBlockingProgress(options.progress ?? 'create', options.progress !== undefined && blocking);
+
   // 입력을 고치면 지우기로 한 실패는 지금 입력이 제출 때 입력과 달라진 동안 보이지 않는다.
   const visibleRejection =
     rejection?.clearWhenEdited !== undefined && !evaluate(values, rejection.clearWhenEdited.submitted) ? undefined : rejection;
@@ -465,6 +495,7 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
     form,
     identity: source.id,
     acknowledge: options.acknowledge === true,
+    progress: options.progress,
     stage,
     /** 저장 실패 원본. 표시 방식은 화면이 kind로 정한다. */
     failure,
@@ -502,6 +533,8 @@ export interface SaveFormEditor<TInput, TResult = unknown> {
   readonly identity: unknown;
   /** 저장 성공 뒤 사용자 확인을 기다리는가(acknowledge 값). */
   readonly acknowledge: boolean;
+  /** 진행 덮개를 쓰는 등록·수정 폼의 종류(progress 값). 있으면 저장 버튼 옆 진행 표시·저장 중 확인창을 그리지 않는다. */
+  readonly progress: 'create' | 'edit' | undefined;
   readonly stage: SaveStage<TInput>;
   readonly failure: unknown;
   readonly formFailure: unknown;

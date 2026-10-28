@@ -1,4 +1,5 @@
-// 파일 책임: jsdom으로 볼 수 없는 키트 보장을 실제 브라우저에서 관찰한다 — 여러 탭의 세션, 진입 주소 정규화와 요청 순서, 결과가 있을 때의 재조회 실패, 저장 직후 이동과 이탈 질문.
+// 파일 책임: jsdom으로 볼 수 없는 키트 보장을 실제 브라우저에서 관찰한다 — 여러 탭의 세션, 진입 주소 정규화와 요청 순서, 결과가 있을 때의 재조회 실패, 저장 직후 이동과 이탈 질문,
+// 저장·페이지 첫 조회 중 화면 전체 덮개(실제 inert 클릭·Tab 차단).
 import { expect, test, type Page, type Request } from '@playwright/test';
 
 /** mock 계정으로 로그인하고 상품 목록이 보일 때까지 기다린다. */
@@ -98,12 +99,82 @@ test('saving a new product moves to its detail without an unsaved-changes questi
   await expect(page.getByRole('alertdialog')).toHaveCount(0);
 });
 
-test('typing while the save is in flight is protected when the page moves on', async ({ page }) => {
+/** 브라우저 mock 응답 지연을 바꾼다(진행 중 화면을 오래 붙잡아 본다). 개발 서버가 앱과 같은 모듈 인스턴스로 내주는 경로다. */
+async function setLatency(page: Page, ms: number) {
+  await page.evaluate(async (value) => {
+    const dbModule = '/src/mocks/db.ts';
+    const { mockDb } = (await import(/* @vite-ignore */ dbModule)) as { mockDb: { latencyMs: number } };
+    mockDb.latencyMs = value;
+  }, ms);
+}
+
+/** 앱 본문(덮개가 막는 영역) 안에 포커스가 있는가. */
+function focusInBody(page: Page) {
+  return page.evaluate(() => document.activeElement?.closest('.wk-blocking-root') != null);
+}
+
+// 저장 중에는 화면 전체 덮개가 입력을 막는다(2026-10-28 사용자 결정, 0008). 이전의 "저장 중 입력 → 이동 때 묻기"는 덮개가 대신한다.
+test('saving a new product covers the page with the create message and blocks clicks and Tab', async ({ page }) => {
   await signIn(page);
   await fillNewProduct(page);
+  await setLatency(page, 1500);
   await page.getByRole('button', { name: '등록', exact: true }).click();
-  await page.getByLabel('상품명').fill('Typed during save');
-  await expect(page.getByRole('alertdialog')).toContainText('저장하지 않은 변경이 있습니다');
+  await expect(page.locator('.wk-blocking').getByText('등록 중입니다.')).toBeVisible();
+  await expect(page.locator('.wk-blocking').getByText('잠시만 기다려 주세요.')).toBeVisible();
+  // 화면 낭독기는 늘 있는 상태 영역에서 같은 문구를 읽는다.
+  await expect(page.getByRole('status').filter({ hasText: '등록 중입니다.' })).toHaveText('등록 중입니다. 잠시만 기다려 주세요.');
+  await expect(page.locator('.wk-blocking-root')).toHaveAttribute('inert', '');
+  await expect(page.locator('.wk-blocking-root')).toHaveAttribute('aria-busy', 'true');
+  // 덮개가 위에 있어 입력칸 클릭이 닿지 않고, Tab으로도 본문에 들어가지 못한다.
+  await expect(page.getByLabel('상품명').click({ timeout: 300 })).rejects.toThrow();
+  await page.keyboard.press('Tab');
+  expect(await focusInBody(page)).toBe(false);
+  await expect(page).toHaveURL(/\/products\/[^/]+$/);
+  await expect(page.locator('.wk-blocking')).toHaveCount(0);
+});
+
+test('an edit closes the confirmation, covers the page with the edit message, then shows the detail', async ({ page }) => {
+  await signIn(page);
+  await page.getByRole('cell', { name: 'Mouse Pad' }).click();
+  await expect(page).toHaveURL(/\/products\/[^/]+$/);
+  await page.goto(`${new URL(page.url()).pathname}/edit`);
+  await page.getByLabel('상품명').fill('Mouse Pad 3');
+  await page.getByRole('button', { name: '저장', exact: true }).click();
+  const confirm = page.getByRole('alertdialog');
+  await expect(confirm).toBeVisible();
+  await expect(page.locator('.wk-blocking')).toHaveCount(0);
+  await setLatency(page, 1500);
+  await confirm.getByRole('button', { name: '저장', exact: true }).click();
+  await expect(page.locator('.wk-blocking').getByText('수정 중입니다.')).toBeVisible();
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
+  await expect(page).toHaveURL(/\/products\/[^/]+$/);
+  await expect(page.locator('.wk-blocking')).toHaveCount(0);
+});
+
+test('a page entry is covered while its first data loads, a page change keeps the rows uncovered', async ({ page }) => {
+  await signIn(page);
+  await setLatency(page, 1500);
+  await page.getByRole('cell', { name: 'Mouse Pad' }).click();
+  await expect(page.locator('.wk-blocking').getByText('데이터를 불러오는 중입니다.')).toBeVisible();
+  await expect(page.locator('.wk-blocking-root')).toHaveAttribute('inert', '');
+  await expect(page.getByText('Mouse Pad').first()).toBeVisible({ timeout: 5000 });
+  await expect(page.locator('.wk-blocking')).toHaveCount(0);
+
+  await page.goBack();
+  await expect(page.getByRole('cell', { name: 'Mouse Pad' })).toBeVisible();
+  // 같은 조건 다시 조회: 요청이 진행되는 동안(응답 1.5초 지연) 이전 결과를 보인 채 한 번도 덮지 않는다.
+  const refetch = page.waitForRequest((request) => new URL(request.url()).pathname === '/api/products');
+  await page.getByRole('button', { name: '검색' }).click();
+  await refetch;
+  const coveredDuringRefetch = await page.evaluate(async () => {
+    for (let i = 0; i < 10; i += 1) {
+      if (document.querySelector('.wk-blocking') !== null || document.querySelector('.wk-blocking-root[inert]') !== null) return true;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    return false;
+  });
+  expect(coveredDuringRefetch).toBe(false);
+  await expect(page.getByRole('cell', { name: 'Mouse Pad' })).toBeVisible();
 });
 
 test('leaving with unsaved input asks first and staying keeps the input', async ({ page }) => {

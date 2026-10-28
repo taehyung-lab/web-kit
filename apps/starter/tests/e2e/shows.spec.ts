@@ -1,5 +1,5 @@
 // 파일 책임: 공연 예시(DT 공연 폼의 복잡한 부분 재현)를 실제 브라우저에서 관찰한다 — 회차 서버 오류 위치·이동 뒤 위치,
-// 대화창 하위 폼 Enter 제출 격리, 일반 칸 Enter = 제출, 저장 실패 뒤 좌석도 파일 보존과 재업로드(multipart), 저장 중 버튼 잠금과 진행 표시.
+// 대화창 하위 폼 Enter 제출 격리, 일반 칸 Enter = 제출, 저장 실패 뒤 좌석도 파일 보존과 재업로드(multipart), 저장 중 화면 전체 덮개와 실패 뒤 포커스 복원.
 import { expect, test, type Page } from '@playwright/test';
 
 async function signIn(page: Page) {
@@ -11,7 +11,7 @@ async function signIn(page: Page) {
   await page.getByRole('link', { name: '공연 예시' }).click();
 }
 
-test('show example keeps errors on their round, isolates the dialog, keeps the file and shows the saving indicator', async ({ page }) => {
+test('show example keeps errors on their round, isolates the dialog, keeps the file and covers the page while saving', async ({ page }) => {
   await signIn(page);
   const api: string[] = [];
   page.on('request', (request) => {
@@ -43,12 +43,16 @@ test('show example keeps errors on their round, isolates the dialog, keeps the f
   await page.getByLabel(/^2회차 시각/).fill('19:00');
   await page.getByLabel(/좌석배치도/).setInputFiles({ name: 'seat-map.png', mimeType: 'image/png', buffer: Buffer.from('png') });
 
-  // 저장 실패(500): 저장 중 버튼 잠금 + 옆 진행 표시, 실패 뒤 파일 유지.
-  await page.getByRole('button', { name: '저장', exact: true }).click();
-  await expect(page.getByRole('status')).toBeVisible();
-  await expect(page.getByRole('button', { name: '저장', exact: true })).toHaveAttribute('aria-disabled', 'true');
+  // 저장 실패(500): 저장 중 화면 전체 덮개(등록 문구)·버튼 잠금, 버튼 옆 진행 표시는 없다. 실패 뒤 덮개가 닫히고
+  // inert가 밀어낸 포커스는 저장 버튼으로 돌아오며, 파일은 남는다.
+  const save = page.getByRole('button', { name: '저장', exact: true });
+  await save.click();
+  await expect(page.locator('.wk-blocking').getByText('등록 중입니다.')).toBeVisible();
+  await expect(save).toHaveAttribute('aria-disabled', 'true');
+  await expect(page.locator('.wk-blocking-root .wk-spinner')).toHaveCount(0);
   await expect(page.getByText('서버에서 오류가 발생했습니다. 잠시 뒤 다시 시도하세요.')).toBeVisible();
-  await expect(page.getByRole('status')).toBeHidden();
+  await expect(page.locator('.wk-blocking')).toHaveCount(0);
+  await expect(save).toBeFocused();
   await expect(page.getByText('seat-map.png')).toBeVisible();
 
   // 같은 일시 회차 → 서버 필드 오류가 2회차 시각 칸에, 위로 옮기면 그 줄(1회차)을 따라간다.

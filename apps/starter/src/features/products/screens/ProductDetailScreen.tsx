@@ -23,7 +23,7 @@ export function ProductDetailScreen({
   readonly onBack: () => void;
 }) {
   const { t } = useTranslation();
-  const state = useRecord(productQuery(productId), productId);
+  const state = useRecord(productQuery(productId), productId, { progress: 'page' });
   return (
     <div className="flex flex-col gap-5">
       <Button variant="ghost" className="self-start" onClick={onBack}>

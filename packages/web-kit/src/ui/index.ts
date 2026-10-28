@@ -2,3 +2,5 @@
 export { Button, Checkbox, Input, Select, TextArea } from './inputs';
 export { AlertDialog, ConfirmDialog, Dialog, type DialogProps } from './dialog';
 export { Pending } from './pending';
+export { BlockingProgress, type BlockingProgressMessages } from './blocking-progress';
+export { useBlockingProgress, type BlockingKind } from '../progress';

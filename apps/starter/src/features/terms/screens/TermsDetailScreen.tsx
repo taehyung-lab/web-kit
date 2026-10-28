@@ -9,7 +9,7 @@ import { termsQuery } from '../api/terms';
 /** 약관 하나의 상세. */
 export function TermsDetailScreen({ termsId }: { readonly termsId: string }) {
   const { t } = useTranslation();
-  const state = useRecord(termsQuery(termsId), termsId);
+  const state = useRecord(termsQuery(termsId), termsId, { progress: 'page' });
   return (
     <div className="flex flex-col gap-5">
       <h1>{t('terms.detailTitle')}</h1>

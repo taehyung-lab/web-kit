@@ -1,4 +1,4 @@
-// 파일 책임: 앱 골격(머리글·탐색·경로 오류·세션 안내) 문구의 ko/en 원문.
+// 파일 책임: 앱 골격(머리글·탐색·경로 오류·세션 안내·화면 전체 진행 덮개) 문구의 ko/en 원문.
 export const appResources = {
   ko: {
     app: {
@@ -10,6 +10,7 @@ export const appResources = {
       goHome: '처음으로',
       crashed: '화면을 그리는 중 문제가 발생했습니다.',
       dismiss: '닫기',
+      progress: { loading: '데이터를 불러오는 중입니다.', create: '등록 중입니다.', edit: '수정 중입니다.', delete: '삭제 중입니다.', wait: '잠시만 기다려 주세요.' },
     },
   },
   en: {
@@ -22,6 +23,7 @@ export const appResources = {
       goHome: 'Go home',
       crashed: 'Something went wrong while showing this page.',
       dismiss: 'Dismiss',
+      progress: { loading: 'Loading data.', create: 'Registering.', edit: 'Updating.', delete: 'Deleting.', wait: 'Please wait a moment.' },
     },
   },
 } as const;

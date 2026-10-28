@@ -10,6 +10,7 @@ description: 상세·수정 원본 같은 단건 조회의 대기·없음·실�
 ## 화면 선언
 
 - `useRecord(queryOptions, identity)`: queryOptions와 레코드 식별을 넘긴다. 식별은 queryKey의 나머지(언어 등)와 구분된다. 상태 판정은 화면 안의 이 한 곳에서만 하고, 화면이 raw query를 다시 읽지 않는다.
+- 페이지 진입 조회(상세·수정 원본)면 `useRecord(queryOptions, identity, { progress: 'page' })`로 선언한다. 보일 내용이 없고 조회 중인 동안만 앱 셸의 화면 전체 진행 덮개(`/ui` `BlockingProgress`, web-kit-form 「화면 전체 진행 덮개」)가 덮는다. 언어 전환·재조회(내용 있음)·실패·취소는 덮지 않는다. 대화창 안 조회는 선언하지 않는다.
 - route loader는 같은 queryOptions로 미리 받기만 한다: 기다리지 않고 실패를 삼키는 `void queryClient.query(options).catch(() => undefined)`(설치된 Query에서 `prefetchQuery`는 deprecated). `ensureQueryData`처럼 실패를 던지는 호출은 loader가 판정하게 되므로 쓰지 않는다. 기다리면 실패가 캐시에 남아 화면 mount 때 한 번 더 요청한다. 진입 대기 표시는 프로젝트가 정한다. 상태 판정은 하지 않는다. 선택지 조회도 같은 원칙이다. 선택지 실패는 그 필드 자리에 보인다.
 
 ## 키트 보장

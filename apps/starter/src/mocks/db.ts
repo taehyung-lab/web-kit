@@ -68,6 +68,8 @@ export interface MockSnapshot {
 }
 
 export const mockDb = {
+  /** 브라우저 mock 응답 지연(ms). 실제 브라우저 검사가 진행 중 화면(덮개 등)을 오래 붙잡아 볼 때만 늘린다. */
+  latencyMs: 250,
   /** 분류 선택지(고정). */
   get categories(): readonly Category[] {
     return CATEGORIES;
