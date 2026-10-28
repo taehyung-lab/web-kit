@@ -151,6 +151,37 @@ test('an edit closes the confirmation, covers the page with the edit message, th
   await expect(page.locator('.wk-blocking')).toHaveCount(0);
 });
 
+// 확인창을 거친 저장이 칸 없는 오류(500)로 끝나면, 확인창 버튼은 사라졌으므로 포커스는 본문에서 확인창을 연 저장 버튼으로 돌아온다(0008 포커스).
+test('an edit that fails after the confirmation returns focus to the save button, not the document body', async ({ page }) => {
+  await signIn(page);
+  await page.getByRole('cell', { name: 'Mouse Pad' }).click();
+  await expect(page).toHaveURL(/\/products\/[^/]+$/);
+  await page.goto(`${new URL(page.url()).pathname}/edit`);
+  await page.getByLabel('상품명').fill('Mouse Pad 500');
+  const save = page.getByRole('button', { name: '저장', exact: true });
+  await save.click();
+  const confirm = page.getByRole('alertdialog');
+  await setLatency(page, 800);
+  await confirm.getByRole('button', { name: '저장', exact: true }).click();
+  await expect(page.locator('.wk-blocking').getByText('수정 중입니다.')).toBeVisible();
+  // 덮개가 열린 동안 mock 서버를 내려 PUT을 500으로 끝낸다(지연 뒤 상품 조회에서 예외).
+  await page.evaluate(async () => {
+    const dbModule = '/src/mocks/db.ts';
+    const { mockDb } = (await import(/* @vite-ignore */ dbModule)) as { mockDb: object };
+    Object.defineProperty(mockDb, 'products', {
+      get: () => {
+        throw new Error('mock server down');
+      },
+      configurable: true,
+    });
+  });
+  await expect(page.locator('.wk-blocking')).toHaveCount(0);
+  await expect(page.locator('.wk-form-failure')).toBeVisible();
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
+  await expect(save).toBeFocused();
+  expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
+});
+
 test('a page entry is covered while its first data loads, a page change keeps the rows uncovered', async ({ page }) => {
   await signIn(page);
   await setLatency(page, 1500);

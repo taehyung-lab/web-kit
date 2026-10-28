@@ -1,5 +1,6 @@
 // 파일 책임: 화면 전체 진행 덮개. 등록소를 제공하고, 진행이 있으면 본문을 막고(inert·aria-busy) 가운데 진행 표시와 문구를 띄운다.
-// 무엇이 진행 중인지는 등록(폼 저장·페이지 첫 조회)이, 문구는 프로젝트가 정한다. 덮개가 닫힐 때 잃은 포커스를 본문으로 돌린다.
+// 무엇이 진행 중인지는 등록(폼 저장·페이지 첫 조회)이, 문구는 프로젝트가 정한다. 덮개가 닫힐 때 잃은 포커스를 본문으로 돌린다
+// (본문 DOM 안에서 마지막으로 포커스한 요소 → 사라졌으면 본문 첫 h1 → 그것도 없으면 본문 영역).
 import { useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { BlockingRegistryContext, type BlockingKind, type BlockingRegistry } from '../progress';
 import { Spinner } from './pending';
@@ -47,6 +48,21 @@ function createRegistry() {
   };
 }
 
+/** 본문으로 포커스를 돌린다: 기록한 요소가 남아 있으면 그 요소, 사라졌으면 본문 첫 h1, 그것도 없으면 본문 영역. 문서 본문에 두지 않는다. */
+function restoreFocus(root: HTMLElement, last: HTMLElement) {
+  if (last.isConnected && root.contains(last)) {
+    last.focus();
+    if (document.activeElement === last) return;
+  }
+  const fallback = root.querySelector<HTMLElement>('h1') ?? root;
+  // 포커스를 받는 동안만 tabindex를 붙인다(떠나면 떼어 클릭·Tab 순서에 남지 않게).
+  if (!fallback.hasAttribute('tabindex')) {
+    fallback.setAttribute('tabindex', '-1');
+    fallback.addEventListener('blur', () => fallback.removeAttribute('tabindex'), { once: true });
+  }
+  fallback.focus();
+}
+
 /**
  * 앱 셸에 한 번 두는 덮개. children(앱 본문)은 진행 중 inert·aria-busy가 되어 클릭·포커스·낭독에서 빠진다.
  * 대화창(portal)은 children 밖이라 덮개 위에서 조작된다. 덮개 층은 CSS 변수 `--wk-blocking-layer`(기본은 키트 대화창 아래).
@@ -66,15 +82,18 @@ export function BlockingProgress({
   const [store] = useState(createRegistry);
   const kind = useSyncExternalStore(store.subscribe, store.snapshot, store.snapshot);
   const open = kind !== undefined;
+  const root = useRef<HTMLDivElement | null>(null);
   const lastFocused = useRef<HTMLElement | null>(null);
   const wasOpen = useRef(false);
 
-  // 닫히는 커밋에서: inert가 밀어낸 포커스(문서 본문)만 본문의 마지막 포커스로 돌린다. 완료 창·오류 칸이 가져간 포커스는 건드리지 않는다.
+  // 닫히는 커밋에서: inert가 밀어낸 포커스(문서 본문)만 본문으로 돌린다. 완료 창·오류 칸·대화창이 가져간 포커스는 건드리지 않는다.
+  // 본문에 포커스한 적이 없으면(첫 진입) 옮기지 않는다.
   useLayoutEffect(() => {
     if (wasOpen.current && !open) {
       const active = document.activeElement;
-      const target = lastFocused.current;
-      if ((active === null || active === document.body) && target !== null && target.isConnected) target.focus();
+      if ((active === null || active === document.body) && lastFocused.current !== null && root.current !== null) {
+        restoreFocus(root.current, lastFocused.current);
+      }
     }
     wasOpen.current = open;
   }, [open]);
@@ -82,11 +101,13 @@ export function BlockingProgress({
   return (
     <BlockingRegistryContext.Provider value={store.registry}>
       <div
+        ref={root}
         className="wk-blocking-root"
         inert={open || undefined}
         aria-busy={open || undefined}
         onFocus={(event) => {
-          lastFocused.current = event.target instanceof HTMLElement ? event.target : null;
+          // React 합성 포커스는 portal(확인창 등)에서도 올라온다. 본문 DOM 안의 요소만 기록한다.
+          if (event.target instanceof HTMLElement && event.currentTarget.contains(event.target)) lastFocused.current = event.target;
         }}
       >
         {children}

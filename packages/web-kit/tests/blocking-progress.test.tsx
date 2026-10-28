@@ -4,6 +4,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { z } from 'zod';
 import { RequestFailure } from '../src/failure';
@@ -243,6 +244,72 @@ it('P6 서버 필드 오류로 끝나면 포커스는 첫 오류 칸으로 간�
   );
   expect(overlayOpen()).toBe(false);
   await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('textbox', { name: '이름' })));
+});
+
+/** 본문 버튼과, React 트리로는 본문 안이지만 DOM은 document.body로 나간 portal 버튼. portal 안 포커스도 React 합성 이벤트로 본문 div까지 올라온다. */
+function PortalScreen({ active, portal, trigger = true }: { readonly active: boolean; readonly portal: boolean; readonly trigger?: boolean }) {
+  function Probe() {
+    useBlockingProgress('edit', active);
+    return null;
+  }
+  return (
+    <Host>
+      <h1>상품 수정</h1>
+      {trigger ? <button type="button">저장</button> : null}
+      <Probe />
+      {portal ? createPortal(<button type="button">확인</button>, document.body) : null}
+    </Host>
+  );
+}
+
+it('P6 portal(확인창) 안 포커스는 본문 마지막 포커스로 기록하지 않는다 — 확인창이 사라진 뒤 덮개가 닫히면 본문 요소로 돌린다', () => {
+  const view = render(<PortalScreen active={false} portal />);
+  const trigger = screen.getByRole('button', { name: '저장' });
+  trigger.focus();
+  screen.getByRole('button', { name: '확인' }).focus();
+  // 확인하면 확인창이 내려가고 덮개가 열린다. 브라우저는 inert 본문으로 포커스를 돌려주지 못해 문서 본문에 남는다.
+  view.rerender(<PortalScreen active portal={false} />);
+  expect(overlayOpen()).toBe(true);
+  expect(document.activeElement).toBe(document.body);
+  view.rerender(<PortalScreen active={false} portal={false} />);
+  expect(overlayOpen()).toBe(false);
+  expect(document.activeElement).toBe(trigger);
+});
+
+it('P6 기록한 본문 요소도 사라졌으면 본문의 첫 제목(h1)으로, 제목도 없으면 본문 영역으로 돌린다 — 문서 본문에 두지 않는다', () => {
+  const view = render(<PortalScreen active={false} portal={false} />);
+  screen.getByRole('button', { name: '저장' }).focus();
+  view.rerender(<PortalScreen active portal={false} trigger={false} />);
+  expect(document.activeElement).toBe(document.body);
+  view.rerender(<PortalScreen active={false} portal={false} trigger={false} />);
+  const heading = screen.getByRole('heading', { name: '상품 수정' });
+  expect(document.activeElement).toBe(heading);
+  expect(heading.getAttribute('tabindex')).toBe('-1');
+  cleanup();
+
+  function Bare({ active, button }: { readonly active: boolean; readonly button: boolean }) {
+    function Probe() {
+      useBlockingProgress('delete', active);
+      return null;
+    }
+    return (
+      <Host>
+        {button ? <button type="button">선택 삭제</button> : null}
+        <Probe />
+      </Host>
+    );
+  }
+  const bare = render(<Bare active={false} button />);
+  screen.getByRole('button', { name: '선택 삭제' }).focus();
+  bare.rerender(<Bare active button={false} />);
+  bare.rerender(<Bare active={false} button={false} />);
+  expect(document.activeElement).toBe(body());
+});
+
+it('P6 본문에서 아무 요소에도 포커스한 적이 없으면(첫 진입) 덮개가 닫혀도 포커스를 옮기지 않는다', () => {
+  const view = render(<PortalScreen active portal={false} />);
+  view.rerender(<PortalScreen active={false} portal={false} />);
+  expect(document.activeElement).toBe(document.body);
 });
 
 it('P10 덮개는 본문만 막고 덮개 밖(portal) 대화창은 막지 않는다 — 덮개 층은 프로젝트 변수로 바꾼다', async () => {
