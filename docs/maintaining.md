@@ -1,12 +1,12 @@
 # 키트 변경과 검증
 
-사용 동작의 정본은 `skills/`, 변경 이유는 `docs/decisions/`, 현재 공개 경로·타입은 `package.json`과 `src/`다. 이 문서는 변경·호환성·발행 판단만 맡는다.
+사용 동작의 정본은 `packages/web-kit/skills/`, 변경 이유는 `docs/decisions/`, 현재 공개 경로·타입은 `packages/web-kit/package.json`과 `src/`다. 이 문서는 변경·호환성·발행 판단만 맡는다.
 
 ## 변경 순서
 
 1. 영향받는 기존 보장과 새 요구를 정하고, 정상 결과와 위반 결과를 구별할 검사를 고른다. 제품 정책은 키트 기본값으로 채우지 않는다.
 2. 코드를 바꿀 때 해당 스킬도 대조한다. 사용자가 찾는 작업이 늘거나 책임이 이동하면 description과 README의 진입 안내도 확인한다.
-3. `pnpm check`로 키트 보장을 확인한다. adapter 검사 도구를 추가하거나 바꾸면 정상 adapter뿐 아니라 관찰한 결함을 가진 adapter도 거절하는지 확인한다.
+3. 저장소 루트의 `pnpm check`로 키트 보장을 확인한다. adapter 검사 도구를 추가하거나 바꾸면 정상 adapter뿐 아니라 관찰한 결함을 가진 adapter도 거절하는지 확인한다.
 4. 아래 버전 기준으로 번호를 정하고 그 번호로 포장한 산출물을 소비 검사에 넣는다. 현재 연결된 소비자와, 호환성이 달라진 경우 짝지은 소비자 revision을 구분한다.
 5. 실제로 검사한 버전·환경·입력·결과·미확인을 기록한다. 새로운 interface가 기존 예제에서 사용되지 않으면 예제 통과만으로 새 기능의 소비 검사를 완료했다고 하지 않는다.
 
@@ -22,15 +22,16 @@
 
 ## 소비 검사와 발행
 
-`.github/workflows/check.yml`은 기본적으로 starter 기본 브랜치를 확인한다. 수동 실행의 `consumer_ref`에는 특정 commit을 넣어 같은 조합을 다시 검사하거나, 호환성 변경의 짝지은 소비자 commit을 검사할 수 있다. 입력은 checkout에만 전달하며 셸 명령으로 실행하지 않는다.
+키트와 소비 검사 앱 `apps/starter`는 같은 저장소에 있다. starter는 workspace 구성원이 아니며 키트 소스가 아니라 포장한 tarball로만 키트를 쓴다(`scripts/sync-starter.mjs`). 키트를 바꾸면 `pnpm starter:sync`로 starter를 다시 맞추고, starter vendor tarball(`apps/starter/vendor/boosterlab-web-kit.tgz`)·사용 코드·lockfile을 같은 PR에 넣는다. `pnpm starter:check`와 CI는 커밋된 vendor tarball의 풀어 낸 내용이 그 commit의 키트를 포장한 내용과 다르거나 lockfile 지문이 그 tarball과 다르면 실패한다. pnpm pack의 바이트는 OS마다 달라질 수 있어 내용으로 비교하고, lockfile·소비 검사·발행은 커밋된 tarball 하나를 쓴다. starter에 두 번째 공용 구현을 두지 않는다. 반복이 생기면 키트 책임이 빠진 신호다.
+
+starter 통과만으로 소비 검증을 끝내지 않는다. 실제 제품(DT v2)의 대표 흐름은 [0003](decisions/0003-web-kit-3-redesign.md)의 완료 기준으로 판정한다.
 
 consumer가 통과하면 다음을 같은 `web-kit-tarball` artifact에 남긴다.
 
 - 검사한 tarball
-- `verification.json`: 키트 commit·소비자 commit·패키지 버전·tarball SHA-256·실행 식별자
+- `verification.json`: 저장소 commit·패키지 버전·tarball SHA-256·실행 식별자
 
-발행은 main의 해당 키트 commit에서 통과한 산출물 그대로 한다. 번호가 맞는 tag와 release에 올리고 다시 pack하지 않는다. 발행한 번호로 내용이 다른 산출물을 만들지 않는다. 소비자에서 저장한 commit은 설치 전 기준이며, 검사는 그 checkout에 후보 tarball을 설치한 결과를 대상으로 한다.
-
+발행은 main의 해당 키트 commit에서 통과한 산출물 그대로 한다. 번호가 맞는 tag와 release에 올리고 다시 pack하지 않는다. 발행한 번호로 내용이 다른 산출물을 만들지 않는다. 
 사용법이 바뀌는 변경은 이전 소비자의 실패와 새 소비자의 통과를 구분한다. 새 소비자가 아직 준비되지 않았다면 키트 내부 검사만으로 소비 검증 완료나 발행 가능을 선언하지 않는다. 프로젝트 연결이 별도 범위인 작업에서는 키트 준비 완료와 미수행 소비 검사를 따로 보고한다.
 
 ## 스킬 탐색 확인

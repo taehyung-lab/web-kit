@@ -3,12 +3,6 @@ on:
   push:
   pull_request:
   workflow_dispatch:
-    inputs:
-      consumer_ref:
-        description: 'Starter revision (use a commit SHA to repeat a verified combination)'
-        required: true
-        default: 'main'
-        type: string
 permissions:
   contents: read
 jobs:
@@ -25,44 +19,27 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm check
-  # 발행할 산출물 그대로 공개 starter에 설치해 소비 쪽 검사(check·브라우저)를 돌린다. 통과한 tarball을 artifact로 남기고 release에는 이것을 올린다.
+  # 발행할 산출물 그대로 같은 commit의 apps/starter에 설치해 소비 쪽 검사(check·브라우저)를 돌린다.
+  # starter lockfile의 키트 지문이 이 산출물과 다르면 실패한다: 키트를 바꾼 PR은 starter도 함께 맞춘다.
+  # 통과한 tarball을 artifact로 남기고 release에는 이것을 올린다.
   consumer:
     needs: contracts
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          path: web-kit
-      - uses: actions/checkout@v4
-        with:
-          repository: taehyung-lab/admin-web-starter
-          ref: ${{ inputs.consumer_ref || 'main' }}
-          path: starter
       - uses: pnpm/action-setup@v4
         with:
           version: 10.33.0
       - uses: actions/setup-node@v4
         with:
           node-version: 24.19.0
-      - run: pnpm install --frozen-lockfile --ignore-scripts
-        working-directory: web-kit
-      - run: pnpm pack --pack-destination ../dist
-        working-directory: web-kit
-      - name: starter에 이 산출물 설치
-        working-directory: starter
-        run: |
-          tgz=$(cd ../dist && ls boosterlab-web-kit-*.tgz)
-          rm -f vendor/boosterlab-web-kit-*.tgz
-          cp "../dist/$tgz" vendor/
-          pnpm add "@boosterlab/web-kit@file:vendor/$tgz"
-      - run: pnpm check
-        working-directory: starter
+      - run: pnpm starter:check
       - run: pnpm exec playwright install --with-deps chromium
-        working-directory: starter
+        working-directory: apps/starter
       - run: pnpm test:e2e
-        working-directory: starter
-      - name: 검증한 버전 조합과 산출물 기록
-        run: node web-kit/scripts/write-verification.mjs web-kit starter dist
+        working-directory: apps/starter
+      - name: 검증한 commit과 산출물 기록
+        run: node scripts/write-verification.mjs packages/web-kit dist
       - uses: actions/upload-artifact@v4
         with:
           name: web-kit-tarball

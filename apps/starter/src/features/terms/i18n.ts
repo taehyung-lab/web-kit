@@ -1,0 +1,51 @@
+// 파일 책임: 약관 등록·상세(레퍼런스 약관 등록 재현) 문구의 ko/en 원문.
+export const termsResources = {
+  ko: {
+    terms: {
+      createTitle: '약관 등록',
+      detailTitle: '약관 상세',
+      section: '기본정보',
+      fields: { version: '버전', effectiveAt: '시행일', status: '게시 상태', publishedAt: '게시일', body: '본문' },
+      status: { PUBLISHED: '게시', UNPUBLISHED: '미게시' },
+      confirmBody: '입력한 내용으로 약관을 등록합니다.',
+      savedBody: '약관을 등록했습니다.',
+      notFound: '약관을 찾을 수 없습니다.',
+      backToCreate: '약관 등록으로',
+      errors: {
+        version: '버전을 입력하세요.',
+        versionLength: '버전은 10자 이하입니다.',
+        versionFormat: '버전은 숫자와 점(.)만 입력할 수 있습니다.',
+        versionDuplicate: '이미 등록된 버전입니다.',
+        effectiveAt: '시행일을 선택하세요.',
+        status: '게시 상태를 선택하세요.',
+        publishedAt: '게시일을 선택하세요.',
+        body: '본문을 입력하세요.',
+        invalid: '서버가 이 값을 받아들이지 않았습니다.',
+      },
+    },
+  },
+  en: {
+    terms: {
+      createTitle: 'New terms',
+      detailTitle: 'Terms',
+      section: 'Basic information',
+      fields: { version: 'Version', effectiveAt: 'Effective date', status: 'Status', publishedAt: 'Publish date', body: 'Body' },
+      status: { PUBLISHED: 'Published', UNPUBLISHED: 'Unpublished' },
+      confirmBody: 'Register the terms with these values.',
+      savedBody: 'The terms were registered.',
+      notFound: 'These terms do not exist.',
+      backToCreate: 'New terms',
+      errors: {
+        version: 'Enter a version.',
+        versionLength: 'Up to 10 characters.',
+        versionFormat: 'Digits and dots only.',
+        versionDuplicate: 'This version already exists.',
+        effectiveAt: 'Choose the effective date.',
+        status: 'Choose a status.',
+        publishedAt: 'Choose the publish date.',
+        body: 'Enter the body.',
+        invalid: 'The server did not accept this value.',
+      },
+    },
+  },
+} as const;
