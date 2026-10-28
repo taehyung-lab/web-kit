@@ -22,7 +22,7 @@ it('닫히는 범위만 검사하고 페이지 이동은 전체를 검사한다'
   nav.register({}, { read: () => ({ dirty: true, busy: false, identity: 1 }) });
   nav.register({}, { scope: dialog, read: () => ({ dirty: false, busy: false, identity: 2 }) });
   const close = vi.fn();
-  expect(nav.request(close, dialog)).toBe('performed');
+  expect(nav.request(close, { scope: dialog })).toBe('performed');
   expect(close).toHaveBeenCalledOnce();
   expect(nav.request(vi.fn())).toBe('confirming');
 });
@@ -32,7 +32,7 @@ it.each(['saving', 'identity', 'removed'] as const)('확인 대기 뒤 %s 변화
   const remove = nav.register({}, { read: () => facts });
   const run = vi.fn();
   const cancel = vi.fn();
-  nav.request(run, undefined, cancel);
+  nav.request(run, { onCancel: cancel });
   if (kind === 'saving') facts = { ...facts, busy: true };
   if (kind === 'identity') facts = { ...facts, identity: 2 };
   if (kind === 'removed') remove();
@@ -48,7 +48,7 @@ it('중첩 범위와 재마운트는 옛 요청을 실행하지 않는다', () =
   nav.registerScope(inner, outer);
   nav.register({}, { scope: inner, read: () => ({ dirty: true, busy: false, identity: 1 }) });
   const run = vi.fn();
-  nav.request(run, outer);
+  nav.request(run, { scope: outer });
   remove();
   nav.registerScope(outer);
   nav.confirm();
@@ -63,4 +63,15 @@ it('실행 직전 저장 상태를 읽고 clean 이동은 확인 없이 실행�
   busy = false;
   expect(nav.request(run)).toBe('performed');
   expect(run).toHaveBeenCalledOnce();
+});
+
+it('묻는 이탈은 까닭(취소 버튼/이동)을 함께 기억하고 답하면 지운다', () => {
+  const nav = createFormNavigation();
+  nav.register({}, { read: () => ({ dirty: true, busy: false, identity: 1 }) });
+  nav.request(vi.fn(), { reason: 'cancel' });
+  expect(nav.reason).toBe('cancel');
+  nav.cancel();
+  expect(nav.reason).toBeUndefined();
+  nav.request(vi.fn());
+  expect(nav.reason).toBe('navigate');
 });

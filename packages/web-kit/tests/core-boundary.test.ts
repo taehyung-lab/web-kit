@@ -34,7 +34,7 @@ it.each(['../src/index.ts', '../src/session-testing.ts'])('%s는 상대 경로�
   expect(visited.size).toBeGreaterThan(1);
 });
 
-it.each(['../src/form/save-form.ts', '../src/form/navigation.ts', '../src/use-list.ts', '../src/session.ts', '../src/record.ts'])(
+it.each(['../src/form/index.ts', '../src/form/save-form.ts', '../src/form/navigation.ts', '../src/form/confirmation.ts', '../src/use-list.ts', '../src/list.ts', '../src/session.ts', '../src/record.ts'])(
   '%s의 동작 경로는 기본 UI를 import하지 않는다',
   (entry) => {
     const queue = [entry];
@@ -57,7 +57,7 @@ it.each(['../src/form/save-form.ts', '../src/form/navigation.ts', '../src/use-li
 
 /**
  * 공개 입구(package.json exports) 중 유휴 타이머 자신을 뺀 전부. 유휴 타이머는 그 입구를 직접 import한 앱에만 들어간다(0004 §1):
- * 동작 입구(목록·폼·record)뿐 아니라 화면 부품 입구(list/ui·form/ui·detail/ui·filter)도 끌어오면 쓰지 않는 앱(starter) 결과물에 들어간다.
+ * 동작 입구(목록·폼·record)뿐 아니라 화면 부품 입구(list/ui·form/ui·detail/ui·ui·filter)도 끌어오면 쓰지 않는 앱(starter) 결과물에 들어간다.
  * 목록을 손으로 두지 않아 새 입구도 자동으로 검사된다.
  */
 const exportsMap = JSON.parse(
@@ -87,6 +87,7 @@ it('유휴 타이머 경계 검사 대상에 동작 입구와 화면 부품 입�
       '../src/list-ui.tsx',
       '../src/form/ui.tsx',
       '../src/detail-ui.tsx',
+      '../src/ui/index.ts',
       '../src/filter.ts',
       '../src/session.ts',
     ]),
@@ -114,7 +115,7 @@ it.each([...entriesWithoutIdle, '../src/use-list.ts'])(
   },
 );
 
-/** 목록·폼은 권한 판정과 결합하지 않는다(0005). 권한 결과는 프로젝트가 연결한다. */
+/** 목록·폼·상세·기본 UI는 권한 판정과 결합하지 않는다(0005·0006). 권한 결과는 프로젝트가 연결한다. */
 it.each([
   '../src/form/index.ts',
   '../src/form/ui.tsx',
@@ -122,6 +123,8 @@ it.each([
   '../src/list.ts',
   '../src/list-ui.tsx',
   '../src/record.ts',
+  '../src/detail-ui.tsx',
+  '../src/ui/index.ts',
   '../src/search/index.ts',
 ])(
   '%s는 권한을 import하지 않는다',
@@ -142,3 +145,27 @@ it.each([
     }
   },
 );
+
+/** 진입 파일에서 상대 import를 따라 닿는 소스 파일 전부. */
+function reach(entry: string): Set<string> {
+  const queue = [entry];
+  const visited = new Set<string>();
+  while (queue.length) {
+    const file = queue.pop()!;
+    if (visited.has(file)) continue;
+    visited.add(file);
+    for (const [, specifier] of sources[file]!.matchAll(/(?:from|import)\s+['"]([^'"]+)['"]/g)) {
+      if (!specifier!.startsWith('.')) continue;
+      queue.push(resolve(file, specifier!)!);
+    }
+  }
+  return visited;
+}
+
+it.each(['../src/form/index.ts', '../src/form/ui.tsx'])('%s는 목록(list·search)을 import하지 않는다', (entry) => {
+  for (const file of reach(entry)) expect(file).not.toMatch(/use-list|list-ui|\/list\.ts|list-download|list-return|\/search\//);
+});
+
+it.each(['../src/use-list.ts', '../src/list.ts', '../src/list-ui.tsx'])('%s는 폼을 import하지 않는다', (entry) => {
+  for (const file of reach(entry)) expect(file).not.toMatch(/\/form\//);
+});

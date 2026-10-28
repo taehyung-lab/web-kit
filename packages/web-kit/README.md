@@ -25,13 +25,14 @@ React 19 + TanStack(Router·Query·Form) + zod 4 + axios/orval을 쓰고, 서버
 | `/list/ui` | `List` 묶음 부품: 필터·기간·키워드·다중 선택·결과 상태·표(가상화)·총건수·정렬·페이지 이동·쓰기 잠금·일괄 확인·다운로드 | 배치·필드·시간대·컬럼·성공한 ID·문구·실패 문구 |
 | `/permission` | 진입 거부·메뉴 숨김·버튼 비활성의 닫힘 기본 판정 | 권한 상태·판정 함수·권한 목록 |
 | `/filter` | 기간 검증, 오류 표시, 체크 트리 | checkbox·문구·스타일 |
-| `/form` · `/form/ui` · `/dialog` | 제출·확인 관문·저장·기준선·서버 필드 오류·늦은 결과, 기본 필드·단일 확인·이탈 조정 | schema·원본·저장 함수·완료 의도·문구 |
-| `/record` · `/detail/ui` | 단건 상태·재시도·항목·이력 표현·선언적 마스킹 | queryOptions·업무 항목·노출 정책 |
+| `/form` · `/form/ui` · `/dialog` | 제출·확인 관문·저장·기준선·서버 필드 오류·늦은 결과·저장 뒤 완료 처리, `Form` 묶음 부품(칸·선택지 상태·오류 줄·저장 확인·저장 완료 확인·대화창 폼)·`FormGuard` 이탈 확인 | schema·원본·저장 함수·완료 동작·배치·문구·실패 문구 |
+| `/record` · `/detail/ui` | 단건 상태·재시도·갱신 실패, `Record` 묶음 부품(항목·이력)·선언적 마스킹 | queryOptions·업무 항목·노출 정책·실패 문구 |
+| `/ui` | 기본 부품: 버튼·입력·선택·체크박스·대화창(포커스 가두기)·확인창·알림 | 값·문구·업무 행동 |
 | `/api` | Spring query 직렬화 | 적용 endpoint |
 | `/testing` | 프로젝트 Field·확인창·재시도 focus adapter 검사 | 자기 UI adapter |
 | `/testing/session` | 저장 실패·다른 탭 변경·종료의 adapter 검사(React/Form import 없음) | 자기 저장 adapter와 격리된 검사 환경 |
 
-React는 peer이고 번들에 포함하지 않는다. 현재 React·ReactDOM peer는 필수이며 TanStack(react-virtual 포함)·axios·Base UI peer는 optional이다. `/list/ui`를 쓰면 `@base-ui/react`와 `@tanstack/react-virtual`이 필요하다. 루트 소스가 React를 import하지 않는 것과 React 없는 독립 패키지인 것은 다르다.
+React는 peer이고 번들에 포함하지 않는다. 현재 React·ReactDOM peer는 필수이며 TanStack(react-virtual 포함)·axios·Base UI peer는 optional이다. `/list/ui`를 쓰면 `@base-ui/react`와 `@tanstack/react-virtual`이, `/ui`·`/form/ui`·`/detail/ui`를 쓰면 `@base-ui/react`가 필요하다. 루트 소스가 React를 import하지 않는 것과 React 없는 독립 패키지인 것은 다르다.
 
 ## 스킬
 
@@ -80,7 +81,7 @@ pnpm add @boosterlab/web-kit@file:vendor/boosterlab-web-kit-2.0.0.tgz
 
 `selection.run`은 `{ completedIds }` 결과를 요구한다. Promise가 끝났다는 이유만으로 전부 성공으로 보던 동작을 제거했으므로 major 버전이다. 실패·거절은 throw하고, 부분 성공은 실제 성공 ID만 반환한다. 기존 import 경로는 유지한다.
 
-기본 UI 사용 시 `@base-ui/react@1.7.0`을 설치하고 앱 진입에서 `@boosterlab/web-kit/styles.css`를 한 번 import한다. `FormNavigation`은 Router 안에 한 번 설치한다. 기본 UI를 채택한 화면은 중복된 이탈 차단·확인창·필드 배선을 제거한다. Vite 8의 TSX 소스 소비는 `optimizeDeps.extensions: ['.tsx']`로 사전 변환 대상에 포함한다.
+기본 UI 사용 시 `@base-ui/react@1.7.0`을 설치하고 앱 진입에서 `@boosterlab/web-kit/styles.css`를 한 번 import한다. `FormGuard`는 Router 안에 한 번 설치한다. 기본 UI를 채택한 화면은 중복된 이탈 차단·확인창·필드 배선을 제거한다. Vite 8의 TSX 소스 소비는 `optimizeDeps.extensions: ['.tsx']`로 사전 변환 대상에 포함한다.
 
 ## 개발과 검증
 

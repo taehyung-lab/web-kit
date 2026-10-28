@@ -302,3 +302,107 @@
   padding: 0;
   min-width: 0;
 }
+/* 대화창·폼·상세 묶음 부품(5단계). */
+.wk-dialog-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+.wk-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.wk-button-secondary,
+.wk-button-ghost {
+  background: var(--wk-bg);
+}
+.wk-button-ghost {
+  border-color: transparent;
+  text-decoration: underline;
+}
+.wk-button-danger {
+  color: var(--wk-danger);
+}
+.wk-button[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: default;
+}
+.wk-textarea {
+  min-height: 6rem;
+  resize: vertical;
+}
+.wk-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--wk-accent);
+}
+.wk-count {
+  margin: 0;
+  text-align: right;
+  font-size: 0.75rem;
+  color: color-mix(in srgb, var(--wk-fg) 65%, transparent);
+}
+.wk-form-failure {
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--wk-danger) 40%, transparent);
+  border-radius: var(--wk-radius);
+  padding: 8px 12px;
+  color: var(--wk-danger);
+}
+.wk-section {
+  display: grid;
+  gap: var(--wk-space);
+  margin: 0;
+  border: 1px solid var(--wk-border);
+  border-radius: var(--wk-radius);
+  padding: var(--wk-space);
+}
+.wk-section-title {
+  font-weight: 600;
+  padding: 0 4px;
+}
+.wk-options-state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 2.25rem;
+  outline: none;
+}
+.wk-record-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 4px var(--wk-space);
+  margin: 0;
+}
+.wk-record-field {
+  min-width: 0;
+  padding: 8px 0;
+}
+.wk-record-label {
+  font-size: 0.75rem;
+  color: color-mix(in srgb, var(--wk-fg) 65%, transparent);
+}
+.wk-record-value {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+.wk-record-missing,
+.wk-record-loading {
+  display: grid;
+  justify-items: center;
+  gap: var(--wk-space);
+  padding: 32px 0;
+}
+.wk-record-refresh-failed {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--wk-danger);
+}
+.wk-record-changes {
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}

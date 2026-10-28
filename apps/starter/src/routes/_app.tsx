@@ -2,7 +2,7 @@
 import { useAuth } from '@/app/auth';
 import { changeLanguage, LANGUAGES } from '@/app/i18n';
 import { session } from '@/app/web-kit';
-import { Button } from '@boosterlab/web-kit/form/ui';
+import { Button } from '@boosterlab/web-kit/ui';
 import { createFileRoute, Link, Outlet, redirect } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
@@ -34,6 +34,12 @@ function AppLayout() {
               className="rounded-md px-3 py-1.5 text-slate-600 hover:bg-slate-100 data-[status=active]:bg-slate-100 data-[status=active]:font-medium data-[status=active]:text-slate-900"
             >
               {t('app.nav.members')}
+            </Link>
+            <Link
+              to="/terms/new"
+              className="rounded-md px-3 py-1.5 text-slate-600 hover:bg-slate-100 data-[status=active]:bg-slate-100 data-[status=active]:font-medium data-[status=active]:text-slate-900"
+            >
+              {t('app.nav.terms')}
             </Link>
           </nav>
           <div className="ml-auto flex items-center gap-2">

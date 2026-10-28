@@ -1,5 +1,5 @@
-// 파일 책임: 상품 필드·배치·옵션의 업무 값을 선언한다. 기본 입력 연결은 키트가 맡는다.
-import type { FormFields, FormIntent } from '@boosterlab/web-kit/form/ui';
+// 파일 책임: 상품 필드·배치·옵션의 업무 값을 선언한다. 입력·검증·오류 연결은 키트 Form 부품이 맡는다.
+import { Form } from '@boosterlab/web-kit/form/ui';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useFieldMessage } from '@/shared/lib/form-messages';
@@ -7,63 +7,53 @@ import { categoryOptionsQuery } from '../api/categories';
 import { OPTION_LIMITS, type ProductFormValues } from '../model/form';
 import { PRODUCT_STATUSES } from '../model/product';
 
-/** 등록·수정의 업무 필드는 같은 선언을 사용한다. */
-export function ProductForm({
-  fields: f,
-  submitLabel,
-  cancel,
-}: {
-  readonly fields: FormFields<ProductFormValues>;
-  readonly submitLabel: string;
-  readonly cancel: FormIntent;
-}) {
+const F = Form.of<ProductFormValues>();
+/** 취소 버튼이 가는 곳(키트 Form.Cancel의 to). */
+type CancelTo = Parameters<typeof Form.Cancel>[0]['to'];
+
+/** 등록·수정의 업무 필드는 같은 선언을 사용한다. `<Form editor>` 안에 둔다. */
+export function ProductFields({ submitLabel, cancelTo }: { readonly submitLabel: string; readonly cancelTo: CancelTo }) {
   const { t } = useTranslation();
   const message = useFieldMessage();
   const categories = useQuery(categoryOptionsQuery());
   return (
     <>
+      <F.Failure />
       <div className="grid gap-5 md:grid-cols-2">
-        <f.Text name="name" label={t('products.fields.name')} required />
-        <f.Text name="code" label={t('products.fields.code')} required description={t('products.form.codeDescription')} />
-        <f.Select
+        <F.Text name="name" label={t('products.fields.name')} required />
+        <F.Text name="code" label={t('products.fields.code')} required description={t('products.form.codeDescription')} />
+        <F.Select
           name="status"
           label={t('products.fields.status')}
           required
           options={PRODUCT_STATUSES.map((value) => ({ value, label: t(`products.status.${value}`) }))}
         />
-        <f.Select
+        <F.Select
           name="categoryId"
           label={t('products.fields.category')}
           required
-          disabled={categories.data === undefined}
-          options={[
-            { value: '', label: t('products.form.chooseCategory') },
-            ...(categories.data ?? []).map((category) => ({ value: category.id, label: category.name })),
-          ]}
+          placeholder={t('products.form.chooseCategory')}
+          status={categories.isError ? { failure: categories.error } : categories.data === undefined ? 'loading' : 'ready'}
+          onRetry={() => void categories.refetch()}
+          options={(categories.data ?? []).map((category) => ({ value: category.id, label: category.name }))}
         />
-        <f.Text name="price" label={t('products.fields.price')} required inputMode="numeric" />
-        <f.Text name="stock" label={t('products.fields.stock')} required inputMode="numeric" />
+        <F.Text name="price" label={t('products.fields.price')} required inputMode="numeric" />
+        <F.Text name="stock" label={t('products.fields.stock')} required inputMode="numeric" />
       </div>
-      {categories.isError && (
-        <button type="button" onClick={() => void categories.refetch()}>
-          {t('common.retry')}
-        </button>
-      )}
-      <f.Array name="options" minItems={OPTION_LIMITS.min} maxItems={OPTION_LIMITS.max}>
+      <F.Array name="options" minItems={OPTION_LIMITS.min} maxItems={OPTION_LIMITS.max}>
         {(rows) => {
           const add = () => rows.append({ name: '', extraPrice: '0' });
           return (
-            <fieldset>
-              <legend>{t('products.fields.options')}</legend>
+            <F.Section title={t('products.fields.options')}>
               {rows.items.map((_, index) => (
                 <div className="grid gap-3 md:grid-cols-3" key={index}>
-                  <f.Text
+                  <F.Text
                     name={`options[${index}].name`}
                     label={`${t('products.fields.optionName')} ${index + 1}`}
                     required
                     onKeyDown={rows.enterAdds(add)}
                   />
-                  <f.Text
+                  <F.Text
                     name={`options[${index}].extraPrice`}
                     label={`${t('products.fields.optionExtraPrice')} ${index + 1}`}
                     required
@@ -71,22 +61,25 @@ export function ProductForm({
                     onKeyDown={rows.enterAdds(add)}
                   />
                   {rows.canRemove && (
-                    <button type="button" onClick={() => rows.remove(index)}>
+                    <button type="button" className="wk-button wk-button-secondary" onClick={() => rows.remove(index)}>
                       {t('products.form.removeOption', { index: index + 1 })}
                     </button>
                   )}
                 </div>
               ))}
-              <button type="button" disabled={!rows.canAdd} onClick={add}>
+              <button type="button" className="wk-button wk-button-secondary" disabled={!rows.canAdd} onClick={add}>
                 {t('products.form.addOption')}
               </button>
               {message(rows.errors) && <p role="alert">{message(rows.errors)}</p>}
-            </fieldset>
+            </F.Section>
           );
         }}
-      </f.Array>
-      <f.TextArea name="description" label={t('products.fields.description')} />
-      <f.Actions submitLabel={submitLabel} cancelLabel={t('common.cancel')} cancel={cancel} />
+      </F.Array>
+      <F.TextArea name="description" label={t('products.fields.description')} maxLength={500} />
+      <div className="wk-actions">
+        <F.Submit>{submitLabel}</F.Submit>
+        <F.Cancel to={cancelTo} />
+      </div>
     </>
   );
 }

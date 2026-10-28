@@ -15,6 +15,8 @@ import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppMembersIndexRouteImport } from './routes/_app/members/index'
 import { Route as AppProductsIndexRouteImport } from './routes/_app/products/index'
 import { Route as AppProductsNewRouteImport } from './routes/_app/products/new'
+import { Route as AppTermsTermsIdRouteImport } from './routes/_app/terms/$termsId'
+import { Route as AppTermsNewRouteImport } from './routes/_app/terms/new'
 import { Route as AppProductsProductIdIndexRouteImport } from './routes/_app/products/$productId/index'
 import { Route as AppProductsProductIdEditRouteImport } from './routes/_app/products/$productId/edit'
 
@@ -47,6 +49,16 @@ const AppProductsNewRoute = AppProductsNewRouteImport.update({
   path: '/products/new',
   getParentRoute: () => AppRoute,
 } as any)
+const AppTermsTermsIdRoute = AppTermsTermsIdRouteImport.update({
+  id: '/terms/$termsId',
+  path: '/terms/$termsId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTermsNewRoute = AppTermsNewRouteImport.update({
+  id: '/terms/new',
+  path: '/terms/new',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppProductsProductIdIndexRoute =
   AppProductsProductIdIndexRouteImport.update({
     id: '/products/$productId/',
@@ -64,6 +76,8 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
   '/products/new': typeof AppProductsNewRoute
+  '/terms/$termsId': typeof AppTermsTermsIdRoute
+  '/terms/new': typeof AppTermsNewRoute
   '/members/': typeof AppMembersIndexRoute
   '/products/': typeof AppProductsIndexRoute
   '/products/$productId/edit': typeof AppProductsProductIdEditRoute
@@ -73,6 +87,8 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/': typeof AppIndexRoute
   '/products/new': typeof AppProductsNewRoute
+  '/terms/$termsId': typeof AppTermsTermsIdRoute
+  '/terms/new': typeof AppTermsNewRoute
   '/members': typeof AppMembersIndexRoute
   '/products': typeof AppProductsIndexRoute
   '/products/$productId/edit': typeof AppProductsProductIdEditRoute
@@ -84,6 +100,8 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_app/': typeof AppIndexRoute
   '/_app/products/new': typeof AppProductsNewRoute
+  '/_app/terms/$termsId': typeof AppTermsTermsIdRoute
+  '/_app/terms/new': typeof AppTermsNewRoute
   '/_app/members/': typeof AppMembersIndexRoute
   '/_app/products/': typeof AppProductsIndexRoute
   '/_app/products/$productId/edit': typeof AppProductsProductIdEditRoute
@@ -95,6 +113,8 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/products/new'
+    | '/terms/$termsId'
+    | '/terms/new'
     | '/members/'
     | '/products/'
     | '/products/$productId/edit'
@@ -104,6 +124,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/'
     | '/products/new'
+    | '/terms/$termsId'
+    | '/terms/new'
     | '/members'
     | '/products'
     | '/products/$productId/edit'
@@ -114,6 +136,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/_app/'
     | '/_app/products/new'
+    | '/_app/terms/$termsId'
+    | '/_app/terms/new'
     | '/_app/members/'
     | '/_app/products/'
     | '/_app/products/$productId/edit'
@@ -169,6 +193,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProductsNewRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/terms/$termsId': {
+      id: '/_app/terms/$termsId'
+      path: '/terms/$termsId'
+      fullPath: '/terms/$termsId'
+      preLoaderRoute: typeof AppTermsTermsIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/terms/new': {
+      id: '/_app/terms/new'
+      path: '/terms/new'
+      fullPath: '/terms/new'
+      preLoaderRoute: typeof AppTermsNewRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/products/$productId/': {
       id: '/_app/products/$productId/'
       path: '/products/$productId'
@@ -189,6 +227,8 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
   AppProductsNewRoute: typeof AppProductsNewRoute
+  AppTermsTermsIdRoute: typeof AppTermsTermsIdRoute
+  AppTermsNewRoute: typeof AppTermsNewRoute
   AppMembersIndexRoute: typeof AppMembersIndexRoute
   AppProductsIndexRoute: typeof AppProductsIndexRoute
   AppProductsProductIdEditRoute: typeof AppProductsProductIdEditRoute
@@ -198,6 +238,8 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppIndexRoute: AppIndexRoute,
   AppProductsNewRoute: AppProductsNewRoute,
+  AppTermsTermsIdRoute: AppTermsTermsIdRoute,
+  AppTermsNewRoute: AppTermsNewRoute,
   AppMembersIndexRoute: AppMembersIndexRoute,
   AppProductsIndexRoute: AppProductsIndexRoute,
   AppProductsProductIdEditRoute: AppProductsProductIdEditRoute,

@@ -1,7 +1,7 @@
 // 파일 책임: openapi/sample.json 계약을 흉내 내는 msw handler. Spring 봉투, 401 → 재발급, 필드 오류, 없음, HTTP 200 업무 거절을 낸다.
 import type { Product, ProductUpsertRequest } from '@/api/generated/models';
 import { delay, http, HttpResponse, type DefaultBodyType } from 'msw';
-import { mockDb } from './db';
+import { mockDb, type MockTerms } from './db';
 import { MEMBERS } from './members';
 
 const API = '*/api';
@@ -38,6 +38,25 @@ function duplicateCode(body: ProductUpsertRequest, selfId?: string) {
 }
 
 export const handlers = [
+  // 약관 등록: 같은 버전이 있으면 Spring 형식 필드 오류(400). 등록 응답은 새 약관이다.
+  http.post(`${API}/terms`, async ({ request }) => {
+    const denied = unauthorized(request);
+    if (denied) return denied;
+    await latency();
+    const body = (await request.json()) as Omit<MockTerms, 'termsId'>;
+    if (mockDb.terms.some((terms) => terms.version === body.version))
+      return envelope(400, 4000, 'Invalid input', [{ field: 'version', validCode: 'DUPLICATE' }]);
+    const created: MockTerms = { ...body, termsId: `t-${String(mockDb.terms.length + 1).padStart(3, '0')}` };
+    mockDb.terms.push(created);
+    return ok(created);
+  }),
+  http.get(`${API}/terms/:termsId`, async ({ request, params }) => {
+    const denied = unauthorized(request);
+    if (denied) return denied;
+    await latency();
+    const found = mockDb.terms.find((terms) => terms.termsId === params.termsId);
+    return found === undefined ? envelope(404, 4040, 'Not found', null) : ok(found);
+  }),
   http.post(`${API}/auth/sign-in`, async ({ request }) => {
     await latency();
     const body = (await request.json()) as { loginId?: string; password?: string };

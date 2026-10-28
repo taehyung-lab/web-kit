@@ -522,7 +522,7 @@ it('S17 onSaved가 불리는 순간 화면은 이미 저장 결과를 반영해 
   type('name', 'A2');
   await submit();
   await flush();
-  expect(seen).toEqual([{ dirty: false, stage: 'idle' }]);
+  expect(seen).toEqual([{ dirty: false, stage: 'saved' }]);
 });
 
 it('S17b 저장 중 입력이 바뀌었다면 onSaved가 불리는 순간에도 dirty로 남는다(바뀐 입력은 이동 때 보호된다)', async () => {
@@ -540,7 +540,7 @@ it('S17b 저장 중 입력이 바뀌었다면 onSaved가 불리는 순간에도 
   await submit();
   type('name', 'B');
   await act(async () => pending.resolve({ saved: { name: 'A2', email: 'a@x' } }));
-  expect(seen).toEqual([{ dirty: true, stage: 'idle' }]);
+  expect(seen).toEqual([{ dirty: true, stage: 'saved' }]);
 });
 
 // 제출 검증과 완료 처리는 저장 요청 수명과 다른 실패 지점이다.
@@ -635,4 +635,89 @@ it('F2 clearFailureOnEdit이 없으면 입력을 고쳐도 실패가 남는다',
   await flush();
   type('email', 'b@x');
   expect(state().failure).toBe('business (http 400)');
+});
+
+it('S20 저장은 성공했는데 완료 처리(이동)가 실패하면 다시 저장해도 요청이 나가지 않고, complete()는 완료 처리만 다시 한다', async () => {
+  const save = vi.fn(async () => undefined);
+  let fail = true;
+  const onSaved = vi.fn(() => {
+    if (fail) throw new Error('navigation failed');
+  });
+  let editor!: ReturnType<typeof useSaveForm<Values, Output>>;
+  function CompletionScreen() {
+    editor = useSaveForm({ schema, source: original, save, onSaved });
+    return (
+      <>
+        <button onClick={() => void editor.submit()}>save</button>
+        <output data-testid="stage">{editor.stage.kind}</output>
+      </>
+    );
+  }
+  render(<CompletionScreen />);
+  await submit();
+  await flush();
+  expect(save).toHaveBeenCalledTimes(1);
+  expect(screen.getByTestId('stage').textContent).toBe('saved');
+  await submit();
+  await flush();
+  expect(save).toHaveBeenCalledTimes(1);
+  fail = false;
+  await act(async () => editor.complete());
+  expect(onSaved).toHaveBeenCalledTimes(2);
+  expect(save).toHaveBeenCalledTimes(1);
+  expect(screen.getByTestId('stage').textContent).toBe('idle');
+  expect(editor.completionFailure).toBeUndefined();
+});
+
+it('S21 acknowledge면 저장 뒤 saved에서 멈추고, complete()를 두 번 불러도 onSaved는 한 번이다', async () => {
+  const onSaved = vi.fn(() => new Promise<void>(() => undefined));
+  let editor!: ReturnType<typeof useSaveForm<Values, Output>>;
+  function AckScreen() {
+    editor = useSaveForm({ schema, source: original, save: async () => undefined, onSaved, acknowledge: true });
+    return <button onClick={() => void editor.submit()}>save</button>;
+  }
+  render(<AckScreen />);
+  await submit();
+  await flush();
+  expect(onSaved).not.toHaveBeenCalled();
+  expect(editor.stage).toEqual({ kind: 'saved', completing: false });
+  await act(async () => {
+    void editor.complete();
+    void editor.complete();
+  });
+  expect(onSaved).toHaveBeenCalledTimes(1);
+});
+
+it('S22 서버 필드 오류가 모두 칸에 붙으면 폼 수준 실패는 없고, 붙지 못한 오류나 필드와 무관한 실패는 폼 수준에 남는다', async () => {
+  let failure: RequestFailure = new RequestFailure({ kind: 'validation', status: 400, fieldErrors: [{ field: 'name', code: 'Size' }] });
+  let editor!: ReturnType<typeof useSaveForm<Values, Output>>;
+  function FieldScreen() {
+    editor = useSaveForm({
+      schema,
+      source: original,
+      save: async () => {
+        throw failure;
+      },
+      fieldError: (error) => (error.field === 'name' ? { field: 'name', message: 'too long' } : undefined),
+    });
+    return (
+      <>
+        <editor.form.Field name="name">{(field) => <input aria-label="name" value={field.state.value} readOnly />}</editor.form.Field>
+        <button onClick={() => void editor.submit()}>save</button>
+      </>
+    );
+  }
+  render(<FieldScreen />);
+  await submit();
+  await flush();
+  expect(editor.failure).toBe(failure);
+  expect(editor.formFailure).toBeUndefined();
+  failure = new RequestFailure({ kind: 'validation', status: 400, fieldErrors: [{ field: 'unknown', code: 'Size' }] });
+  await submit();
+  await flush();
+  expect(editor.formFailure).toBe(failure);
+  failure = new RequestFailure({ kind: 'server-error', status: 500 });
+  await submit();
+  await flush();
+  expect(editor.formFailure).toBe(failure);
 });

@@ -2,15 +2,19 @@
 import { failureCopyKey } from '@/shared/lib/failure-copy';
 import { formMessages, useFieldMessage } from '@/shared/lib/form-messages';
 import { isRequestFailure } from '@boosterlab/web-kit/failure';
-import { SaveForm } from '@boosterlab/web-kit/form/ui';
+import { useSaveForm } from '@boosterlab/web-kit/form';
+import { Form } from '@boosterlab/web-kit/form/ui';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import { signIn } from '../api/auth';
 
+const SOURCE = { id: 'login', values: { loginId: '', password: '' } } as const;
 const schema = z.object({
   loginId: z.string().trim().min(1, formMessages.encode('auth.required.loginId')),
   password: z.string().min(1, formMessages.encode('auth.required.password')),
 });
+
+const F = Form.of<z.input<typeof schema>>();
 
 /** 로그인 폼. notice는 세션 종료 사유처럼 이 화면에 들어온 이유를 보인다. */
 export function LoginScreen({
@@ -24,6 +28,12 @@ export function LoginScreen({
 }) {
   const { t } = useTranslation();
   const message = useFieldMessage();
+  const editor = useSaveForm({
+    schema,
+    source: SOURCE,
+    save: async (values: { loginId: string; password: string }) => ({ accessToken: await signIn(values.loginId, values.password) }),
+    onSaved: (result) => onSignedIn(result.accessToken),
+  });
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
@@ -34,28 +44,20 @@ export function LoginScreen({
             {notice}
           </p>
         )}
-        <SaveForm
-          schema={schema}
-          source={{ id: 'login', values: { loginId: '', password: '' } }}
+        <Form
+          editor={editor}
           protect={false}
           formatError={message}
-          save={async (values) => ({ accessToken: await signIn(values.loginId, values.password) })}
-          completion={(result) => {
-            onSignedIn(result.accessToken);
-          }}
           renderFailure={(failure) =>
             isRequestFailure(failure) && failure.kind === 'unauthorized' ? t('auth.credentialRejected') : t(failureCopyKey(failure))
           }
         >
-          {(field) => (
-            <>
-              <field.Text name="loginId" label={t('auth.loginId')} required autoFocus autoComplete="username" />
-              <field.Text name="password" label={t('auth.password')} required type="password" autoComplete="current-password" />
-              <field.Actions submitLabel={t('auth.submit')} />
-              {showMockHint && <p>{t('auth.mockHint')}</p>}
-            </>
-          )}
-        </SaveForm>
+          <F.Text name="loginId" label={t('auth.loginId')} required autoFocus autoComplete="username" />
+          <F.Text name="password" label={t('auth.password')} required type="password" autoComplete="current-password" />
+          <F.Failure />
+          <F.Submit>{t('auth.submit')}</F.Submit>
+          {showMockHint && <p>{t('auth.mockHint')}</p>}
+        </Form>
       </div>
     </main>
   );

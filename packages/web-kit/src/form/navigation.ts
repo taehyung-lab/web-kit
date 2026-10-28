@@ -1,4 +1,6 @@
 /** 폼 범위와 이탈 요청 하나의 수명을 소유한다. Router와 UI는 이 판정을 소비한다. */
+/** 이탈을 묻는 까닭. 문구만 다르고 판정은 같다(취소 버튼 / 그 밖의 이동·닫기). */
+export type LeaveReason = 'navigate' | 'cancel';
 export interface FormFacts {
   readonly dirty: boolean;
   readonly busy: boolean;
@@ -11,6 +13,7 @@ type Pending = {
   readonly owners: ReadonlyMap<object, unknown>;
   readonly run: Action;
   readonly cancel?: () => void;
+  readonly reason: LeaveReason;
 };
 
 /** 기본 이탈 판정. 등록 정보는 복사한 dirty가 아니라 현재 상태를 읽는 함수다. */
@@ -69,7 +72,10 @@ export function createFormNavigation() {
     }
   }
   /** 이동·닫기 의도를 최신 상태로 판정한다. 동시에 두 요청을 예약하지 않는다. */
-  function request(run: Action, scope?: object, onCancel?: () => void): 'performed' | 'confirming' | 'blocked' {
+  function request(
+    run: Action,
+    { scope, onCancel, reason = 'navigate' }: { readonly scope?: object; readonly onCancel?: () => void; readonly reason?: LeaveReason } = {},
+  ): 'performed' | 'confirming' | 'blocked' {
     if (pending !== undefined || (scope !== undefined && !scopes.has(scope))) return 'blocked';
     const current = facts(scope);
     if (current.some(([, value]) => value.busy)) return 'blocked';
@@ -78,7 +84,7 @@ export function createFormNavigation() {
       perform(run);
       return 'performed';
     }
-    pending = { scope, owners: new Map(current.map(([id, value]) => [id, value.identity])), run, cancel: onCancel };
+    pending = { scope, owners: new Map(current.map(([id, value]) => [id, value.identity])), run, cancel: onCancel, reason };
     publish();
     return 'confirming';
   }
@@ -141,6 +147,10 @@ export function createFormNavigation() {
     busy: (scope?: object) => facts(scope).some(([, value]) => value.busy),
     get pending() {
       return pending !== undefined;
+    },
+    /** 지금 묻는 이탈의 까닭. 묻는 중이 아니면 undefined. */
+    get reason() {
+      return pending?.reason;
     },
     get failure() {
       return failure;

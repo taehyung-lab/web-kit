@@ -1,7 +1,7 @@
 // 파일 책임: 상품 상세 화면. 단건 상태 판정은 web-kit useRecord 한 곳이 하고, 여기서는 상태별 표현과 dt/dd 목록을 그린다.
 import { failureCopyKey } from '@/shared/lib/failure-copy';
-import { Button } from '@boosterlab/web-kit/form/ui';
-import { DetailField, RecordView } from '@boosterlab/web-kit/detail/ui';
+import { Record } from '@boosterlab/web-kit/detail/ui';
+import { Button } from '@boosterlab/web-kit/ui';
 import { useRecord } from '@boosterlab/web-kit/record';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -11,8 +11,6 @@ import { productQuery } from '../api/products';
 import type { Product } from '../model/product';
 import { formatDate, formatPrice } from './format';
 import { StatusBadge } from './StatusBadge';
-
-const DETAIL_CLASSES = { root: 'grid grid-cols-[8rem_1fr] gap-4 py-3', label: 'text-sm text-slate-500', value: 'text-sm text-slate-900' };
 
 /** 상품 하나의 상세. 없음(missing)이면 목록으로 돌아가는 수단을 준다. */
 export function ProductDetailScreen({
@@ -31,18 +29,21 @@ export function ProductDetailScreen({
       <Button variant="ghost" className="self-start" onClick={onBack}>
         ‹ {t('products.backToList')}
       </Button>
-      <RecordView
-        messages={{ loading: t('common.loading'), retry: t('common.retry'), refreshFailed: t('common.refreshFailed') }}
+      <Record
+        messages={{ loading: t('common.loading'), retry: t('common.retry'), refreshFailed: t('common.refreshFailed'), empty: t('common.empty') }}
         state={state}
         renderFailure={(failure) => t(failureCopyKey(failure))}
-        missingAction={() => (
-          <Button variant="secondary" onClick={onBack}>
-            {t('products.backToList')}
-          </Button>
-        )}
+        missing={
+          <>
+            <p>{t(failureCopyKey(state.kind === 'missing' ? state.failure : undefined))}</p>
+            <Button variant="secondary" onClick={onBack}>
+              {t('products.backToList')}
+            </Button>
+          </>
+        }
       >
         {(product) => <ProductDetail product={product} onEdit={onEdit} />}
-      </RecordView>
+      </Record>
     </div>
   );
 }
@@ -52,11 +53,7 @@ function ProductDetail({ product, onEdit }: { readonly product: Product; readonl
   const { t, i18n } = useTranslation();
   const categories = useQuery(categoryOptionsQuery());
   const categoryName = categories.data?.find((category) => category.id === product.categoryId)?.name ?? t('common.empty');
-  const item = (label: string, value: ReactNode) => (
-    <DetailField label={label} classes={DETAIL_CLASSES}>
-      {value}
-    </DetailField>
-  );
+  const item = (label: string, value: ReactNode) => <Record.Field label={label}>{value}</Record.Field>;
   return (
     <article className="rounded-xl border border-slate-200 bg-white p-6">
       <header className="mb-4 flex items-start justify-between gap-4">
@@ -70,7 +67,7 @@ function ProductDetail({ product, onEdit }: { readonly product: Product; readonl
           {t('products.edit')}
         </Button>
       </header>
-      <dl className="divide-y divide-slate-100">
+      <Record.Fields>
         {item(t('products.fields.status'), <StatusBadge status={product.status} />)}
         {item(t('products.fields.category'), categoryName)}
         {item(t('products.fields.price'), formatPrice(product.price, i18n.language))}
@@ -87,11 +84,11 @@ function ProductDetail({ product, onEdit }: { readonly product: Product; readonl
         )}
         {item(
           t('products.fields.description'),
-          product.description === '' ? t('common.empty') : <span className="whitespace-pre-wrap">{product.description}</span>,
+          product.description === '' ? null : <span className="whitespace-pre-wrap">{product.description}</span>,
         )}
         {item(t('products.fields.createdAt'), formatDate(product.createdAt, i18n.language))}
         {item(t('products.fields.updatedAt'), formatDate(product.updatedAt, i18n.language))}
-      </dl>
+      </Record.Fields>
     </article>
   );
 }

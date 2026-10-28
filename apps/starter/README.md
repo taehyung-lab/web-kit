@@ -76,9 +76,10 @@ vendor/                      web-kit tarball(커밋하지 않음, `pnpm starter:
 | `app/web-kit.ts` | `createBrowserSessionStore`(key·schema·읽기 불가 정책 선언), 공개 요청으로 재발급, `isPublic`·`prepare`(Accept-Language)·axios 기본값, QueryClient retry·staleTime·`notify` 예시, 예시 결과 코드 행 |
 | `app/auth.tsx` | 캡처한 토큰으로 로그아웃, `ended`의 `by`(local·other-tab·server)별 이동 |
 | 상품 목록 | `defineSearch`(쉼표 목록 `encode`, 기간 묶음 `valid`, `view` key, 고정 목록은 `z.enum`·서버 선택지(분류)는 `check` — 없는 값은 그 필드만 기본값), route `validateSearch` + `beforeLoad`, `useList` + `ListView` 필터·표·페이지 이동·일괄 확인, `/api` 반복 키 직렬화 |
-| 상품 상세 | `useRecord(options, id)`, loader는 미리 받기만, `RecordView` |
-| 등록·수정 | `SaveForm` + typed fields로 필수·오류·배열 입력을 선언. 수정은 저장 확인, 완료 후 이동은 `FormIntent`. 루트의 `FormNavigation` 한 곳에서 이탈을 보호 |
-| 로그인 | `SaveForm protect={false}`로 제품 예외를 명시. 공개 요청·토큰으로 세션 시작·자격증명 거절 문구는 제품이 연결 |
+| 상품 상세 | `useRecord(options, id)`, loader는 미리 받기만, `Record`·`Record.Fields`·`Record.Field` |
+| 등록·수정 | `useSaveForm` + `<Form editor>`와 `Form.of<Values>()` 부품으로 필수·오류·선택지 상태·배열 입력을 선언. 수정은 `confirm` + `Form.Confirm`, 완료 후 이동은 `onSaved`. 루트의 `FormGuard` 한 곳에서 이탈을 보호 |
+| 약관 등록(레퍼런스 재현) | 레퍼런스 약관 등록(검증 → 저장 확인 → 저장 → 저장 완료 확인 → 상세)을 키트 값(`confirm`·`acknowledge`)과 부품 배치만으로 재현. `/terms/new` → `/terms/$termsId` |
+| 로그인 | `<Form protect={false}>`로 제품 예외를 명시. 공개 요청·토큰으로 세션 시작·자격증명 거절 문구는 제품이 연결 |
 | `shared/ui/adapters.test.tsx` | 설치한 Field·ConfirmDialog·RetryRegion을 공개 계약 검사로 확인 |
 
 

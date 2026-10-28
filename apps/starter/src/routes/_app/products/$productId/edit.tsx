@@ -16,7 +16,6 @@ function ProductEditRoute() {
   return (
     <ProductEditScreen
       productId={productId}
-      destination={{ kind: 'navigate', destination: { to: '/products/$productId', params: { productId } } }}
       onBack={() => void navigate({ to: '/products' })}
     />
   );

@@ -5,7 +5,7 @@ description: 상세·수정 원본 같은 단건 조회의 대기·없음·실�
 
 # web-kit record
 
-`/record`의 `useRecord`와 `/detail/ui`를 쓰는 기준이다.
+`/record`의 `useRecord`와 `/detail/ui`의 `Record` 묶음 부품을 쓰는 기준이다.
 
 ## 화면 선언
 
@@ -26,13 +26,17 @@ description: 상세·수정 원본 같은 단건 조회의 대기·없음·실�
 
 ## 기본 표시
 
-`RecordView`에 `useRecord` 결과를 주고 ready 내용만 children에서 그린다. 없음·실패·재시도와 retry 버튼 제거 후 focus를 공통 처리한다. 문구·missingAction·renderFailure는 제품이 선언한다. `HistoryList`에는 이미 해석한 항목·변경값을 전달한다. 서버 DTO나 업무 action을 키트가 해석하지 않는다.
+`<Record state={useRecord(...)}>{(data) => …}</Record>`로 준비됨일 때만 내용을 그린다. 대기·없음·실패(다시 시도, 버튼이 사라지면 내용으로 focus)·재조회 실패(내용을 둔 채 알림과 다시 시도)는 키트가 그린다. 없음 안내(무엇이 없는지·돌아갈 길)는 `missing` 값이다. 실패 문구는 `renderFailure(failure, place)`(place: load·missing·refresh)로 정하고, `null`이면 그 자리에 그리지 않는다(앱 경계가 이미 알린 401·403 등). 문구는 `messages`.
+
+- `Record.Fields`·`Record.Field label`: 라벨·값 목록. null·undefined·''·false만 빈 값 표시(`messages.empty`, 기본 '-')이고 0은 그대로다.
+- `Record.History entries labels empty`: 일시·변경 내용·담당자 표. 항목은 프로젝트가 서버 어휘를 해석하고 일시를 표시 형식으로 써서 넘긴다. 0건이면 빈 문구.
+- 서버 DTO나 업무 action을 키트가 해석하지 않는다.
 
 `maskText`에는 노출할 앞/뒤 문자 수를 명시한다. 유니코드 문자를 보존하며 이름·전화·권한별 노출 기준을 추측하지 않는다.
 
 ## 프로젝트 연결
 
-`missing`의 `failure.kind`(not-found / forbidden)로 문구와 이동을 정한다. `wasReady`가 false면 진입 때 없음이라, 진입 실패를 route 경계(404 페이지 등)로 보이는 프로젝트는 이 값으로 넘긴다. 판정은 `useRecord` 한 곳이고, 넘기는 것은 표시 위치다. `DetailField`에 label과 value class를 넘긴다. 빈 값·마스킹·날짜 포맷은 프로젝트가 정한다.
+`missing`의 `failure.kind`(not-found / forbidden)로 문구와 이동을 정한다. `wasReady`가 false면 진입 때 없음이라, 진입 실패를 route 경계(404 페이지 등)로 보이는 프로젝트는 이 값으로 넘긴다. 판정은 `useRecord` 한 곳이고, 넘기는 것은 표시 위치다. 마스킹·날짜 포맷·빈 값 문구는 프로젝트가 정한다.
 
 ## 확인 방법
 

@@ -1,6 +1,6 @@
 {
   "name": "@boosterlab/web-kit",
-  "version": "3.0.0-dev.5",
+  "version": "3.0.0-dev.6",
   "private": true,
   "type": "module",
   "sideEffects": [
@@ -12,6 +12,7 @@
     "./session": "./src/session.ts",
     "./http": "./src/http.ts",
     "./query": "./src/query.ts",
+    "./ui": "./src/ui/index.ts",
     "./search": "./src/search/index.ts",
     "./list": "./src/list.ts",
     "./filter": "./src/filter.ts",

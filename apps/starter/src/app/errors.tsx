@@ -1,6 +1,6 @@
 // 파일 책임: 경로 오류·없는 경로 화면과, router 밖 렌더 오류를 받는 마지막 경계.
 import { failureCopyKey } from '@/shared/lib/failure-copy';
-import { Button } from '@boosterlab/web-kit/form/ui';
+import { Button } from '@boosterlab/web-kit/ui';
 import { Link, useRouter, type ErrorComponentProps } from '@tanstack/react-router';
 import { Component, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';

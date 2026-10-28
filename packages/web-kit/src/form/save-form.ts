@@ -1,6 +1,15 @@
 /** 폼의 검증·제출·확인·저장과 완료 처리의 수명을 소유한다. */
 // 파일 책임: 등록·수정 폼의 제출 → (확인) → 저장 → 기준선/실패 반영 수명을 TanStack Form 위에서 소유한다.
-import { evaluate, getBy, revalidateLogic, useForm, useSelector, type DeepKeys, type StandardSchemaV1 } from '@tanstack/react-form';
+import {
+  evaluate,
+  getBy,
+  revalidateLogic,
+  useForm,
+  useSelector,
+  type DeepKeys,
+  type ReactFormExtendedApi,
+  type StandardSchemaV1,
+} from '@tanstack/react-form';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { isRequestFailure, type FieldError } from '../failure';
@@ -27,14 +36,22 @@ export interface SaveFormOptions<TInput, TOutput, TResult = { readonly saved?: T
    * 연결 실패처럼 입력과 무관한 실패는 false로 두면 고쳐도 남는다. 입력을 제출 때 값으로 되돌리면 다시 보인다.
    */
   readonly clearFailureOnEdit?: (failure: unknown) => boolean;
-  /** 이 폼의 저장이 끝난 직후 저장 함수의 결과로 한 번 실행한다(이동·알림). 늦은 결과에는 실행하지 않는다. */
-  readonly onSaved?: (result: TResult) => void;
+  /**
+   * 이 폼의 저장이 끝난 뒤 저장 함수의 결과로 한 번 실행한다(이동·알림). 늦은 결과에는 실행하지 않는다.
+   * 끝날 때까지(Promise면 settle까지) 단계는 `saved`라 다시 저장할 수 없다. 실패하면 `completionFailure`가 되고
+   * `complete()`가 이것만 다시 실행한다(저장 요청은 다시 나가지 않는다).
+   */
+  readonly onSaved?: (result: TResult) => unknown;
+  /** true면 저장 성공 뒤 `saved`에서 멈추고, 사용자가 확인해 `complete()`를 부를 때 onSaved를 실행한다(저장 완료 확인창). */
+  readonly acknowledge?: boolean;
 }
 
 export type SaveStage<TInput> =
   | { readonly kind: 'idle' }
   | { readonly kind: 'confirming'; readonly values: TInput }
-  | { readonly kind: 'saving'; readonly values: TInput };
+  | { readonly kind: 'saving'; readonly values: TInput }
+  /** 저장은 끝났고 완료 처리(onSaved)를 기다리거나 실행 중이거나 실패했다. 이 동안 제출은 잠긴다. */
+  | { readonly kind: 'saved'; readonly completing: boolean };
 
 /** 폼 하나의 입력 control id. 라벨·오류·focus가 같은 id를 쓴다. */
 export function formFieldControlId(formId: string, field: string): string {
@@ -48,7 +65,7 @@ export function formFieldControlId(formId: string, field: string): string {
  */
 export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput } | void>(
   options: SaveFormOptions<TInput, TOutput, TResult>,
-) {
+): SaveFormEditor<TInput, TResult> {
   const latest = useRef(options);
   latest.current = options;
   const { source } = options;
@@ -75,6 +92,8 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
   const decided = useRef(source.values);
   const pendingOutput = useRef<TOutput | undefined>(undefined);
   const focusTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  /** 저장이 성공해 완료 처리를 기다리는 결과. 완료 처리를 다시 시도할 때 같은 결과를 쓴다. */
+  const savedResult = useRef<{ readonly result: TResult; readonly identity: unknown } | undefined>(undefined);
 
   const form = useForm({
     defaultValues: defaults,
@@ -157,7 +176,12 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
     if (!isRequestFailure(error)) return { attached, unattached };
     for (const item of error.fieldErrors) {
       const target = latest.current.fieldError?.(item);
-      if (target === undefined || !evaluate(getBy(form.state.values, target.field), getBy(submitted, target.field))) {
+      // 화면에 없는 칸(등록되지 않은 필드)에는 붙여도 보이지 않으므로 붙이지 못한 오류로 남긴다.
+      if (
+        target === undefined ||
+        form.getFieldMeta(target.field) === undefined ||
+        !evaluate(getBy(form.state.values, target.field), getBy(submitted, target.field))
+      ) {
         unattached.push(item);
         continue;
       }
@@ -192,16 +216,37 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
     const declared =
       typeof result === 'object' && result !== null && 'saved' in result ? (result as { readonly saved?: TInput }).saved : undefined;
     const saved = declared ?? submitted;
+    savedResult.current = { result, identity: identity.current };
     flushSync(() => {
       if (evaluate(form.state.values, submitted)) replace(saved);
       else setBaseline(saved);
-      setStage({ kind: 'idle' });
+      setStage({ kind: 'saved', completing: false });
     });
+    if (latest.current.acknowledge !== true) await complete();
+  }
+
+  /**
+   * 저장 성공 뒤 완료 처리(onSaved)를 한 번 실행한다. 저장 완료 확인과 완료 실패 뒤 다시 시도가 같은 길이다.
+   * 저장 요청은 다시 보내지 않는다. 성공하면 idle로 돌아가고, 실패하면 saved에 남아 제출을 잠근 채 다시 시도를 기다린다.
+   */
+  async function complete() {
+    const pending = savedResult.current;
+    const now = stageRef.current;
+    if (pending === undefined || now.kind !== 'saved' || now.completing) return;
+    const stillHere = () => mounted.current && savedResult.current === pending && Object.is(identity.current, pending.identity);
+    setStage({ kind: 'saved', completing: true });
+    setCompletionFailure(undefined);
     try {
-      await latest.current.onSaved?.(result);
+      await latest.current.onSaved?.(pending.result);
     } catch (error: unknown) {
-      if (current()) setCompletionFailure(error);
+      if (!stillHere()) return;
+      setStage({ kind: 'saved', completing: false });
+      setCompletionFailure(error);
+      return;
     }
+    if (!stillHere()) return;
+    savedResult.current = undefined;
+    setStage({ kind: 'idle' });
   }
 
   /** 검증 → 확인 대기 또는 저장. 진행 중·확인 대기 중에는 다시 들어가지 않는다. */
@@ -262,6 +307,7 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
       decided.current = source.values;
       submission.current = undefined;
       pendingOutput.current = undefined;
+      savedResult.current = undefined;
       cancelFocus();
       setStage({ kind: 'idle' });
       setRejection(undefined);
@@ -292,15 +338,25 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
   const visibleRejection =
     rejection?.clearWhenEdited !== undefined && !evaluate(values, rejection.clearWhenEdited.submitted) ? undefined : rejection;
 
+  const failure = visibleRejection?.failure;
+  const unattached = visibleRejection?.unattached ?? [];
+  // 서버가 지목한 필드 오류가 모두 칸에 붙은 검증 실패는 칸이 이미 알린다. 그 밖의 실패만 폼 수준에 남는다.
+  const allAttached =
+    isRequestFailure(failure) && failure.kind === 'validation' && failure.fieldErrors.length > 0 && unattached.length === 0;
+
   return {
     form,
+    identity: source.id,
+    acknowledge: options.acknowledge === true,
     stage,
     /** 저장 실패 원본. 표시 방식은 화면이 kind로 정한다. */
-    failure: visibleRejection?.failure,
+    failure,
+    /** 폼 수준(한 줄)에 보일 실패. 모든 필드 오류가 칸에 붙었으면 undefined다. */
+    formFailure: allAttached ? undefined : failure,
     /** 저장은 성공했지만 완료 후 이동·알림이 실패했다. 재저장 실패와 구분한다. */
     completionFailure,
     /** 필드에 붙이지 못한 서버 필드 오류(저장 중 바뀐 필드·폼 경로로 바꾸지 못한 것). 폼 수준 표시의 근거다. */
-    unattachedFieldErrors: visibleRejection?.unattached ?? [],
+    unattachedFieldErrors: unattached,
     /** 기준선(마지막으로 확정된 원본 또는 저장 결과). 차이로 요청을 만드는 화면이 읽는다. 바꾸지 않는다. */
     baseline,
     /** 현재 입력이 기준선과 다른가. */
@@ -316,5 +372,32 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
     submit,
     confirm,
     cancel,
+    complete,
   };
+}
+
+/** useSaveForm이 돌려주는 편집 상태. `/form/ui`의 `<Form editor>`가 이 모양을 읽는다. */
+export interface SaveFormEditor<TInput, TResult = unknown> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 검증기 타입 인자 12개는 화면이 알 필요가 없다.
+  readonly form: ReactFormExtendedApi<TInput, any, any, any, any, any, any, any, any, any, any, any>;
+  /** 편집 대상 식별(source.id). 바뀌면 진행 중이던 이탈 허가가 무효가 된다. */
+  readonly identity: unknown;
+  /** 저장 성공 뒤 사용자 확인을 기다리는가(acknowledge 값). */
+  readonly acknowledge: boolean;
+  readonly stage: SaveStage<TInput>;
+  readonly failure: unknown;
+  readonly formFailure: unknown;
+  readonly completionFailure: unknown;
+  readonly unattachedFieldErrors: readonly FieldError[];
+  readonly baseline: TInput;
+  readonly isDirty: boolean;
+  readonly isSaving: boolean;
+  readonly getState: () => { readonly stage: SaveStage<TInput>['kind']; readonly isDirty: boolean; readonly isSaving: boolean };
+  readonly fieldId: (field: DeepKeys<TInput>) => string;
+  readonly submit: () => Promise<void>;
+  readonly confirm: () => Promise<void>;
+  readonly cancel: () => void;
+  readonly complete: () => Promise<void>;
+  /** 타입 위치만 쓰는 표식. 저장 결과 타입을 부품까지 잇는다. */
+  readonly __result?: TResult;
 }

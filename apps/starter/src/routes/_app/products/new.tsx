@@ -3,14 +3,5 @@ import { ProductCreateScreen } from '@/features/products/screens/ProductCreateSc
 import { createFileRoute } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/_app/products/new')({
-  component: ProductCreateRoute,
+  component: ProductCreateScreen,
 });
-
-function ProductCreateRoute() {
-  return (
-    <ProductCreateScreen
-      createdDestination={(productId) => ({ kind: 'navigate', destination: { to: '/products/$productId', params: { productId } } })}
-      cancel={{ kind: 'navigate', destination: { to: '/products' } }}
-    />
-  );
-}

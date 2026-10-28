@@ -1,16 +1,19 @@
-// 파일 책임: 설치한 키트 UI(Field·ConfirmDialog·RetryRegion)가 공개 보장(접근성 연결·확인 관문·재시도 focus)을 깨지 않는지 /testing 검사로 확인한다.
+// 파일 책임: 설치한 키트 UI(칸 틀·확인창·재시도 영역)가 공개 보장(접근성 연결·확인 관문·재시도 focus)을 깨지 않는지 /testing 검사로 확인한다.
 import '@/app/i18n';
 import { checkConfirmDialogAdapter, checkFieldAdapter, checkRetryFocusAdapter } from '@boosterlab/web-kit/testing';
 import { describe, it } from 'vitest';
-import { ConfirmDialog, Field, TextInput } from '@boosterlab/web-kit/form/ui';
+import { FieldFrame } from '@boosterlab/web-kit/form/ui';
+import { ConfirmDialog, Input } from '@boosterlab/web-kit/ui';
 import { RetryRegion } from '@boosterlab/web-kit/detail/ui';
 
+const CLASSES = { root: 'wk-field', label: 'wk-label', required: 'wk-required', description: 'wk-description', error: 'wk-error' };
+
 describe('installed kit UI', () => {
-  it('Field keeps label, description and error wired to the control', async () => {
+  it('FieldFrame keeps label, description and error wired to the control', async () => {
     await checkFieldAdapter(({ id, label, description, message }) => (
-      <Field id={id} label={label} description={description} message={message}>
-        {(control) => <TextInput {...control} />}
-      </Field>
+      <FieldFrame id={id} label={label} description={description} message={message} required={false} classes={CLASSES}>
+        {(control) => <Input {...control} />}
+      </FieldFrame>
     ));
   });
 

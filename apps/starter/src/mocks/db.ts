@@ -38,14 +38,25 @@ function seed(): Product[] {
   });
 }
 
+/** 약관 한 건(레퍼런스 약관 등록 재현용 mock). */
+export interface MockTerms {
+  readonly termsId: string;
+  readonly version: string;
+  readonly effectiveAt: string;
+  readonly status: 'PUBLISHED' | 'UNPUBLISHED';
+  readonly publishedAt: string;
+  readonly body: string;
+}
+
 interface State {
   products: Product[];
+  terms: MockTerms[];
   tokens: Map<string, number>;
   refreshValid: boolean;
   issued: number;
 }
 
-const state: State = { products: seed(), tokens: new Map(), refreshValid: true, issued: 0 };
+const state: State = { products: seed(), terms: [], tokens: new Map(), refreshValid: true, issued: 0 };
 
 export const mockDb = {
   /** 분류 선택지(고정). */
@@ -55,12 +66,16 @@ export const mockDb = {
   get products() {
     return state.products;
   },
+  get terms() {
+    return state.terms;
+  },
   set products(next: Product[]) {
     state.products = next;
   },
   /** 처음 상태로 되돌린다(테스트마다). */
   reset() {
     state.products = seed();
+    state.terms = [];
     state.tokens = new Map();
     state.refreshValid = true;
     state.issued = 0;
