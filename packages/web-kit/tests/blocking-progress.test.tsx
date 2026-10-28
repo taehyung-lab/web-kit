@@ -285,6 +285,10 @@ it('P6 기록한 본문 요소도 사라졌으면 본문의 첫 제목(h1)으로
   const heading = screen.getByRole('heading', { name: '상품 수정' });
   expect(document.activeElement).toBe(heading);
   expect(heading.getAttribute('tabindex')).toBe('-1');
+  // 받는 동안만 붙인다: 포커스가 다른 곳으로 가면 떼어 클릭·Tab 순서에 남기지 않는다.
+  view.rerender(<PortalScreen active={false} portal={false} />);
+  screen.getByRole('button', { name: '저장' }).focus();
+  expect(heading.hasAttribute('tabindex')).toBe(false);
   cleanup();
 
   function Bare({ active, button }: { readonly active: boolean; readonly button: boolean }) {
@@ -304,6 +308,10 @@ it('P6 기록한 본문 요소도 사라졌으면 본문의 첫 제목(h1)으로
   bare.rerender(<Bare active button={false} />);
   bare.rerender(<Bare active={false} button={false} />);
   expect(document.activeElement).toBe(body());
+  expect(body().getAttribute('tabindex')).toBe('-1');
+  bare.rerender(<Bare active={false} button />);
+  screen.getByRole('button', { name: '선택 삭제' }).focus();
+  expect(body().hasAttribute('tabindex')).toBe(false);
 });
 
 it('P6 본문에서 아무 요소에도 포커스한 적이 없으면(첫 진입) 덮개가 닫혀도 포커스를 옮기지 않는다', () => {
