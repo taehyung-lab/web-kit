@@ -8,7 +8,7 @@
 
 | 항목 | DT v2 | 레퍼런스 | web-kit 2.0 | 고른 것과 이유 |
 |---|---|---|---|---|
-| 기간 검증·입력 중 키워드 | 화면(`Filters.tsx`)이 검색 직전 `withPendingKeyword`로 합침. 기간 검증은 URL 묶음 규칙과 `PeriodField` | `use-period-draft` 훅이 화면마다 초안 보유 | UI 부품 안의 binding(`prepare`)이 검증·합침 | **상태(`useList`)가 소유**: `periods` 선언과 `keywordInput` 상태. 세 방식 모두 입력칸을 바꾸거나 숨기면 보장이 사라졌다(0003 반례 2개). 상태에 두면 부품 교체와 무관하다 |
+| 기간 검증·입력 중 키워드 | 화면(`Filters.tsx`)이 검색 직전 `withPendingKeyword`로 합침. 기간 검증은 URL 묶음 규칙과 `PeriodField` | `use-period-draft` 훅이 화면마다 초안 보유 | UI 부품 안의 binding(`prepare`)이 검증·합침 | **상태(`useList`)가 소유**: `periods` 선언과 `keywordInput` 상태. 맞지 않는 기간은 검색을 막지 않고 그 쌍만 기본값으로 돌린다(0003 §5, 2026-10-28 사용자 확인). 세 방식 모두 입력칸을 바꾸거나 숨기면 보장이 사라졌다(0003 반례 2개). 상태에 두면 부품 교체와 무관하다 |
 | 정렬 첫 방향 | `header-sort`의 `toggleSort`가 새 열은 desc | 화면마다 다름 | `nextSort`가 현재 방향 유지로 고정 | **`defineSearch({ sortFirst })` 값**. 0003 §5가 화면 값으로 정했다. 생략 시 2.0 동작이라 기존 소비자가 바뀌지 않는다 |
 | 목록 UI 조립 | `ListResult`(상태·액션 잠금)+`DataTable`(TanStack Table)+필터 부품 9종, 화면이 props로 연결 | `PagedListResult`·`DataTable`·`primitives` adapter, 1개 목록이 8~13 파일 | `ListView` render prop 하나에 typed parts | **`<List model>` + `List.*` 부품(context)**. 위치를 바꿔도 연결을 다시 쓰지 않는다(0003 반례 "배치·CSS만 바꿨는데 조립을 다시 쓴다"). render prop은 배치가 한 함수 안에 갇혔고, props 연결은 화면마다 같은 배선을 반복했다 |
 | 표 | TanStack Table v9 + 50행부터 가상화 | 높이 제한만 | 단순 table | **키트 단순 table + `@tanstack/react-virtual`(optional peer) 가상화**. 컬럼 정의는 `key·header·cell·sort`면 충분했고 TanStack Table을 peer로 늘릴 이유가 없었다. 가상화는 DT 기존 보장이라 유지 |

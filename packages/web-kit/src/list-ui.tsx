@@ -76,9 +76,6 @@ const defaultMessages = {
   periodStart: '시작',
   periodEnd: '종료',
   periodType: '기간 기준',
-  periodIncomplete: '시작일과 종료일을 입력해 주세요.',
-  periodReversed: '기간의 순서를 확인해 주세요.',
-  periodInvalid: '올바른 날짜를 입력해 주세요.',
   all: '전체',
   confirm: '확인',
   cancel: '취소',
@@ -356,7 +353,7 @@ export type PeriodShortcut =
   | { readonly label: string; readonly value: PeriodPreset }
   | { readonly label: string; readonly range: (today: string) => { readonly from?: string; readonly to?: string } };
 
-/** 기간: 기준 선택(선택)·단축·직접 입력. 오류 문구는 상태의 기간 검증 결과를 보인다. */
+/** 기간: 기준 선택(선택)·단축·직접 입력. 맞지 않는 기간은 검색할 때 상태가 기본값으로 돌린다. */
 function Period({
   from,
   to,
@@ -384,18 +381,7 @@ function Period({
   const { model, copy } = useListContext();
   const draft = model.draft as Record<string, unknown>;
   const issue = model.issues.find((item) => item.field === from);
-  const issueId = useId();
   const typeId = useId();
-  const message =
-    issue === undefined
-      ? undefined
-      : issue.code === 'incomplete'
-        ? copy.periodIncomplete
-        : issue.code === 'reversed'
-          ? copy.periodReversed
-          : issue.code === 'invalid'
-            ? copy.periodInvalid
-            : undefined;
   const set = (range: { from?: string; to?: string }) => model.patchDraft({ [from]: range.from || undefined, [to]: range.to || undefined });
   /** 단축 하나가 지금 만드는 기간. 누른 순간과 선택 표시가 같은 계산을 쓴다. */
   const rangeOf = (preset: PeriodShortcut): { from?: string; to?: string } => {
@@ -428,7 +414,6 @@ function Period({
           type="date"
           aria-label={startLabel ?? `${label} ${copy.periodStart}`}
           aria-invalid={issue !== undefined || undefined}
-          aria-describedby={message ? issueId : undefined}
           value={(draft[from] as string | undefined) ?? ''}
           onChange={(event) => model.patchDraft({ [from]: event.target.value || undefined })}
         />
@@ -438,7 +423,6 @@ function Period({
           type="date"
           aria-label={endLabel ?? `${label} ${copy.periodEnd}`}
           aria-invalid={issue !== undefined || undefined}
-          aria-describedby={message ? issueId : undefined}
           value={(draft[to] as string | undefined) ?? ''}
           onChange={(event) => model.patchDraft({ [to]: event.target.value || undefined })}
         />
@@ -461,11 +445,6 @@ function Period({
             );
           })}
         </div>
-      )}
-      {message !== undefined && (
-        <p id={issueId} role="alert" className="wk-error">
-          {message}
-        </p>
       )}
     </fieldset>
   );

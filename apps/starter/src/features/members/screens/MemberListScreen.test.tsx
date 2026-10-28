@@ -32,15 +32,18 @@ describe('member list (search to load)', () => {
     expect(await screen.findByRole('button', { name: 'member2 제거' })).toBeTruthy();
   });
 
-  it('blocks a reversed period before any request', async () => {
+  it('drops only a reversed period and searches with the other conditions', async () => {
     const user = userEvent.setup();
     const { requests } = renderApp('/members');
     await screen.findByText('검색 조건을 정하고 검색을 누르세요.');
+    await user.type(screen.getByRole('textbox', { name: '검색어' }), 'member2');
     await user.type(screen.getByLabelText('기간 시작'), '2026-03-10');
     await user.type(screen.getByLabelText('기간 종료'), '2026-03-01');
     await user.click(screen.getByRole('button', { name: '검색' }));
-    expect((await screen.findByRole('alert')).textContent).toContain('순서');
-    expect(memberRequests(requests)).toEqual([]);
+    await waitFor(() => expect(memberRequests(requests).at(-1)?.line).toContain(':member2'));
+    expect(memberRequests(requests).at(-1)?.line).not.toMatch(/from=|to=|startDate|endDate/);
+    expect((screen.getByLabelText('기간 시작') as HTMLInputElement).value).toBe('');
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('opens a shared searched URL directly and changes sort from the sort select', async () => {

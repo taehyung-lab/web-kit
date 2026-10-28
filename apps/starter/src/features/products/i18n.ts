@@ -33,11 +33,6 @@ export const productResources = {
         to: '종료일',
         submit: '검색',
         reset: '초기화',
-        issue: {
-          incomplete: '시작일과 종료일을 모두 입력하세요.',
-          invalid: '날짜 형식이 올바르지 않습니다.',
-          reversed: '시작일이 종료일보다 늦습니다.',
-        },
       },
       list: {
         caption: '상품 목록',
@@ -115,11 +110,6 @@ export const productResources = {
         to: 'To',
         submit: 'Search',
         reset: 'Reset',
-        issue: {
-          incomplete: 'Enter both a start and an end date.',
-          invalid: 'Enter a valid date.',
-          reversed: 'The start date is after the end date.',
-        },
       },
       list: {
         caption: 'Product list',

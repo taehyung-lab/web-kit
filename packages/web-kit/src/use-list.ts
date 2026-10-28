@@ -72,8 +72,8 @@ export interface ListOptions<
   /** 검색 확정 직전의 직접 입력 검증(제품의 기간 한도 등). 초안 모양을 받는다. */
   readonly validateDraft?: (draft: NoInfer<D>) => readonly DraftIssue[];
   /**
-   * 직접 입력하는 기간 쌍 [시작 필드, 끝 필드](초안 키). 검색 직전 한쪽만·없는 날짜·역순이면 확정하지 않고
-   * `{ field: 시작 필드, code: 'incomplete' | 'invalid' | 'reversed' }`를 낸다. 입력 UI와 무관하게 지킨다.
+   * 직접 입력하는 기간 쌍 [시작 필드, 끝 필드](초안 키). 검색 직전 한쪽만·없는 날짜·역순이면 그 쌍만 기본값으로 돌리고
+   * 나머지 조건으로 검색한다(주소의 잘못된 값과 같은 규칙). 입력 UI와 무관하게 지킨다.
    */
   readonly periods?: readonly (readonly [NoInfer<keyof D & string>, NoInfer<keyof D & string>])[];
 }
@@ -267,23 +267,27 @@ export function useList<
     return { ...state, draft: draft as D, inputs: {} };
   }
 
-  /** 기간 선언과 화면 검증을 합친 검색 직전 오류. */
-  function issuesOf(draft: D): readonly DraftIssue[] {
+  /** 맞지 않는 기간 쌍(한쪽만·없는 날짜·역순)을 기본값으로 돌린다. 주소의 잘못된 값처럼 그 쌍만 바뀐다. */
+  function withValidPeriods(draft: D): D {
     const values = draft as Record<string, unknown>;
-    const periodIssues = (latest.current.periods ?? []).flatMap(([from, to]) => {
-      const code = validateDateRange(values[from] as string | undefined, values[to] as string | undefined);
-      return code === undefined ? [] : [{ field: from, code }];
-    });
-    return [...periodIssues, ...(latest.current.validateDraft?.(draft) ?? [])];
+    let defaults: Record<string, unknown> | undefined;
+    let next = values;
+    for (const [from, to] of latest.current.periods ?? []) {
+      if (validateDateRange(values[from] as string | undefined, values[to] as string | undefined) === undefined) continue;
+      defaults ??= codec.from(definition.defaults) as Record<string, unknown>;
+      next = { ...next, [from]: defaults[from], [to]: defaults[to] };
+    }
+    return next as D;
   }
 
-  /** 입력 중 키워드를 합치고 검증한 뒤 첫 페이지로 확정한다. 보기 상태(size·sort·order)는 지금 값 그대로다. */
+  /** 입력 중 키워드를 합치고 기간을 정리·검증한 뒤 첫 페이지로 확정한다. 보기 상태(size·sort·order)는 지금 값 그대로다. */
   function submit() {
     const merged = withInputs(draftLatest.current);
-    const issues = issuesOf(merged.draft);
-    setDraft({ ...merged, issues });
+    const draft = withValidPeriods(merged.draft);
+    const issues = latest.current.validateDraft?.(draft) ?? [];
+    setDraft({ ...merged, draft, issues });
     if (issues.length > 0) return;
-    commit({ ...full, ...codec.to(merged.draft), ...firstPage(), searched: true });
+    commit({ ...full, ...codec.to(draft), ...firstPage(), searched: true });
   }
 
   /** 키워드 필드 하나의 입력 중 상태. choices는 고를 수 있는 검색 대상이고 첫 항목이 기본이다. */

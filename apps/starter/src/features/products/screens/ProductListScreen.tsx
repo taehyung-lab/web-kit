@@ -71,9 +71,6 @@ export function ProductListScreen({
           loading: t('common.loading'),
           empty: t('products.list.empty'),
           size: t('products.list.pageSize'),
-          periodIncomplete: t('products.filter.issue.incomplete'),
-          periodInvalid: t('products.filter.issue.invalid'),
-          periodReversed: t('products.filter.issue.reversed'),
           cancel: t('common.cancel'),
         }}
       >

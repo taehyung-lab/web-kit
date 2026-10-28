@@ -768,21 +768,21 @@ it('L35 입력 중 키워드는 페이지 이동에는 남고 필터 교체에�
   expect(keywordLatest.keywordInput('words', ['name']).text).toBe('');
 });
 
-it('L36 기간 선언은 UI 없이도 한쪽만·없는 날짜·역순을 막고 요청하지 않는다', async () => {
+it('L36 기간 선언은 UI 없이도 한쪽만·없는 날짜·역순인 기간만 기본값으로 돌리고 나머지 조건으로 검색한다', async () => {
   const searches = mountKeywords();
   await act(async () => {});
-  const before = searches.length;
-  for (const [from, to, code] of [
-    ['2026-01-02', undefined, 'incomplete'],
-    ['2026-02-30', '2026-03-01', 'invalid'],
-    ['2026-03-02', '2026-03-01', 'reversed'],
+  for (const [from, to] of [
+    ['2026-01-02', undefined],
+    ['2026-02-30', '2026-03-01'],
+    ['2026-03-02', '2026-03-01'],
   ] as const) {
-    act(() => keywordLatest.patchDraft({ from, to }));
+    act(() => keywordLatest.patchDraft({ from, to, q: from }));
     act(() => keywordLatest.submit());
-    expect(keywordLatest.issues).toEqual([{ field: 'from', code }]);
+    await act(async () => {});
+    expect(searches.at(-1)).toMatchObject({ q: from, from: undefined, to: undefined });
+    expect(keywordLatest.issues).toEqual([]);
+    expect(keywordLatest.draft).toMatchObject({ q: from, from: undefined, to: undefined });
   }
-  await act(async () => {});
-  expect(searches.length).toBe(before);
   act(() => keywordLatest.patchDraft({ from: '2026-03-01', to: '2026-03-02' }));
   act(() => keywordLatest.submit());
   await act(async () => {});

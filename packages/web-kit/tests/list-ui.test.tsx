@@ -145,7 +145,7 @@ it('반례: 키워드 UI를 숨겨도 이미 입력한 글자는 검색에 들�
   await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ keywords: [{ field: 'name', value: 'kept' }] })));
 });
 
-it('반례: 기간 입력칸을 프로젝트 부품으로 바꾸거나 숨겨도 역순 기간 검증이 남는다', async () => {
+it('반례: 기간 입력칸을 프로젝트 부품으로 바꿔도 맞지 않는 기간은 그 칸만 기본값으로 돌리고 검색한다', async () => {
   /** 프로젝트가 만든 날짜 입력. 키트 Period를 쓰지 않는다. */
   function OwnDate({ name }: { name: string }) {
     const field = useListField<string | undefined>(name);
@@ -159,26 +159,34 @@ it('반례: 기간 입력칸을 프로젝트 부품으로 바꾸거나 숨겨도
     </List.Filter>
   ));
   await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
-  fireEvent.change(screen.getByLabelText('own-from'), { target: { value: '2026-03-31' } });
-  fireEvent.change(screen.getByLabelText('own-to'), { target: { value: '2026-03-01' } });
-  fireEvent.click(screen.getByRole('button', { name: '검색' }));
-  expect(model.issues).toEqual([{ field: 'from', code: 'reversed' }]);
-  fireEvent.change(screen.getByLabelText('own-to'), { target: { value: '' } });
-  fireEvent.click(screen.getByRole('button', { name: '검색' }));
-  expect(model.issues).toEqual([{ field: 'from', code: 'incomplete' }]);
-  await act(async () => {});
-  expect(fetch).toHaveBeenCalledTimes(1);
+  for (const [from, to] of [
+    ['2026-03-31', '2026-03-01'],
+    ['2026-03-31', ''],
+  ]) {
+    const before = fetch.mock.calls.length;
+    fireEvent.change(screen.getByLabelText('own-from'), { target: { value: from } });
+    fireEvent.change(screen.getByLabelText('own-to'), { target: { value: to } });
+    fireEvent.click(screen.getByRole('button', { name: '검색' }));
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(before + 1));
+    expect(fetch.mock.lastCall?.[0]).toMatchObject({ from: undefined, to: undefined });
+    expect(model.issues).toEqual([]);
+    expect((screen.getByLabelText('own-from') as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText('own-to') as HTMLInputElement).value).toBe('');
+  }
 });
 
-it('역순 기간은 문구를 보이고 요청하지 않으며 달 단축은 월말을 보정한다', async () => {
+it('역순 기간은 기간만 비우고 나머지 조건으로 검색하며 달 단축은 월말을 보정한다', async () => {
   const { fetch } = mount(topLayout);
   await screen.findByText('a');
-  const before = fetch.mock.calls.length;
+  fireEvent.change(screen.getByRole('textbox', { name: '키워드' }), { target: { value: 'kept' } });
   fireEvent.change(screen.getByLabelText('기간 시작'), { target: { value: '2026-03-31' } });
   fireEvent.change(screen.getByLabelText('기간 종료'), { target: { value: '2026-03-01' } });
   fireEvent.click(screen.getByRole('button', { name: '검색' }));
-  expect(screen.getByRole('alert').textContent).toContain('순서');
-  expect(fetch).toHaveBeenCalledTimes(before);
+  await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ keywords: [{ field: 'name', value: 'kept' }] })));
+  expect(fetch.mock.lastCall?.[0]).toMatchObject({ from: undefined, to: undefined });
+  expect(screen.queryByRole('alert')).toBeNull();
+  expect((screen.getByLabelText('기간 시작') as HTMLInputElement).value).toBe('');
+  expect((screen.getByLabelText('기간 종료') as HTMLInputElement).value).toBe('');
   fireEvent.click(screen.getByRole('button', { name: '한 달' }));
   fireEvent.click(screen.getByRole('button', { name: '검색' }));
   await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ from: '2026-02-28', to: '2026-03-31' })));

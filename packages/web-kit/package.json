@@ -1,6 +1,6 @@
 {
   "name": "@boosterlab/web-kit",
-  "version": "3.0.0-dev.2",
+  "version": "3.0.0-dev.3",
   "private": true,
   "type": "module",
   "sideEffects": [
