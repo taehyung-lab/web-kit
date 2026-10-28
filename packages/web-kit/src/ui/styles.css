@@ -22,7 +22,16 @@
 .wk-field {
   display: grid;
   gap: 6px;
+}
+/*
+ * 프로젝트가 배치하는 블록(칸·구역·폼 한 줄)의 기본 여백 초기화는 :where()로 0 우선순위에 둔다.
+ * 클래스 우선순위로 margin을 0으로 두면 프로젝트의 간격 유틸리티(Tailwind v4 space-y 등은 :where 선택자)가 지워져
+ * 오류 문구 바로 아래에 다음 칸 라벨이 붙는다(DT 운영자 등록, 2026-10-28 관찰).
+ */
+:where(fieldset.wk-field, .wk-section, .wk-form-failure) {
   margin: 0;
+}
+fieldset.wk-field {
   border: 0;
   padding: 0;
 }
@@ -344,7 +353,6 @@
   color: color-mix(in srgb, var(--wk-fg) 65%, transparent);
 }
 .wk-form-failure {
-  margin: 0;
   border: 1px solid color-mix(in srgb, var(--wk-danger) 40%, transparent);
   border-radius: var(--wk-radius);
   padding: 8px 12px;
@@ -353,7 +361,6 @@
 .wk-section {
   display: grid;
   gap: var(--wk-space);
-  margin: 0;
   border: 1px solid var(--wk-border);
   border-radius: var(--wk-radius);
   padding: var(--wk-space);

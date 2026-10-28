@@ -8,6 +8,8 @@ export function checkFields() {
   <F.Field name="count" label="수량">
     {(control) => <input value={control.value.toFixed(0)} onChange={(event) => control.change(Number(event.target.value))} />}
   </F.Field>;
+  // @ts-expect-error 필수 표시는 schema가 정한다(칸마다 따로 적지 않는다).
+  <F.Text name="title" label="제목" required />;
   // @ts-expect-error 존재하지 않는 필드다.
   <F.Text name="missing" label="잘못된 필드" />;
   // @ts-expect-error boolean을 문자열 입력에 연결하지 않는다.

@@ -5,4 +5,8 @@ export { createFormMessages } from './messages';
 
 export { FormArrayField, type ArrayForm, type FormArrayRows } from './array';
 
+export { appendRow, moveRow, removeRow } from './rows';
+
+export type { FormFileValue } from './file';
+
 export { createFormNavigation, type FormFacts } from './navigation';

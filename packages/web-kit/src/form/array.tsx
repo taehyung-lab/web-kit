@@ -1,6 +1,8 @@
-// 파일 책임: 줄을 늘리고 줄이는 배열 입력의 규칙(삭제 가능 여부, Enter = 추가 버튼)을 한 곳에 둔다. 줄의 모양과 문구는 프로젝트가 그린다.
+// 파일 책임: 줄을 늘리고 줄이고 옮기는 배열 입력의 규칙(삭제 가능 여부, Enter = 추가 버튼)을 한 곳에 둔다. 줄의 모양과 문구는 프로젝트가 그린다.
+// 줄 작업은 rows.ts가 맡아 칸 오류·서버 오류가 줄을 따라간다(중첩 배열 포함).
 import { useStore, type AnyFieldApi, type DeepKeysOfType, type DeepValue, type FieldComponent } from '@tanstack/react-form';
 import type { KeyboardEvent, ReactNode } from 'react';
+import { appendRow, moveRow, removeRow } from './rows';
 
 type ArrayItem<TValues, TName extends DeepKeysOfType<TValues, unknown[]>> =
   DeepValue<TValues, TName> extends (infer TItem)[] ? TItem : never;
@@ -20,6 +22,8 @@ export interface FormArrayRows<TItem> {
   readonly canRemove: boolean;
   readonly append: (value: TItem) => void;
   readonly remove: (index: number) => void;
+  /** 줄 하나를 from에서 to로 옮긴다. 칸 오류는 각자 줄을 따라간다. */
+  readonly move: (from: number, to: number) => void;
   /**
    * 줄 안 입력의 onKeyDown. Enter가 `add`(추가 버튼이 하는 일)를 그대로 부르게 한다.
    * 폼 제출은 막고, 한글 조합 중이거나 수정키가 함께 눌렸으면 아무것도 하지 않는다.
@@ -79,10 +83,13 @@ function Rows<TItem>({
     canAdd,
     canRemove,
     append: (value) => {
-      if (canAdd) field.pushValue(value);
+      if (canAdd) void appendRow(field.form, name, value);
     },
     remove: (index) => {
-      if (canRemove) field.removeValue(index);
+      if (canRemove) void removeRow(field.form, name, index);
+    },
+    move: (from, to) => {
+      void moveRow(field.form, name, from, to);
     },
     enterAdds: (add) => (event) => {
       if (event.key !== 'Enter' || event.nativeEvent.isComposing) return;

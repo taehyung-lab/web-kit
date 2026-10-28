@@ -52,8 +52,8 @@ export function LoginScreen({
             isRequestFailure(failure) && failure.kind === 'unauthorized' ? t('auth.credentialRejected') : t(failureCopyKey(failure))
           }
         >
-          <F.Text name="loginId" label={t('auth.loginId')} required autoFocus autoComplete="username" />
-          <F.Text name="password" label={t('auth.password')} required type="password" autoComplete="current-password" />
+          <F.Text name="loginId" label={t('auth.loginId')} autoFocus autoComplete="username" />
+          <F.Text name="password" label={t('auth.password')} type="password" autoComplete="current-password" />
           <F.Failure />
           <F.Submit>{t('auth.submit')}</F.Submit>
           {showMockHint && <p>{t('auth.mockHint')}</p>}

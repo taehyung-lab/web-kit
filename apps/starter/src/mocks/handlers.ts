@@ -37,7 +37,37 @@ function duplicateCode(body: ProductUpsertRequest, selfId?: string) {
   return taken ? envelope(400, 4000, 'Invalid input', [{ field: 'code', validCode: 'DUPLICATE' }]) : undefined;
 }
 
+/** 공연 예시 mock: 올린 파일 수(파일 id). 새로 고침 뒤 기억할 필요가 없는 예시 값이다. */
+let uploadedFiles = 0;
+
 export const handlers = [
+  // 공연 예시: 파일 업로드(multipart) → 파일 id.
+  http.post(`${API}/files`, async ({ request }) => {
+    const denied = unauthorized(request);
+    if (denied) return denied;
+    await latency();
+    // 본문은 읽지 않는다(jsdom의 File을 Node multipart 해석기가 받지 못한다). multipart로 왔는지만 본다.
+    if (!request.headers.get('Content-Type')?.startsWith('multipart/form-data'))
+      return envelope(400, 4000, 'Invalid input', [{ field: 'file', validCode: 'REQUIRED' }]);
+    uploadedFiles += 1;
+    return ok({ fileId: `f-${uploadedFiles}` });
+  }),
+  // 공연 예시 등록: 시작 일시가 앞 회차와 같은 회차는 Spring 형식 필드 오류(400, rounds[i].startAt). 제목이 E2E-실패로 시작하면 500.
+  http.post(`${API}/shows`, async ({ request }) => {
+    const denied = unauthorized(request);
+    if (denied) return denied;
+    await latency();
+    const body = (await request.json()) as { title: string; rounds: { startAt: string }[]; seatFileId?: string };
+    if (body.title.startsWith('E2E-실패')) return envelope(500, 5000, 'Server error', null);
+    const seen = new Set<string>();
+    const duplicates = body.rounds.flatMap((round, index) => {
+      if (seen.has(round.startAt)) return [{ field: `rounds[${index}].startAt`, validCode: 'DUPLICATE' }];
+      seen.add(round.startAt);
+      return [];
+    });
+    if (duplicates.length > 0) return envelope(400, 4000, 'Invalid input', duplicates);
+    return ok({ showId: `s-${Date.now()}` });
+  }),
   // 약관 등록: 같은 버전이 있으면 Spring 형식 필드 오류(400). 등록 응답은 새 약관이다.
   http.post(`${API}/terms`, async ({ request }) => {
     const denied = unauthorized(request);

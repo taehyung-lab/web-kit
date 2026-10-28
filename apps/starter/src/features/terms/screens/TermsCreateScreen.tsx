@@ -33,17 +33,16 @@ export function TermsCreateScreen() {
         <F.Failure />
         <F.Section title={t('terms.section')}>
           <div className="grid gap-5 md:grid-cols-2">
-            <F.Text name="version" label={t('terms.fields.version')} required maxLength={10} />
-            <F.Text name="effectiveAt" type="date" label={t('terms.fields.effectiveAt')} required />
+            <F.Text name="version" label={t('terms.fields.version')} maxLength={10} />
+            <F.Text name="effectiveAt" type="date" label={t('terms.fields.effectiveAt')} />
             <F.Select
               name="status"
               label={t('terms.fields.status')}
-              required
               options={TERMS_STATUSES.map((value) => ({ value, label: t(`terms.status.${value}`) }))}
             />
-            <F.Text name="publishedAt" type="date" label={t('terms.fields.publishedAt')} required />
+            <F.Text name="publishedAt" type="date" label={t('terms.fields.publishedAt')} />
           </div>
-          <F.TextArea name="body" label={t('terms.fields.body')} required rows={10} />
+          <F.TextArea name="body" label={t('terms.fields.body')} rows={10} />
         </F.Section>
         <div className="wk-actions">
           <F.Submit />

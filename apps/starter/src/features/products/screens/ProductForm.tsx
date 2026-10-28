@@ -20,25 +20,23 @@ export function ProductFields({ submitLabel, cancelTo }: { readonly submitLabel:
     <>
       <F.Failure />
       <div className="grid gap-5 md:grid-cols-2">
-        <F.Text name="name" label={t('products.fields.name')} required />
-        <F.Text name="code" label={t('products.fields.code')} required description={t('products.form.codeDescription')} />
+        <F.Text name="name" label={t('products.fields.name')} />
+        <F.Text name="code" label={t('products.fields.code')} description={t('products.form.codeDescription')} />
         <F.Select
           name="status"
           label={t('products.fields.status')}
-          required
           options={PRODUCT_STATUSES.map((value) => ({ value, label: t(`products.status.${value}`) }))}
         />
         <F.Select
           name="categoryId"
           label={t('products.fields.category')}
-          required
           placeholder={t('products.form.chooseCategory')}
           status={categories.isError ? { failure: categories.error } : categories.data === undefined ? 'loading' : 'ready'}
           onRetry={() => void categories.refetch()}
           options={(categories.data ?? []).map((category) => ({ value: category.id, label: category.name }))}
         />
-        <F.Text name="price" label={t('products.fields.price')} required inputMode="numeric" />
-        <F.Text name="stock" label={t('products.fields.stock')} required inputMode="numeric" />
+        <F.Text name="price" label={t('products.fields.price')} inputMode="numeric" />
+        <F.Text name="stock" label={t('products.fields.stock')} inputMode="numeric" />
       </div>
       <F.Array name="options" minItems={OPTION_LIMITS.min} maxItems={OPTION_LIMITS.max}>
         {(rows) => {
@@ -50,13 +48,11 @@ export function ProductFields({ submitLabel, cancelTo }: { readonly submitLabel:
                   <F.Text
                     name={`options[${index}].name`}
                     label={`${t('products.fields.optionName')} ${index + 1}`}
-                    required
                     onKeyDown={rows.enterAdds(add)}
                   />
                   <F.Text
                     name={`options[${index}].extraPrice`}
                     label={`${t('products.fields.optionExtraPrice')} ${index + 1}`}
-                    required
                     inputMode="numeric"
                     onKeyDown={rows.enterAdds(add)}
                   />

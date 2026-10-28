@@ -15,6 +15,7 @@ import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppMembersIndexRouteImport } from './routes/_app/members/index'
 import { Route as AppProductsIndexRouteImport } from './routes/_app/products/index'
 import { Route as AppProductsNewRouteImport } from './routes/_app/products/new'
+import { Route as AppShowsNewRouteImport } from './routes/_app/shows/new'
 import { Route as AppTermsTermsIdRouteImport } from './routes/_app/terms/$termsId'
 import { Route as AppTermsNewRouteImport } from './routes/_app/terms/new'
 import { Route as AppProductsProductIdIndexRouteImport } from './routes/_app/products/$productId/index'
@@ -49,6 +50,11 @@ const AppProductsNewRoute = AppProductsNewRouteImport.update({
   path: '/products/new',
   getParentRoute: () => AppRoute,
 } as any)
+const AppShowsNewRoute = AppShowsNewRouteImport.update({
+  id: '/shows/new',
+  path: '/shows/new',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppTermsTermsIdRoute = AppTermsTermsIdRouteImport.update({
   id: '/terms/$termsId',
   path: '/terms/$termsId',
@@ -76,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
   '/products/new': typeof AppProductsNewRoute
+  '/shows/new': typeof AppShowsNewRoute
   '/terms/$termsId': typeof AppTermsTermsIdRoute
   '/terms/new': typeof AppTermsNewRoute
   '/members/': typeof AppMembersIndexRoute
@@ -87,6 +94,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/': typeof AppIndexRoute
   '/products/new': typeof AppProductsNewRoute
+  '/shows/new': typeof AppShowsNewRoute
   '/terms/$termsId': typeof AppTermsTermsIdRoute
   '/terms/new': typeof AppTermsNewRoute
   '/members': typeof AppMembersIndexRoute
@@ -100,6 +108,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_app/': typeof AppIndexRoute
   '/_app/products/new': typeof AppProductsNewRoute
+  '/_app/shows/new': typeof AppShowsNewRoute
   '/_app/terms/$termsId': typeof AppTermsTermsIdRoute
   '/_app/terms/new': typeof AppTermsNewRoute
   '/_app/members/': typeof AppMembersIndexRoute
@@ -113,6 +122,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/products/new'
+    | '/shows/new'
     | '/terms/$termsId'
     | '/terms/new'
     | '/members/'
@@ -124,6 +134,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/'
     | '/products/new'
+    | '/shows/new'
     | '/terms/$termsId'
     | '/terms/new'
     | '/members'
@@ -136,6 +147,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/_app/'
     | '/_app/products/new'
+    | '/_app/shows/new'
     | '/_app/terms/$termsId'
     | '/_app/terms/new'
     | '/_app/members/'
@@ -193,6 +205,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProductsNewRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/shows/new': {
+      id: '/_app/shows/new'
+      path: '/shows/new'
+      fullPath: '/shows/new'
+      preLoaderRoute: typeof AppShowsNewRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/terms/$termsId': {
       id: '/_app/terms/$termsId'
       path: '/terms/$termsId'
@@ -227,6 +246,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
   AppProductsNewRoute: typeof AppProductsNewRoute
+  AppShowsNewRoute: typeof AppShowsNewRoute
   AppTermsTermsIdRoute: typeof AppTermsTermsIdRoute
   AppTermsNewRoute: typeof AppTermsNewRoute
   AppMembersIndexRoute: typeof AppMembersIndexRoute
@@ -238,6 +258,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppIndexRoute: AppIndexRoute,
   AppProductsNewRoute: AppProductsNewRoute,
+  AppShowsNewRoute: AppShowsNewRoute,
   AppTermsTermsIdRoute: AppTermsTermsIdRoute,
   AppTermsNewRoute: AppTermsNewRoute,
   AppMembersIndexRoute: AppMembersIndexRoute,

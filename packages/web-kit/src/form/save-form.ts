@@ -4,6 +4,7 @@ import {
   evaluate,
   getBy,
   revalidateLogic,
+  setBy,
   useForm,
   useSelector,
   type DeepKeys,
@@ -13,6 +14,7 @@ import {
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { isRequestFailure, type FieldError } from '../failure';
+import { followRows, rowMark } from './rows';
 
 export interface SaveFormOptions<TInput, TOutput, TResult = { readonly saved?: TInput } | void> {
   /** 입력 → 저장 값 동기 검증. zod 4 등 Standard Schema 구현이면 되고, 비동기 검증(async refine 등)은 받지 않는다. */
@@ -26,7 +28,10 @@ export interface SaveFormOptions<TInput, TOutput, TResult = { readonly saved?: T
    * 그 밖의 결과(새 id·토큰 등)도 함께 돌려주면 onSaved가 받는다.
    */
   readonly save: (values: TOutput, submitted: TInput) => Promise<TResult>;
-  /** 서버 필드 오류를 폼 경로와 표시 문구로 바꾼다. undefined면 붙이지 않는다. */
+  /**
+   * 서버 필드 오류를 폼 경로와 표시 문구로 바꾼다. undefined면 붙이지 않는다.
+   * 돌려준 경로는 제출 때 기준이다. 그 뒤 키트 줄 작업으로 줄이 옮겨졌으면 키트가 지금 위치로 옮긴다.
+   */
   readonly fieldError?: (error: FieldError) => { readonly field: DeepKeys<TInput>; readonly message: string } | undefined;
   /** 오류 필드가 접힌 영역에 있으면 focus 전에 펼친다. */
   readonly reveal?: (fields: readonly string[]) => void;
@@ -52,6 +57,53 @@ export type SaveStage<TInput> =
   | { readonly kind: 'saving'; readonly values: TInput }
   /** 저장은 끝났고 완료 처리(onSaved)를 기다리거나 실행 중이거나 실패했다. 이 동안 제출은 잠긴다. */
   | { readonly kind: 'saved'; readonly completing: boolean };
+
+const lockedFields = new WeakMap<object, Map<string, number>>();
+
+/**
+ * 고칠 수 없는(disabled) 칸이라고 알린다. 그 칸은 오류를 숨기므로, 서버 필드 오류가 그 칸으로 대응되어도 칸에 붙은 것으로 세지 않고
+ * 붙지 못한 오류(폼 한 줄)로 보낸다. 칸 부품이 마운트 동안 부르고 돌려준 함수로 푼다.
+ */
+export function lockField(form: object, field: string): () => void {
+  const key = (form as { readonly store: object }).store;
+  let locked = lockedFields.get(key);
+  if (locked === undefined) {
+    locked = new Map();
+    lockedFields.set(key, locked);
+  }
+  const map = locked;
+  map.set(field, (map.get(field) ?? 0) + 1);
+  return () => {
+    const count = (map.get(field) ?? 1) - 1;
+    if (count <= 0) map.delete(field);
+    else map.set(field, count);
+  };
+}
+
+function isLocked(form: object, field: string): boolean {
+  return lockedFields.get((form as { readonly store: object }).store)?.has(field) === true;
+}
+
+/** Standard Schema 오류 경로 → 폼 경로('a.b[0].c'). */
+function issuePath(path: readonly (PropertyKey | { readonly key: PropertyKey })[] | undefined): string {
+  let out = '';
+  for (const segment of path ?? []) {
+    const key = typeof segment === 'object' ? segment.key : segment;
+    out += typeof key === 'number' ? `[${key}]` : out === '' ? String(key) : `.${String(key)}`;
+  }
+  return out;
+}
+
+const FILE_KINDS = new Set(['empty', 'existing', 'selected', 'removed']);
+
+/** 칸의 빈 값: 문자열 '', 목록 [], 체크 false, 파일 칸 비어 있음, 그 밖은 undefined. */
+function emptyLike(value: unknown): unknown {
+  if (typeof value === 'string') return '';
+  if (Array.isArray(value)) return [];
+  if (typeof value === 'boolean') return false;
+  if (typeof value === 'object' && value !== null && 'kind' in value && FILE_KINDS.has(String(value.kind))) return { kind: 'empty' };
+  return undefined;
+}
 
 /** 폼 하나의 입력 control id. 라벨·오류·focus가 같은 id를 쓴다. */
 export function formFieldControlId(formId: string, field: string): string {
@@ -91,6 +143,8 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
   const identity = useRef(source.id);
   const decided = useRef(source.values);
   const pendingOutput = useRef<TOutput | undefined>(undefined);
+  /** 확인 대기 중인 제출 값을 고정한 순간의 줄 작업 기록 위치. */
+  const pendingMark = useRef(0);
   const focusTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   /** 저장이 성공해 완료 처리를 기다리는 결과. 완료 처리를 다시 시도할 때 같은 결과를 쓴다. */
   const savedResult = useRef<{ readonly result: TResult; readonly identity: unknown } | undefined>(undefined);
@@ -104,14 +158,16 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
       if (meta === undefined || !isCurrent(meta)) return;
       // TanStack Form은 값을 바꿀 때마다 새 객체를 만든다. 제출 순간의 참조가 곧 고정된 S다(File 등은 그대로 유지).
       const submitted = value;
+      const mark = rowMark(form);
       const result = await latest.current.schema['~standard'].validate(submitted);
       if (!isCurrent(meta) || result.issues !== undefined) return;
       if (latest.current.confirm === true) {
         pendingOutput.current = result.value;
+        pendingMark.current = mark;
         setStage({ kind: 'confirming', values: submitted });
         return;
       }
-      await execute(meta, submitted, result.value);
+      await execute(meta, submitted, result.value, mark);
     },
     onSubmitInvalid: ({ formApi, meta }) => {
       if (meta === undefined || !isCurrent(meta)) return;
@@ -122,6 +178,24 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
     },
   });
   const values = useSelector(form.store, (state) => state.values);
+  /** 필수 판정 캐시. 값이 바뀌면 새로 판정한다. */
+  const requiredCache = useRef<{ values: unknown; fields: Map<string, boolean> }>({ values: undefined, fields: new Map() });
+
+  /**
+   * 칸이 필수인가: 지금 값에서 그 칸만 비워 schema로 검증했을 때 그 칸에 오류가 나면 필수다. 필수 표시의 출처는 schema 하나다.
+   * 다른 칸 값에 따른 조건부 필수도 같은 검증으로 나온다(다른 칸 오류가 있어도 돌도록 쓴 규칙이어야 한다 — skill 「필수 표시」).
+   */
+  function isRequired(field: string): boolean {
+    const current = form.state.values;
+    if (requiredCache.current.values !== current) requiredCache.current = { values: current, fields: new Map() };
+    const known = requiredCache.current.fields.get(field);
+    if (known !== undefined) return known;
+    const probe = setBy(current, field, emptyLike(getBy(current, field)));
+    const result = latest.current.schema['~standard'].validate(probe);
+    const required = !(result instanceof Promise) && (result.issues ?? []).some((issue) => issuePath(issue.path) === field);
+    requiredCache.current.fields.set(field, required);
+    return required;
+  }
 
   /** 렌더 이전 이탈 판정도 최신 저장 기준선을 읽게 한다. */
   function setBaseline(next: TInput) {
@@ -169,33 +243,39 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
     }
   }
 
-  /** 제출 값과 지금 값이 같은 필드에만 서버 오류를 붙인다. 붙인 필드와 붙이지 못한 오류를 돌려준다. */
-  function attachFieldErrors(error: unknown, submitted: TInput) {
+  /**
+   * 제출 값과 지금 값이 같은 필드에만 서버 오류를 붙인다. 붙인 필드와 붙이지 못한 오류를 돌려준다.
+   * 배열 경로는 제출 뒤 줄 작업(mark 이후 기록)을 따라 지금 위치로 옮긴다. 그 줄이 지워졌으면 붙이지 않는다.
+   */
+  function attachFieldErrors(error: unknown, submitted: TInput, mark: number) {
     const attached: string[] = [];
     const unattached: FieldError[] = [];
     if (!isRequestFailure(error)) return { attached, unattached };
     for (const item of error.fieldErrors) {
       const target = latest.current.fieldError?.(item);
-      // 화면에 없는 칸(등록되지 않은 필드)에는 붙여도 보이지 않으므로 붙이지 못한 오류로 남긴다.
+      const now = target === undefined ? undefined : (followRows(form, target.field, mark) as DeepKeys<TInput> | undefined);
+      // 화면에 없는 칸(등록되지 않은 필드)·고칠 수 없는 칸에는 붙여도 보이지 않으므로 붙이지 못한 오류로 남긴다.
       if (
         target === undefined ||
-        form.getFieldMeta(target.field) === undefined ||
-        !evaluate(getBy(form.state.values, target.field), getBy(submitted, target.field))
+        now === undefined ||
+        form.getFieldMeta(now) === undefined ||
+        isLocked(form, now) ||
+        !evaluate(getBy(form.state.values, now), getBy(submitted, target.field))
       ) {
         unattached.push(item);
         continue;
       }
-      form.setFieldMeta(target.field, (meta) => ({
+      form.setFieldMeta(now, (meta) => ({
         ...meta,
         errorMap: { ...meta.errorMap, onServer: target.message },
       }));
-      attached.push(target.field);
+      attached.push(now);
     }
     return { attached, unattached };
   }
 
   /** 저장 한 번. 이 제출이 아직 현재 제출일 때만 결과를 반영한다. */
-  async function execute(token: object, submitted: TInput, output: TOutput) {
+  async function execute(token: object, submitted: TInput, output: TOutput, mark: number) {
     const current = () => isCurrent(token);
     if (!current()) return;
     setStage({ kind: 'saving', values: submitted });
@@ -206,7 +286,7 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
       if (!current()) return;
       setStage({ kind: 'idle' });
       if (isRequestFailure(error) && error.kind === 'cancelled') return;
-      const { attached, unattached } = attachFieldErrors(error, submitted);
+      const { attached, unattached } = attachFieldErrors(error, submitted, mark);
       const clearWhenEdited = latest.current.clearFailureOnEdit?.(error) === true ? { submitted } : undefined;
       setRejection({ failure: error, unattached, clearWhenEdited });
       focusFirst(attached);
@@ -282,7 +362,7 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
     submission.current = token;
     pendingOutput.current = undefined;
     try {
-      await execute(token, requested.values, output);
+      await execute(token, requested.values, output, pendingMark.current);
     } finally {
       release(token);
     }
@@ -369,6 +449,7 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
       isSaving: stageRef.current.kind === 'saving',
     }),
     fieldId: (field: DeepKeys<TInput>) => formFieldControlId(form.formId, field),
+    isRequired: (field: DeepKeys<TInput>) => isRequired(field),
     submit,
     confirm,
     cancel,
@@ -394,6 +475,8 @@ export interface SaveFormEditor<TInput, TResult = unknown> {
   readonly isSaving: boolean;
   readonly getState: () => { readonly stage: SaveStage<TInput>['kind']; readonly isDirty: boolean; readonly isSaving: boolean };
   readonly fieldId: (field: DeepKeys<TInput>) => string;
+  /** 필수 표시(별표·aria-required): 그 칸만 비운 지금 값을 schema가 거부하는가. */
+  readonly isRequired: (field: DeepKeys<TInput>) => boolean;
   readonly submit: () => Promise<void>;
   readonly confirm: () => Promise<void>;
   readonly cancel: () => void;

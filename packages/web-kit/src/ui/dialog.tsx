@@ -117,7 +117,7 @@ export function Dialog({
   );
 }
 
-/** 실행 전 확인. 실행 중(pending)에는 닫기·재실행이 막힌다. 승인·취소의 판정은 호출자가 한다. */
+/** 실행 전 확인. 실행 중(pending)에는 닫기·재실행이 막히고 버튼 옆에 진행 표시가 선다. 승인·취소의 판정은 호출자가 한다. */
 export function ConfirmDialog({
   open,
   title,
@@ -127,6 +127,7 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
   pending = false,
+  pendingLabel = '처리 중입니다.',
   returnFocus,
 }: {
   readonly open: boolean;
@@ -137,6 +138,8 @@ export function ConfirmDialog({
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
   readonly pending?: boolean;
+  /** 실행 중 표시의 화면 낭독기 문구. */
+  readonly pendingLabel?: string;
   readonly returnFocus?: RefObject<HTMLElement | null>;
 }) {
   return (
@@ -155,6 +158,7 @@ export function ConfirmDialog({
           <button type="button" className="wk-button wk-button-primary" disabled={pending} onClick={onConfirm}>
             {confirmLabel}
           </button>
+          {pending ? <Pending label={pendingLabel} /> : null}
         </>
       }
     >
@@ -171,14 +175,17 @@ export function AlertDialog({
   confirmLabel = '확인',
   onConfirm,
   pending = false,
+  pendingLabel = '처리 중입니다.',
 }: {
   readonly open: boolean;
   readonly title: ReactNode;
   readonly children?: ReactNode;
   readonly confirmLabel?: string;
   readonly onConfirm: () => void;
-  /** 확인 뒤 할 일이 진행 중이면 true. 버튼이 잠긴다. */
+  /** 확인 뒤 할 일이 진행 중이면 true. 버튼이 잠기고 옆에 진행 표시가 선다. */
   readonly pending?: boolean;
+  /** 진행 표시의 화면 낭독기 문구. */
+  readonly pendingLabel?: string;
 }) {
   const done = useRef(false);
   if (!open) done.current = false;
@@ -189,22 +196,34 @@ export function AlertDialog({
       role="alertdialog"
       closable={false}
       footer={
-        <button
-          type="button"
-          className="wk-button wk-button-primary"
-          aria-disabled={pending || undefined}
-          onClick={() => {
-            if (pending || done.current) return;
-            done.current = true;
-            onConfirm();
-          }}
-        >
-          {confirmLabel}
-        </button>
+        <>
+          <button
+            type="button"
+            className="wk-button wk-button-primary"
+            aria-disabled={pending || undefined}
+            onClick={() => {
+              if (pending || done.current) return;
+              done.current = true;
+              onConfirm();
+            }}
+          >
+            {confirmLabel}
+          </button>
+          {pending ? <Pending label={pendingLabel} /> : null}
+        </>
       }
     >
       {children}
     </Dialog>
+  );
+}
+
+/** 진행 중 표시: 버튼 옆 회전 표시와 화면 낭독기용 문구(목록 다운로드·폼 저장과 같은 마크업). */
+export function Pending({ label }: { readonly label: string }) {
+  return (
+    <span role="status" className="wk-spinner">
+      <span className="wk-visually-hidden">{label}</span>
+    </span>
   );
 }
 

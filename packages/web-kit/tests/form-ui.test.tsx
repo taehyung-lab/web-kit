@@ -14,7 +14,15 @@ beforeAll(() => {
   window.scrollTo = vi.fn();
 });
 
-const schema = z.object({ name: z.string().min(1, '이름 필요'), contact: z.string(), needed: z.boolean(), kind: z.string().min(1, '종류 필요') });
+// 연락처는 '필요'를 체크했을 때만 필수다(다른 칸 오류가 있어도 도는 규칙).
+const schema = z
+  .object({ name: z.string().min(1, '이름 필요'), contact: z.string(), needed: z.boolean(), kind: z.string().min(1, '종류 필요') })
+  .superRefine(
+    (value, ctx) => {
+      if (value.needed && value.contact === '') ctx.addIssue({ code: 'custom', path: ['contact'], message: '연락처 필요' });
+    },
+    { when: () => true },
+  );
 type Values = z.input<typeof schema>;
 const values: Values = { name: 'A', contact: '', needed: false, kind: 'x' };
 const F = Form.of<Values>();
@@ -45,9 +53,9 @@ function Editor(props: Partial<SaveFormOptions<Values, z.output<typeof schema>>>
   return (
     <F editor={editor} renderFailure={(failure) => (failure instanceof RequestFailure && failure.kind === 'forbidden' ? null : undefined)}>
       <F.Failure />
-      <F.Text name="name" label="이름" required />
+      <F.Text name="name" label="이름" />
       <F.Checkbox name="needed" label="필요" />
-      <F.Text name="contact" label="연락처" required={(v) => v.needed} />
+      <F.Text name="contact" label="연락처" />
       <F.Submit />
       <F.Cancel to={{ to: '/done' }} />
       {props.children}
@@ -61,13 +69,45 @@ it('F4 검증 실패는 저장 0건이고 화면 순서의 첫 오류 칸으로 
   const input = screen.getByRole('textbox', { name: '이름' });
   fireEvent.change(input, { target: { value: '' } });
   expect(screen.getByRole('textbox', { name: '이름' })).toBe(input);
-  fireEvent.click(screen.getByLabelText('필요'));
+  // 필수 표시는 schema에서 나온다: 이름은 늘, 연락처는 '필요'를 체크했을 때만.
+  expect(screen.getByRole('textbox', { name: '이름' }).getAttribute('aria-required')).toBe('true');
+  expect(screen.getByRole('textbox', { name: '연락처' }).getAttribute('aria-required')).toBe('false');
+  fireEvent.click(screen.getByLabelText('필요', { exact: false }));
   expect(screen.getByRole('textbox', { name: '연락처' }).getAttribute('aria-required')).toBe('true');
+  expect(screen.getByText('연락처').querySelector('.wk-required')).not.toBeNull();
+  fireEvent.click(screen.getByLabelText('필요', { exact: false }));
+  expect(screen.getByRole('textbox', { name: '연락처' }).getAttribute('aria-required')).toBe('false');
   fireEvent.click(screen.getByText('저장'));
   await waitFor(() => expect(document.activeElement).toBe(input));
   expect(save).not.toHaveBeenCalled();
   expect(screen.getByRole('alert').textContent).toBe('이름 필요');
   expect(input.getAttribute('aria-invalid')).toBe('true');
+});
+
+it('F4(5단계 교정) 서버 필드 오류가 고칠 수 없는(disabled) 칸으로 대응되면 칸에 붙은 것으로 세지 않고 폼 한 줄로 알린다', async () => {
+  function Screen() {
+    const editor = useSaveForm({
+      schema,
+      source: { id: 1, values },
+      save: async () => {
+        throw new RequestFailure({ kind: 'validation', status: 400, fieldErrors: [{ field: 'contact', code: 'Bad' }] });
+      },
+      fieldError: (error) => (error.field === 'contact' ? { field: 'contact', message: '연락처 거절' } : undefined),
+    });
+    return (
+      <F editor={editor} renderFailure={() => '저장 실패 한 줄'}>
+        <F.Failure />
+        <F.Text name="name" label="이름" />
+        <F.Text name="contact" label="연락처" disabled />
+        <F.Submit />
+      </F>
+    );
+  }
+  await mount(() => <Screen />);
+  await act(async () => fireEvent.click(screen.getByText('저장')));
+  await screen.findByText('저장 실패 한 줄');
+  expect(screen.getAllByRole('alert')).toHaveLength(1);
+  expect(screen.queryByText('연락처 거절')).toBeNull();
 });
 
 it('F5 입력칸을 프로젝트 부품으로 바꿔도 값·검증·오류 focus가 그대로다', async () => {
@@ -94,7 +134,7 @@ it('F5 입력칸을 프로젝트 부품으로 바꿔도 값·검증·오류 focu
     );
   }
   await mount(() => <Custom />);
-  const input = screen.getByLabelText('사용자 이름');
+  const input = screen.getByLabelText('사용자 이름', { exact: false });
   fireEvent.change(input, { target: { value: '' } });
   fireEvent.click(screen.getByText('저장'));
   await waitFor(() => expect(document.activeElement).toBe(input));
@@ -301,16 +341,16 @@ it('대화창 안 폼의 닫기·취소는 그 안 폼만 보고 묻고, 바깥 
     );
   }
   await mount(() => <Example />);
-  fireEvent.change(screen.getByLabelText('바깥'), { target: { value: 'O' } });
+  fireEvent.change(screen.getByLabelText('바깥', { exact: false }), { target: { value: 'O' } });
   await act(async () => fireEvent.click(screen.getByText('안쪽 저장')));
   expect(innerSave).toHaveBeenCalledTimes(1);
   expect(outerSave).not.toHaveBeenCalled();
-  fireEvent.change(screen.getByLabelText('안쪽'), { target: { value: 'B' } });
+  fireEvent.change(screen.getByLabelText('안쪽', { exact: false }), { target: { value: 'B' } });
   fireEvent.click(screen.getByText('닫기'));
   await screen.findByText('작성을 취소할까요?');
   fireEvent.click(screen.getByText('취소하기'));
   await waitFor(() => expect(screen.queryByText('편집')).toBeNull());
-  expect((screen.getByLabelText('바깥') as HTMLInputElement).value).toBe('O');
+  expect((screen.getByLabelText('바깥', { exact: false }) as HTMLInputElement).value).toBe('O');
 });
 
 it('선택은 값이 비었을 때만 빈 선택지를 두고, 선택지 상태(불러오는 중·실패·재시도)를 그 칸 자리에 보인다', async () => {

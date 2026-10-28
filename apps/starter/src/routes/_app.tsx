@@ -41,6 +41,12 @@ function AppLayout() {
             >
               {t('app.nav.terms')}
             </Link>
+            <Link
+              to="/shows/new"
+              className="rounded-md px-3 py-1.5 text-slate-600 hover:bg-slate-100 data-[status=active]:bg-slate-100 data-[status=active]:font-medium data-[status=active]:text-slate-900"
+            >
+              {t('app.nav.shows')}
+            </Link>
           </nav>
           <div className="ml-auto flex items-center gap-2">
             <div role="group" aria-label={t('app.language')} className="flex rounded-md border border-slate-200 p-0.5 text-xs">

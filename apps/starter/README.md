@@ -78,8 +78,9 @@ vendor/                      web-kit tarball(커밋하지 않음, `pnpm starter:
 | `app/auth.tsx` | 캡처한 토큰으로 로그아웃, `ended`의 `by`(local·other-tab·server)별 이동 |
 | 상품 목록 | `defineSearch`(쉼표 목록 `encode`, 기간 묶음 `valid`, `view` key, 고정 목록은 `z.enum`·서버 선택지(분류)는 `check` — 없는 값은 그 필드만 기본값), route `validateSearch` + `beforeLoad`, `useList` + `ListView` 필터·표·페이지 이동·일괄 확인, `/api` 반복 키 직렬화 |
 | 상품 상세 | `useRecord(options, id)`, loader는 미리 받기만, `Record`·`Record.Fields`·`Record.Field` |
-| 등록·수정 | `useSaveForm` + `<Form editor>`와 `Form.of<Values>()` 부품으로 필수·오류·선택지 상태·배열 입력을 선언. 수정은 `confirm` + `Form.Confirm`, 완료 후 이동은 `onSaved`. 루트의 `FormGuard` 한 곳에서 이탈을 보호 |
+| 등록·수정 | `useSaveForm` + `<Form editor>`와 `Form.of<Values>()` 부품으로 오류·선택지 상태·배열 입력을 선언(필수 표시는 schema에서 나온다). 수정은 `confirm` + `Form.Confirm`, 완료 후 이동은 `onSaved`. 루트의 `FormGuard` 한 곳에서 이탈을 보호 |
 | 약관 등록(레퍼런스 재현) | 레퍼런스 약관 등록(검증 → 저장 확인 → 저장 → 저장 완료 확인 → 상세)을 키트 값(`confirm`·`acknowledge`)과 부품 배치만으로 재현. `/terms/new` → `/terms/$termsId` |
+| 공연 예시(복잡한 폼 재현) | DT 공연 폼의 복잡한 부분을 키트 값만으로 재현: 회차 줄 추가·삭제·이동(`Form.Array`, 서버 오류가 줄을 따라감), 좌석도 `Form.File`(저장 실패 뒤 보존·다시 업로드), 판매처 키 `Form.Dialog` 하위 폼(Enter가 바깥 폼을 제출하지 않음), 저장 중 진행 표시. `/shows/new` |
 | 로그인 | `<Form protect={false}>`로 제품 예외를 명시. 공개 요청·토큰으로 세션 시작·자격증명 거절 문구는 제품이 연결 |
 | `shared/ui/adapters.test.tsx` | 설치한 Field·ConfirmDialog·RetryRegion을 공개 계약 검사로 확인 |
 

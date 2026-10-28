@@ -15,11 +15,12 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from 'react';
-import { AlertDialog, ConfirmDialog, Dialog } from '../ui/dialog';
+import { AlertDialog, ConfirmDialog, Dialog, Pending } from '../ui/dialog';
 import { FormArrayField, type FormArrayRows } from './array';
 import { FieldFrame, type FieldControlProps } from './field';
+import type { FormFileValue } from './file';
 import { createFormNavigation, type FormNavigation as Navigation, type LeaveReason } from './navigation';
-import type { SaveFormEditor } from './save-form';
+import { lockField, type SaveFormEditor } from './save-form';
 
 // ─── 이탈 보호 ───────────────────────────────────────────────────────────────
 
@@ -115,6 +116,8 @@ const defaultFormMessages = {
   confirm: '저장',
   savedTitle: '저장되었습니다.',
   savedConfirm: '확인',
+  saving: '저장 중입니다.',
+  removeFile: '파일 삭제',
   count: (current: number, max: number) => `${current}/${max}`,
 };
 export type FormMessages = typeof defaultFormMessages;
@@ -142,6 +145,11 @@ function useFormContext(): FormContextValue {
   return value;
 }
 
+/** 고칠 수 없는 칸이면 마운트 동안 폼에 알린다(그 칸으로 대응된 서버 오류는 폼 한 줄로 간다). */
+function useLocked(editor: AnyEditor, name: string, disabled: boolean) {
+  useLayoutEffect(() => (disabled ? lockField(editor.form, name) : undefined), [editor.form, name, disabled]);
+}
+
 /** 오류 값 중 첫 문자열 문구를 고른다. 원시 응답 객체는 보이지 않는다. */
 function firstMessage(errors: readonly unknown[]): string | undefined {
   for (const error of errors) {
@@ -149,6 +157,11 @@ function firstMessage(errors: readonly unknown[]): string | undefined {
     if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string') return error.message;
   }
   return undefined;
+}
+
+/** 저장 요청 또는 저장 뒤 완료 처리(이동 등)가 진행 중인가. 이 동안 버튼은 잠기고 저장 버튼 옆에 진행 표시가 선다. */
+function inProgress(editor: AnyEditor): boolean {
+  return editor.stage.kind === 'saving' || (editor.stage.kind === 'saved' && editor.stage.completing);
 }
 
 /**
@@ -224,8 +237,6 @@ function FormRoot({
 export interface FormFieldProps {
   readonly name: string;
   readonly label: string;
-  /** 필수 별표·aria-required. 검증은 schema가 하며, 같은 업무 조건을 값→boolean 함수로 줄 수 있다. */
-  readonly required?: boolean | ((values: never) => boolean);
   readonly description?: string;
   /** 고칠 수 없는 칸. 오류도 숨긴다. */
   readonly disabled?: boolean;
@@ -245,7 +256,6 @@ export interface FormControl<V = unknown> extends FieldControlProps {
 function Field<V = unknown>({
   name,
   label,
-  required = false,
   description,
   disabled = false,
   labelTarget = 'control',
@@ -256,8 +266,9 @@ function Field<V = unknown>({
   readonly children: (control: FormControl<V>, labelId: string) => ReactNode;
 }) {
   const { editor, formatError } = useFormContext();
-  const values = useSelector(editor.form.store, (state) => state.values);
-  const isRequired = typeof required === 'function' ? (required as (values: unknown) => boolean)(values) : required;
+  useLocked(editor, name, disabled);
+  // 필수 표시는 schema가 정한다(칸만 비운 지금 값을 schema가 거부하는가). 값이 바뀌면 다시 판정한다.
+  const isRequired = useSelector(editor.form.store, () => editor.isRequired(name));
   return (
     <editor.form.Field name={name}>
       {(field) => (
@@ -305,7 +316,7 @@ function Text({
   onKeyDown,
   ...field
 }: FormFieldProps & {
-  readonly type?: 'text' | 'email' | 'password' | 'tel' | 'date' | 'number' | 'url' | 'search';
+  readonly type?: 'text' | 'email' | 'password' | 'tel' | 'date' | 'time' | 'number' | 'url' | 'search';
   readonly placeholder?: string;
   readonly autoComplete?: string;
   readonly autoFocus?: boolean;
@@ -490,6 +501,7 @@ function Select({
 /** boolean 값 하나. 라벨이 체크박스 옆에 붙는다. onChange는 사용자가 바꾼 직후에만 부른다. */
 function Checkbox({ onChange, ...field }: FormFieldProps & { readonly onChange?: (checked: boolean) => void }) {
   const { editor, formatError } = useFormContext();
+  useLocked(editor, field.name, field.disabled === true);
   const id = editor.fieldId(field.name);
   return (
     <editor.form.Field name={field.name}>
@@ -524,6 +536,56 @@ function Checkbox({ onChange, ...field }: FormFieldProps & { readonly onChange?:
         );
       }}
     </editor.form.Field>
+  );
+}
+
+/**
+ * 파일 하나 고르기. 값은 FormFileValue이고 지금 파일 이름을 상태에서 그린다(네이티브 입력은 다시 그려지면 비므로 근거로 쓰지 않는다).
+ * 선택 창을 열었다 취소해도 값은 그대로다. 지우는 길은 제거 버튼 하나다(실수로 연 창 때문에 이미 있는 파일을 잃지 않는다).
+ * 다른 칸 오류·재마운트·대화창·저장 실패 뒤에도 고른 File은 폼 값에 그대로 남는다. 업로드는 프로젝트 save가 한다.
+ */
+function FileField({ accept, ...field }: FormFieldProps & { readonly accept?: string }) {
+  const { copy } = useFormContext();
+  return (
+    <Field<FormFileValue> {...field}>
+      {({ value, change, blur, ...control }) => {
+        const current: FormFileValue = value ?? { kind: 'empty' };
+        const name = current.kind === 'selected' ? current.file.name : current.kind === 'existing' ? current.name : undefined;
+        const nameId = `${control.id}-file`;
+        const describedBy = [control['aria-describedby'], name === undefined ? undefined : nameId].filter(Boolean).join(' ');
+        return (
+          <div className="wk-actions">
+            <input
+              {...control}
+              aria-describedby={describedBy === '' ? undefined : describedBy}
+              // 고른 파일이 사라지면(제거·초기화) 네이티브 입력도 비우도록 다시 만든다.
+              key={current.kind === 'selected' ? 'selected' : 'idle'}
+              type="file"
+              accept={accept}
+              onBlur={blur}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file === undefined) return;
+                change({ kind: 'selected', file });
+              }}
+            />
+            {name === undefined ? null : (
+              <>
+                <span id={nameId}>{name}</span>
+                <button
+                  type="button"
+                  className="wk-button wk-button-ghost"
+                  disabled={field.disabled}
+                  onClick={() => change(current.kind === 'existing' ? { kind: 'removed' } : { kind: 'empty' })}
+                >
+                  {copy.removeFile}
+                </button>
+              </>
+            )}
+          </div>
+        );
+      }}
+    </Field>
   );
 }
 
@@ -588,19 +650,23 @@ function Failure({ className }: { readonly className?: string }) {
 /**
  * 저장 버튼. 저장 중·확인 대기·완료 처리 중에는 aria-disabled로 잠근다. disabled로 바꾸면 포커스가 본문으로 떨어져
  * 확인창을 닫은 뒤 돌아올 자리가 사라지고, 열린 직후 Tab이 창 밖에서 시작한다.
+ * 저장 요청·완료 처리가 진행 중이면 버튼 바로 뒤에 진행 표시(문구는 화면 낭독기용 `messages.saving`)를 둔다(사용자 결정 2026-10-28).
  */
 function Submit({ children, className }: { readonly children?: ReactNode; readonly className?: string }) {
   const { editor, copy } = useFormContext();
   const locked = editor.stage.kind !== 'idle';
   return (
-    <button type="submit" className={join('wk-button wk-button-primary', className)} aria-disabled={locked || undefined}>
-      {children ?? copy.submit}
-    </button>
+    <>
+      <button type="submit" className={join('wk-button wk-button-primary', className)} aria-disabled={locked || undefined}>
+        {children ?? copy.submit}
+      </button>
+      {inProgress(editor) ? <Pending label={copy.saving} /> : null}
+    </>
   );
 }
 
 /**
- * 취소 버튼. 대화창 안이면 그 대화창을, 아니면 `to`로 이동한다. 입력이 있으면 취소 문구로 한 번 묻고, 저장 중이면 아무것도 하지 않는다.
+ * 취소 버튼. 대화창 안이면 그 대화창을, 아니면 `to`로 이동한다. 입력이 있으면 취소 문구로 한 번 묻고, 저장·완료 처리 중이면 잠겨 아무것도 하지 않는다.
  */
 function Cancel({
   to,
@@ -620,9 +686,9 @@ function Cancel({
     <button
       type="button"
       className={join('wk-button wk-button-secondary', className)}
-      aria-disabled={editor.isSaving || undefined}
+      aria-disabled={inProgress(editor) || undefined}
       onClick={() => {
-        if (editor.getState().isSaving) return;
+        if (editor.getState().isSaving || inProgress(editor)) return;
         const run =
           scope !== undefined
             ? scope.close
@@ -661,6 +727,7 @@ function Confirm({
     <ConfirmDialog
       open={open}
       pending={editor.isSaving}
+      pendingLabel={copy.saving}
       returnFocus={submitOrigin}
       title={title ?? copy.confirmTitle}
       confirmLabel={confirmLabel ?? copy.confirm}
@@ -689,6 +756,7 @@ function Saved({ title, confirmLabel, children }: { readonly title?: ReactNode; 
       key={attempts.current.count}
       open={editor.acknowledge && stage.kind === 'saved'}
       pending={stage.kind === 'saved' && stage.completing}
+      pendingLabel={copy.saving}
       title={title ?? copy.savedTitle}
       confirmLabel={confirmLabel ?? copy.savedConfirm}
       onConfirm={() => void editor.complete()}
@@ -762,6 +830,7 @@ export const Form = Object.assign(FormRoot, {
   TextArea,
   Select,
   Checkbox,
+  File: FileField,
   Array: ArrayField,
   Section,
   Failure,
@@ -776,22 +845,22 @@ export const Form = Object.assign(FormRoot, {
 type Keys<T> = Extract<DeepKeys<T>, string>;
 /** 값이 V인 칸 이름만. */
 type KeysOf<T, V> = { [K in Keys<T>]: DeepValue<T, K> extends V ? K : never }[Keys<T>];
-type Named<T, P, K extends string> = Omit<P, 'name' | 'required'> & {
+type Named<P, K extends string> = Omit<P, 'name'> & {
   readonly name: K;
-  readonly required?: boolean | ((values: T) => boolean);
 };
 type PropsOf<C> = C extends (props: infer P) => unknown ? P : never;
 /** 칸 이름이 값 타입으로 좁혀진 Form. 문자열 입력에는 문자열 칸만, 체크박스에는 boolean 칸만 들어간다. 동작은 Form과 같다. */
 export type TypedForm<T> = typeof FormRoot & {
   readonly Field: <K extends Keys<T>>(
-    props: Named<T, Omit<PropsOf<typeof Field>, 'children'>, K> & {
+    props: Named<Omit<PropsOf<typeof Field>, 'children'>, K> & {
       readonly children: (control: FormControl<DeepValue<T, K>>, labelId: string) => ReactNode;
     },
   ) => ReactNode;
-  readonly Text: (props: Named<T, PropsOf<typeof Text>, KeysOf<T, string>>) => ReactNode;
-  readonly TextArea: (props: Named<T, PropsOf<typeof TextArea>, KeysOf<T, string>>) => ReactNode;
-  readonly Select: (props: Named<T, PropsOf<typeof Select>, KeysOf<T, string>>) => ReactNode;
-  readonly Checkbox: (props: Named<T, PropsOf<typeof Checkbox>, KeysOf<T, boolean>>) => ReactNode;
+  readonly Text: (props: Named<PropsOf<typeof Text>, KeysOf<T, string>>) => ReactNode;
+  readonly TextArea: (props: Named<PropsOf<typeof TextArea>, KeysOf<T, string>>) => ReactNode;
+  readonly Select: (props: Named<PropsOf<typeof Select>, KeysOf<T, string>>) => ReactNode;
+  readonly Checkbox: (props: Named<PropsOf<typeof Checkbox>, KeysOf<T, boolean>>) => ReactNode;
+  readonly File: (props: Named<PropsOf<typeof FileField>, KeysOf<T, FormFileValue>>) => ReactNode;
   readonly Array: <K extends KeysOf<T, readonly unknown[]>>(props: {
     readonly name: K;
     readonly minItems?: number;

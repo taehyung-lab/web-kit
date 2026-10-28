@@ -63,7 +63,7 @@ export const http: Http = createHttp({
   defaults: {
     baseURL: env.VITE_API_BASE_URL,
     timeout: env.VITE_API_TIMEOUT_MS,
-    headers: { 'Content-Type': 'application/json' },
+    // Content-Type은 고정하지 않는다. axios가 본문으로 정한다(객체 → JSON, FormData → multipart). 고정하면 파일 업로드가 JSON으로 바뀐다.
   },
 });
 

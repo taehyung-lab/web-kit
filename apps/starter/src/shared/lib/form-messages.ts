@@ -33,6 +33,8 @@ export function useFormCopy(): {
       confirm: t('common.save'),
       savedTitle: t('common.savedTitle'),
       savedConfirm: t('common.confirm'),
+      saving: t('common.saving'),
+      removeFile: t('common.removeFile'),
     },
     formatError,
     renderFailure: (failure, place) => (place === 'completion' ? undefined : t(failureCopyKey(failure))),

@@ -1,6 +1,6 @@
 # 0006. 폼·상세·대화창: 저장 수명은 상태가, 배치는 부품 묶음이, 포커스는 대화창이 맡는다
 
-- 상태: 채택 (2026-10-28, 3.0 5단계 구현)
+- 상태: 채택 (2026-10-28, 3.0 5단계 구현). 「필수 별표」 행은 [0007](0007-complex-form-fit.md)이 대체한다(필수 표시는 schema 하나에서, DT 사용자 규칙).
 - 관련 결정: [0003](0003-web-kit-3-redesign.md) §3 form·record 행, §4 구조 규칙, 순서 5단계 행. [0005](0005-list-filter-table-permission.md)의 부품 구조(`<List model>` + `List.*`)를 폼·상세에도 쓴다. 보장 내용의 정본은 `packages/web-kit/skills/web-kit-form`·`web-kit-record`이며 여기에는 결정·이유·출처만 둔다.
 - 근거 자료: DT v2 운영자 등록·수정·상세(`apps/admin/src/features/settings/screens/operator-form`·`operator-detail`)와 DT 공용(`shared/ui/form/*`·`shared/ui/dialog/*`·`shared/ui/detail/*`), 레퍼런스(`src/shared/ui/form/FormSaveDialogs.tsx`·`submit-form.ts`·`FormField.tsx`·`useInitialFocus.ts`, 약관 등록 `src/features/terms/screens/terms-form`), DT 1.5(`v1.5` 태그) 운영자 폼, web-kit 2.0 `form/ui.tsx`·`ui/dialog.tsx`·`detail-ui.tsx`, Base UI 1.7.0 `floating-ui-react/components/FloatingFocusManager.js`.
 

@@ -2,6 +2,7 @@
 import { authResources } from '@/features/auth/i18n';
 import { memberResources } from '@/features/members/i18n';
 import { productResources } from '@/features/products/i18n';
+import { showResources } from '@/features/shows/i18n';
 import { termsResources } from '@/features/terms/i18n';
 import { sharedResources } from '@/shared/i18n';
 import i18next, { type i18n as I18n } from 'i18next';
@@ -31,7 +32,7 @@ void i18n.use(initReactI18next).init({
   resources: Object.fromEntries(
     LANGUAGES.map((lng) => [
       lng,
-      { translation: { ...sharedResources[lng], ...appResources[lng], ...authResources[lng], ...productResources[lng], ...memberResources[lng], ...termsResources[lng] } },
+      { translation: { ...sharedResources[lng], ...appResources[lng], ...authResources[lng], ...productResources[lng], ...memberResources[lng], ...termsResources[lng], ...showResources[lng] } },
     ]),
   ),
 });
