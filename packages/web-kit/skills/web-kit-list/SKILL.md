@@ -53,7 +53,7 @@ description: 목록 필터·기간 프리셋·키워드 칩·표·페이지 이�
 
 `<List model={useList(...)}>` 안에 `List.Filter`·`FilterActions`·`Detail`·`Text`·`Select`·`MultiSelect`·`Period`·`Keywords`·`Result`·`Table`·`Total`·`PageSize`·`SortSelect`·`Pagination`·`Actions`·`BulkAction`·`Download`를 원하는 배치로 둔다. 부품은 context로 같은 상태를 읽으므로 필터를 위·왼쪽으로 옮겨도 조회·정렬·선택 연결을 다시 쓰지 않는다. 프로젝트 입력칸은 `useListField(name)`로 같은 초안에 연결한다.
 
-- `Period`는 명시한 시간대·시계로 단축(`value` 이동 또는 `range(today)`)을 계산하고, 지금 기간과 같은 단축은 눌린 상태로 보인다. 오류 문구는 상태의 기간 검증 결과를 보일 뿐이다. 일/월 이동은 달력 기준이며 월말을 보정한다.
+- `Period`는 명시한 시간대·시계로 단축(`value` 이동 또는 `range(today)`)을 계산하고, 지금 기간과 같은 단축은 눌린 상태로 보인다. 보이는 오류 문구는 제품 검증 `validateDraft`가 그 기간의 시작 칸에 낸 문제 하나뿐이다(맞지 않는 기간은 검색할 때 기본값으로 돌아갈 뿐 문구를 띄우지 않는다). 일/월 이동은 달력 기준이며 월말을 보정한다.
 - `Keywords`는 `keywordInput` 상태를 표시한다. Enter·추가·검색이 같은 정규화를 쓴다. 검색어 칸의 Enter는 [추가]이고 검색(필터 제출)은 하지 않는다(1.5 검색어 입력과 같다).
 - `MultiSelect`는 `[]`를 제한 없음(전체 체크 표시)으로 쓰고 전부 고르면 `[]`로 접는다. `allLabel`을 주면 "전체" 칸을 둔다. `Select`는 빈 선택을 기본값이 없을 때 undefined로 둔다.
 - `Result`는 조회 안 함·로딩·결과 없는 실패(재시도)·빈 결과를 그리고, 이전 결과를 보이는 중 실패하면 원인 · `messages.refreshFailed` 안내와 재시도를 위에 띄운다. 실패 문구는 `List renderFailure(failure, place)`가 고르고 null이면 그 자리에 아무것도 그리지 않는다(앱 경계가 이미 알린 401·403 등).

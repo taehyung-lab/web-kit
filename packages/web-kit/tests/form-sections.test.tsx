@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 // 파일 책임: 접을 수 있는 폼 구역(Form.Section fields·FormSection)의 오류 처리를 실제 DOM으로 검사한다(0003 §3 form 행 "오류 요약·구역 펼침·첫 오류 포커스").
-// 닫힌 구역 안 칸의 클라이언트 오류·서버 오류 → 그 구역이 펼쳐지고 머리글에 오류 표시, 첫 오류 칸에 포커스. 1.5 form-accordion과 같은 순서다.
+// 닫힌 구역 안 칸의 클라이언트 오류·서버 오류 → 그 구역이 펼쳐지고 머리글에 오류 표시(1.5 「!」), 첫 오류 칸에 포커스.
+// 열림 규칙은 참조 프로젝트 use-form-sections의 사건 방식이다: 거절된 제출마다 오류 구역을 펼치고, 그 밖의 열고 닫기는 사용자 상태다.
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createMemoryHistory, createRootRoute, createRoute, createRouter, Outlet, RouterProvider } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
@@ -96,7 +97,29 @@ it('닫힌 구역 안 칸의 서버 필드 오류: 그 구역이 펼쳐지고 �
   expect(header('주문').textContent).toContain('오류 1개');
 });
 
-it('제출 뒤 사용자가 다시 닫으면 다음 제출까지 닫힌 채 둔다', async () => {
+it('저장 중에 사용자가 닫은 구역도 그 저장의 서버 필드 오류가 늦게 오면 펼치고 그 칸에 포커스한다', async () => {
+  let reject: (error: unknown) => void = () => undefined;
+  const save = () =>
+    new Promise<never>((_, fail) => {
+      reject = fail;
+    });
+  await mount(() => <Screen values={VALID} save={save} />);
+  await act(async () => fireEvent.click(screen.getByText('저장')));
+  fireEvent.click(header('주문'));
+  expect(header('주문').getAttribute('aria-expanded')).toBe('false');
+  await act(async () => reject(rejectGrade()));
+  await waitFor(() => expect(document.activeElement).toBe(grade()));
+  expect(header('주문').getAttribute('aria-expanded')).toBe('true');
+  expect(header('주문').textContent).toContain('오류 1개');
+  // 고쳐도 서버 오류가 연 구역은 열린 채 남고, 그 뒤 닫으면 닫힌다.
+  fireEvent.change(grade(), { target: { value: 'R' } });
+  await act(async () => undefined);
+  expect(header('주문').getAttribute('aria-expanded')).toBe('true');
+  fireEvent.click(header('주문'));
+  expect(header('주문').getAttribute('aria-expanded')).toBe('false');
+});
+
+it('제출 뒤 사용자가 다시 닫으면 다음 거절된 제출까지 닫힌 채 둔다', async () => {
   await mount(() => <Screen values={{ ...VALID, order: { grades: [{ key: 'a', name: '' }] } }} save={async () => undefined} />);
   fireEvent.click(header('주문'));
   await act(async () => fireEvent.click(screen.getByText('저장')));

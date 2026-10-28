@@ -15,6 +15,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { isRequestFailure, type FieldError } from '../failure';
 import { followRows, rowMark } from './rows';
+import { revealFormSections } from './sections';
 
 export interface SaveFormOptions<TInput, TOutput, TResult = { readonly saved?: TInput } | void> {
   /** 입력 → 저장 값 동기 검증. zod 4 등 Standard Schema 구현이면 되고, 비동기 검증(async refine 등)은 받지 않는다. */
@@ -219,12 +220,18 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
     focusTimer.current = undefined;
   }
 
-  /** 펼친 뒤 disabled가 풀린 다음 작업에서 화면 순서의 첫 필드로 focus한다. */
+  /**
+   * 거절된 제출 하나(클라이언트 검증 실패·서버 필드 오류 도착)를 알린다: 실패한 칸을 가진 키트 구역과 화면의 접힌 영역(reveal)을 펼친 뒤,
+   * disabled가 풀린 다음 작업에서 화면 순서의 첫 필드로 focus한다.
+   */
   function focusFirst(fields: readonly string[]) {
     cancelFocus();
     if (fields.length === 0 || !mounted.current) return;
     const { reveal } = latest.current;
-    if (reveal !== undefined) flushSync(() => reveal(fields));
+    flushSync(() => {
+      revealFormSections(form, fields);
+      reveal?.(fields);
+    });
     focusTimer.current = setTimeout(() => {
       focusTimer.current = undefined;
       if (!mounted.current) return;

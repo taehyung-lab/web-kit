@@ -16,14 +16,14 @@ description: 등록·수정·대화창 폼의 저장·저장 확인·저장 완�
 - 고칠 수 없는 칸(`disabled`)은 오류를 숨긴다. 서버 필드 오류가 그 칸으로 대응되면 칸에 붙은 것으로 세지 않고 폼 한 줄(`Form.Failure`)로 알린다.
 - `Form.Text`·`TextArea`의 `maxLength`는 길어지는 편집만 거부한다(한글 조합 커밋도). 서버가 준 초과 초기값은 줄일 수 있다. `showCount`면 글자 수를 보인다.
 - `Form.Select`는 값이 비었을 때만 빈 선택지(`placeholder`)를 둔다. 서버 선택지는 `status`('loading'·'ready'·`{ failure }`)와 `onRetry`로 그 칸 자리에 불러오는 중·실패·다시 시도를 보인다. `onChange`는 사용자가 고른 직후에만 불린다(함께 비울 값).
-- `Form.Section`: 칸 묶음. `fields`(이 구역 칸의 정확한 경로나 접두, 예 `['order.grades']`)를 주면 접을 수 있는 구역이다. 처음엔 펼침, 머리글 버튼으로 닫고 연다(닫혀도 칸은 마운트된 채 숨김). 구역 칸에 오류(클라이언트·서버)가 있으면 머리글에 「!」(화면 낭독기는 `messages.sectionErrors(count)`)를 보이고, 제출 뒤 오류가 있으면 그 구역을 펼친 다음 첫 오류 칸에 포커스한다. 제출이 연 구역은 고쳐도 열린 채 두고, 그 뒤 사용자가 닫으면 다음 제출까지 닫힌 채다(1.5 공연 폼 구역과 같다). 키트 `Form` 밖의 폼은 `FormSection`(`form`·`fields`·`title`·`errorLabel`)을 같은 규칙으로 쓴다. 구역 열림·오류 수를 프로젝트가 따로 만들지 않는다.
+- `Form.Section`: 칸 묶음. `fields`(이 구역 칸의 정확한 경로나 접두, 예 `['order.grades']`)를 주면 접을 수 있는 구역이다. 처음엔 펼침, 머리글 버튼으로 닫고 연다(닫혀도 칸은 마운트된 채 숨김). 열림 규칙(참조 프로젝트 `use-form-sections`의 사건 방식): 제출이 거절될 때마다(클라이언트 검증 실패, 서버 필드 오류 도착) 실패한 칸을 가진 구역을 모두 펼친 다음 화면 순서 첫 오류 칸에 포커스한다. 저장 중에 사용자가 닫은 구역도 그 저장의 서버 오류가 오면 펼친다. 그 밖의 열고 닫기는 사용자 상태라, 펼쳐진 구역은 고쳐도 열린 채이고 사용자가 닫으면 다음 거절까지 닫힌 채다. 표시(1.5 공연 폼 구역과 같다): 구역 칸에 오류(클라이언트·서버)가 있으면 머리글에 「!」, 화면 낭독기는 `messages.sectionErrors(count)`(기본 `오류 N개`)를 읽는다. 키트 저장 흐름 밖에서 칸에 오류를 붙이는 화면은 포커스 전에 `revealFormSections(form, 칸 목록)`을 부른다. 키트 `Form` 밖의 폼은 `FormSection`(`form`·`fields`·`title`·`errorLabel`)을 같은 규칙으로 쓴다. 구역 열림·오류 수를 프로젝트가 따로 만들지 않는다.
 - `Form.Failure`: 폼 수준 한 줄. 칸에 붙지 못한 저장 실패와, 저장 뒤 완료 처리 실패(다시 시도 = 완료 처리만)를 보인다. 서버 필드 오류가 모두 칸에 붙은 검증 실패는 그리지 않는다. 위치는 놓는 곳이 정한다.
 - `Form.File`: 값은 `FormFileValue`(`empty`·`existing{name}`·`selected{file}`·`removed`). 지금 파일 이름을 상태에서 그리고 입력의 설명으로 잇는다. 선택 창을 열었다 취소해도 값은 그대로이고, 지우는 길은 제거 버튼 하나다(기존 파일이면 `removed`). 고른 File은 다른 칸 오류·재마운트·대화창 열고 닫기·저장 실패 뒤에도 같은 객체로 남아 다시 저장하면 그대로 보낸다. 업로드와 `removed`의 요청 변환은 `save`가 한다.
 - `Form.Submit`은 저장 중·확인 대기·완료 처리 중에 `aria-disabled`로 잠긴다(`disabled`로 바꾸지 않아 포커스가 남는다). 저장 요청이나 완료 처리(이동 등)가 진행 중이면 버튼 바로 뒤에 진행 표시(`.wk-spinner`, 문구 `messages.saving`은 화면 낭독기용 `.wk-visually-hidden`)가 선다. `Form.Cancel`도 그동안 잠긴다.
 - `Form.Cancel to={...}`: 입력이 있으면 취소 문구로 한 번 묻고 이동한다. `Form.Dialog` 안이면 그 대화창을 닫는다. 저장 중이면 아무것도 하지 않는다.
 - `Form.Confirm`: `useSaveForm({ confirm: true })`의 저장 전 확인창. 제출한 값(snapshot)을 children에 주고 그 값으로 저장한다. 저장 중에는 닫히지 않는다.
 - `Form.Saved`: `useSaveForm({ acknowledge: true })`의 저장 완료 확인창. 확인이 `onSaved`(보통 이동)를 한 번 실행한다. Esc·바깥 클릭으로 닫히지 않는다.
-- Enter: 폼에서 Enter는 기본적으로 제출(저장 버튼 클릭)이다. 단, [추가] 버튼이 딸린 입력칸(배열 줄 입력, 검색어 칩 등)에서는 Enter가 제출 대신 [추가] 클릭으로 동작한다. 모달 안 입력칸의 Enter는 그 모달의 확인(모달 폼 제출)이며 바깥 폼은 제출되지 않는다. 키트에서: 일반 칸은 `Form.Submit`이 있는 `<Form>`이 받으므로 칸에서 Enter를 막지 않는다. [추가] 칸은 `onKeyDown={rows.enterAdds(add)}`(목록 `List.Keywords`는 기본). 모달은 `Form.Dialog` 안에 자기 `<Form>`과 `Form.Submit`을 둔다.
+- Enter: 폼에서 Enter는 기본적으로 제출(저장 버튼 클릭)이다. 단, 입력한 값을 [추가] 버튼이 목록에 넣는 입력칸(검색어 칩, 제목 입력 + [추가]로 목록에 넣는 칸 등)에서는 Enter가 제출 대신 [추가] 클릭으로 동작한다. 줄마다 자기 칸이고 [추가]가 빈 줄만 더하는 배열 줄 입력(등급명·회차 날짜 등)은 일반 칸이라 Enter가 폼 제출이다. 모달 안 입력칸의 Enter는 그 모달의 확인(모달 폼 제출)이며 바깥 폼은 제출되지 않는다. 키트에서: 일반 칸은 `Form.Submit`이 있는 `<Form>`이 받으므로 칸에서 Enter를 막지 않는다. 값을 목록에 넣는 [추가] 칸은 `onKeyDown={rows.enterAdds(add)}`(목록 `List.Keywords`는 기본). 모달은 `Form.Dialog` 안에 자기 `<Form>`과 `Form.Submit`을 둔다.
 - `Form.Dialog`: 대화창 안 하위 폼(자기 `useSaveForm`). 안쪽 제출(버튼·Enter)은 안쪽만 검증·저장하고 바깥 폼의 저장·검증 오류·확인창을 건드리지 않는다. 바깥에 오류가 있어도 안쪽 제출은 막히지 않는다. 닫기·취소는 그 안의 폼만 보고 묻는다(바깥이 dirty여도 바깥 이탈 확인은 뜨지 않는다). 하위 결과를 바깥 값에 넣으면 바깥이 dirty가 되어 이후 이탈은 바깥 기준으로 묻는다. 입력이 있어도 묻지 않고 닫는 대화창은 안쪽을 `<Form protect={false}>`로 둔다.
 - 이탈: `FormGuard`가 등록된 폼 중 하나라도 입력이 기준선과 다르면 Router 이동·브라우저 이탈을 한 번 묻고, 저장 중이면 묻지 않고 막는다. 저장 성공 뒤 이동은 묻지 않는다. Router를 거치지 않는 이탈(같은 메뉴 다시 누르기)은 `useLeave()(run, reason)`로 같은 판정을 받는다. 확인 뒤 `run`이 이동하면 `ignoreBlocker: true`로 이동한다. 로그인 같은 제품 예외만 `<Form protect={false}>`.
 - 문구는 `FormGuard messages`(까닭별: navigate·cancel)·`Form messages`·`formatError`(칸 오류 값 → 문구)·`renderFailure(failure, place)`(place: save·completion·options, `null`이면 그 자리에 그리지 않음), 모양은 `--wk-*` 토큰으로 바꾼다. 새 화면마다 Field·이탈 확인·확인창을 다시 만들지 않는다.
@@ -61,7 +61,7 @@ description: 등록·수정·대화창 폼의 저장·저장 확인·저장 완�
 - React key는 값 안의 줄 식별(예: 새 줄을 만들 때 넣은 `key`)을 쓴다.
 
 - 삭제 버튼은 `rows.canRemove`가 참일 때 각 줄에 그린다. 현재 줄 수가 `minItems`보다 클 때만 삭제할 수 있다. 최소 한 줄이 필요한 프로젝트는 `minItems={1}`을 지정한다. 최소 줄 수를 생략하면 마지막 줄도 삭제할 수 있다.
-- 줄 안 입력의 `onKeyDown`에 `rows.enterAdds(add)`를 건다. Enter는 추가 버튼의 `add`를 그대로 부른다. 그래서 추가 버튼이 빈 값에서 오류를 보이면 Enter도 같은 오류를 보인다. 폼 제출은 하지 않고, 한글 조합 중이거나 최대 줄 수일 때는 추가하지 않는다.
+- 입력한 값을 [추가]가 새 줄로 넣는 입력칸(예: 제목 입력 + [추가])에는 `onKeyDown={rows.enterAdds(add)}`를 건다. Enter는 추가 버튼의 `add`를 그대로 부른다. 그래서 추가 버튼이 빈 값에서 오류를 보이면 Enter도 같은 오류를 보인다. 폼 제출은 하지 않고, 한글 조합 중이거나 최대 줄 수일 때는 추가하지 않는다. [추가]가 빈 줄만 더하고 줄마다 자기 칸인 배열 줄 입력에는 걸지 않는다(그 칸의 Enter는 폼 제출, 위 「Enter」).
 - `rows.items`는 줄 안의 값이 바뀔 때도 새로 그려져, 추가 버튼이 낡은 값을 보지 않는다.
 - 프로젝트가 정하는 것: 빈 줄의 값, 최소·최대 줄 수(`minItems`·`maxItems`), 줄의 모양과 문구.
 

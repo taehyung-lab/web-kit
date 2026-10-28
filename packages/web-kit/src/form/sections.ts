@@ -1,9 +1,9 @@
-// 파일 책임: 접을 수 있는 폼 구역의 규칙 — 구역 칸(정확한 경로나 접두)으로 센 오류 수와 열림 상태.
-// 처음엔 펼침. 제출(클라이언트 검증 실패·서버 필드 오류) 뒤 그 구역에 오류가 있으면 연다. 제출이 연 구역은 오류를 고쳐도 열린 채 두고,
-// 그 뒤 사용자가 닫으면 다음 제출까지 닫힌 채 둔다(1.5 form-accordion openSections). 오류는 폼 저장소를 동기로 구독해
-// useSaveForm이 setTimeout(0)으로 예약한 첫 오류 포커스보다 먼저 구역이 열린다. UI는 import하지 않는다.
+// 파일 책임: 접을 수 있는 폼 구역의 규칙 — 구역 칸(정확한 경로나 접두)으로 센 오류 수와 열림 상태, 거절된 제출의 구역 펼침.
+// 열림은 사용자가 열고 닫는 평범한 상태다(처음엔 펼침, 닫혀도 칸은 마운트). 제출이 거절될 때마다(클라이언트 검증 실패, 서버 필드 오류 도착)
+// useSaveForm이 실패한 칸 목록으로 revealFormSections를 부르고, 그 칸을 가진 구역이 모두 펼쳐진다. 제출 횟수 같은 기록은 두지 않는다
+// (참조 프로젝트 use-form-sections의 revealInvalid와 같은 사건 방식). 포커스는 펼친 뒤 useSaveForm이 화면 순서 첫 오류 칸에 옮긴다. UI는 import하지 않는다.
 import { useStore, type AnyFormApi } from '@tanstack/react-form';
-import { useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 
 /** 칸 경로가 구역 칸 목록에 들어가는가. 목록의 각 항목은 정확한 경로이거나 그 아래 경로(`a.b`, `a[0]`)의 접두다. */
 export function inSection(fields: readonly string[], path: string): boolean {
@@ -18,6 +18,22 @@ export function sectionErrorCount(
   return Object.entries(fieldMeta).filter(([path, meta]) => (meta?.errors?.length ?? 0) > 0 && inSection(fields, path)).length;
 }
 
+type Revealer = (failed: readonly string[]) => void;
+
+/** 폼(저장소)마다 마운트된 구역의 펼침 함수. */
+const revealers = new WeakMap<object, Set<Revealer>>();
+
+const storeOf = (form: object) => (form as { readonly store: object }).store;
+
+/**
+ * 거절된 제출 하나를 알린다: 실패한 칸을 가진 구역을 모두 펼친다. useSaveForm이 클라이언트 검증 실패와 서버 필드 오류 도착 때
+ * 포커스 직전에 부른다. 키트 저장 흐름 밖에서 칸에 오류를 붙이는 화면(자기 절차의 거절 등)도 포커스 전에 같은 함수를 부른다.
+ */
+export function revealFormSections(form: object, failed: readonly string[]): void {
+  if (failed.length === 0) return;
+  for (const reveal of revealers.get(storeOf(form)) ?? []) reveal(failed);
+}
+
 export interface FormSectionState {
   readonly open: boolean;
   readonly errorCount: number;
@@ -26,16 +42,23 @@ export interface FormSectionState {
 
 /** 구역 하나의 열림·오류 수. `form`은 useSaveForm의 form이다(키트 Form 밖의 폼도 같다). */
 export function useFormSection(form: AnyFormApi, fields: readonly string[]): FormSectionState {
-  const attempts = useStore(form.store, (state) => state.submissionAttempts);
   const errorCount = useStore(form.store, (state) => sectionErrorCount(state.fieldMeta, fields));
-  /** 사용자가 마지막으로 정한 열림과 그때의 제출 시도 횟수. */
-  const [choice, setChoice] = useState<{ readonly open: boolean; readonly attempt: number } | undefined>();
-  /** 제출 뒤 오류로 연 제출 시도 횟수. 사용자가 그 뒤에 정한 열림이 없으면 열린 채 둔다. */
-  const [opened, setOpened] = useState(0);
-  const decidedAt = choice?.attempt ?? 0;
-  const forced = errorCount > 0 && attempts > decidedAt;
-  // 이전 렌더에서 온 정보를 기억하는 렌더 중 갱신(같은 값이면 다시 부르지 않는다).
-  if (forced && opened !== attempts) setOpened(attempts);
-  const open = forced || opened > decidedAt || (choice?.open ?? true);
-  return { open, errorCount, toggle: () => setChoice({ open: !open, attempt: attempts }) };
+  const [open, setOpen] = useState(true);
+  useLayoutEffect(() => {
+    const store = storeOf(form);
+    let set = revealers.get(store);
+    if (set === undefined) {
+      set = new Set();
+      revealers.set(store, set);
+    }
+    const own = set;
+    const reveal: Revealer = (failed) => {
+      if (failed.some((path) => inSection(fields, path))) setOpen(true);
+    };
+    own.add(reveal);
+    return () => {
+      own.delete(reveal);
+    };
+  }, [form, fields]);
+  return { open, errorCount, toggle: () => setOpen((current) => !current) };
 }

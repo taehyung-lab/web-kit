@@ -11,4 +11,4 @@ export type { FormFileValue } from './file';
 
 export { createFormNavigation, type FormFacts } from './navigation';
 
-export { inSection, sectionErrorCount, useFormSection, type FormSectionState } from './sections';
+export { inSection, revealFormSections, sectionErrorCount, useFormSection, type FormSectionState } from './sections';
