@@ -54,6 +54,20 @@ function isJson(response: AxiosResponse): boolean {
   return media === 'application/json' || media?.endsWith('+json') === true;
 }
 
+/**
+ * 파일로 받는 요청(responseType blob)도 서버가 JSON(봉투)으로 답하면 본문을 JSON으로 읽어 둔다.
+ * 그래야 다운로드 실패도 resultCode로 해석된다. 읽지 못하면 그대로 두어 봉투 해석이 계약 위반으로 판정한다.
+ */
+async function readJsonBlob(response: AxiosResponse | undefined): Promise<void> {
+  const data: unknown = response?.data;
+  if (response === undefined || typeof Blob === 'undefined' || !(data instanceof Blob) || !isJson(response)) return;
+  try {
+    response.data = JSON.parse(await data.text());
+  } catch {
+    // 계약 위반은 아래 해석이 판정한다.
+  }
+}
+
 /** axios 오류를 실패 해석 입력으로 바꾼다. */
 function outcomeOf(error: unknown): TransportOutcome | undefined {
   if (axios.isCancel(error)) return { type: 'cancelled' };
@@ -118,9 +132,13 @@ export function createHttp<C extends Credentials>({
     try {
       const response = await instance.request({ ...config, headers });
       report(response);
+      await readJsonBlob(response);
       return response;
     } catch (error: unknown) {
-      if (!axios.isCancel(error)) report(axios.isAxiosError(error) ? error.response : undefined);
+      if (axios.isCancel(error)) throw error;
+      const response = axios.isAxiosError(error) ? error.response : undefined;
+      report(response);
+      await readJsonBlob(response);
       throw error;
     }
   }

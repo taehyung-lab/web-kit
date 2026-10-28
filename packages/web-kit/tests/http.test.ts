@@ -86,6 +86,19 @@ it('H1 봉투를 풀고 세션 토큰과 프로젝트 헤더를 싣는다. JSON�
   expect(sent[0]).toMatchObject({ authorization: 'Bearer t1', locale: 'ko' });
 });
 
+it('H1b 파일로 받는 요청도 JSON 실패 응답은 resultCode로 해석한다(다운로드 실패 문구)', async () => {
+  const { http } = setup();
+  const json = (body: unknown) => new Blob([JSON.stringify(body)], { type: 'application/json' });
+  replies = [
+    { status: 500, data: json({ header: { resultCode: 2100 } }) },
+    { status: 200, data: json({ header: { resultCode: 2100 } }) },
+    { status: 200, data: new Blob(['xlsx']), contentType: 'application/octet-stream' },
+  ];
+  await expect(http.request({ url: '/file', method: 'post', responseType: 'blob' })).rejects.toMatchObject({ status: 500, code: '2100' });
+  await expect(http.request({ url: '/file', method: 'post', responseType: 'blob' })).rejects.toMatchObject({ kind: 'business', messageKey: 'notExist' });
+  await expect(http.request({ url: '/file', method: 'post', responseType: 'blob' })).resolves.toBeInstanceOf(Blob);
+});
+
 it('H2 HTTP 200 업무 실패는 business로 던지고, 세션 종료 행이면 세션을 끝내고 취소로 끝난다', async () => {
   const { http, session } = setup();
   replies = [ok(null, 2100), ok(null, 4999)];
