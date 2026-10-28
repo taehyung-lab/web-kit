@@ -1,5 +1,6 @@
 // 파일 책임: 공연 예시 등록 화면 — DT 공연 폼의 복잡한 부분(회차 줄 오류 위치, 대화창 하위 폼 제출 격리, 좌석도 파일 보존)을 키트 값만으로 재현한다.
 // 회차 줄은 Form.Array(추가·삭제·위/아래 이동), 좌석도는 Form.File, 판매처 키는 Form.Dialog 안의 자기 useSaveForm이다.
+// 회차·판매처 키는 접을 수 있는 구역(Form.Section fields)이라 닫힌 구역의 오류는 제출 뒤 펼쳐지고 그 칸에 포커스한다.
 // 저장: 좌석도 업로드 → 등록. 저장 완료 확인 뒤 상품 목록으로 간다. 공연 폼 전체를 옮긴 것은 아니다.
 import { useSaveForm, type FormFileValue } from '@boosterlab/web-kit/form';
 import { Form } from '@boosterlab/web-kit/form/ui';
@@ -55,7 +56,7 @@ export function ShowCreateScreen() {
         <F.Text name="title" label={t('shows.fields.title')} />
         <F.Array name="rounds" minItems={1}>
           {(rows) => (
-            <F.Section title={t('shows.fields.rounds')}>
+            <F.Section title={t('shows.fields.rounds')} fields={['rounds']}>
               {rows.items.map((item, index) => (
                 <div key={item.key} role="group" aria-label={t('shows.round', { index: index + 1 })} className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
                   <F.Text name={`rounds[${index}].date`} type="date" label={t('shows.fields.date', { index: index + 1 })} />
@@ -89,7 +90,7 @@ export function ShowCreateScreen() {
           )}
         </F.Array>
         <F.File name="seat" label={t('shows.fields.seat')} accept="image/*,.pdf" />
-        <F.Section title={t('shows.fields.vendorKeys')}>
+        <F.Section title={t('shows.fields.vendorKeys')} fields={['vendorKeys']}>
           <p>{vendorKeys.length === 0 ? t('shows.noVendorKeys') : vendorKeys.map((item) => item.value).join(', ')}</p>
           <div className="wk-actions">
             <button type="button" className="wk-button wk-button-secondary" onClick={() => setKeysOpen(true)}>

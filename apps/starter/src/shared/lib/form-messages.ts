@@ -35,6 +35,7 @@ export function useFormCopy(): {
       savedConfirm: t('common.confirm'),
       saving: t('common.saving'),
       removeFile: t('common.removeFile'),
+      sectionErrors: (count: number) => t('common.sectionErrors', { count }),
     },
     formatError,
     renderFailure: (failure, place) => (place === 'completion' ? undefined : t(failureCopyKey(failure))),

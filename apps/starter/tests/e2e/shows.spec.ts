@@ -52,9 +52,16 @@ test('show example keeps errors on their round, isolates the dialog, keeps the f
   await expect(page.getByText('seat-map.png')).toBeVisible();
 
   // 같은 일시 회차 → 서버 필드 오류가 2회차 시각 칸에, 위로 옮기면 그 줄(1회차)을 따라간다.
+  // 회차 구역을 닫아 두고 저장하면, 서버 오류가 온 뒤 구역이 펼쳐지고 머리글에 오류 표시, 그 칸에 포커스한다.
   await page.getByLabel(/공연명/).fill('E2E-회차 중복');
+  const roundsHeader = page.getByRole('button', { name: /^회차( 오류 \d+개)?$/ });
+  await roundsHeader.click();
+  await expect(roundsHeader).toHaveAttribute('aria-expanded', 'false');
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByLabel(/^2회차 시각/)).toHaveAttribute('aria-invalid', 'true');
+  await expect(roundsHeader).toHaveAttribute('aria-expanded', 'true');
+  await expect(roundsHeader).toContainText('오류 1개');
+  await expect(page.getByLabel(/^2회차 시각/)).toBeFocused();
   await expect(page.getByLabel(/^1회차 시각/)).not.toHaveAttribute('aria-invalid', 'true');
   await page.getByLabel(/^2회차 날짜/).fill('2026-11-02');
   await page.getByRole('button', { name: '2회차 위로' }).click();

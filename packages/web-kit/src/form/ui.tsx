@@ -2,11 +2,12 @@
 // 각 부품은 같은 편집 상태(useSaveForm 결과)를 context로 읽어서, 칸·버튼·오류 줄을 어디에 두어도 저장·검증·focus 연결을 다시 쓰지 않는다.
 // 저장 수명은 useSaveForm이, 이탈 판정은 createFormNavigation이 소유하고 여기는 표시와 사용자 입력 연결만 맡는다.
 import { useBlocker, useRouter, type NavigateOptions } from '@tanstack/react-router';
-import { useSelector, type DeepKeys, type DeepValue } from '@tanstack/react-form';
+import { useSelector, type AnyFormApi, type DeepKeys, type DeepValue } from '@tanstack/react-form';
 import {
   createContext,
   useContext,
   useEffect,
+  useId,
   useLayoutEffect,
   useRef,
   useState,
@@ -22,6 +23,7 @@ import { FieldFrame, type FieldControlProps } from './field';
 import type { FormFileValue } from './file';
 import { createFormNavigation, type FormNavigation as Navigation, type LeaveReason } from './navigation';
 import { lockField, type SaveFormEditor } from './save-form';
+import { useFormSection } from './sections';
 
 // ─── 이탈 보호 ───────────────────────────────────────────────────────────────
 
@@ -120,6 +122,7 @@ const defaultFormMessages = {
   saving: '저장 중입니다.',
   removeFile: '파일 삭제',
   count: (current: number, max: number) => `${current}/${max}`,
+  sectionErrors: (count: number) => `오류 ${count}개`,
 };
 export type FormMessages = typeof defaultFormMessages;
 
@@ -610,13 +613,78 @@ function ArrayField({
   );
 }
 
-/** 칸 묶음 하나(제목 있는 구역). */
-function Section({ title, children, className }: { readonly title?: ReactNode; readonly children: ReactNode; readonly className?: string }) {
+/**
+ * 칸 묶음 하나(제목 있는 구역). `fields`(이 구역 칸의 정확한 경로나 접두)를 주면 접을 수 있는 구역이 된다:
+ * 머리글 버튼이 열고 닫고, 구역 칸에 오류가 있으면 머리글에 표시하며, 제출 뒤 오류가 있으면 펼친 다음 첫 오류 칸에 포커스한다.
+ * 접을 수 있으려면 자기 칸을 알아야 한다(오류를 숨긴 채 닫혀 있지 않게).
+ */
+function Section({
+  title,
+  fields,
+  children,
+  className,
+}: {
+  readonly title?: ReactNode;
+  readonly fields?: readonly string[];
+  readonly children: ReactNode;
+  readonly className?: string;
+}) {
+  const { editor, copy } = useFormContext();
+  if (fields !== undefined) {
+    return (
+      <FormSection form={editor.form} fields={fields} title={title} errorLabel={copy.sectionErrors} className={className}>
+        {children}
+      </FormSection>
+    );
+  }
   return (
     <fieldset className={join('wk-section', className)}>
       {title === undefined ? null : <legend className="wk-section-title">{title}</legend>}
       {children}
     </fieldset>
+  );
+}
+
+/**
+ * 접을 수 있는 구역(열림·오류 표시·제출 뒤 펼침). `Form.Section fields`가 이것을 쓰고, 키트 `Form` 밖의 폼(useSaveForm의 form만 있는 화면)도
+ * 같은 부품을 직접 쓴다. 닫혀도 칸은 마운트된 채 숨긴다(값·검증 유지). 오류 표시는 1.5처럼 머리글의 「!」이고, 화면 낭독기는 오류 수(`errorLabel`)를 읽는다.
+ */
+export function FormSection({
+  form,
+  fields,
+  title,
+  errorLabel,
+  className,
+  children,
+}: {
+  readonly form: AnyFormApi;
+  readonly fields: readonly string[];
+  readonly title: ReactNode;
+  /** 오류 수 → 화면 낭독기 문구. */
+  readonly errorLabel: (count: number) => string;
+  readonly className?: string;
+  readonly children: ReactNode;
+}) {
+  const section = useFormSection(form, fields);
+  const contentId = useId();
+  return (
+    <section className={join('wk-section', 'wk-section-collapsible', className)}>
+      <h2 className="wk-section-heading">
+        <button type="button" className="wk-section-toggle" aria-expanded={section.open} aria-controls={contentId} onClick={section.toggle}>
+          {title}
+          {section.errorCount > 0 ? ' ' : null}
+          {section.errorCount > 0 ? (
+            <span className="wk-section-badge">
+              <span aria-hidden="true">!</span>
+              <span className="wk-visually-hidden">{errorLabel(section.errorCount)}</span>
+            </span>
+          ) : null}
+        </button>
+      </h2>
+      <div id={contentId} className="wk-section-content" hidden={!section.open}>
+        {children}
+      </div>
+    </section>
   );
 }
 

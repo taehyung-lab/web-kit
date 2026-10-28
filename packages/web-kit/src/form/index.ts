@@ -10,3 +10,5 @@ export { appendRow, moveRow, removeRow } from './rows';
 export type { FormFileValue } from './file';
 
 export { createFormNavigation, type FormFacts } from './navigation';
+
+export { inSection, sectionErrorCount, useFormSection, type FormSectionState } from './sections';
