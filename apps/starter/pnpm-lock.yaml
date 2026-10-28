@@ -221,8 +221,8 @@ packages:
         optional: true
 
   '@boosterlab/web-kit@file:vendor/boosterlab-web-kit.tgz':
-    resolution: {integrity: sha512-EBQJ+H8wo/TIfGUI6AbBFU4vdc9i0XLHyG9qE3c78axGaj9JOZ+sGDigOTm9zQ+CgYHWG+S5wYewJxBLN8jogw==, tarball: file:vendor/boosterlab-web-kit.tgz}
-    version: 3.0.0-dev.13
+    resolution: {integrity: sha512-g7z8l7dVJmM+3KQXNkBEg5ROBhxAJTLfIv+sHPviZLesPL3cvBIjVY/v/TX0DXuzWlSBEVx1EdYcvr9P37TwLw==, tarball: file:vendor/boosterlab-web-kit.tgz}
+    version: 3.0.0-dev.14
     peerDependencies:
       '@base-ui/react': 1.7.0
       '@tanstack/react-form': 1.33.5

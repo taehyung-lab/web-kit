@@ -1,4 +1,5 @@
-// 파일 책임: 줄을 늘리고 줄이고 옮기는 배열 입력의 규칙(삭제 가능 여부, Enter = 추가 버튼)을 한 곳에 둔다. 줄의 모양과 문구는 프로젝트가 그린다.
+// 파일 책임: 줄을 늘리고 줄이고 옮기는 배열 입력의 규칙(삭제 가능 여부, 값을 목록에 넣는 [추가] 칸의 Enter = 추가)을 한 곳에 둔다.
+// 줄 안 칸의 Enter는 일반 칸처럼 페이지 폼 제출이다. 줄의 모양과 문구는 프로젝트가 그린다.
 // 줄 작업은 rows.ts가 맡아 칸 오류·서버 오류가 줄을 따라간다(중첩 배열 포함).
 import { useStore, type AnyFieldApi, type DeepKeysOfType, type DeepValue, type FieldComponent } from '@tanstack/react-form';
 import type { KeyboardEvent, ReactNode } from 'react';
@@ -25,7 +26,8 @@ export interface FormArrayRows<TItem> {
   /** 줄 하나를 from에서 to로 옮긴다. 칸 오류는 각자 줄을 따라간다. */
   readonly move: (from: number, to: number) => void;
   /**
-   * 줄 안 입력의 onKeyDown. Enter가 `add`(추가 버튼이 하는 일)를 그대로 부르게 한다.
+   * 입력한 값을 [추가]가 목록에 넣는 칸(예: 제목 입력 + [추가])의 onKeyDown. Enter가 `add`(추가 버튼이 하는 일)를 그대로 부르게 한다.
+   * 줄마다 자기 칸인 배열 줄 입력에는 걸지 않는다(그 칸의 Enter는 페이지 폼 제출).
    * 폼 제출은 막고, 한글 조합 중이거나 수정키가 함께 눌렸으면 아무것도 하지 않는다.
    * 최대 줄 수에서는 추가하지 않으며 제출도 하지 않는다.
    */
