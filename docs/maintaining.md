@@ -22,7 +22,7 @@
 
 ## 소비 검사와 발행
 
-키트와 소비 검사 앱 `apps/starter`는 같은 저장소에 있다. starter는 workspace 구성원이 아니며 키트 소스가 아니라 포장한 tarball로만 키트를 쓴다(`scripts/sync-starter.mjs`). 키트를 바꾸면 `pnpm starter:sync`로 starter를 다시 맞추고, starter의 사용 코드·lockfile을 같은 PR에 넣는다. `pnpm starter:check`와 CI는 starter lockfile의 키트 지문이 지금 산출물과 다르면 실패한다. starter에 두 번째 공용 구현을 두지 않는다. 반복이 생기면 키트 책임이 빠진 신호다.
+키트와 소비 검사 앱 `apps/starter`는 같은 저장소에 있다. starter는 workspace 구성원이 아니며 키트 소스가 아니라 포장한 tarball로만 키트를 쓴다(`scripts/sync-starter.mjs`). 키트를 바꾸면 `pnpm starter:sync`로 starter를 다시 맞추고, starter vendor tarball(`apps/starter/vendor/boosterlab-web-kit.tgz`)·사용 코드·lockfile을 같은 PR에 넣는다. `pnpm starter:check`와 CI는 커밋된 vendor tarball의 풀어 낸 내용이 그 commit의 키트를 포장한 내용과 다르거나 lockfile 지문이 그 tarball과 다르면 실패한다. pnpm pack의 바이트는 OS마다 달라질 수 있어 내용으로 비교하고, lockfile·소비 검사·발행은 커밋된 tarball 하나를 쓴다. starter에 두 번째 공용 구현을 두지 않는다. 반복이 생기면 키트 책임이 빠진 신호다.
 
 starter 통과만으로 소비 검증을 끝내지 않는다. 실제 제품(DT v2)의 대표 흐름은 [0003](decisions/0003-web-kit-3-redesign.md)의 완료 기준으로 판정한다.
 
