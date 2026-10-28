@@ -36,7 +36,8 @@ pnpm dev:mock      # msw mock API로 실행. 계정 admin / password
 | `pnpm check` | typecheck + lint + test + build. 저장소 CI(`../../.github/workflows/check.yml`)가 키트 tarball을 설치한 뒤 이것을 돌린다 |
 | `pnpm test:e2e` | 실제 브라우저(chromium, mock 모드) 검사. 처음 한 번 `pnpm exec playwright install chromium`. CI는 `check` 뒤에 돌린다 |
 
-mock 모드에서는 access 토큰이 2분 뒤 만료되고, 새로고침하면 mock 서버 상태가 초기화된다. 그래서 401 → 재발급 → 재전송 흐름을 바로 볼 수 있다.
+mock 모드에서는 access 토큰이 2분 뒤 만료된다. 그래서 2분 뒤 조회에서 401 → 재발급 → 재전송 흐름을 볼 수 있다(쓰기는 다시 보내지 않고 "저장 결과를 확인할 수 없습니다"로 끝난다 — 키트 결정 0001 E1).
+mock 서버 상태(토큰·데이터)는 실제 서버처럼 새로고침해도 남는다(localStorage `starter.mock-server`). 처음 상태로 돌리려면 그 값을 지운다.
 
 ## 구조
 

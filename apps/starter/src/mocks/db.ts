@@ -58,6 +58,15 @@ interface State {
 
 const state: State = { products: seed(), terms: [], tokens: new Map(), refreshValid: true, issued: 0 };
 
+/** 서버 상태를 JSON으로 옮길 수 있는 모양. 브라우저 mock이 새로 고침 뒤에도 같은 서버로 보이게 저장·복원한다. */
+export interface MockSnapshot {
+  readonly products: Product[];
+  readonly terms: MockTerms[];
+  readonly tokens: [string, number][];
+  readonly refreshValid: boolean;
+  readonly issued: number;
+}
+
 export const mockDb = {
   /** 분류 선택지(고정). */
   get categories(): readonly Category[] {
@@ -79,6 +88,12 @@ export const mockDb = {
     state.tokens = new Map();
     state.refreshValid = true;
     state.issued = 0;
+  },
+  snapshot(): MockSnapshot {
+    return { ...state, tokens: [...state.tokens] };
+  },
+  restore(snapshot: MockSnapshot) {
+    Object.assign(state, { ...snapshot, tokens: new Map(snapshot.tokens) });
   },
   /** 새 access 토큰을 발급하고 refresh 쿠키를 유효로 둔다. */
   issueToken(): string {

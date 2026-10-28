@@ -11,7 +11,7 @@ test('terms create confirms, saves once, acknowledges and opens the detail', asy
   page.on('request', (request) => {
     if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/terms') posts.push(request.url());
   });
-  // 전체 새로 고침은 브라우저 mock 서버의 메모리를 비운다. 사용자처럼 메뉴로 이동한다.
+  // 메뉴로 이동한다(새로 고침 뒤 저장은 아래 검사가 본다).
   await page.getByRole('link', { name: '약관 등록' }).click();
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByLabel(/버전/)).toBeFocused();
@@ -35,4 +35,29 @@ test('terms create confirms, saves once, acknowledges and opens the detail', asy
   await expect(page).toHaveURL(/\/terms\/t-\d+$/);
   await expect(page.getByText('E2E-약관 본문')).toBeVisible();
   expect(posts).toHaveLength(1);
+});
+
+// 새로 고침 직후 첫 요청이 쓰기여도 mock 서버가 발급한 토큰을 기억해야 한다(실제 서버처럼). 잊으면 쓰기 401 → "저장 결과를 확인할 수 없습니다".
+test('terms saved right after a full reload are saved once and open the detail', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByLabel('아이디').fill('admin');
+  await page.getByLabel('비밀번호').fill('password');
+  await page.getByRole('button', { name: '로그인' }).click();
+  await expect(page).toHaveURL(/\/products$/);
+  const api: string[] = [];
+  page.on('response', (response) => {
+    const url = new URL(response.url());
+    if (url.pathname.startsWith('/api/')) api.push(`${response.request().method()} ${url.pathname} ${response.status()}`);
+  });
+  await page.goto('/terms/new');
+  await page.getByLabel(/버전/).fill('9.2');
+  await page.getByLabel(/시행일/).fill('2026-11-01');
+  await page.getByLabel(/게시일/).fill('2026-10-28');
+  await page.getByLabel(/본문/).fill('E2E-새로 고침 뒤 저장');
+  await page.getByRole('button', { name: '저장', exact: true }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: '저장' }).click();
+  await page.getByRole('alertdialog', { name: '저장되었습니다.' }).getByRole('button', { name: '확인' }).click();
+  await expect(page).toHaveURL(/\/terms\/t-\d+$/);
+  await expect(page.getByText('E2E-새로 고침 뒤 저장')).toBeVisible();
+  expect(api.filter((line) => line.startsWith('POST /api/terms'))).toEqual(['POST /api/terms 200']);
 });
