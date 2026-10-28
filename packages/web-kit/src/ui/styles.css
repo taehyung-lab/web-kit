@@ -33,6 +33,33 @@
 .wk-error {
   color: var(--wk-danger);
 }
+.wk-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.wk-spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid var(--wk-border);
+  border-top-color: var(--wk-fg);
+  border-radius: 50%;
+  animation: wk-spin 0.8s linear infinite;
+}
+@keyframes wk-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wk-spinner {
+    animation-duration: 2.4s;
+  }
+}
 .wk-description {
   font-size: 0.875rem;
   color: color-mix(in srgb, var(--wk-fg) 65%, transparent);

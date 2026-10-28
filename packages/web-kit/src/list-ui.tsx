@@ -986,11 +986,13 @@ function Download({
   const blocked = kind === '' || control.blockOf(kind) !== undefined;
   const custom = control.state.kind === 'failed' ? renderFailure(control.state.failure, 'download') : null;
   const failure = control.state.kind !== 'failed' ? null : custom === undefined ? copy.downloadFailed : custom;
+  const running = control.state.kind === 'running';
   return (
-    <span className="wk-inline" aria-busy={control.state.kind === 'running' || undefined}>
+    <span className="wk-inline" aria-busy={running || undefined}>
       <select
         aria-label={copy.downloadKind}
         className="wk-input"
+        disabled={running}
         value={kind}
         onChange={(event) => {
           control.clear();
@@ -1007,9 +1009,10 @@ function Download({
       <button type="button" className="wk-button" disabled={blocked} onClick={() => kind !== '' && void control.start(kind)}>
         {label ?? copy.download}
       </button>
-      {control.state.kind === 'running' && (
-        <span role="status" className="wk-description">
-          {copy.downloading}
+      {/* 진행 중에는 종류·버튼을 잠그고 옆에 로딩 표시만 둔다. 문구는 화면 낭독기에만 읽힌다. */}
+      {running && (
+        <span role="status" className="wk-spinner">
+          <span className="wk-visually-hidden">{copy.downloading}</span>
         </span>
       )}
       {failure !== null && (

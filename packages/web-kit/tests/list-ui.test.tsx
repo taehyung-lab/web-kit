@@ -438,7 +438,15 @@ it('다운로드: 누른 순간의 확정 조건·선택을 고정하고, 입력
   await waitFor(() => expect(targets).toHaveLength(1));
   expect(targets[0]).toEqual({ kind: 'all', search: expect.objectContaining({ keywords: [] }) });
   expect(button.disabled).toBe(true);
+  // 진행 중: 종류·버튼 잠금, 옆에는 로딩 표시만(문구는 화면 낭독기용).
+  expect((kind as HTMLSelectElement).disabled).toBe(true);
+  const progress = screen.getByRole('status');
+  expect(progress.className).toContain('wk-spinner');
+  expect(progress.textContent).toBe('다운로드 중입니다.');
+  expect(progress.querySelector('.wk-visually-hidden')?.textContent).toBe('다운로드 중입니다.');
   await act(async () => finish());
+  expect(screen.queryByRole('status')).toBeNull();
+  expect((kind as HTMLSelectElement).disabled).toBe(false);
   fireEvent.click(screen.getAllByRole('checkbox', { name: '행 선택' })[1]!);
   fireEvent.change(kind, { target: { value: 'selected' } });
   fireEvent.click(button);
