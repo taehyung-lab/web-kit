@@ -98,3 +98,5 @@ pnpm check
 ## 3.0에서 3.1로
 
 기존 입구는 유지한다. 신규 화면은 이름 있는 목록 부품과 `ChoiceFilter`·`Form.Choice`를 사용할 수 있다. 서버 응답이 다르면 `createHttp({ response })`, 실제 데이터 타입을 그대로 받으려면 `http.requestData<T>`를 사용한다. 오류 종류·처리는 키트, 서버 코드 의미·메시지 키·번역은 프로젝트가 소유한다. 필수 검색 조건은 검색 선언의 `required`에 두고 칸과 버튼에서 같은 판정을 사용한다.
+
+폼 내부에서 다른 항목의 ID를 참조하면 `useSaveForm`의 `references`로 관계와 삭제 정책을 선언한다. 키트는 연결된 값의 정리 확인·삭제 차단·저장 시 무결성 검사를 맡는다. 임시 저장처럼 검증이 다른 두 번째 저장은 `secondary`와 `<Form.Submit mode="secondary">`로 연결하며, 중복 제출 방지·저장 기준선·이탈 보호는 기본 저장과 공유한다. 관계·검증 조건·문구는 프로젝트가 정한다. 사용 계약은 `web-kit-form` 스킬, 실행 예제는 starter의 `form-workflows` 기능에 있다.

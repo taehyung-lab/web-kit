@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppFormWorkflowsRouteImport } from './routes/_app/form-workflows'
 import { Route as AppMembersIndexRouteImport } from './routes/_app/members/index'
 import { Route as AppProductsIndexRouteImport } from './routes/_app/products/index'
 import { Route as AppProductsNewRouteImport } from './routes/_app/products/new'
@@ -33,6 +34,11 @@ const LoginRoute = LoginRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFormWorkflowsRoute = AppFormWorkflowsRouteImport.update({
+  id: '/form-workflows',
+  path: '/form-workflows',
   getParentRoute: () => AppRoute,
 } as any)
 const AppMembersIndexRoute = AppMembersIndexRouteImport.update({
@@ -81,6 +87,7 @@ const AppProductsProductIdEditRoute =
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
+  '/form-workflows': typeof AppFormWorkflowsRoute
   '/products/new': typeof AppProductsNewRoute
   '/shows/new': typeof AppShowsNewRoute
   '/terms/$termsId': typeof AppTermsTermsIdRoute
@@ -92,6 +99,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/form-workflows': typeof AppFormWorkflowsRoute
   '/': typeof AppIndexRoute
   '/products/new': typeof AppProductsNewRoute
   '/shows/new': typeof AppShowsNewRoute
@@ -106,6 +114,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/_app/form-workflows': typeof AppFormWorkflowsRoute
   '/_app/': typeof AppIndexRoute
   '/_app/products/new': typeof AppProductsNewRoute
   '/_app/shows/new': typeof AppShowsNewRoute
@@ -121,6 +130,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/form-workflows'
     | '/products/new'
     | '/shows/new'
     | '/terms/$termsId'
@@ -132,6 +142,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/form-workflows'
     | '/'
     | '/products/new'
     | '/shows/new'
@@ -145,6 +156,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_app'
     | '/login'
+    | '/_app/form-workflows'
     | '/_app/'
     | '/_app/products/new'
     | '/_app/shows/new'
@@ -182,6 +194,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/form-workflows': {
+      id: '/_app/form-workflows'
+      path: '/form-workflows'
+      fullPath: '/form-workflows'
+      preLoaderRoute: typeof AppFormWorkflowsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/members/': {
@@ -244,6 +263,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppFormWorkflowsRoute: typeof AppFormWorkflowsRoute
   AppIndexRoute: typeof AppIndexRoute
   AppProductsNewRoute: typeof AppProductsNewRoute
   AppShowsNewRoute: typeof AppShowsNewRoute
@@ -256,6 +276,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppFormWorkflowsRoute: AppFormWorkflowsRoute,
   AppIndexRoute: AppIndexRoute,
   AppProductsNewRoute: AppProductsNewRoute,
   AppShowsNewRoute: AppShowsNewRoute,

@@ -1,0 +1,42 @@
+// 파일 책임: 공용 참조 정리·임시저장·저장 후 이탈 보호를 실제 브라우저에서 검사한다.
+import { expect, test } from '@playwright/test';
+
+test('reference cleanup and draft save share the form lifecycle', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByLabel('아이디').fill('admin');
+  await page.getByLabel('비밀번호').fill('password');
+  await page.getByRole('button', { name: '로그인' }).click();
+  await expect(page).toHaveURL(/\/products$/);
+  await page.getByRole('link', { name: '작성 예제' }).click();
+  await page.getByRole('button', { name: '항목 추가' }).click();
+  await page.getByRole('button', { name: '대표 항목' }).click();
+  await page.getByRole('radio', { name: '새 항목 1' }).check();
+  await page.keyboard.press('Escape');
+  await page.getByLabel('항목 1 이름').fill('바뀐 이름');
+  await expect(page.getByRole('button', { name: '대표 항목' })).toHaveText('바뀐 이름');
+  await page.getByRole('button', { name: '항목 1 삭제' }).click();
+  const dialog = page.getByRole('alertdialog');
+  await expect(dialog).toContainText('1곳에서 쓰고 있습니다.');
+  await dialog.getByRole('button', { name: '취소' }).click();
+  await expect(page.getByLabel('항목 1 이름')).toHaveValue('바뀐 이름');
+  await page.getByRole('button', { name: '항목 1 삭제' }).click();
+  await dialog.getByRole('button', { name: '함께 정리' }).click();
+  await expect(page.getByLabel('항목 1 이름')).toHaveCount(0);
+  await page.getByRole('button', { name: '게시', exact: true }).click();
+  await expect(page.getByText('제목을 입력해 주세요.')).toBeVisible();
+  const request = page.waitForRequest((request) => request.method() === 'POST' && request.url().endsWith('/api/form-workflows'));
+  await page.getByRole('button', { name: '임시 저장' }).click();
+  expect((await request).postDataJSON()).toEqual({ mode: 'draft', values: { title: '', items: [], selected: '' } });
+  await expect(page.getByRole('status').filter({ hasText: '임시 저장했습니다.' })).toHaveText('임시 저장했습니다.');
+  await page.getByRole('link', { name: '상품', exact: true }).click();
+  await expect(page).toHaveURL(/\/products$/);
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
+  await page.getByRole('link', { name: '작성 예제' }).click();
+  await page.getByRole('button', { name: '임시 저장' }).click();
+  await expect(page.getByRole('status').filter({ hasText: '임시 저장했습니다.' })).toHaveText('임시 저장했습니다.');
+  await page.getByLabel('제목').fill('저장 뒤 새 입력');
+  await page.getByRole('link', { name: '상품', exact: true }).click();
+  await expect(page.getByRole('alertdialog')).toContainText('저장하지 않은 변경이 있습니다');
+  await page.getByRole('button', { name: '계속 편집' }).click();
+  await expect(page.getByLabel('제목')).toHaveValue('저장 뒤 새 입력');
+});

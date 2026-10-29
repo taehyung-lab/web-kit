@@ -16,7 +16,7 @@ web-kit 저장소의 `apps/starter`. 새 관리자 웹의 틀이자, 키트를 �
 | 검사 | TypeScript 5.9, ESLint 10(typescript-eslint, react-hooks), Vitest 4 + Testing Library + jsdom, msw 2 |
 | 실행 | Node 24, pnpm 10.33 |
 
-- **web-kit**: `package.json`의 `file:vendor/boosterlab-web-kit.tgz` 의존과 `.agents/skills/web-kit-*` 링크로 쓴다. 이 저장소 안에서는 `vendor/`가 커밋되지 않으며, 저장소 루트의 `pnpm starter:sync`가 지금 키트를 포장해 넣는다. 처음 받은 뒤에도 이것부터 실행한다.
+- **web-kit**: `package.json`의 `file:vendor/boosterlab-web-kit.tgz` 의존과 `.agents/skills/web-kit-*` 링크로 쓴다. `vendor/`의 검사 대상 tarball과 lockfile은 함께 커밋한다. 키트 변경 시 저장소 루트의 `pnpm starter:sync`로 다시 포장하고 설치한다.
 - **agent-workflow-kit**: 이 앱에는 설치하지 않는다. web-kit 저장소 루트의 것을 쓰고, 복사한 새 프로젝트에서 새로 설치한다.
 
 ## 빠른 시작
@@ -64,7 +64,7 @@ src/
   mocks/                     msw handler·메모리 DB(테스트와 dev:mock 공용)
   test/                      테스트 준비·앱 렌더 도우미
 docs/product/                제품 정책 문서 자리(비어 있음)
-vendor/                      web-kit tarball(커밋하지 않음, `pnpm starter:sync`가 넣음)
+vendor/                      검사·배포에 사용하는 web-kit tarball(커밋 대상)
 .agents/skills/              web-kit-*(node_modules로 가는 링크)
 ```
 
@@ -82,6 +82,7 @@ vendor/                      web-kit tarball(커밋하지 않음, `pnpm starter:
 | 약관 등록(레퍼런스 재현) | 레퍼런스 약관 등록(검증 → 저장 확인 → 저장 → 저장 완료 확인 → 상세)을 키트 값(`confirm`·`acknowledge`)과 부품 배치만으로 재현. `/terms/new` → `/terms/$termsId` |
 | 공연 예시(복잡한 폼 재현) | DT 공연 폼의 복잡한 부분을 키트 값만으로 재현: 회차 줄 추가·삭제·이동(`Form.Array`, 서버 오류가 줄을 따라감), 좌석도 `Form.File`(저장 실패 뒤 보존·다시 업로드), 판매처 키 `Form.Dialog` 하위 폼(Enter가 바깥 폼을 제출하지 않음), 저장 중 진행 표시. `/shows/new` |
 | 로그인 | `<Form protect={false}>`로 제품 예외를 명시. 공개 요청·토큰으로 세션 시작·자격증명 거절 문구는 제품이 연결 |
+| 작성 예제 | `references`로 항목 ID와 선택 칸을 연결하고 삭제 시 정리 확인·취소를 소비한다. `secondary`와 `<Form.Submit mode="secondary">`로 필수 제목 없이 임시 저장하며, 게시와 저장 기준선·이탈 보호를 공유한다. `/form-workflows` |
 | `shared/ui/adapters.test.tsx` | 설치한 Field·ConfirmDialog·RetryRegion을 공개 계약 검사로 확인 |
 
 
@@ -110,6 +111,6 @@ mock 통과나 HTTP 200만으로 서버 계약을 확인했다고 보지 않는�
 
 ## 키트 갱신
 
-현재 작업 브랜치의 2.0.0 tarball은 로컬 소비 검사용 후보이며 아직 release가 아니다. `selection.run`의 결과는 실제 성공 ID인 `{ completedIds }`로 반환한다. 예시 API가 개수만 주는 부분 성공에서는 ID를 추측하지 않고 선택을 보존한다.
+현재 대상은 3.1.0이다. 정식 발행에는 main CI에서 검증한 tarball과 `verification.json`을 그대로 사용한다. `selection.run`의 결과는 실제 성공 ID인 `{ completedIds }`로 반환한다. 예시 API가 개수만 주는 부분 성공에서는 ID를 추측하지 않고 선택을 보존한다.
 
 새 버전을 받는 방법은 각 키트 README의 업데이트·업그레이드를 따른다. 받은 뒤 이 저장소의 `pnpm check`와 `pnpm test:e2e`를 통과시킨다.
