@@ -2,7 +2,7 @@
 
 React 19 + TanStack(Router·Query·Form) + zod 4 + axios/orval을 쓰는 웹 프로젝트의 공용 키트다. 서버 응답 구조와 코드 의미는 프로젝트의 `ResponseContract`가 해석한다. 기존 Spring 응답 봉투 도우미도 선택해서 쓸 수 있다. 공통 동작은 패키지 hook·Provider가, 화면 배치는 registry로 설치한 프로젝트 소유 복사본이 맡는다. registry는 복사할 UI와 공통 검사 연결 파일의 묶음이다. 업무 정책·서버 연결 차이는 프로젝트가 정한다. 현재 제공 범위는 아래 표와 `package.json` exports다([4.0 배포 결정](../../docs/decisions/0011-web-kit-4-ui-distribution.md)).
 
-정본: https://github.com/taehyung-lab/web-kit · 패키지 `@boosterlab/web-kit` · 이 문서의 대상 버전 `4.0.0-rc.2` 후보(아직 정식 발행 전) · 결정 기록 [docs/decisions](../../docs/decisions/). 이 패키지는 저장소의 `packages/web-kit`이고, 사용 예이자 소비 검사 앱은 같은 저장소의 [`apps/starter`](../../apps/starter)다.
+정본: https://github.com/taehyung-lab/web-kit · 패키지 `@boosterlab/web-kit` · 이 문서의 대상 버전 `4.0.0-rc.3` 후보(아직 정식 발행 전) · 결정 기록 [docs/decisions](../../docs/decisions/). 이 패키지는 저장소의 `packages/web-kit`이고, 사용 예이자 소비 검사 앱은 같은 저장소의 [`apps/starter`](../../apps/starter)다.
 
 ## 구조
 
@@ -66,7 +66,7 @@ done
 
 4.0은 책임 단위로 필요한 부분만 채택한다. 한 책임 안에서는 키트의 상태 수명·이벤트 처리와 자체 구현을 섞지 않는다. 배치와 디자인은 설치한 복사본에서 바꾸고 공통 동작은 패키지 hook으로 연결한다.
 
-1. 검증된 같은 commit의 패키지 tarball(tgz 압축 파일)과 registry를 선택한다. 현재 후보 `4.0.0-rc.2`의 원격 tag/release는 아직 없으므로 아래 tag 예시는 발행 뒤 사용한다. 후보 검사는 저장소의 로컬 산출물을 사용한다.
+1. 검증된 같은 commit의 패키지 tarball(tgz 압축 파일)과 registry를 선택한다. 현재 후보 `4.0.0-rc.3`의 원격 tag/release는 아직 없으므로 아래 tag 예시는 발행 뒤 사용한다. 후보 검사는 저장소의 로컬 산출물을 사용한다.
 2. tgz를 `vendor/`에 보관하고 설치한다. 대부분 소스 TS/TSX이므로 Vite/TypeScript가 컴파일하며 Vite에는 `optimizeDeps: { extensions: ['.tsx'] }`를 둔다. Playwright 검사 입구는 Node가 실행할 수 있는 mjs다.
 
 ```sh
@@ -78,12 +78,12 @@ pnpm add @boosterlab/web-kit@file:vendor/boosterlab-web-kit.tgz
 ```json
 {
   "registries": {
-    "@web-kit": "https://raw.githubusercontent.com/taehyung-lab/web-kit/v4.0.0-rc.2/public/r/{name}.json"
+    "@web-kit": "https://raw.githubusercontent.com/taehyung-lab/web-kit/v4.0.0-rc.3/public/r/{name}.json"
   }
 }
 ```
 
-4. shadcn 4.19.1 CLI로 필요한 항목을 먼저 확인한 뒤 설치한다. 기존 프로젝트는 자기 변경과 차이를 확인한다. `--overwrite`를 갱신 기본값으로 쓰지 않는다.
+4. shadcn 4.19.1 CLI로 필요한 항목을 먼저 확인한 뒤 설치한다. 항목은 검사 도구(vitest·Testing Library·Playwright)를 정확한 버전의 devDependencies로 설치해 기존 버전을 바꿀 수 있으므로, `shadcn add --dry-run`으로 바뀔 의존 버전과 lockfile 영향을 먼저 확인한다. 기존 프로젝트는 자기 변경과 차이를 확인한다. `--overwrite`를 갱신 기본값으로 쓰지 않는다.
 
 ```sh
 pnpm dlx shadcn@4.19.1 add @web-kit/form --dry-run
@@ -102,6 +102,10 @@ pnpm dlx shadcn@4.19.1 add @web-kit/form
 이전 원본 **A**, 받을 새 원본 **B**, 프로젝트가 고친 현재 복사본 **C**를 비교한다. 설치 기록으로 A의 tag/commit과 파일을 찾고 A와 B를 같은 CLI·설정으로 별도 작업 폴더에 설치한다. A→B는 키트 교정, A→C는 프로젝트 수정이다. 두 차이를 비교해 C의 디자인·업무 연결을 보존하며 필요한 교정을 적용한다. 충돌은 파일을 보존해 검토한다. `shadcn add --diff`는 C와 B의 차이만 보여 주므로 세 방향 비교를 대신하지 않는다.
 
 적용 뒤 새 설치·검증 기록을 남기고 같은 단위·브라우저·점검 명령을 실행한다. 되돌릴 때는 이전 tgz·lockfile·복사본·설치 기록을 함께 복원한다. 변경 안내는 매번 **패키지만 올리면 반영 / 복사본 교정 필요**를 구분한다.
+
+### rc.3 변경 안내
+
+**패키지만 올리면 반영(문서·검사)**: 같은 행 ID가 돌아오는 검색 변경의 선택 초기화 검사를 보강하고, 같은 CI 작업에서 새 검사 결과로 점검하는 조건과 registry 설치의 검사 도구 버전 영향을 명시했다. 실행 동작과 registry 원본은 그대로이며 복사본 교정은 필요 없다.
 
 ### rc.2 변경 안내
 

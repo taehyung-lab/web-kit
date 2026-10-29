@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // 파일 책임: useList의 검색 확정·조회·이전 결과·조회 보류·선택지 확인·선택·일괄 작업을 관찰 결과로 검사한다.
-import { act, cleanup, render } from '@testing-library/react';
+import { act, cleanup, render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, queryOptions, useQuery } from '@tanstack/react-query';
 import { StrictMode, useState, type ReactNode } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
@@ -41,12 +41,14 @@ let latest!: ReturnType<typeof useList<Definition['fields'], Row>>;
 let navigations: { next: unknown; replace: boolean }[] = [];
 let setUrl!: (next: SparseSearch<Definition['fields']>) => void;
 
+/** 같은 목록 hook의 상태를 시험 화면 또는 직접 관찰에 제공한다. */
 function Harness(props: {
   definition: Definition;
   initial: Record<string, unknown>;
   fetchRows: (search: unknown) => Promise<ListPage<Row>>;
   validateDraft?: (draft: { q: string }) => readonly { field: string; code: string }[];
   ready?: boolean;
+  renderResult?: (model: typeof latest) => ReactNode;
 }) {
   const [search, setSearch] = useState(() => props.definition.validateSearch(props.initial));
   setUrl = (next) => setSearch(props.definition.validateSearch(next as Record<string, unknown>));
@@ -62,7 +64,7 @@ function Harness(props: {
     selectable: (row) => row.id !== 'locked',
     validateDraft: props.validateDraft,
   });
-  return null;
+  return props.renderResult?.(latest) ?? null;
 }
 
 let client!: QueryClient;
@@ -349,22 +351,43 @@ it('L12 상위 필드 값이 바뀌면 하위 선택지를 새 상위 값으로 
   expect(fetchOptions.mock.calls.map((args) => args[0])).toEqual([{ code: 'A' }, { code: 'B' }]);
 });
 
-it('L13 검색 변경은 선택을 비우고, 재조회에서 사라진 행은 선택에서 빠지며, 선택 불가 행은 무시한다', async () => {
-  const fetchRows = vi
-    .fn()
+// 같은 ID의 재등장을 보여 선택 수명 초기화와 행 교집합 정리를 구별한다.
+it('L13 검색 변경 뒤 같은 ID가 다시 나와도 선택을 비우고 일괄 요청을 보내지 않는다', async () => {
+  const fetchRows = vi.fn()
     .mockResolvedValueOnce(page('1', '2', 'locked'))
     .mockResolvedValueOnce(page('2'))
-    .mockResolvedValue(page('9'));
-  mount({ definition: makeDefinition(), initial: {}, fetchRows });
+    .mockResolvedValue(page('2'));
+  const bulkRequest = vi.fn(async (_ids: readonly string[]) => ({ completedIds: ['2'] }));
+  mount({ definition: makeDefinition(), initial: {}, fetchRows, renderResult: (model) => (
+    <section>
+      <input aria-label="검색어" value={String(model.draft.q ?? '')} onChange={(event) => model.patchDraft({ q: event.target.value })} />
+      <button onClick={() => void model.submit()}>검색</button>
+      <button onClick={() => model.selection.togglePage(true)}>전체 선택</button>
+      <output aria-label="현재 결과">{model.isCurrent ? '현재' : '이전'}</output>
+      <output aria-label="선택 수">{model.selection.selectedIds.length}</output>
+      {model.rows.map((row) => <input key={row.id} type="checkbox" aria-label={`행 ${row.id}`} checked={model.selection.selectedIds.includes(row.id)} readOnly />)}
+      <button onClick={() => void model.selection.run(bulkRequest)}>일괄 실행</button>
+    </section>
+  ) });
   await flush();
-  act(() => latest.selection.togglePage(true));
-  expect(latest.selection.selectedIds).toEqual(['1', '2']);
-  await act(async () => latest.submit());
+  fireEvent.click(screen.getByRole('button', { name: '전체 선택' }));
+  expect(screen.getByLabelText('선택 수').textContent).toBe('2');
+  expect((screen.getByLabelText('행 locked') as HTMLInputElement).checked).toBe(false);
+  // 같은 조건의 재조회에서는 남은 행의 선택이 유지된다.
+  fireEvent.click(screen.getByRole('button', { name: '검색' }));
   await flush();
-  expect(latest.selection.selectedIds).toEqual(['2']);
-  act(() => latest.goToPage(2));
+  expect(screen.getByLabelText('선택 수').textContent).toBe('1');
+  expect((screen.getByLabelText('행 2') as HTMLInputElement).checked).toBe(true);
+  fireEvent.change(screen.getByLabelText('검색어'), { target: { value: 'other' } });
+  fireEvent.click(screen.getByRole('button', { name: '검색' }));
   await flush();
-  expect(latest.selection.selectedIds).toEqual([]);
+  expect(fetchRows).toHaveBeenLastCalledWith(expect.objectContaining({ q: 'other' }));
+  expect(screen.getByLabelText('현재 결과').textContent).toBe('현재');
+  expect((screen.getByLabelText('행 2') as HTMLInputElement).checked).toBe(false);
+  expect(screen.getByLabelText('선택 수').textContent).toBe('0');
+  fireEvent.click(screen.getByRole('button', { name: '일괄 실행' }));
+  await flush();
+  expect(bulkRequest).not.toHaveBeenCalled();
 });
 
 it('L14 일괄 작업은 시작 순간의 선택 ID로 실행하고, 같은 선택 수명일 때만 성공 후 선택을 비운다', async () => {
