@@ -69,3 +69,5 @@ export function useRecord<TQueryFnData, TError = unknown, TData = TQueryFnData, 
 }
 
 export { maskText } from './masking';
+
+export { useRetryFocus } from './retry-focus';

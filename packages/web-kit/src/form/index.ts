@@ -14,3 +14,7 @@ export { createFormNavigation, type FormFacts } from './navigation';
 export { inSection, sectionErrorCount, useFormSection, type FormSectionState } from './sections';
 
 export { requestFormChange, writeFormValues, type FormReference, type ReferenceChange } from './references';
+
+export { useChoiceBinding, useChoiceSearch, type ChoiceBindingOptions, type ChoiceNode, type ChoiceValue } from '../choice-binding';
+
+export * from './binding';

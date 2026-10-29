@@ -37,11 +37,13 @@ describe('기간 입력 검증', () => {
   ])('기간 %s ~ %s', (start, end, expected) => { expect(validateDateRange(start, end)).toBe(expected); });
 });
 
-// 부모의 일부 선택을 mixed 상태로 바꾸는 회귀를 막는다.
-it('자식 하나 선택은 부모 체크이며 부모 해제는 다른 가지를 보존한다', () => {
+// 0010 1-2·0011 합의 11: 일부 선택은 −, 클릭하면 전부 선택한다.
+it('자식 하나 선택은 부모 mixed이며 클릭은 모두 선택하고 명시 해제는 다른 가지를 보존한다', () => {
   const nodes = [{ label: 'A', children: [{ label: 'A1', value: 'a1' }, { label: 'A2', value: 'a2' }] }, { label: 'B', value: 'b' }];
   const selection = checkboxTreeSelection(nodes, ['a1', 'b']);
-  expect(selection.checked(['a1', 'a2'])).toBe(true);
+  expect(selection.checked(['a1', 'a2'])).toBe(false);
+  expect(selection.mixed(['a1', 'a2'])).toBe(true);
+  expect(selection.set(['a1', 'a2'], !selection.checked(['a1', 'a2']))).toEqual(['a1', 'a2', 'b']);
   expect(selection.checked(selection.all, true)).toBe(false);
   expect(selection.set(['a1', 'a2'], false)).toEqual(['b']);
   expect(selection.set(selection.all, true)).toEqual(['a1', 'a2', 'b']);

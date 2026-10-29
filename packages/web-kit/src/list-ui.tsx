@@ -1,63 +1,13 @@
 // 파일 책임: 목록 기본 UI의 묶음 부품(List.*). 각 부품은 같은 목록 상태(useList)를 context로 읽어서, 필터·표·페이지 이동을
 // 어디에 두어도 조회·정렬·선택 연결을 다시 쓰지 않는다. 검색 직전 보장(기간 검증·입력 중 키워드)은 상태가 맡고 부품은 표시만 한다.
-import { useQuery } from '@tanstack/react-query';
+import { ListProvider as ModelProvider, useListModel, useListField, useListFilterBinding, useListDetailsBinding, useBulkConfirmation, useListChoiceBinding, useListMultiChoiceBinding, useListPeriodBinding, listPaginationBinding, useListDownloadBinding, useListKeywordBinding, listViewBinding, listRowBinding, useListVirtualRows, type PeriodShortcut, type DownloadControl, type ListModel } from './list-binding';
 import { Choice as ChoiceInput, type ChoiceProps } from './ui/choice';
-import type { FieldCheck } from './search/fields';
 import { Checkbox } from '@base-ui/react/checkbox';
-import { useVirtualizer } from '@tanstack/react-virtual';
-import { createContext, useContext, useId, useRef, useState, type ReactNode, type RefObject } from 'react';
-import type { DownloadBlock, DownloadKind, DownloadState } from './list-download';
-import { activateTableRow } from './row-activation';
-import type { ViewKeys } from './search/fields';
-import { calendarDate, normalizeFilterSelection, shiftCalendarDate, type Keyword, type PeriodPreset } from './search/interactions';
+import { createContext, useContext, useId, useRef, type ReactNode, type RefObject } from 'react';
+import type { DownloadKind } from './list-download';
+import { type Keyword } from './search/interactions';
 import { ConfirmDialog } from './ui/dialog';
 import { Pending } from './ui/pending';
-import type { DraftIssue, KeywordInput, ListStatus } from './use-list';
-
-/** 기본 UI가 읽는 목록 상태(useList 결과와 같은 모양). */
-export interface ListModel<Row = any, D extends object = any> {
-  readonly search: Readonly<Record<string, unknown>>;
-  readonly defaults: Readonly<Record<string, unknown>>;
-  readonly view: ViewKeys;
-  readonly draft: D;
-  readonly draftSearch?: Readonly<Record<string, unknown>>;
-  readonly issues: readonly DraftIssue[];
-  readonly required?: (name: string) => boolean;
-  readonly blockedReason?: string;
-  readonly resetVersion?: number;
-  readonly submitVersion?: number;
-  readonly checks?: Readonly<Record<string, FieldCheck | undefined>>;
-  readonly patchDraft: (patch: Partial<D>) => void;
-  // 메서드 표기: 소비자 초안의 좁은 키 타입을 받아들이기 위해서다.
-  keywordInput(name: keyof D & string, choices: readonly string[]): KeywordInput;
-  readonly submit: () => void;
-  readonly reset: () => void;
-  readonly rows: readonly Row[];
-  readonly total: number;
-  readonly page: unknown;
-  readonly isCurrent: boolean;
-  readonly isFetching: boolean;
-  readonly status: ListStatus;
-  readonly failure: unknown;
-  readonly refresh: () => void;
-  readonly goToPage: (page: number) => void;
-  readonly setSize: (size: number) => void;
-  readonly setSort: (sort: string, order: 'asc' | 'desc') => void;
-  readonly toggleSort: (sort: string) => void;
-  readonly selection: {
-    readonly selectedIds: readonly string[];
-    readonly isRunning: boolean;
-    readonly isAllChecked: boolean;
-    readonly isMixed: boolean;
-    readonly canSelect: (id: string) => boolean;
-    readonly isChecked: (id: string) => boolean;
-    readonly toggleRow: (id: string, on: boolean) => void;
-    readonly togglePage: (on: boolean) => void;
-    readonly run: <T extends { readonly completedIds: readonly string[] }>(
-      action: (ids: readonly string[]) => Promise<T>,
-    ) => Promise<T | undefined>;
-  };
-}
 
 const defaultMessages = {
   search: '검색',
@@ -110,34 +60,16 @@ export type FailurePlace = 'list' | 'refresh' | 'action' | 'download';
  */
 export type RenderFailure = (failure: unknown, place: FailurePlace) => ReactNode | null | undefined;
 type Context = {
-  readonly model: ListModel;
   readonly copy: typeof defaultMessages;
   readonly renderFailure: RenderFailure;
 };
-const ListContext = createContext<Context | undefined>(undefined);
-
-/** 현재 목록 context를 읽는다. List 밖에서 쓰면 바로 알린다. */
-function useListContext(): Context {
-  const value = useContext(ListContext);
-  if (value === undefined) throw new Error('List parts require <List model>');
-  return value;
+const PresentationContext = createContext<Context>({ copy: defaultMessages, renderFailure: () => undefined });
+/** 표시 설정과 패키지 모델을 함께 읽되 명시 모델을 우선한다. */
+function useListContext(explicit?: ListModel) {
+  return { ...useContext(PresentationContext), model: useListModel(explicit) };
 }
-
-/** 프로젝트 입력칸을 같은 초안에 연결한다. 검색 직전 보장은 상태가 맡으므로 입력칸을 바꿔도 남는다. */
-export function useListField<T = unknown>(name: string, searchName: string = name) {
-  const { model } = useListContext();
-  return {
-    required: model.required?.(searchName) ?? false,
-    value: (model.draft as Record<string, unknown>)[name] as T,
-    set: (value: T) => model.patchDraft({ [name]: value }),
-    issues: model.issues.filter((issue) => issue.field === name || issue.field === searchName),
-  };
-}
-
-/** 지금 목록 상태를 읽는다(프로젝트가 자기 표시를 그릴 때). */
-export function useListModel<Row = unknown, D extends object = Record<string, unknown>>(): ListModel<Row, D> {
-  return useListContext().model as ListModel<Row, D>;
-}
+export { useListModel, useListField };
+export type { ListModel };
 
 /** 목록 하나의 부품들이 같은 상태를 쓰게 한다. 배치는 children이 정한다. */
 function ListRoot({
@@ -152,24 +84,20 @@ function ListRoot({
   readonly children: ReactNode;
 }) {
   const context: Context = {
-    model,
     copy: { ...defaultMessages, ...messages },
     renderFailure: renderFailure ?? (() => undefined),
   };
-  return <ListContext.Provider value={context}>{children}</ListContext.Provider>;
+  return <ModelProvider model={model}><PresentationContext.Provider value={context}>{children}</PresentationContext.Provider></ModelProvider>;
 }
 
 /** 검색 영역. Enter·검색 버튼이 같은 확정(model.submit)을 부른다. */
-function Filter({ children, className }: { readonly children: ReactNode; readonly className?: string }) {
-  const { model } = useListContext();
+function Filter({ model: explicitModel, children, className }: { readonly children: ReactNode; readonly className?: string } & { readonly model?: ListModel }) {
+  const { model } = useListContext(explicitModel);
+  const binding = useListFilterBinding(model);
   return (
     <form
       className={join('wk-filter', className)}
-      noValidate
-      onSubmit={(event) => {
-        event.preventDefault();
-        model.submit();
-      }}
+      {...binding}
     >
       {children}
     </form>
@@ -177,8 +105,8 @@ function Filter({ children, className }: { readonly children: ReactNode; readonl
 }
 
 /** 검색·초기화 버튼. Filter 안에 둔다. */
-function FilterActions({ className, children }: { readonly className?: string; readonly children?: ReactNode }) {
-  const { model, copy } = useListContext();
+function FilterActions({ model: explicitModel, className, children }: { readonly className?: string; readonly children?: ReactNode } & { readonly model?: ListModel }) {
+  const { model, copy } = useListContext(explicitModel);
   const reasonId = useId();
   return (
     <div className={join('wk-actions', className)}>
@@ -195,29 +123,12 @@ function FilterActions({ className, children }: { readonly className?: string; r
 }
 
 /** 접을 수 있는 상세 필터. 접어도 입력은 초안에 남는다. keys 중 확정 값이 있으면 펼친 채 시작한다. */
-function Detail({ keys, children }: { readonly keys: readonly string[]; readonly children: ReactNode }) {
-  const { model, copy } = useListContext();
-  const hasValue = (value: unknown) =>
-    value !== undefined && value !== null && value !== '' && value !== false && (!Array.isArray(value) || value.length > 0);
-  const invalid = keys.some((key) => model.issues.some((issue) => issue.field === key));
-  const signature = JSON.stringify([keys.map((key) => model.search[key]), model.resetVersion]);
-  const active = keys.some((key) => hasValue(model.search[key]));
-  const [open, setOpen] = useState(active);
-  const [seen, setSeen] = useState(signature);
-  const id = useId();
-  const validation = model.submitVersion ?? JSON.stringify(model.issues);
-  const [seenValidation, setSeenValidation] = useState(validation);
-  if (seenValidation !== validation) {
-    setSeenValidation(validation);
-    if (invalid) setOpen(true);
-  }
-  if (signature !== seen) {
-    setSeen(signature);
-    setOpen(active || invalid);
-  }
+function Detail({ model: explicitModel, keys, children }: { readonly keys: readonly string[]; readonly children: ReactNode } & { readonly model?: ListModel }) {
+  const { model, copy } = useListContext(explicitModel);
+  const { open, id, toggle } = useListDetailsBinding(model, keys);
   return (
     <>
-      <button type="button" className="wk-button" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>
+      <button type="button" className="wk-button" aria-expanded={open} aria-controls={id} onClick={toggle}>
         {copy.detail}
       </button>
       <div id={id} hidden={!open}>
@@ -228,14 +139,11 @@ function Detail({ keys, children }: { readonly keys: readonly string[]; readonly
 }
 
 /** 선택지 조회와 URL 확인이 같은 선언을 쓰는 목록 선택 칸. */
-function Choice({ name, searchName = name, nodes, ...props }: Omit<ChoiceProps, 'value' | 'onValueChange' | 'nodes'> & { readonly name: string; readonly searchName?: string; readonly nodes?: ChoiceProps['nodes'] }) {
-  const field = useListField<ChoiceProps['value']>(name, searchName);
-  const { model, copy } = useListContext();
+function Choice({ model: explicitModel, name, searchName = name, nodes, ...props }: Omit<ChoiceProps, 'value' | 'onValueChange' | 'nodes'> & { readonly name: string; readonly searchName?: string; readonly nodes?: ChoiceProps['nodes'] } & { readonly model?: ListModel }) {
+  const field = useListField<ChoiceProps['value']>(name, searchName, explicitModel);
+  const { model, copy } = useListContext(explicitModel);
   const id = useId();
-  const check = model.checks?.[searchName];
-  const parents = Object.fromEntries((check?.parents ?? []).map((parent) => [parent, (model.draftSearch ?? model.draft as Record<string, unknown>)[parent]]));
-  const options = useQuery(check === undefined ? { queryKey: ['web-kit-no-options', id], enabled: false, queryFn: () => [] } : check.options(parents));
-  const choices = nodes ?? (options.data === undefined ? [] : check?.tree?.(options.data) ?? []);
+  const { check, options, choices } = useListChoiceBinding(model, searchName, nodes);
   const message = field.issues[0]?.message;
   return <div className="wk-field">
     <label className="wk-label" htmlFor={id}>{props.label}{field.required && <span aria-hidden="true"> *</span>}</label>
@@ -247,9 +155,8 @@ function Choice({ name, searchName = name, nodes, ...props }: Omit<ChoiceProps, 
 }
 
 /** 문자열 입력 하나. 빈 값은 기본값이 없을 때 undefined로 둔다. */
-function Text({ name, label }: { readonly name: string; readonly label: string }) {
-  const field = useListField<string | undefined>(name);
-  const { model } = useListContext();
+function Text({ model: explicitModel, name, label }: { readonly name: string; readonly label: string } & { readonly model?: ListModel }) {
+  const field = useListField<string | undefined>(name, name, explicitModel);
   const id = useId();
   return (
     <div className="wk-field">
@@ -263,7 +170,7 @@ function Text({ name, label }: { readonly name: string; readonly label: string }
         aria-describedby={field.issues.length > 0 ? `${id}-error` : undefined}
         className="wk-input"
         value={field.value ?? ''}
-        onChange={(event) => field.set(event.target.value === '' && model.defaults[name] === undefined ? undefined : event.target.value)}
+        onChange={(event) => field.setText(event.target.value)}
       />
       {field.issues[0]?.message !== undefined && <span id={`${id}-error`} role="alert">{field.issues[0].message}</span>}
     </div>
@@ -272,6 +179,7 @@ function Text({ name, label }: { readonly name: string; readonly label: string }
 
 /** 단일 선택. 빈 선택은 기본값이 없을 때 undefined다. */
 function Select({
+  model: explicitModel,
   name,
   label,
   options,
@@ -284,9 +192,8 @@ function Select({
   /** 있으면 맨 앞에 빈 선택을 둔다. */
   readonly emptyLabel?: string;
   readonly disabled?: boolean;
-}) {
-  const field = useListField<string | undefined>(name);
-  const { model } = useListContext();
+} & { readonly model?: ListModel }) {
+  const field = useListField<string | undefined>(name, name, explicitModel);
   const id = useId();
   return (
     <div className="wk-field">
@@ -301,7 +208,7 @@ function Select({
         className="wk-input"
         disabled={disabled}
         value={field.value ?? ''}
-        onChange={(event) => field.set(event.target.value === '' && model.defaults[name] === undefined ? undefined : event.target.value)}
+        onChange={(event) => field.setText(event.target.value)}
       >
         {emptyLabel !== undefined && <option value="">{emptyLabel}</option>}
         {options.map((option) => (
@@ -354,6 +261,7 @@ function Check({
 
 /** 다중 선택. 빈 배열은 제한 없음(전부 체크 표시)이고 전부 고르면 빈 배열로 돌린다. "전체"는 allLabel이 있을 때만 둔다. */
 function MultiSelect({
+  model: explicitModel,
   name,
   label,
   options,
@@ -363,12 +271,9 @@ function MultiSelect({
   readonly label: string;
   readonly options: readonly { readonly value: string; readonly label: string }[];
   readonly allLabel?: string;
-}) {
-  const field = useListField<readonly string[]>(name);
+} & { readonly model?: ListModel }) {
   const values = options.map((option) => option.value);
-  const selected = field.value ?? [];
-  const effective = selected.length === 0 ? values : selected.filter((value) => values.includes(value));
-  const set = (next: readonly string[]) => field.set(normalizeFilterSelection(next, values));
+  const { effective, set, toggle } = useListMultiChoiceBinding(name, values, explicitModel);
   return (
     <fieldset className="wk-field">
       <legend className="wk-label">{label}</legend>
@@ -386,7 +291,7 @@ function MultiSelect({
           <Check
             key={option.value}
             checked={effective.includes(option.value)}
-            onChange={(on) => set(on ? [...effective, option.value] : effective.filter((value) => value !== option.value))}
+            onChange={(on) => toggle(option.value, on)}
           >
             {option.label}
           </Check>
@@ -396,13 +301,11 @@ function MultiSelect({
   );
 }
 
-/** 기간 단축 하나. range를 주면 그 계산을, value를 주면 오늘에서 그만큼 이동한 쌍을 쓴다. */
-export type PeriodShortcut =
-  | { readonly label: string; readonly value: PeriodPreset }
-  | { readonly label: string; readonly range: (today: string) => { readonly from?: string; readonly to?: string } };
+export type { PeriodShortcut } from './list-binding';
 
 /** 기간: 기준 선택(선택)·단축·직접 입력. 맞지 않는 기간은 검색할 때 상태가 기본값으로 돌린다. */
 function Period({
+  model: explicitModel,
   from,
   to,
   label,
@@ -416,28 +319,21 @@ function Period({
   readonly from: string;
   readonly to: string;
   readonly label: string;
-  /** 단축이 오늘을 읽는 시간대. 브라우저 시간대를 암묵적으로 쓰지 않는다. */
-  readonly timeZone: string;
-  readonly now: () => Date;
+  /** 단축이 오늘을 읽는 시간대. 생략하면 브라우저 시간대를 쓴다. */
+  readonly timeZone?: string;
+  readonly now?: () => Date;
   readonly presets?: readonly PeriodShortcut[];
   /** 기간 기준 필드(공연일·등록일 등). */
   readonly type?: { readonly name: string; readonly options: readonly { readonly value: string; readonly label: string }[] };
   /** 날짜 칸 이름. 생략하면 "{label} {messages.periodStart/End}". */
   readonly startLabel?: string;
   readonly endLabel?: string;
-}) {
-  const { model, copy } = useListContext();
+} & { readonly model?: ListModel }) {
+  const { model, copy } = useListContext(explicitModel);
   const draft = model.draft as Record<string, unknown>;
   const issue = model.issues.find((item) => item.field === from);
   const typeId = useId();
-  const set = (range: { from?: string; to?: string }) => model.patchDraft({ [from]: range.from || undefined, [to]: range.to || undefined });
-  /** 단축 하나가 지금 만드는 기간. 누른 순간과 선택 표시가 같은 계산을 쓴다. */
-  const rangeOf = (preset: PeriodShortcut): { from?: string; to?: string } => {
-    const today = calendarDate(now(), timeZone);
-    if ('range' in preset) return preset.range(today);
-    const other = shiftCalendarDate(today, preset.value);
-    return other < today ? { from: other, to: today } : { from: today, to: other };
-  };
+  const { set, rangeOf } = useListPeriodBinding(model, from, to, timeZone, now);
   return (
     <fieldset className="wk-field">
       <legend className="wk-label">{label}</legend>
@@ -500,6 +396,7 @@ function Period({
 
 /** 키워드: 대상 선택·입력·추가·칩. 입력 중 글자는 상태(keywordInput)에 있어 추가를 누르지 않아도 검색에 들어간다. */
 function Keywords({
+  model: explicitModel,
   name,
   label,
   choices,
@@ -514,10 +411,9 @@ function Keywords({
   readonly targetLabel?: string;
   readonly inputLabel?: string;
   readonly removeLabel?: (item: Keyword, choiceLabel: string) => string;
-}) {
-  const { model, copy } = useListContext();
-  const input = model.keywordInput(name, choices.map((choice) => choice.value));
-  const items = ((model.draft as Record<string, unknown>)[name] as readonly Keyword[] | undefined) ?? [];
+} & { readonly model?: ListModel }) {
+  const { model, copy } = useListContext(explicitModel);
+  const { input, items, onKeyDown, remove } = useListKeywordBinding(model, name, choices.map((choice) => choice.value));
   return (
     <fieldset className="wk-field">
       <legend className="wk-label">{label}</legend>
@@ -536,12 +432,7 @@ function Keywords({
           className="wk-input"
           value={input.text}
           onChange={(event) => input.setText(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
-              event.preventDefault();
-              input.add();
-            }
-          }}
+          onKeyDown={onKeyDown}
         />
         <button type="button" className="wk-button" onClick={input.add}>
           {copy.keywordAdd}
@@ -558,7 +449,7 @@ function Keywords({
                 type="button"
                 className="wk-chip-remove"
                 aria-label={removeLabel?.(item, choiceLabel) ?? `${item.value} ${copy.keywordRemove}`}
-                onClick={() => model.patchDraft({ [name]: items.filter((_, i) => i !== index) })}
+                onClick={() => remove(index)}
               >
                 ×
               </button>
@@ -572,8 +463,8 @@ function Keywords({
 }
 
 /** 결과 영역: 조회 안 함·로딩·실패(재시도)·빈 결과·이전 결과 유지 중 실패 안내. 결과가 있을 때만 children(표)을 그린다. */
-function Result({ children, className }: { readonly children: ReactNode; readonly className?: string }) {
-  const { model, copy, renderFailure } = useListContext();
+function Result({ model: explicitModel, children, className }: { readonly children: ReactNode; readonly className?: string } & { readonly model?: ListModel }) {
+  const { model, copy, renderFailure } = useListContext(explicitModel);
   const status = model.status;
   const resultId = useId();
   let body: ReactNode;
@@ -652,12 +543,12 @@ export interface ListColumn<Row> {
 }
 
 const ARIA_SORT = { asc: 'ascending', desc: 'descending' } as const;
-const INTERACTIVE = 'a,button,input,select,textarea,label,[role="button"],[role="checkbox"]';
 /** 이 행 수부터 화면에 보이는 행만 그린다. */
 export const VIRTUALIZE_FROM_ROWS = 50;
 
 /** 결과 표: 선택 열·정렬 머리글·행 이동(클릭·Enter)·많은 행의 가상화. 이전 조건 결과는 선택할 수 없다. */
 function Table<Row>({
+  model: explicitModel,
   columns,
   rowId,
   onOpen,
@@ -674,38 +565,37 @@ function Table<Row>({
   readonly rowLabel?: (row: Row) => string;
   readonly virtualizeFrom?: number;
   readonly className?: string;
-}) {
-  const { model, copy } = useListContext();
+} & { readonly model?: ListModel }) {
+  const { model, copy } = useListContext(explicitModel);
   const rows = model.rows as readonly Row[];
   const viewport = useRef<HTMLDivElement>(null);
   const virtualize = rows.length >= virtualizeFrom;
-  const sortKey = model.search[model.view.sort];
-  const order = model.search[model.view.order] === 'asc' ? 'asc' : 'desc';
-  const locked = !model.isCurrent || model.selection.isRunning;
+  const { sortKey, order, locked } = listViewBinding(model);
   const columnCount = columns.length + (selectable ? 1 : 0);
 
   /** 행 하나. 가상화 중이면 측정 ref와 위치를 받는다. */
   const renderRow = (row: Row, measure?: { readonly index: number; readonly ref: (node: Element | null) => void }) => {
     const id = rowId(row);
     const activate = onOpen === undefined ? undefined : () => onOpen(row);
+    const binding = listRowBinding(model, id, activate);
     return (
       <tr
         key={id}
         data-index={measure?.index}
         ref={measure?.ref}
-        data-selected={model.selection.isChecked(id) || undefined}
+        data-selected={binding.checked || undefined}
         tabIndex={activate ? 0 : undefined}
         className={activate ? 'wk-row-link' : undefined}
-        onClick={(event) => activateTableRow(event, activate, { keys: ['Enter'], interactiveSelector: INTERACTIVE })}
-        onKeyDown={(event) => activateTableRow(event, activate, { keys: ['Enter'], interactiveSelector: INTERACTIVE })}
+        onClick={binding.onClick}
+        onKeyDown={binding.onKeyDown}
       >
         {selectable && (
           <td className="wk-cell-select">
             <Check
               label={rowLabel?.(row) ?? copy.selectRow}
-              checked={model.selection.isChecked(id)}
-              disabled={locked || !model.selection.canSelect(id)}
-              onChange={(on) => model.selection.toggleRow(id, on)}
+              checked={binding.checked}
+              disabled={binding.disabled}
+              onChange={binding.toggle}
             />
           </td>
         )}
@@ -779,17 +669,7 @@ function VirtualRows<Row>({
   readonly columnCount: number;
   readonly renderRow: (row: Row, measure: { readonly index: number; readonly ref: (node: Element | null) => void }) => ReactNode;
 }) {
-  const virtualizer = useVirtualizer({
-    count: rows.length,
-    getScrollElement: () => viewport.current,
-    estimateSize: () => 41,
-    overscan: 8,
-    getItemKey: (index) => (rows[index] === undefined ? index : rowId(rows[index]!)),
-    initialRect: { width: 1, height: 576 },
-  });
-  const items = virtualizer.getVirtualItems();
-  const leading = items[0]?.start ?? 0;
-  const trailing = Math.max(0, virtualizer.getTotalSize() - (items.at(-1)?.end ?? 0));
+  const { items, leading, trailing, measureElement } = useListVirtualRows(rows, rowId, viewport);
   const spacer = (height: number) => (
     <tr aria-hidden="true">
       <td colSpan={columnCount} style={{ height, padding: 0 }} />
@@ -800,7 +680,7 @@ function VirtualRows<Row>({
       {leading > 0 && spacer(leading)}
       {items.map((item) => {
         const row = rows[item.index];
-        return row === undefined ? null : renderRow(row, { index: item.index, ref: virtualizer.measureElement });
+        return row === undefined ? null : renderRow(row, { index: item.index, ref: measureElement });
       })}
       {trailing > 0 && spacer(trailing)}
     </>
@@ -808,10 +688,10 @@ function VirtualRows<Row>({
 }
 
 /** 총 건수. 이전 조건 결과를 보이는 동안은 그 숫자가 틀린 정보라 '…'이다. */
-function Total({ className }: { readonly className?: string }) {
-  const { model, copy } = useListContext();
-  const shown = model.status.kind === 'rows' || model.status.kind === 'empty' || (model.status.kind === 'pending' && model.rows.length > 0);
-  const count = !shown ? '0' : model.isCurrent ? model.total.toLocaleString() : '…';
+function Total({ model: explicitModel, className }: { readonly className?: string } & { readonly model?: ListModel }) {
+  const { model, copy } = useListContext(explicitModel);
+  const { total } = listViewBinding(model);
+  const count = total === undefined ? '…' : total.toLocaleString();
   return (
     <p className={join('wk-total', className)}>
       {copy.total} <strong>{count}</strong>
@@ -821,13 +701,14 @@ function Total({ className }: { readonly className?: string }) {
 }
 
 /** 페이지 크기 선택. 바꾸면 첫 페이지로 확정한다. */
-function PageSize({ sizes }: { readonly sizes: readonly number[] }) {
-  const { model, copy } = useListContext();
+function PageSize({ model: explicitModel, sizes }: { readonly sizes: readonly number[] } & { readonly model?: ListModel }) {
+  const { model, copy } = useListContext(explicitModel);
+  const binding = listViewBinding(model);
   const id = useId();
   return (
     <span className="wk-inline">
       <label htmlFor={id}>{copy.size}</label>
-      <select id={id} className="wk-input" value={Number(model.search[model.view.size])} onChange={(event) => model.setSize(Number(event.target.value))}>
+      <select id={id} className="wk-input" value={binding.size} onChange={(event) => binding.setSize(event.target.value)}>
         {sizes.map((size) => (
           <option key={size} value={size}>
             {size}
@@ -839,17 +720,15 @@ function PageSize({ sizes }: { readonly sizes: readonly number[] }) {
 }
 
 /** 정렬 키 선택. 고르면 그 키의 첫 방향(sortFirst)으로, 같은 키면 지금 방향으로 확정한다. */
-function SortSelect({ options }: { readonly options: readonly { readonly value: string; readonly label: string }[] }) {
-  const { model, copy } = useListContext();
-  const current = String(model.search[model.view.sort] ?? '');
+function SortSelect({ model: explicitModel, options }: { readonly options: readonly { readonly value: string; readonly label: string }[] } & { readonly model?: ListModel }) {
+  const { model, copy } = useListContext(explicitModel);
+  const binding = listViewBinding(model);
   return (
     <select
       aria-label={copy.sort}
       className="wk-input"
-      value={current}
-      onChange={(event) => {
-        if (event.target.value !== current) model.toggleSort(event.target.value);
-      }}
+      value={binding.sort}
+      onChange={(event) => binding.setSort(event.target.value)}
     >
       {options.map((option) => (
         <option key={option.value} value={option.value}>
@@ -860,28 +739,17 @@ function SortSelect({ options }: { readonly options: readonly { readonly value: 
   );
 }
 
-const WINDOW = 5;
-/** 지금 페이지 주변 번호들. 처음·끝 페이지는 항상 보인다. */
-function pageWindow(page: number, last: number): readonly number[] {
-  const start = Math.max(1, Math.min(page - Math.floor(WINDOW / 2), last - WINDOW + 1));
-  const pages = new Set([1, last]);
-  for (let current = start; current < start + WINDOW && current <= last; current += 1) pages.add(current);
-  return [...pages].sort((a, b) => a - b);
-}
-
 /** 번호 페이지 이동. 한 페이지뿐이면 그리지 않는다. */
-function Pagination({ className }: { readonly className?: string }) {
-  const { model, copy } = useListContext();
-  const size = Math.max(1, Number(model.search[model.view.size]) || 1);
-  const last = Math.max(1, Math.ceil(model.total / size));
-  if (last <= 1 || model.rows.length === 0) return null;
-  const page = Math.min(Math.max(Number(model.search[model.view.page]) || 1, 1), last);
+function Pagination({ model: explicitModel, className }: { readonly className?: string } & { readonly model?: ListModel }) {
+  const { model, copy } = useListContext(explicitModel);
+  const { page, last, pages, visible } = listPaginationBinding(model);
+  if (!visible) return null;
   return (
     <nav aria-label={copy.pagination} className={join('wk-pagination', className)}>
       <button type="button" className="wk-button" disabled={page === 1} onClick={() => model.goToPage(page - 1)}>
         {copy.previous}
       </button>
-      {pageWindow(page, last).map((number, index, all) => (
+      {pages.map((number, index, all) => (
         <span key={number} className="wk-inline">
           {index > 0 && number - (all[index - 1] ?? number) > 1 && <span aria-hidden="true">…</span>}
           <button
@@ -902,8 +770,8 @@ function Pagination({ className }: { readonly className?: string }) {
 }
 
 /** 선택 기반 쓰기 액션 자리. 이전 조건 결과를 보이는 동안 통째로 잠근다. */
-function Actions({ children, className }: { readonly children: ReactNode; readonly className?: string }) {
-  const { model } = useListContext();
+function Actions({ model: explicitModel, children, className }: { readonly children: ReactNode; readonly className?: string } & { readonly model?: ListModel }) {
+  const { model } = useListContext(explicitModel);
   return (
     <fieldset disabled={!model.isCurrent} className={join('wk-actions wk-fieldset', className)}>
       {children}
@@ -913,6 +781,7 @@ function Actions({ children, className }: { readonly children: ReactNode; readon
 
 /** 확인창을 거치는 일괄 작업. 확인 당시 결과와 선택이 바뀌면 실행하지 않고, 실패는 확인창에 남기며 선택은 유지한다. */
 function BulkAction<T>({
+  model: explicitModel,
   label,
   run,
   check,
@@ -929,44 +798,9 @@ function BulkAction<T>({
   readonly confirmLabel?: string;
   readonly cancelLabel?: string;
   readonly describe?: (ids: readonly string[]) => ReactNode;
-}) {
-  const { model, copy, renderFailure } = useListContext();
-  const [pending, setPending] = useState<{ ids: readonly string[]; page: unknown }>();
-  const [error, setError] = useState<unknown>();
-  const running = useRef(false);
-  const current = useRef(model);
-  current.current = model;
-  const stale = (snapshot: { ids: readonly string[]; page: unknown }, now: ListModel) =>
-    snapshot.page !== now.page ||
-    JSON.stringify(snapshot.ids) !== JSON.stringify(now.selection.selectedIds) ||
-    !now.isCurrent ||
-    snapshot.ids.some((id) => !now.selection.canSelect(id));
-  if (!running.current && pending !== undefined && stale(pending, model)) setPending(undefined);
-
-  /** 마지막 순간에도 결과·선택 snapshot과 업무 조건을 다시 확인한다. */
-  async function confirm() {
-    if (running.current || pending === undefined) return;
-    const now = current.current;
-    if (stale(pending, now)) {
-      setPending(undefined);
-      return;
-    }
-    const refusal = check?.(pending.ids);
-    if (refusal) {
-      setError(refusal);
-      return;
-    }
-    running.current = true;
-    setError(undefined);
-    try {
-      await now.selection.run(run);
-      setPending(undefined);
-    } catch (failure) {
-      setError(failure);
-    } finally {
-      running.current = false;
-    }
-  }
+} & { readonly model?: ListModel }) {
+  const { model, copy, renderFailure } = useListContext(explicitModel);
+  const { pending, error, confirm, locked, open, cancel } = useBulkConfirmation({ model, run, check });
   const custom = error === undefined || typeof error === 'string' ? undefined : renderFailure(error, 'action');
   const errorText = error === undefined ? null : typeof error === 'string' ? error : custom === undefined ? copy.actionFailed : custom;
   return (
@@ -974,12 +808,8 @@ function BulkAction<T>({
       <button
         type="button"
         className="wk-button"
-        disabled={!model.isCurrent || model.selection.selectedIds.length === 0 || model.selection.isRunning}
-        onClick={() => {
-          const refusal = check?.(model.selection.selectedIds);
-          setError(refusal);
-          if (!refusal) setPending({ ids: [...model.selection.selectedIds], page: model.page });
-        }}
+        disabled={locked}
+        onClick={open}
       >
         {label}
       </button>
@@ -990,9 +820,7 @@ function BulkAction<T>({
         confirmLabel={confirmLabel ?? copy.confirm}
         cancelLabel={cancelLabel ?? copy.cancel}
         onConfirm={() => void confirm()}
-        onCancel={() => {
-          if (!running.current) setPending(undefined);
-        }}
+        onCancel={cancel}
       >
         {pending === undefined ? null : (describe?.(pending.ids) ?? `${pending.ids.length}${copy.items}`)}
         {errorText !== null && (
@@ -1010,16 +838,11 @@ function BulkAction<T>({
   );
 }
 
-/** Download가 읽는 다운로드 흐름(useListDownload 결과). */
-export interface DownloadControl {
-  readonly state: DownloadState;
-  readonly blockOf: (kind: DownloadKind) => DownloadBlock | undefined;
-  readonly start: (kind: DownloadKind) => Promise<boolean>;
-  readonly clear: () => void;
-}
+export type { DownloadControl } from './list-binding';
 
 /** 다운로드 종류 선택과 실행 버튼. 진행 중에는 잠기고 실패는 원인과 함께 남는다. kinds 순서대로 보인다. */
 function Download({
+  model: explicitModel,
   control,
   kinds = ['all', 'selected'],
   label,
@@ -1027,11 +850,10 @@ function Download({
   readonly control: DownloadControl;
   readonly kinds?: readonly DownloadKind[];
   readonly label?: string;
-}) {
-  const { copy, renderFailure } = useListContext();
-  const [kind, setKind] = useState<DownloadKind | ''>('');
+} & { readonly model?: ListModel }) {
+  const { copy, renderFailure } = useListContext(explicitModel);
+  const { kind, blocked, change, start } = useListDownloadBinding(control, kinds);
   const kindLabel = (value: DownloadKind) => (value === 'all' ? copy.downloadAll : copy.downloadSelected);
-  const blocked = kind === '' || control.blockOf(kind) !== undefined;
   const custom = control.state.kind === 'failed' ? renderFailure(control.state.failure, 'download') : null;
   const failure = control.state.kind !== 'failed' ? null : custom === undefined ? copy.downloadFailed : custom;
   const running = control.state.kind === 'running';
@@ -1042,10 +864,7 @@ function Download({
         className="wk-input"
         disabled={running}
         value={kind}
-        onChange={(event) => {
-          control.clear();
-          setKind(kinds.find((value) => value === event.target.value) ?? '');
-        }}
+        onChange={(event) => change(event.target.value)}
       >
         <option value="">{copy.downloadChoose}</option>
         {kinds.map((value) => (
@@ -1054,7 +873,7 @@ function Download({
           </option>
         ))}
       </select>
-      <button type="button" className="wk-button" disabled={blocked} onClick={() => kind !== '' && void control.start(kind)}>
+      <button type="button" className="wk-button" disabled={blocked} onClick={start}>
         {label ?? copy.download}
       </button>
       {/* 진행 중에는 종류·버튼을 잠그고 옆에 로딩 표시만 둔다. 문구는 화면 낭독기에만 읽힌다. */}

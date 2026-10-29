@@ -12,9 +12,10 @@ export interface TreeStyles {
 export interface TreeControl {
   readonly label: string;
   readonly checked: boolean;
+  readonly mixed?: boolean;
   readonly toggle: () => void;
 }
-/** 명시적인 leaf 선택을 렌더한다. 부모는 하나라도 선택되면 체크, 전체는 모든 leaf가 선택되어야 체크다. */
+/** 명시적인 leaf 선택을 렌더한다. 부모·전체는 모든 leaf 선택 시 체크, 일부 선택 시 mixed다. */
 export function CheckboxTree<T extends string>({
   nodes,
   values,
@@ -49,6 +50,7 @@ export function CheckboxTree<T extends string>({
         {renderCheckbox({
           label,
           checked,
+          mixed: selection.mixed(descendants),
           toggle: () => onValueChange(selection.set(descendants, !checked)),
         })}
         <span aria-hidden="true">{label}</span>

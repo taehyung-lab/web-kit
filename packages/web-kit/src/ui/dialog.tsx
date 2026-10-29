@@ -1,41 +1,9 @@
 // 파일 책임: 기본 대화창 세 가지(Dialog·ConfirmDialog·AlertDialog)와 그 포커스 규칙.
 // 열린 직후부터 닫힐 때까지 키보드 포커스가 창 밖으로 한 순간도 나가지 않게 한다(Base UI의 focus guard 경유를 막는다).
 import { Dialog as BaseDialog } from '@base-ui/react/dialog';
-import { useCallback, useRef, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
-import { tabbable } from 'tabbable';
+import { type ReactNode, type RefObject } from 'react';
+import { useDialogBinding, useConfirmBinding, useAcknowledgeBinding } from '../dialog-binding';
 import { Pending } from './pending';
-
-/** 표시·disabled·radio 그룹 규칙을 포함해 현재 Tab 대상만 고른다. */
-function tabbables(root: HTMLElement): ReturnType<typeof tabbable> {
-  return tabbable(root).filter((element) => !element.hasAttribute('data-base-ui-focus-guard'));
-}
-
-/**
- * Tab·Shift+Tab의 끝에서 반대쪽 끝으로 같은 이벤트 안에서 옮긴다.
- * Base UI는 끝에서 팝업 밖 guard에 포커스를 둔 뒤 다음 프레임에 되돌리므로, 그 한 프레임 동안 포커스가 창 밖에 있었다.
- */
-function trapTab(event: KeyboardEvent<HTMLElement>) {
-  if (event.key !== 'Tab' || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
-  const target = event.target;
-  // 포털로 열린 하위 선택창과 중첩 대화창의 키보드는 해당 창이 맡는다.
-  if (target instanceof HTMLElement && (!event.currentTarget.contains(target) || target.closest('[role="dialog"], [role="alertdialog"]') !== event.currentTarget)) return;
-  const items = tabbables(event.currentTarget);
-  if (items.length === 0) {
-    event.preventDefault();
-    return;
-  }
-  const first = items[0]!;
-  const last = items[items.length - 1]!;
-  const active = document.activeElement;
-  const inside = active instanceof HTMLElement && event.currentTarget.contains(active);
-  if (event.shiftKey && (!inside || active === first || active === event.currentTarget)) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && (!inside || active === last)) {
-    event.preventDefault();
-    first.focus();
-  }
-}
 
 export interface DialogProps {
   readonly open: boolean;
@@ -67,40 +35,18 @@ export function Dialog({
   returnFocus,
   className,
 }: DialogProps) {
-  const popup = useRef<HTMLDivElement | null>(null);
-  // 열리는 순간(마운트 커밋) 첫 칸에 동기로 포커스한다. Base UI의 첫 포커스는 다음 프레임이라 그 사이 Tab이 창 밖에서 시작했다.
-  const attach = useCallback((node: HTMLDivElement | null) => {
-    popup.current = node;
-    if (node === null || node.contains(document.activeElement)) return;
-    (tabbables(node)[0] ?? node).focus();
-  }, []);
+  const binding = useDialogBinding({ open, closable, onClose, returnFocus });
   return (
-    <BaseDialog.Root
-      open={open}
-      disablePointerDismissal={!closable}
-      onOpenChange={(next) => {
-        if (!next && closable) onClose?.();
-      }}
-    >
+    <BaseDialog.Root {...binding.rootProps}>
       <BaseDialog.Portal>
         <BaseDialog.Backdrop className="wk-backdrop" />
         <BaseDialog.Popup
-          ref={attach}
+          ref={binding.popupRef}
           role={role}
-          tabIndex={-1}
+          {...binding.popupProps}
           className={join('wk-dialog', className)}
           aria-describedby={undefined}
-          initialFocus={() => {
-            if (popup.current === null) return true;
-            (tabbables(popup.current)[0] ?? popup.current).focus();
-            return false;
-          }}
-          finalFocus={returnFocus ?? true}
-          onKeyDown={(event) => {
-            trapTab(event);
-            // Base UI는 Esc를 막지 않으면 닫기 요청으로 보낸다. 닫을 수 없는 창은 여기서 멈춘다.
-            if (event.key === 'Escape' && !closable) event.preventDefault();
-          }}
+
         >
           <BaseDialog.Title className="wk-dialog-title">{title}</BaseDialog.Title>
           {children === undefined ? null : <div className="wk-dialog-body">{children}</div>}
@@ -143,20 +89,21 @@ export function ConfirmDialog({
   readonly pendingLabel?: string;
   readonly returnFocus?: RefObject<HTMLElement | null>;
 }) {
+  const binding = useConfirmBinding({ pending, onConfirm, onCancel });
   return (
     <Dialog
       open={open}
       title={title}
       role="alertdialog"
-      closable={!pending}
-      onClose={onCancel}
+      closable={binding.closable}
+      onClose={binding.cancel}
       returnFocus={returnFocus}
       footer={
         <>
-          <button type="button" className="wk-button wk-button-secondary" disabled={pending} onClick={onCancel}>
+          <button type="button" className="wk-button wk-button-secondary" disabled={binding.locked} onClick={binding.cancel}>
             {cancelLabel}
           </button>
-          <button type="button" className="wk-button wk-button-primary" disabled={pending} onClick={onConfirm}>
+          <button type="button" className="wk-button wk-button-primary" disabled={binding.locked} onClick={binding.confirm}>
             {confirmLabel}
           </button>
           {pending ? <Pending label={pendingLabel} /> : null}
@@ -188,8 +135,7 @@ export function AlertDialog({
   /** 진행 표시의 화면 낭독기 문구. */
   readonly pendingLabel?: string;
 }) {
-  const done = useRef(false);
-  if (!open) done.current = false;
+  const binding = useAcknowledgeBinding({ open, pending, onConfirm });
   return (
     <Dialog
       open={open}
@@ -202,11 +148,7 @@ export function AlertDialog({
             type="button"
             className="wk-button wk-button-primary"
             aria-disabled={pending || undefined}
-            onClick={() => {
-              if (pending || done.current) return;
-              done.current = true;
-              onConfirm();
-            }}
+            onClick={binding.confirm}
           >
             {confirmLabel}
           </button>

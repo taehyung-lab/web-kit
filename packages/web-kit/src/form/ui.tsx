@@ -1,20 +1,14 @@
 // 파일 책임: 폼 기본 UI의 묶음 부품(Form.*)과 앱에 한 번 두는 이탈 보호(FormGuard).
 // 각 부품은 같은 편집 상태(useSaveForm 결과)를 context로 읽어서, 칸·버튼·오류 줄을 어디에 두어도 저장·검증·focus 연결을 다시 쓰지 않는다.
 // 저장 수명은 useSaveForm이, 이탈 판정은 createFormNavigation이 소유하고 여기는 표시와 사용자 입력 연결만 맡는다.
-import { flushSync } from 'react-dom';
-import { requestFormChange, writeFormValues } from './references';
+import { GuardContext, ScopeContext, useFormGuardBinding, useFormRootBinding, useFormFieldBinding, applyFormText, useOptionsRetryFocus, useFormCancel, useFormDialogScope, useFormConfirmBinding, useFormSavedBinding, firstMessage, FormBindingProvider, useFormBinding, useFormSubmitBinding, formFileBinding } from './binding';
 import { Choice as ChoiceInput, type ChoiceProps } from '../ui/choice';
-import { useBlocker, useRouter, type NavigateOptions } from '@tanstack/react-router';
-import { getBy, setBy, useSelector, type AnyFormApi, type DeepKeys, type DeepValue } from '@tanstack/react-form';
+import { type NavigateOptions } from '@tanstack/react-router';
+import { type AnyFormApi, type DeepKeys, type DeepValue } from '@tanstack/react-form';
 import {
   createContext,
   useContext,
-  useEffect,
   useId,
-  useLayoutEffect,
-  useRef,
-  useState,
-  useSyncExternalStore,
   type FormHTMLAttributes,
   type KeyboardEvent,
   type ReactNode,
@@ -24,8 +18,7 @@ import { Pending } from '../ui/pending';
 import { FormArrayField, type FormArrayRows } from './array';
 import { FieldFrame, type FieldControlProps } from './field';
 import type { FormFileValue } from './file';
-import { createFormNavigation, type FormNavigation as Navigation, type LeaveReason } from './navigation';
-import { FormRejection, lockField, type SaveFormEditor } from './save-form';
+import { FormRejection, type SaveFormEditor } from './save-form';
 import { useFormSection } from './sections';
 
 // ─── 이탈 보호 ───────────────────────────────────────────────────────────────
@@ -40,10 +33,6 @@ export type FormGuardMessages = {
   readonly cancel: typeof defaultGuardMessages.cancel;
   readonly navigationFailed: string;
 };
-
-const GuardContext = createContext<Navigation | undefined>(undefined);
-/** 대화창 안 폼의 범위. 닫기는 이 범위의 폼만 묻는다. */
-const ScopeContext = createContext<{ readonly id: object; readonly close: () => void } | undefined>(undefined);
 
 /**
  * 앱(Router 안)에 한 번 둔다. 등록된 폼 중 하나라도 입력이 기준선과 다르면 Router 이동·브라우저 이탈을 한 번 묻고,
@@ -60,21 +49,12 @@ export function FormGuard({
     readonly navigationFailed?: string;
   };
 }) {
-  const [owner] = useState(createFormNavigation);
-  useSyncExternalStore(owner.subscribe, owner.getSnapshot, owner.getSnapshot);
+  const owner = useFormGuardBinding();
   const copy = {
     navigate: { ...defaultGuardMessages.navigate, ...messages?.navigate },
     cancel: { ...defaultGuardMessages.cancel, ...messages?.cancel },
     navigationFailed: messages?.navigationFailed ?? defaultGuardMessages.navigationFailed,
   };
-  const blocker = useBlocker({ shouldBlockFn: () => owner.blocked(), withResolver: true, enableBeforeUnload: () => owner.blocked() });
-  const proceed = blocker.status === 'blocked' ? blocker.proceed : undefined;
-  const reset = blocker.status === 'blocked' ? blocker.reset : undefined;
-  useEffect(() => {
-    if (proceed === undefined) return;
-    // 저장 중이면 'blocked'라 묻지 않고 되돌린다. 입력이 있으면 한 번 묻고, 답에 따라 진행하거나 되돌린다.
-    if (owner.request(proceed, { onCancel: reset }) === 'blocked') reset?.();
-  }, [owner, proceed, reset]);
   const text = copy[owner.reason ?? 'navigate'];
   return (
     <GuardContext.Provider value={owner}>
@@ -103,13 +83,7 @@ export function FormGuard({
  * 저장 중이면 아무것도 하지 않고, 입력이 없으면 바로, 있으면 확인 뒤에 run을 실행한다.
  * run이 Router로 이동하면 이미 물었으므로 `ignoreBlocker: true`로 이동한다.
  */
-export function useLeave(): (run: () => void | Promise<void>, reason?: LeaveReason) => void {
-  const owner = useContext(GuardContext);
-  if (owner === undefined) throw new Error('useLeave requires <FormGuard>');
-  return (run, reason = 'navigate') => {
-    owner.request(run, { reason });
-  };
-}
+export { useLeave } from './binding';
 
 // ─── 폼 ─────────────────────────────────────────────────────────────────────
 
@@ -144,38 +118,17 @@ export type RenderFormFailure = (failure: unknown, place: FormFailurePlace) => R
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 부품은 값 타입을 모르고 이름으로만 접근한다.
 type AnyEditor = SaveFormEditor<any, any>;
 type FormContextValue = {
-  readonly editor: AnyEditor;
   readonly copy: FormMessages;
   readonly renderFailure: RenderFormFailure;
   readonly formatError: (errors: readonly unknown[]) => string | undefined;
-  readonly submitOrigin: { current: HTMLElement | null };
 };
 const FormContext = createContext<FormContextValue | undefined>(undefined);
 
 /** 지금 폼 context를 읽는다. Form 밖에서 쓰면 바로 알린다. */
-function useFormContext(): FormContextValue {
+function useFormContext() {
   const value = useContext(FormContext);
   if (value === undefined) throw new Error('Form parts require <Form editor>');
-  return value;
-}
-
-/** 고칠 수 없는 칸이면 마운트 동안 폼에 알린다(그 칸으로 대응된 서버 오류는 폼 한 줄로 간다). */
-function useLocked(editor: AnyEditor, name: string, disabled: boolean) {
-  useLayoutEffect(() => (disabled ? lockField(editor.form, name) : undefined), [editor.form, name, disabled]);
-}
-
-/** 오류 값 중 첫 문자열 문구를 고른다. 원시 응답 객체는 보이지 않는다. */
-function firstMessage(errors: readonly unknown[]): string | undefined {
-  for (const error of errors) {
-    if (typeof error === 'string') return error;
-    if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string') return error.message;
-  }
-  return undefined;
-}
-
-/** 저장 요청 또는 저장 뒤 완료 처리(이동 등)가 진행 중인가. 이 동안 버튼은 잠기고 저장 버튼 옆에 진행 표시가 선다. */
-function inProgress(editor: AnyEditor): boolean {
-  return editor.stage.kind === 'saving' || (editor.stage.kind === 'saved' && editor.stage.completing);
+  return { ...value, ...useFormBinding() };
 }
 
 /**
@@ -199,47 +152,18 @@ function FormRoot({
   readonly formatError?: (errors: readonly unknown[]) => string | undefined;
   readonly children: ReactNode;
 } & Omit<FormHTMLAttributes<HTMLFormElement>, 'onSubmit' | 'noValidate' | 'children'>) {
-  const owner = useContext(GuardContext);
-  if (protect && owner === undefined) throw new Error('<Form> requires <FormGuard> (or protect={false})');
-  const scope = useContext(ScopeContext);
-  const current = useRef(editor);
-  current.current = editor;
-  const [id] = useState(() => ({}));
-  const submitOrigin = useRef<HTMLElement | null>(null);
-  useLayoutEffect(() => {
-    if (!protect || owner === undefined) return;
-    return owner.register(id, {
-      scope: scope?.id,
-      read: () => {
-        const state = current.current.getState();
-        return { dirty: state.isDirty, busy: state.isSaving, identity: current.current.identity };
-      },
-    });
-  }, [owner, id, scope?.id, protect]);
-  useLayoutEffect(() => {
-    owner?.changed();
-  }, [owner, editor.isDirty, editor.isSaving, editor.identity]);
+  const { submitOrigin, formProps: binding } = useFormRootBinding(editor, protect);
   const value: FormContextValue = {
-    editor,
     copy: { ...defaultFormMessages, ...messages },
     renderFailure: renderFailure ?? (() => undefined),
     formatError: formatError ?? firstMessage,
-    submitOrigin,
   };
   return (
-    <FormContext.Provider value={value}>
+    <FormBindingProvider editor={editor} submitOrigin={submitOrigin}><FormContext.Provider value={value}>
       <form
         {...formProps}
         className={join('wk-form', formProps.className)}
-        noValidate
-        onSubmit={(event) => {
-          event.preventDefault();
-          // 대화창(portal) 안 폼의 제출이 React 트리를 따라 바깥 폼까지 올라가 바깥 폼도 제출되는 일을 막는다.
-          event.stopPropagation();
-          submitOrigin.current =
-            (event.nativeEvent as SubmitEvent).submitter ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
-          void editor.submit();
-        }}
+        {...binding}
       >
         {children}
       </form>
@@ -259,7 +183,7 @@ function FormRoot({
           {value.formatError([editor.referenceFailure]) ?? editor.referenceFailure}
         </p>
       )}
-    </FormContext.Provider>
+    </FormContext.Provider></FormBindingProvider>
   );
 }
 
@@ -296,9 +220,8 @@ function Field<V = unknown>({
   readonly children: (control: FormControl<V>, labelId: string) => ReactNode;
 }) {
   const { editor, formatError } = useFormContext();
-  useLocked(editor, name, disabled);
-  // 필수 표시는 schema가 정한다(칸만 비운 지금 값을 schema가 거부하는가). 값이 바뀌면 다시 판정한다.
-  const isRequired = useSelector(editor.form.store, () => editor.isRequired(name));
+  const binding = useFormFieldBinding(editor, name, disabled);
+  const isRequired = binding.required;
   return (
     <editor.form.Field name={name}>
       {(field) => (
@@ -317,15 +240,7 @@ function Field<V = unknown>({
                 ...control,
                 name,
                 value: field.state.value as V,
-                change: (value, onApplied) => {
-                  void requestFormChange(editor.form, setBy(editor.form.state.values, name, value), (accepted) => {
-                    flushSync(() => {
-                      writeFormValues(editor.form, accepted);
-                      field.handleChange(getBy(accepted, name) as never);
-                      onApplied?.();
-                    });
-                  });
-                },
+                change: (value, onApplied) => binding.change(value, field.handleChange, onApplied),
                 blur: field.handleBlur,
                 disabled,
                 'aria-required': isRequired,
@@ -393,8 +308,7 @@ function Text({
               onBlur={blur}
               onChange={(event) => {
                 const next = event.target.value;
-                if (maxLength !== undefined && next.length > Math.max(maxLength, text.length)) return;
-                change(next);
+                applyFormText(text, next, maxLength, change);
               }}
             />
             {showCount && maxLength !== undefined ? (
@@ -434,8 +348,7 @@ function TextArea({
               onBlur={blur}
               onChange={(event) => {
                 const next = event.target.value;
-                if (maxLength !== undefined && next.length > Math.max(maxLength, text.length)) return;
-                change(next);
+                applyFormText(text, next, maxLength, change);
               }}
             />
             {showCount && maxLength !== undefined ? (
@@ -472,7 +385,7 @@ function Select({
   readonly onChange?: (value: string) => void;
 }) {
   const { copy, renderFailure } = useFormContext();
-  const retried = useRef(false);
+  const retry = useOptionsRetryFocus(onRetry);
   return (
     <Field<unknown> {...field} labelTarget={status === 'ready' ? 'control' : 'group'}>
       {({ value, change, blur, ...control }, labelId) => {
@@ -499,12 +412,7 @@ function Select({
                     <button
                       type="button"
                       className="wk-button wk-button-ghost"
-                      onClick={(event) => {
-                        retried.current = true;
-                        // 버튼이 사라지므로 묶음에 포커스를 둔다. 선택지가 오면 입력으로 넘긴다.
-                        (event.currentTarget.closest('[role="group"]') as HTMLElement | null)?.focus();
-                        onRetry();
-                      }}
+                      onClick={retry.onRetry}
                     >
                       {copy.retry}
                     </button>
@@ -518,12 +426,7 @@ function Select({
           <select
             key="control"
             {...control}
-            ref={(node) => {
-              if (node === null || !retried.current) return;
-              retried.current = false;
-              // 묶음이 빠지며 포커스가 본문으로 떨어졌을 때만 옮긴다. 그새 다른 곳으로 옮겼으면 건드리지 않는다.
-              if (document.activeElement === null || document.activeElement === document.body) node.focus();
-            }}
+            ref={retry.inputRef}
             className="wk-input"
             value={selected}
             onBlur={blur}
@@ -548,7 +451,7 @@ function Select({
 /** boolean 값 하나. 라벨이 체크박스 옆에 붙는다. onChange는 사용자가 바꾼 직후에만 부른다. */
 function Checkbox({ onChange, ...field }: FormFieldProps & { readonly onChange?: (checked: boolean) => void }) {
   const { editor, formatError } = useFormContext();
-  useLocked(editor, field.name, field.disabled === true);
+  const binding = useFormFieldBinding(editor, field.name, field.disabled === true);
   const id = editor.fieldId(field.name);
   return (
     <editor.form.Field name={field.name}>
@@ -569,13 +472,7 @@ function Checkbox({ onChange, ...field }: FormFieldProps & { readonly onChange?:
                 onBlur={state.handleBlur}
                 onChange={(event) => {
                   const checked = event.target.checked;
-                  void requestFormChange(editor.form, setBy(editor.form.state.values, field.name, checked), (accepted) => {
-                    flushSync(() => {
-                      writeFormValues(editor.form, accepted);
-                      state.handleChange(getBy(accepted, field.name) as never);
-                      onChange?.(checked);
-                    });
-                  });
+                  binding.change(checked, state.handleChange, () => onChange?.(checked));
                 }}
               />
               {field.label}
@@ -602,8 +499,8 @@ function FileField({ accept, ...field }: FormFieldProps & { readonly accept?: st
   return (
     <Field<FormFileValue> {...field}>
       {({ value, change, blur, ...control }) => {
-        const current: FormFileValue = value ?? { kind: 'empty' };
-        const name = current.kind === 'selected' ? current.file.name : current.kind === 'existing' ? current.name : undefined;
+        const file = formFileBinding(value, change);
+        const name = file.name;
         const nameId = `${control.id}-file`;
         const describedBy = [control['aria-describedby'], name === undefined ? undefined : nameId].filter(Boolean).join(' ');
         return (
@@ -612,14 +509,12 @@ function FileField({ accept, ...field }: FormFieldProps & { readonly accept?: st
               {...control}
               aria-describedby={describedBy === '' ? undefined : describedBy}
               // 고른 파일이 사라지면(제거·초기화) 네이티브 입력도 비우도록 다시 만든다.
-              key={current.kind === 'selected' ? 'selected' : 'idle'}
+              key={file.inputKey}
               type="file"
               accept={accept}
               onBlur={blur}
               onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file === undefined) return;
-                change({ kind: 'selected', file });
+                file.select(event.target.files?.[0]);
               }}
             />
             {name === undefined ? null : (
@@ -629,7 +524,7 @@ function FileField({ accept, ...field }: FormFieldProps & { readonly accept?: st
                   type="button"
                   className="wk-button wk-button-ghost"
                   disabled={field.disabled}
-                  onClick={() => change(current.kind === 'existing' ? { kind: 'removed' } : { kind: 'empty' })}
+                  onClick={file.remove}
                 >
                   {copy.removeFile}
                 </button>
@@ -800,26 +695,16 @@ function Submit({
   readonly mode?: 'primary' | 'secondary';
 }) {
   const { editor, copy, submitOrigin } = useFormContext();
-  const locked = editor.stage.kind !== 'idle' || (mode === 'secondary' && editor.submitSecondary === undefined);
+  const binding = useFormSubmitBinding(editor, submitOrigin, mode);
   return (
     <>
       <button
-        type={mode === 'primary' ? 'submit' : 'button'}
+        {...binding.buttonProps}
         className={join('wk-button wk-button-primary', className)}
-        aria-disabled={locked || undefined}
-        onClick={
-          mode === 'secondary'
-            ? (event) => {
-                if (locked) return;
-                submitOrigin.current = event.currentTarget;
-                void editor.submitSecondary?.();
-              }
-            : undefined
-        }
       >
         {children ?? copy.submit}
       </button>
-      {editor.progress === undefined && (editor.saveMode ?? 'primary') === mode && inProgress(editor) ? (
+      {binding.pending ? (
         <Pending label={copy.saving} />
       ) : null}
     </>
@@ -840,24 +725,14 @@ function Cancel({
   readonly className?: string;
 }) {
   const { editor, copy } = useFormContext();
-  const owner = useContext(GuardContext);
-  const scope = useContext(ScopeContext);
-  const router = useRouter();
+  const cancel = useFormCancel(editor, to);
   return (
     <button
       type="button"
       className={join('wk-button wk-button-secondary', className)}
-      aria-disabled={inProgress(editor) || undefined}
+      aria-disabled={cancel.disabled || undefined}
       onClick={() => {
-        if (editor.getState().isSaving || inProgress(editor)) return;
-        const run =
-          scope !== undefined
-            ? scope.close
-            : () => {
-                if (to !== undefined) void router.navigate({ ...to, ignoreBlocker: true });
-              };
-        if (owner === undefined) run();
-        else owner.request(run, { scope: scope?.id, reason: 'cancel' });
+        cancel.cancel();
       }}
     >
       {children ?? copy.cancel}
@@ -882,11 +757,7 @@ function Confirm({
   readonly children?: (values: never) => ReactNode;
 }) {
   const { editor, copy, submitOrigin } = useFormContext();
-  const viaConfirm = useRef(false);
-  if (editor.stage.kind === 'confirming') viaConfirm.current = true;
-  else if (editor.stage.kind !== 'saving') viaConfirm.current = false;
-  const stage = editor.stage;
-  const open = stage.kind === 'confirming' || (stage.kind === 'saving' && viaConfirm.current && editor.progress === undefined);
+  const { open, stage } = useFormConfirmBinding(editor);
   return (
     <ConfirmDialog
       open={open}
@@ -918,14 +789,12 @@ function Saved({
   readonly children?: ReactNode;
 }) {
   const { editor, copy, renderFailure } = useFormContext();
-  const attempts = useRef({ failure: undefined as unknown, count: 0 });
-  if (editor.completionFailure !== undefined && editor.completionFailure !== attempts.current.failure)
-    attempts.current = { failure: editor.completionFailure, count: attempts.current.count + 1 };
+  const { attempt } = useFormSavedBinding(editor);
   const failure = editor.completionFailure === undefined ? undefined : renderFailure(editor.completionFailure, 'completion');
   const stage = editor.stage;
   return (
     <AlertDialog
-      key={attempts.current.count}
+      key={attempt}
       open={editor.acknowledge && stage.kind === 'saved'}
       pending={stage.kind === 'saved' && stage.completing}
       pendingLabel={copy.saving}
@@ -958,23 +827,15 @@ function FormDialog({
   readonly children: ReactNode;
   readonly className?: string;
 }) {
-  const owner = useContext(GuardContext);
-  if (owner === undefined) throw new Error('<Form.Dialog> requires <FormGuard>');
-  const parent = useContext(ScopeContext);
-  const [id] = useState(() => ({}));
-  useLayoutEffect(() => owner.registerScope(id, parent?.id), [owner, id, parent?.id]);
-  useSyncExternalStore(owner.subscribe, owner.getSnapshot, owner.getSnapshot);
-  const busy = owner.busy(id);
+  const { scope, busy, requestClose } = useFormDialogScope(onClose);
   return (
-    <ScopeContext.Provider value={{ id, close: onClose }}>
+    <ScopeContext.Provider value={scope}>
       <Dialog
         open
         title={title}
         closable={!busy}
         className={className}
-        onClose={() => {
-          owner.request(onClose, { scope: id, reason: 'cancel' });
-        }}
+        onClose={requestClose}
         footer={null}
       >
         {children}
@@ -984,10 +845,9 @@ function FormDialog({
 }
 
 /** 지금 폼의 편집 상태를 읽는다(프로젝트가 자기 표시를 그릴 때). */
-export function useFormEditor<T = unknown>(): SaveFormEditor<T> {
-  return useFormContext().editor as SaveFormEditor<T>;
-}
+export { useFormEditor } from './binding';
 
+/** 표시 클래스 이름을 연결한다. */
 function join(...names: readonly (string | undefined)[]): string {
   return names.filter(Boolean).join(' ');
 }

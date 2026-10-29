@@ -4,8 +4,9 @@ import { Checkbox } from '@base-ui/react/checkbox';
 import { Combobox } from '@base-ui/react/combobox';
 import { Menu } from '@base-ui/react/menu';
 import { Popover } from '@base-ui/react/popover';
-import { useEffect, useRef, useState, useId, type ReactNode } from 'react';
-import { treeLeaves, type CheckboxTreeNode } from '../checkbox-tree';
+import type { ReactNode } from 'react';
+import { useChoiceBinding } from '../choice-binding';
+import { treeLeaves, treeLeafNodes, type CheckboxTreeNode } from '../checkbox-tree';
 
 export type ChoiceNode = CheckboxTreeNode;
 export type ChoiceValue = string | readonly string[] | undefined;
@@ -34,85 +35,14 @@ export interface ChoiceProps {
   readonly messages?: { readonly loading?: string; readonly failed?: string; readonly retry?: string; readonly empty?: string };
 }
 
-/** 트리를 단일 선택·검색이 쓰는 맨 아래 항목으로 펼친다. */
-function leaves(nodes: readonly ChoiceNode[]): { value: string; label: string }[] {
-  return nodes.flatMap((node) => (node.children === undefined ? [{ value: node.value, label: node.label }] : leaves(node.children)));
-}
-
-/** 입력 정지 뒤 검색하고 취소를 무시하는 서버의 늦은 응답도 버린다. */
-function useChoiceSearch(props: ChoiceProps, text: string) {
-  const [state, setState] = useState<{ nodes: readonly ChoiceNode[]; pending: boolean; failed: boolean }>({
-    nodes: props.nodes,
-    pending: false,
-    failed: false,
-  });
-  const [attempt, retry] = useState(0);
-  const searchRef = useRef(props.search);
-  searchRef.current = props.search;
-  const hasSearch = props.search !== undefined;
-  const scope = JSON.stringify(props.searchKey ?? []);
-  useEffect(() => {
-    if (!hasSearch) return;
-    const controller = new AbortController();
-    let current = true;
-    setState((old) => ({ ...old, pending: true, failed: false }));
-    const timer = setTimeout(() => {
-      const search = searchRef.current;
-      if (search === undefined) return;
-      void Promise.resolve()
-        .then(() => search(text, controller.signal))
-        .then(
-          (nodes) => {
-            if (current) setState({ nodes, pending: false, failed: false });
-          },
-          () => {
-            if (current) setState((old) => ({ ...old, pending: false, failed: true }));
-          },
-        );
-    }, props.debounceMs ?? 250);
-    return () => {
-      current = false;
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [hasSearch, scope, text, props.debounceMs, attempt]);
-  return { ...state, nodes: hasSearch ? state.nodes : props.nodes, retry: () => retry((value) => value + 1) };
-}
-
 /** 같은 leaf 값 모델을 모든 모양에서 사용한다. 가지 ID는 저장하지 않는다. */
 export function Choice(props: ChoiceProps) {
-  const { nodes, value, onValueChange, multiple = false, appearance = 'dropdown', disabled, label } = props;
-  const fallbackId = useId();
-  const id = props.id ?? fallbackId;
-  const [text, setText] = useState('');
-  const result = useChoiceSearch(props, text);
-  const selected = Array.isArray(value) ? value : typeof value === 'string' ? [value] : [];
-  const names = useRef(new Map<string, string>());
-  for (const item of [...leaves(nodes), ...leaves(result.nodes)]) names.current.set(item.value, item.label);
-  const summary = selected.length === 0 ? (props.placeholder ?? label) : selected.map((id) => names.current.get(id) ?? id).join(', ');
-  const control = {
-    id,
-    'aria-label': label,
-    'aria-describedby': props['aria-describedby'],
-    'aria-invalid': props['aria-invalid'],
-    'aria-required': props['aria-required'],
-    disabled,
-    onBlur: props.onBlur,
-  };
-  /** 한 가지 아래의 모든 leaf를 켜거나 끄고 트리 순서로 저장한다. */
-  function toggle(targets: readonly string[]) {
-    const all = targets.length > 0 && targets.every((id) => selected.includes(id));
-    const next = new Set(selected);
-    for (const id of targets) {
-      if (all) next.delete(id);
-      else next.add(id);
-    }
-    onValueChange(treeLeaves(nodes).filter((id) => next.has(id)));
-  }
+  const { nodes, multiple = false, appearance = 'dropdown', disabled, label } = props;
+  const { id, text, setText, result, selected, names, summary, control, selection, toggle, select } = useChoiceBinding(props);
   /** 다중 가지는 삼상태, 단일 가지는 제목으로만 보여 준다. */
   function branch(node: ChoiceNode, key: number): ReactNode {
     const targets = node.children === undefined ? [node.value] : treeLeaves(node.children);
-    const count = targets.filter((id) => selected.includes(id)).length;
+
     return (
       <li key={node.value ?? key}>
         {multiple ? (
@@ -120,11 +50,11 @@ export function Choice(props: ChoiceProps) {
             <Checkbox.Root
               className="wk-check"
               disabled={disabled}
-              checked={targets.length > 0 && count === targets.length}
-              indeterminate={count > 0 && count < targets.length}
+              checked={selection.checked(targets)}
+              indeterminate={selection.mixed(targets)}
               onCheckedChange={() => toggle(targets)}
             >
-              <Checkbox.Indicator aria-hidden="true">{count === targets.length ? '✓' : '−'}</Checkbox.Indicator>
+              <Checkbox.Indicator aria-hidden="true">{selection.checked(targets) ? '✓' : '−'}</Checkbox.Indicator>
             </Checkbox.Root>
             {node.label}
           </label>
@@ -137,7 +67,7 @@ export function Choice(props: ChoiceProps) {
               name={id}
               disabled={disabled}
               checked={selected.includes(node.value)}
-              onChange={() => onValueChange(node.value)}
+              onChange={() => select(node.value)}
             />
             {node.label}
           </label>
@@ -148,7 +78,7 @@ export function Choice(props: ChoiceProps) {
   }
   const clear =
     !multiple && props.clearLabel !== undefined && selected.length > 0 ? (
-      <button type="button" className="wk-button wk-button-ghost" disabled={disabled} onClick={() => onValueChange(undefined)}>
+      <button type="button" className="wk-button wk-button-ghost" disabled={disabled} onClick={() => select(undefined)}>
         {props.clearLabel}
       </button>
     ) : null;
@@ -163,7 +93,7 @@ export function Choice(props: ChoiceProps) {
   /** 단일 계층 메뉴는 가지를 열고 맨 아래 값만 선택한다. */
   function menu(node: ChoiceNode, key: number): ReactNode {
     return node.children === undefined ? (
-      <Menu.Item disabled={disabled} key={node.value} onClick={() => onValueChange(node.value)}>
+      <Menu.Item disabled={disabled} key={node.value} onClick={() => select(node.value)}>
         {node.label}
       </Menu.Item>
     ) : (
@@ -178,7 +108,7 @@ export function Choice(props: ChoiceProps) {
     );
   }
   if (appearance === 'search') {
-    const items = leaves(result.nodes);
+    const items = treeLeafNodes(result.nodes);
     const selectedItems = selected.map((id) => ({ value: id, label: names.current.get(id) ?? id }));
     const common = {
       disabled,
@@ -223,11 +153,11 @@ export function Choice(props: ChoiceProps) {
       </>
     );
     return multiple ? (
-      <Combobox.Root {...common} multiple value={selectedItems} onValueChange={(items) => onValueChange(items.map((item) => item.value))}>
+      <Combobox.Root {...common} multiple value={selectedItems} onValueChange={(items) => select(items.map((item) => item.value))}>
         {parts}
       </Combobox.Root>
     ) : (
-      <Combobox.Root {...common} value={selectedItems[0] ?? null} onValueChange={(item) => onValueChange(item?.value)}>
+      <Combobox.Root {...common} value={selectedItems[0] ?? null} onValueChange={(item) => select(item?.value)}>
         {parts}
       </Combobox.Root>
     );
@@ -242,7 +172,7 @@ export function Choice(props: ChoiceProps) {
           <Menu.Positioner>
             <Menu.Popup className="wk-choice-popup">
               {!multiple && props.clearLabel !== undefined && selected.length > 0 && (
-                <Menu.Item disabled={disabled} onClick={() => onValueChange(undefined)}>
+                <Menu.Item disabled={disabled} onClick={() => select(undefined)}>
                   {props.clearLabel}
                 </Menu.Item>
               )}

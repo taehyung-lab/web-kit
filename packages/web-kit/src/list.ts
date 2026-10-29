@@ -4,3 +4,7 @@ export * from './list-download';
 export { activateTableRow } from './row-activation';
 
 export * from './list-return';
+
+export * from './list-binding';
+
+export { useChoiceBinding, useChoiceSearch, type ChoiceBindingOptions, type ChoiceNode, type ChoiceValue } from './choice-binding';
