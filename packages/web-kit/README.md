@@ -2,7 +2,7 @@
 
 React 19 + TanStack(Router·Query·Form) + zod 4 + axios/orval을 쓰는 웹 프로젝트의 공용 키트다. 서버 응답 구조와 코드 의미는 프로젝트의 `ResponseContract`가 해석한다. 기존 Spring 응답 봉투 도우미도 선택해서 쓸 수 있다. 공통 동작은 패키지 hook·Provider가, 화면 배치는 registry로 설치한 프로젝트 소유 복사본이 맡는다. registry는 복사할 UI와 공통 검사 연결 파일의 묶음이다. 업무 정책·서버 연결 차이는 프로젝트가 정한다. 현재 제공 범위는 아래 표와 `package.json` exports다([4.0 배포 결정](../../docs/decisions/0011-web-kit-4-ui-distribution.md)).
 
-정본: https://github.com/taehyung-lab/web-kit · 패키지 `@boosterlab/web-kit` · 이 문서의 대상 버전 `4.1.0-rc.1` 후보(아직 정식 발행 전) · 결정 기록 [docs/decisions](../../docs/decisions/). 이 패키지는 저장소의 `packages/web-kit`이고, 사용 예이자 소비 검사 앱은 같은 저장소의 [`apps/starter`](../../apps/starter)다.
+정본: https://github.com/taehyung-lab/web-kit · 패키지 `@boosterlab/web-kit` · 이 문서의 대상 버전 `4.1.0-rc.2` 후보(아직 정식 발행 전) · 결정 기록 [docs/decisions](../../docs/decisions/). 이 패키지는 저장소의 `packages/web-kit`이고, 사용 예이자 소비 검사 앱은 같은 저장소의 [`apps/starter`](../../apps/starter)다.
 
 ## 구조
 
@@ -17,7 +17,8 @@ React 19 + TanStack(Router·Query·Form) + zod 4 + axios/orval을 쓰는 웹 프
 |---|---|---|
 | `.` / `/failure` | 실패 12종, 결과 코드 표, 봉투 해석 | 서버 enum의 결과 코드 행 |
 | `/session` | 세대, 시작·종료와 종료 순서(정리 → 안내 → 서버 로그아웃), 다른 탭 변경, 재발급 단일 비행(Web Locks) | 저장 adapter·재발급·서버 로그아웃 호출 |
-| `/session/idle` | 유휴 마감(로그인과 서버 연장만 변경: 경고 밖 활동은 서버 연장, 경고 안은 연장 버튼만, API 응답·재발급은 연장 안 함), 경고 구간·대기, 활동 연장, 대표 탭, 만료 종료 | 시간 정책·저장 key·서버 연장 호출·응답의 서버 시각 표본·경고 디자인 |
+| `/session/idle` | `createServerClock`으로 로그인 전후 서버 시계 보정 공유, 유휴 마감(로그인과 서버 연장만 변경: 경고 밖 활동은 서버 연장, 경고 안은 연장 버튼만, API 응답·재발급은 연장 안 함), 경고 구간·대기, 활동 연장, 대표 탭, 만료 종료 | 시간 정책·저장 key·서버 연장 호출·응답의 서버 시각 표본·경고 디자인 |
+| `/auth` + registry `auth` | 코드 기한·종류별 단일 요청·늦은 응답 격리, 입력 오류·만료·재전송 표현 | 공유 시계·기한·자리수·서버 요청·성공 처리·문구 |
 | `/session/browser` | 브라우저 저장 장애 복구·외부 이벤트 판별·해제 | 저장 key·동기 schema·읽기 불가 정책 |
 | `/http` | 헤더·토큰, 봉투 해제, 401 재발급 뒤 한 번 재전송, 반영 여부 판정 | 응답 해석·코드 의미·공개 경로·운영 헤더·axios 기본값 |
 | `/query` | 재시도 대상, 실패 알림 한 번, 선언한 무효화, 민감한 쓰기의 입력값 기록 지움, 세션 전환 시 비움 | 재시도 횟수, 알림 표시, staleTime 등 수치 |
@@ -66,7 +67,7 @@ done
 
 4.0은 책임 단위로 필요한 부분만 채택한다. 한 책임 안에서는 키트의 상태 수명·이벤트 처리와 자체 구현을 섞지 않는다. 배치와 디자인은 설치한 복사본에서 바꾸고 공통 동작은 패키지 hook으로 연결한다.
 
-1. 검증된 같은 commit의 패키지 tarball(tgz 압축 파일)과 registry를 선택한다. 현재 후보 `4.1.0-rc.1`의 원격 tag/release는 아직 없으므로 아래 tag 예시는 발행 뒤 사용한다. 후보 검사는 저장소의 로컬 산출물을 사용한다.
+1. 검증된 같은 commit의 패키지 tarball(tgz 압축 파일)과 registry를 선택한다. 현재 후보 `4.1.0-rc.2`의 원격 tag/release는 아직 없으므로 아래 tag 예시는 발행 뒤 사용한다. 후보 검사는 저장소의 로컬 산출물을 사용한다.
 2. tgz를 `vendor/`에 보관하고 설치한다. 대부분 소스 TS/TSX이므로 Vite/TypeScript가 컴파일하며 Vite에는 `optimizeDeps: { extensions: ['.tsx'] }`를 둔다. Playwright 검사 입구는 Node가 실행할 수 있는 mjs다.
 
 ```sh
@@ -78,7 +79,7 @@ pnpm add @boosterlab/web-kit@file:vendor/boosterlab-web-kit.tgz
 ```json
 {
   "registries": {
-    "@web-kit": "https://raw.githubusercontent.com/taehyung-lab/web-kit/v4.1.0-rc.1/public/r/{name}.json"
+    "@web-kit": "https://raw.githubusercontent.com/taehyung-lab/web-kit/v4.1.0-rc.2/public/r/{name}.json"
   }
 }
 ```

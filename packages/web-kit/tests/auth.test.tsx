@@ -89,3 +89,47 @@ it('로그인 전후가 같은 보정 시계를 쓰고 인증만으로 세션이
   expect(idle.remaining()).toBe(9000);
   idle.stop(); session.dispose();
 });
+
+it.each(['verify', 'resend'] as const)('종류별 관문은 %s 대기 중 다른 종류를 허용하고 같은 종류 중복을 막는다', async (firstKind) => {
+  const verification = deferred<string>(); const sent = deferred<void>();
+  const verify = vi.fn(() => verification.promise); const resend = vi.fn(() => sent.promise);
+  const onVerified = vi.fn(); const onResent = vi.fn();
+  const clock = createServerClock({ key: 'clock' });
+  const { result } = renderHook(() => useAuthChallenge({ scope: 1, clock, codeLength: 6, verify, resend, onVerified, onResent }));
+  let checking!: Promise<void>; let sending!: Promise<void>;
+  act(() => {
+    if (firstKind === 'verify') checking = result.current.submit('123456');
+    else sending = result.current.resend();
+  });
+  expect(firstKind === 'verify' ? result.current.canResend : result.current.canSubmit).toBe(true);
+  act(() => {
+    if (firstKind === 'verify') sending = result.current.resend();
+    else checking = result.current.submit('123456');
+    void result.current.submit('123456'); void result.current.resend();
+  });
+  expect(verify).toHaveBeenCalledTimes(1); expect(resend).toHaveBeenCalledTimes(1);
+  expect(result.current.pending).toBe('both');
+  await act(async () => { sent.resolve(); await sending; });
+  expect(result.current.pending).toBe('verify');
+  expect(result.current.canSubmit).toBe(false); expect(result.current.canResend).toBe(true);
+  await act(async () => { verification.resolve('ok'); await checking; });
+  expect(onVerified).toHaveBeenCalledExactlyOnceWith('ok'); expect(onResent).toHaveBeenCalledTimes(1);
+});
+
+it('다른 탭의 시계 보정이 유휴 단계·남은 시간과 인증 남은 초에 즉시 함께 반영된다', () => {
+  const clock = createServerClock({ key: 'shared:clock' });
+  const session = createSession({ store: { read: () => null, write: () => undefined, subscribe: () => () => undefined }, reissue: vi.fn() });
+  const idle = createIdleTimer({ session, key: 'shared', clock, policy: { durationMs: 10000, warningMs: 8000, activityThrottleMs: 1000 }, extend: async () => null, environment: { locks: null } });
+  idle.start(); session.start({ accessToken: 'test' });
+  const { result } = renderHook(() => useAuthChallenge({ scope: 1, clock, codeLength: 6, codeExpiresAt: 110000, verify: vi.fn(), onVerified: vi.fn() }));
+  expect(idle.remaining()).toBe(10000); expect(idle.state().phase).toBe('active');
+  expect(result.current.remainingSeconds).toBe(10);
+  act(() => {
+    localStorage.setItem('shared:clock', '3000');
+    window.dispatchEvent(new StorageEvent('storage', { key: 'shared:clock', newValue: '3000' }));
+  });
+  expect(clock.now()).toBe(103000);
+  expect(idle.remaining()).toBe(7000); expect(idle.state().phase).toBe('warning');
+  expect(result.current.remainingSeconds).toBe(7);
+  idle.stop(); session.dispose();
+});

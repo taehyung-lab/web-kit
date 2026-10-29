@@ -21,6 +21,15 @@ export function checkAuthConformance({ Form, enterCode, readCode }: {
     expect(screen.getByRole('timer').textContent).toBe('남은 시간 5');
     expect((screen.getByRole('button', { name: '재전송' }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByLabelText('resend-wait').textContent).toBe('대기 3');
+    for (const code of ['12', 'abcdef']) {
+      enterCode(code); await click('확인');
+      expect(screen.getByLabelText('요청 횟수').textContent).toBe('0');
+      expect(screen.getByRole('alert').textContent).toBe('숫자 6자리를 입력하세요');
+      for (const input of screen.getAllByRole('textbox')) {
+        expect(input.getAttribute('aria-invalid')).toBe('true');
+        expect(document.getElementById(input.getAttribute('aria-describedby')!)?.textContent).toBe('숫자 6자리를 입력하세요');
+      }
+    }
     enterCode('123456');
     await click('확인'); await click('확인');
     expect(screen.getByLabelText('요청 횟수').textContent).toBe('1');
@@ -43,5 +52,25 @@ export function checkAuthConformance({ Form, enterCode, readCode }: {
     expect(screen.getByRole('timer').textContent).toBe('남은 시간 5');
     expect((screen.getByRole('button', { name: '재전송' }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByLabelText('resend-wait').textContent).toBe('대기 3');
+    await click('전체 기한 경과');
+    expect(screen.getByRole('timer').textContent).toBe('남은 시간 5');
+    expect(screen.getByText('만료됨')).toBeTruthy();
+    expect((screen.getByRole('button', { name: '확인' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: '재전송' }) as HTMLButtonElement).disabled).toBe(true);
   });
+  it(conformanceTitle('auth-concurrency', target, '확인·재전송은 서로 막지 않고 같은 종류만 막는다'), async () => {
+    for (const first of ['확인', '재전송']) {
+      const view = render(<Page />);
+      await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+      enterCode('123456');
+      const second = first === '확인' ? '재전송' : '확인';
+      await click(first);
+      expect((screen.getByRole('button', { name: second }) as HTMLButtonElement).disabled).toBe(false);
+      await click(second); await click(first); await click(second);
+      expect(screen.getByLabelText('요청 횟수').textContent).toBe('1');
+      expect(screen.getByLabelText('재전송 횟수').textContent).toBe('1');
+      view.unmount();
+    }
+  });
+
 }

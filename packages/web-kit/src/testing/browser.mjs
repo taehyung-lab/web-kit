@@ -115,6 +115,12 @@ export function checkAuthBrowser({ url, target, enterCode, readCode }) {
         await expect(page.getByRole('timer')).toHaveText('남은 시간 5');
         await expect(page.getByRole('button', { name: '재전송', exact: true })).toBeDisabled();
         await expect(page.getByLabel('resend-wait')).toHaveText('대기 3');
+        for (const code of ['12', 'abcdef']) {
+            await enterCode(page, code);
+            await page.keyboard.press('Enter');
+            await expect(page.getByLabel('요청 횟수')).toHaveText('0');
+            await expect(page.getByRole('alert')).toHaveText('숫자 6자리를 입력하세요');
+        }
         await enterCode(page, '123456');
         await page.keyboard.press('Enter');
         await page.keyboard.press('Enter');
@@ -134,5 +140,27 @@ export function checkAuthBrowser({ url, target, enterCode, readCode }) {
         await expect(page.getByRole('timer')).toHaveText('남은 시간 5');
         await expect(page.getByRole('button', { name: '재전송', exact: true })).toBeDisabled();
         await expect(page.getByLabel('resend-wait')).toHaveText('대기 3');
+        await page.getByRole('button', { name: '전체 기한 경과' }).click();
+        await expect(page.getByRole('timer')).toHaveText('남은 시간 5');
+        await expect(page.getByText('만료됨', { exact: true })).toBeVisible();
+        await expect(page.getByRole('button', { name: '확인', exact: true })).toBeDisabled();
+        await expect(page.getByRole('button', { name: '재전송', exact: true })).toBeDisabled();
     });
+    test(conformanceTitle('B-auth-concurrency', target, '확인·재전송의 독립된 관문'), async ({ page }) => {
+        await page.clock.install({ time: new Date(100000) });
+        for (const first of ['확인', '재전송']) {
+            await page.goto(url);
+            await page.clock.runFor(3000);
+            await enterCode(page, '123456');
+            const second = first === '확인' ? '재전송' : '확인';
+            await page.getByRole('button', { name: first, exact: true }).click();
+            await expect(page.getByRole('button', { name: second, exact: true })).toBeEnabled();
+            await page.getByRole('button', { name: second, exact: true }).click();
+            await expect(page.getByRole('button', { name: first, exact: true })).toBeDisabled();
+            await expect(page.getByRole('button', { name: second, exact: true })).toBeDisabled();
+            await expect(page.getByLabel('요청 횟수')).toHaveText('1');
+            await expect(page.getByLabel('재전송 횟수')).toHaveText('1');
+        }
+    });
+
 }

@@ -47,15 +47,16 @@ export interface AuthChallengeOptions<Result, Resent> extends AuthDeadlines {
 /** 인증 화면 상위에서 사용한다. 메모리에만 보관하며 세션 저장·이동은 유효 응답 콜백에 연결한다. */
 export function useAuthChallenge<Result, Resent = void>(options: AuthChallengeOptions<Result, Resent>) {
   const current = useRef(options);
-  const active = useRef<object | null>(null);
+  const active = useRef<{ verify: object | null; resend: object | null }>({ verify: null, resend: null });
   const mounted = useRef(true);
-  const [pending, setPending] = useState<'verify' | 'resend' | null>(null);
+  const [running, setRunning] = useState({ verify: false, resend: false });
+  const pending = running.verify ? (running.resend ? 'both' : 'verify') : (running.resend ? 'resend' : null);
   const [failure, setFailure] = useState<unknown>();
   const [, setTick] = useState(0);
   /** 취소·이동 시작 시 호출하여 늦은 성공·실패가 화면에 들어오지 않게 한다. */
   const invalidate = useCallback(() => {
-    active.current = null;
-    setPending(null);
+    active.current = { verify: null, resend: null };
+    setRunning({ verify: false, resend: false });
     setFailure(undefined);
   }, []);
   useLayoutEffect(() => {
@@ -64,7 +65,7 @@ export function useAuthChallenge<Result, Resent = void>(options: AuthChallengeOp
   });
   useEffect(() => {
     mounted.current = true;
-    return () => { mounted.current = false; active.current = null; };
+    return () => { mounted.current = false; active.current = { verify: null, resend: null }; };
   }, []);
   useEffect(() => {
     const tick = () => setTick((value) => value + 1);
@@ -78,17 +79,17 @@ export function useAuthChallenge<Result, Resent = void>(options: AuthChallengeOp
       window.removeEventListener('pageshow', tick);
     };
   }, [options.clock]);
-  /** 요청 시작부터 결과 적용 완료까지 한 요청만 소유한다. */
+  /** 종류별로 요청 시작부터 결과 적용 완료까지 한 요청만 소유한다. */
   async function run(kind: 'verify' | 'resend', code = ''): Promise<void> {
     const input = current.current;
     const timing = getAuthTiming(input, input.clock.now());
-    if (!mounted.current || active.current !== null || input.blocked) return;
+    if (!mounted.current || active.current[kind] !== null || input.blocked) return;
     if (kind === 'verify' && (!timing.canSubmit || !isAuthCode(code, input.codeLength))) return;
     if (kind === 'resend' && (!timing.canResend || input.resend === undefined)) return;
     const owner = {};
-    active.current = owner;
-    setPending(kind); setFailure(undefined);
-    const live = () => mounted.current && active.current === owner &&
+    active.current[kind] = owner;
+    setRunning((previous) => ({ ...previous, [kind]: true })); setFailure(undefined);
+    const live = () => mounted.current && active.current[kind] === owner &&
       Object.is(current.current.scope, input.scope) && !current.current.blocked &&
       !getAuthTiming(current.current, current.current.clock.now()).expired;
     try {
@@ -102,12 +103,12 @@ export function useAuthChallenge<Result, Resent = void>(options: AuthChallengeOp
     } catch (error: unknown) {
       if (live()) setFailure(error);
     } finally {
-      if (mounted.current && active.current === owner) { active.current = null; setPending(null); }
+      if (mounted.current && active.current[kind] === owner) { active.current[kind] = null; setRunning((previous) => ({ ...previous, [kind]: false })); }
     }
   }
   const timing = getAuthTiming(options, options.clock.now());
   return { ...timing, pending, failure, invalidate,
-    canSubmit: timing.canSubmit && !options.blocked && pending === null,
-    canResend: timing.canResend && !options.blocked && pending === null && options.resend !== undefined,
+    canSubmit: timing.canSubmit && !options.blocked && !running.verify,
+    canResend: timing.canResend && !options.blocked && !running.resend && options.resend !== undefined,
     submit: (code: string) => run('verify', code), resend: () => run('resend') };
 }

@@ -280,7 +280,9 @@
   "auth": {
     "ids": [
       "auth-unit",
-      "B-auth"
+      "B-auth",
+      "auth-concurrency",
+      "B-auth-concurrency"
     ],
     "connections": [
       "auth.test.tsx",
