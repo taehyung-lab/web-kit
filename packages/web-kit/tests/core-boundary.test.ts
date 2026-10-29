@@ -6,7 +6,7 @@ import ts from 'typescript';
 
 /** vitest(Vite)가 제공하는 raw import. 키트에 node 타입 의존성을 더하지 않는다. */
 const packageSources = (import.meta as unknown as { glob: (pattern: string, options: object) => Record<string, string> }).glob(
-  '../src/**/*.{ts,tsx}',
+  '../src/**/*.{ts,tsx,mjs}',
   { query: '?raw', import: 'default', eager: true },
 );
 
@@ -23,7 +23,7 @@ function resolve(from: string, specifier: string): string | undefined {
     return path === undefined ? undefined : '../' + path.slice(2);
   }
   const base = new URL(specifier, new URL(from, 'file:///packages/web-kit/tests/')).pathname;
-  return [base + '.ts', base + '.tsx', base + '/index.ts'].map((path) =>
+  return [base, base + '.ts', base + '.tsx', base + '.d.ts', base + '/index.ts', base + '/index.d.ts'].map((path) =>
     Object.keys(sources).find((key) => new URL(key, 'file:///packages/web-kit/tests/').pathname === path),
   ).find((key) => key !== undefined);
 }
@@ -60,7 +60,7 @@ it.each(['../src/form/index.ts', '../src/form/save-form.ts', '../src/form/naviga
       for (const [, specifier] of sources[file]!.matchAll(/(?:from|import)\s+['"]([^'"]+)['"]/g)) {
         if (specifier!.startsWith('.') || specifier!.startsWith('@boosterlab/web-kit')) {
           const target = resolve(file, specifier!);
-          expect(target).toBeDefined();
+          expect(target, file + ' → ' + specifier).toBeDefined();
           queue.push(target!);
         }
       }
@@ -85,7 +85,7 @@ const exportsMap = JSON.parse(
 const entriesWithoutIdle = [
   ...new Set(
     Object.entries(exportsMap)
-      .filter(([name, path]) => name !== './session/idle' && /\.tsx?$/.test(path))
+      .filter(([name, path]) => name !== './session/idle' && /\.(?:tsx?|mjs)$/.test(path))
       .map(([, path]) => `../${path.slice(2)}`),
   ),
 ];
@@ -116,7 +116,7 @@ it.each([...entriesWithoutIdle, '../src/use-list.ts'])(
       for (const [, specifier] of sources[file]!.matchAll(/(?:from|import)\s+['"]([^'"]+)['"]/g)) {
         if (!specifier!.startsWith('.') && !specifier!.startsWith('@boosterlab/web-kit')) continue;
         const target = resolve(file, specifier!);
-        expect(target).toBeDefined();
+        expect(target, file + ' → ' + specifier).toBeDefined();
         queue.push(target!);
       }
     }
@@ -147,7 +147,7 @@ it.each([
       for (const [, specifier] of sources[file]!.matchAll(/(?:from|import)\s+['"]([^'"]+)['"]/g)) {
         if (!specifier!.startsWith('.') && !specifier!.startsWith('@boosterlab/web-kit')) continue;
         const target = resolve(file, specifier!);
-        expect(target).toBeDefined();
+        expect(target, file + ' → ' + specifier).toBeDefined();
         queue.push(target!);
       }
     }
@@ -180,7 +180,7 @@ it.each(['../src/use-list.ts', '../src/list.ts', '../../ui-registry/src/list-ui.
 
 it('진행 표시 마크업(.wk-spinner)은 /ui의 pending 한 곳에만 있고, 목록 다운로드·폼 저장·확인창은 Pending을, 화면 전체 덮개는 Spinner를 쓴다', () => {
   const owners = Object.entries(sources)
-    .filter(([, source]) => source.includes('wk-spinner'))
+    .filter(([file, source]) => !file.startsWith('../src/testing/') && source.includes('wk-spinner'))
     .map(([file]) => file);
   expect(owners).toEqual(['../../ui-registry/src/ui/pending.tsx']);
   for (const file of ['../../ui-registry/src/list-ui.tsx', '../../ui-registry/src/form/ui.tsx', '../../ui-registry/src/ui/dialog.tsx']) expect(sources[file], file).toMatch(/<Pending label=/);
@@ -193,7 +193,7 @@ it('진행 표시 마크업(.wk-spinner)은 /ui의 pending 한 곳에만 있고,
 it('패키지 제품 실행 코드에는 화면 요소·스타일·registry import가 없다', () => {
   for (const [path, source] of Object.entries(packageSources)) {
     expect(source, path).not.toMatch(/from\s+['"][^'"]*(?:ui-registry|registry\/|\.css)['"]/);
-    if (path === '../src/testing.tsx') continue;
+    if (path === '../src/testing.tsx' || path.startsWith('../src/testing/')) continue;
     const file = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true, path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
     /** JSX의 소문자 태그와 문자열 createElement는 시각 배치이므로 거절한다. */
     function visit(node: ts.Node) {
@@ -222,5 +222,13 @@ it('registry 원본의 패키지 내부 import는 0개다', () => {
         expect(target, file + ' → ' + specifier).toMatch(/^\.\.\/\.\.\/ui-registry\/src\//);
       }
     }
+  }
+});
+
+/** 검사 전용 입구를 채택하지 않은 제품 코드에는 검사 러너가 들어오지 않는다. */
+it.each(Object.entries(exportsMap).filter(([name]) => !name.startsWith('./testing')).map(([, path]) => '../' + path.slice(2)))('%s 제품 경로는 검사 러너를 import하지 않는다', (entry) => {
+  for (const file of reach(entry)) {
+    expect(file).not.toMatch(/\/testing(?:\/|\.)/);
+    expect(sources[file]).not.toMatch(/from\s+['"](?:vitest|@playwright\/test|@testing-library\/react)/);
   }
 });

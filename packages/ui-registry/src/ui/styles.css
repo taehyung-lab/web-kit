@@ -487,6 +487,8 @@ fieldset.wk-field {
 }
 
 /* 선택 칸 팝업은 대화창 안에서도 같은 토큰과 키보드 강조를 쓴다. */
+/* 포털의 배치 요소가 만든 쌓임 맥락도 대화창 위에 둔다. */
+.wk-choice-positioner { z-index: 1002; }
 .wk-choice-popup {
   z-index: 1002;
   background: var(--wk-bg);

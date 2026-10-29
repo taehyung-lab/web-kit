@@ -21,14 +21,18 @@
     "./permission": "./src/permission.tsx",
     "./session/browser": "./src/browser-session-store.ts",
     "./session/idle": "./src/session-idle.ts",
-    "./choice": "./src/choice-binding.ts"
+    "./choice": "./src/choice-binding.ts",
+    "./testing/unit": "./src/testing/unit.ts",
+    "./testing/browser": "./src/testing/browser.mjs",
+    "./testing/fixtures": "./src/testing/fixtures.tsx"
   },
   "files": [
     "src",
     "skills",
     "docs",
     "GLOSSARY.md",
-    "README.md"
+    "README.md",
+    "bin"
   ],
   "peerDependencies": {
     "@tanstack/react-form": "1.33.5",
@@ -37,7 +41,11 @@
     "@tanstack/react-virtual": "^3.14.9",
     "axios": "1.20.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "vitest": "4.1.11",
+    "@testing-library/react": "16.3.2",
+    "zod": "^4.0.0",
+    "@playwright/test": "1.62.1"
   },
   "devDependencies": {
     "@base-ui/react": "1.7.0",
@@ -54,7 +62,8 @@
     "react-dom": "19.2.8",
     "typescript": "5.9.3",
     "vitest": "4.1.11",
-    "zod": "4.4.3"
+    "zod": "4.4.3",
+    "@playwright/test": "1.62.1"
   },
   "packageManager": "pnpm@10.33.0",
   "repository": {
@@ -81,9 +90,24 @@
     },
     "@tanstack/react-virtual": {
       "optional": true
+    },
+    "vitest": {
+      "optional": true
+    },
+    "@testing-library/react": {
+      "optional": true
+    },
+    "zod": {
+      "optional": true
+    },
+    "@playwright/test": {
+      "optional": true
     }
   },
   "dependencies": {
     "tabbable": "6.3.0"
+  },
+  "bin": {
+    "web-kit-check": "./bin/check-conformance.mjs"
   }
 }

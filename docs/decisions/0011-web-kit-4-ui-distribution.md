@@ -45,6 +45,10 @@
 | `./detail/ui` | 상세 표시 필요, 독립 수명 없음 | RetryRegion 포커스 연결은 공용 | Record 부품은 registry, 상태는 /record, 재시도 연결은 패키지 | registry로 이전 | `src/detail-ui.tsx:29`, `:154`, `src/ui/retry.tsx:4` |
 | `./api` | Spring/flat 직렬화 필요 | 루트와 같은 구현의 좁은 책임 입구 | 기존 경로 유지; 계산 복제 금지 | 패키지 유지 | `src/api.ts:28`, `:41`, `src/index.ts:5` |
 | `./testing` | 실제 연결 적합성 판정 필요 | 단위/브라우저 기준 소유, 제품 UI 아님 | 실제 registry 복사본을 입력으로 연결, 브라우저 기준 추가 | 패키지 유지 | `src/testing.tsx:116`, `:200`, `:283` |
+| `./testing/unit` | 설치 복사본의 jsdom 적합성 필요 | Vitest·Testing Library 단언은 검사 실행에만 필요 | 실제 부품 주입 함수와 고정 ID 제공; 제품 입구와 의존 분리 | 패키지 추가(합의 10) | 작업 4, src/testing/unit.ts |
+| `./testing/browser` | 실제 Tab·포털·배경·Enter 적합성 필요 | Playwright는 브라우저 검사 실행에만 필요 | Node가 node_modules의 TS를 실행하지 못하므로 직접 실행 가능한 mjs와 선언 타입 제공 | 패키지 추가(합의 10) | 작업 4, src/testing/browser.mjs |
+| `./testing/fixtures` | 소비처 검사용 페이지에 실제 복사본 연결 필요 | 검사 전용 React 배치만 포함하며 제품 화면이 아님 | 복사본을 주입한 공통 시나리오 화면 제공; Playwright import 없음 | 패키지 추가(합의 10) | 작업 4, src/testing/fixtures.tsx |
+| `bin: web-kit-check` | 설치 항목의 필수 연결·실행 결과·대상 버전 점검 필요 | Node 내장 모듈만 쓰는 작은 명령 | 단위/브라우저 JSON 보고서와 설치 기록 대조, 선택 strict 지문, 사용 UI 일치 한계 명시 | 패키지 추가(합의 14) | 작업 4, bin/check-conformance.mjs |
 | `./testing/session` | 세션 어댑터 적합성 필요 | UI 적합성과 다른 계약 | 기존 경로 유지 | 패키지 유지 | `src/session-testing.ts:1` |
 | `./list/ui` | 목록 표현과 공통 연결 필요 | List.*와 이름 있는 export는 같은 함수 | /list Provider·hook + 이름 있는 registry 부품 하나로 이전 | registry로 이전 | `src/list-ui.tsx:1077`, `:1100` |
 | `./permission` | 닫힘 기본 권한 판정·상태 전달 필요 | 목록·폼과 분리, Allowed는 배치 없는 조건부 전달 | Provider·useAllowed·Allowed 등 기존 연결 유지 | 패키지 유지 | `src/permission.tsx:1`, 0005 권한 행 |

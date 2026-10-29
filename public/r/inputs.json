@@ -6,6 +6,10 @@
   "dependencies": [
     "@base-ui/react@1.7.0"
   ],
+  "devDependencies": [
+    "vitest@4.1.11",
+    "@testing-library/react@16.3.2"
+  ],
   "registryDependencies": [],
   "files": [
     {
@@ -13,6 +17,12 @@
       "content": "// 파일 책임: 기본 입력 부품(버튼·한 줄 입력·여러 줄 입력·선택·체크박스). 값과 업무 행동은 호출자가 넘기고 모양은 --wk-* 토큰이 정한다.\nimport { Button as BaseButton } from '@base-ui/react/button';\nimport { Checkbox as BaseCheckbox } from '@base-ui/react/checkbox';\nimport { Input as BaseInput } from '@base-ui/react/input';\nimport type { ComponentProps } from 'react';\n\n/** 기본 버튼. 폼을 제출하지 않는 것이 기본이고 제출은 type=\"submit\"으로 명시한다. */\nexport function Button({\n  className,\n  variant = 'secondary',\n  type = 'button',\n  ...props\n}: Omit<ComponentProps<typeof BaseButton>, 'className'> & {\n  readonly className?: string;\n  readonly variant?: 'primary' | 'secondary' | 'ghost' | 'danger';\n  readonly type?: 'button' | 'submit';\n}) {\n  return <BaseButton {...props} type={type} className={join('wk-button', `wk-button-${variant}`, className)} />;\n}\n\n/** 한 줄 입력. */\nexport function Input({ className, ...props }: Omit<ComponentProps<typeof BaseInput>, 'className'> & { readonly className?: string }) {\n  return <BaseInput {...props} className={join('wk-input', className)} />;\n}\n\n/** 여러 줄 입력. */\nexport function TextArea({ className, ...props }: ComponentProps<'textarea'>) {\n  return <textarea {...props} className={join('wk-input', 'wk-textarea', className)} />;\n}\n\n/** 하나 고르기. 브라우저 select라 키보드·라벨 연결을 브라우저가 맡는다. */\nexport function Select({ className, ...props }: ComponentProps<'select'>) {\n  return <select {...props} className={join('wk-input', className)} />;\n}\n\n/** 체크박스(Base UI). 일부 선택은 indeterminate로 다룬다. */\nexport function Checkbox({\n  className,\n  ...props\n}: Omit<ComponentProps<typeof BaseCheckbox.Root>, 'className'> & { readonly className?: string }) {\n  return (\n    <BaseCheckbox.Root {...props} className={join('wk-check', className)}>\n      <BaseCheckbox.Indicator className=\"wk-check-indicator\" />\n    </BaseCheckbox.Root>\n  );\n}\n\nfunction join(...names: readonly (string | undefined)[]): string {\n  return names.filter(Boolean).join(' ');\n}\n",
       "type": "registry:file",
       "target": "~/src/shared/ui/web-kit/ui/inputs.tsx"
+    },
+    {
+      "path": "packages/ui-registry/checks/inputs.test.tsx",
+      "content": "// @vitest-environment jsdom\n// 파일 책임: 설치한 inputs 복사본을 키트 공통 단위 검사에 연결한다.\nimport { Button, Input, Checkbox } from '../ui/inputs';\nimport { checkInputsConformance } from '@boosterlab/web-kit/testing/unit';\nimport installation from '../../../../../registry-installation.json';\ncheckInputsConformance({ Button, Input, Checkbox }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });\n",
+      "type": "registry:file",
+      "target": "~/src/shared/ui/web-kit/checks/inputs.test.tsx"
     }
   ],
   "type": "registry:block"

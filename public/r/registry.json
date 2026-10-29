@@ -17,7 +17,16 @@
           "path": "packages/ui-registry/src/ui/inputs.tsx",
           "type": "registry:file",
           "target": "~/src/shared/ui/web-kit/ui/inputs.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/inputs.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/inputs.test.tsx"
         }
+      ],
+      "devDependencies": [
+        "vitest@4.1.11",
+        "@testing-library/react@16.3.2"
       ]
     },
     {
@@ -32,7 +41,16 @@
           "path": "packages/ui-registry/src/ui/pending.tsx",
           "type": "registry:file",
           "target": "~/src/shared/ui/web-kit/ui/pending.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/pending.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/pending.test.tsx"
         }
+      ],
+      "devDependencies": [
+        "vitest@4.1.11",
+        "@testing-library/react@16.3.2"
       ]
     },
     {
@@ -44,14 +62,40 @@
         "@base-ui/react@1.7.0"
       ],
       "registryDependencies": [
-        "@web-kit/pending"
+        "@web-kit/pending",
+        "@web-kit/styles"
       ],
       "files": [
         {
           "path": "packages/ui-registry/src/ui/dialog.tsx",
           "type": "registry:file",
           "target": "~/src/shared/ui/web-kit/ui/dialog.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/dialog.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/dialog.test.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/dialog.page.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/dialog.page.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/dialog.spec.ts",
+          "type": "registry:file",
+          "target": "~/tests/e2e/web-kit/dialog.spec.ts"
+        },
+        {
+          "path": "packages/ui-registry/checks/dialog.html",
+          "type": "registry:file",
+          "target": "~/web-kit-checks/dialog.html"
         }
+      ],
+      "devDependencies": [
+        "vitest@4.1.11",
+        "@testing-library/react@16.3.2",
+        "@playwright/test@1.62.1"
       ]
     },
     {
@@ -61,14 +105,41 @@
       "description": "web-kit blocking-progress 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
       "dependencies": [],
       "registryDependencies": [
-        "@web-kit/pending"
+        "@web-kit/pending",
+        "@web-kit/form",
+        "@web-kit/styles"
       ],
       "files": [
         {
           "path": "packages/ui-registry/src/ui/blocking-progress.tsx",
           "type": "registry:file",
           "target": "~/src/shared/ui/web-kit/ui/blocking-progress.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/blocking-progress.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/blocking-progress.test.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/blocking-progress.page.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/blocking-progress.page.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/blocking-progress.spec.ts",
+          "type": "registry:file",
+          "target": "~/tests/e2e/web-kit/blocking-progress.spec.ts"
+        },
+        {
+          "path": "packages/ui-registry/checks/blocking-progress.html",
+          "type": "registry:file",
+          "target": "~/web-kit-checks/blocking-progress.html"
         }
+      ],
+      "devDependencies": [
+        "vitest@4.1.11",
+        "@testing-library/react@16.3.2",
+        "@playwright/test@1.62.1"
       ]
     },
     {
@@ -85,7 +156,16 @@
           "path": "packages/ui-registry/src/ui/choice.tsx",
           "type": "registry:file",
           "target": "~/src/shared/ui/web-kit/ui/choice.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/choice.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/choice.test.tsx"
         }
+      ],
+      "devDependencies": [
+        "vitest@4.1.11",
+        "@testing-library/react@16.3.2"
       ]
     },
     {
@@ -100,7 +180,16 @@
           "path": "packages/ui-registry/src/ui/retry.tsx",
           "type": "registry:file",
           "target": "~/src/shared/ui/web-kit/ui/retry.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/retry.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/retry.test.tsx"
         }
+      ],
+      "devDependencies": [
+        "vitest@4.1.11",
+        "@testing-library/react@16.3.2"
       ]
     },
     {
@@ -136,7 +225,8 @@
       "registryDependencies": [
         "@web-kit/choice",
         "@web-kit/dialog",
-        "@web-kit/pending"
+        "@web-kit/pending",
+        "@web-kit/styles"
       ],
       "files": [
         {
@@ -148,7 +238,52 @@
           "path": "packages/ui-registry/src/form/field.tsx",
           "type": "registry:file",
           "target": "~/src/shared/ui/web-kit/form/field.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/form-complex.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/form-complex.test.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/form-enter.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/form-enter.test.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/form-sections.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/form-sections.test.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/form-ui.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/form-ui.test.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/form-workflows.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/form-workflows.test.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/form.page.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/form.page.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/form.spec.ts",
+          "type": "registry:file",
+          "target": "~/tests/e2e/web-kit/form.spec.ts"
+        },
+        {
+          "path": "packages/ui-registry/checks/form.html",
+          "type": "registry:file",
+          "target": "~/web-kit-checks/form.html"
         }
+      ],
+      "devDependencies": [
+        "vitest@4.1.11",
+        "@testing-library/react@16.3.2",
+        "@playwright/test@1.62.1"
       ]
     },
     {
@@ -169,7 +304,16 @@
           "path": "packages/ui-registry/src/list-ui.tsx",
           "type": "registry:file",
           "target": "~/src/shared/ui/web-kit/list-ui.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/list-ui.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/list-ui.test.tsx"
         }
+      ],
+      "devDependencies": [
+        "vitest@4.1.11",
+        "@testing-library/react@16.3.2"
       ]
     },
     {
@@ -186,7 +330,16 @@
           "path": "packages/ui-registry/src/detail-ui.tsx",
           "type": "registry:file",
           "target": "~/src/shared/ui/web-kit/detail-ui.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/record-ui.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/record-ui.test.tsx"
         }
+      ],
+      "devDependencies": [
+        "vitest@4.1.11",
+        "@testing-library/react@16.3.2"
       ]
     },
     {
@@ -201,7 +354,16 @@
           "path": "packages/ui-registry/src/CheckboxTree.tsx",
           "type": "registry:file",
           "target": "~/src/shared/ui/web-kit/CheckboxTree.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/checkbox-tree-focus.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/checkbox-tree-focus.test.tsx"
         }
+      ],
+      "devDependencies": [
+        "vitest@4.1.11",
+        "@testing-library/react@16.3.2"
       ]
     },
     {
@@ -216,7 +378,16 @@
           "path": "packages/ui-registry/src/search/filter-error.tsx",
           "type": "registry:file",
           "target": "~/src/shared/ui/web-kit/search/filter-error.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/filter-error.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/filter-error.test.tsx"
         }
+      ],
+      "devDependencies": [
+        "vitest@4.1.11",
+        "@testing-library/react@16.3.2"
       ]
     },
     {
@@ -231,7 +402,16 @@
           "path": "packages/ui-registry/src/ui/styles.css",
           "type": "registry:file",
           "target": "~/src/shared/ui/web-kit/ui/styles.css"
+        },
+        {
+          "path": "packages/ui-registry/checks/styles.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/styles.test.tsx"
         }
+      ],
+      "devDependencies": [
+        "vitest@4.1.11",
+        "@testing-library/react@16.3.2"
       ]
     },
     {

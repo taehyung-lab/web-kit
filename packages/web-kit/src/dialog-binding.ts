@@ -40,8 +40,10 @@ export function useDialogBinding({ open, closable = true, onClose, returnFocus }
   readonly returnFocus?: RefObject<HTMLElement | null>;
 }) {
   const popup = useRef<HTMLDivElement | null>(null);
+  const opener = useRef<HTMLElement | null>(null);
   // 열리는 순간(마운트 커밋) 첫 칸에 동기로 포커스한다. Base UI의 첫 포커스는 다음 프레임이라 그 사이 Tab이 창 밖에서 시작했다.
   const attach = useCallback((node: HTMLDivElement | null) => {
+    if (node !== null && popup.current === null) opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     popup.current = node;
     if (node === null || node.contains(document.activeElement)) return;
     (tabbables(node)[0] ?? node).focus();
@@ -56,7 +58,7 @@ export function useDialogBinding({ open, closable = true, onClose, returnFocus }
         (tabbables(popup.current)[0] ?? popup.current).focus();
         return false;
       },
-      finalFocus: returnFocus ?? true,
+      finalFocus: () => returnFocus?.current ?? opener.current ?? true,
       onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
         trapTab(event);
         if (event.key === 'Escape' && !closable) event.preventDefault();

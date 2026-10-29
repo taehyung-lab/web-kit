@@ -4,6 +4,10 @@
   "title": "web-kit filter-error",
   "description": "web-kit filter-error 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
   "dependencies": [],
+  "devDependencies": [
+    "vitest@4.1.11",
+    "@testing-library/react@16.3.2"
+  ],
   "registryDependencies": [],
   "files": [
     {
@@ -11,6 +15,12 @@
       "content": "// 파일 책임: 필터 입력과 aria-describedby로 연결할 오류 문구를 렌더한다.\n/** 문구의 번역은 프로젝트가 제공하고 공통은 오류의 접근 가능한 표시를 맡는다. */\nexport function FilterError({\n  id,\n  message,\n  className,\n}: {\n  readonly id: string;\n  readonly message?: string;\n  readonly className?: string;\n}) {\n  return message ? (\n    <span id={id} role=\"alert\" className={className}>\n      {message}\n    </span>\n  ) : null;\n}\n",
       "type": "registry:file",
       "target": "~/src/shared/ui/web-kit/search/filter-error.tsx"
+    },
+    {
+      "path": "packages/ui-registry/checks/filter-error.test.tsx",
+      "content": "// @vitest-environment jsdom\n// 파일 책임: 설치한 filter-error 복사본을 키트 공통 단위 검사에 연결한다.\nimport { FilterError } from '../search/filter-error';\nimport { checkFilterErrorConformance } from '@boosterlab/web-kit/testing/unit';\nimport installation from '../../../../../registry-installation.json';\ncheckFilterErrorConformance({ FilterError }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });\n",
+      "type": "registry:file",
+      "target": "~/src/shared/ui/web-kit/checks/filter-error.test.tsx"
     }
   ],
   "type": "registry:block"
