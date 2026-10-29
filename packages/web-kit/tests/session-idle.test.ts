@@ -568,6 +568,52 @@ describe('멈춤과 재개(마감을 적용하지 않는 화면)', () => {
     expect(idle.state()).toMatchObject({ paused: false, phase: 'active', leader: true });
   });
 
+  for (const transition of ['logout', 'replace', 'restart'] as const) {
+    for (const oldFirst of [true, false]) {
+      it(`${transition} 뒤 재개는 새 요청을 보내고 이전 응답(${oldFirst ? '먼저' : '나중'})은 새 상태를 바꾸지 않는다`, async () => {
+        const { session, idle, requestExtend } = paused();
+        const oldReply = deferred<ServerTimeSample | null>();
+        const newReply = deferred<ServerTimeSample | null>();
+        requestExtend.mockReturnValueOnce(oldReply.promise).mockReturnValueOnce(newReply.promise);
+        const oldRun = idle.resume();
+        if (transition === 'restart') {
+          idle.stop();
+          idle.start();
+        } else {
+          if (transition === 'logout') session.end();
+          session.start({ accessToken: 'next' });
+        }
+        idle.pause();
+        const newRun = idle.resume();
+        expect(requestExtend).toHaveBeenCalledTimes(2);
+        const newGrant = grantIn(policy.durationMs + 60_000);
+        if (oldFirst) {
+          const before = idle.state();
+          oldReply.resolve(grantIn(2 * policy.durationMs));
+          await expect(oldRun).resolves.toMatchObject({ ok: false, failure: { kind: 'cancelled' } });
+          expect(idle.state()).toEqual(before);
+          expect(idle.resume()).toBe(newRun);
+          expect(requestExtend).toHaveBeenCalledTimes(2);
+          newReply.resolve(newGrant);
+          await expect(newRun).resolves.toEqual({ ok: true });
+          expect(idle.state()).toMatchObject({ paused: false, leader: true, extending: false, deadline: newGrant.deadline });
+        } else {
+          newReply.resolve(newGrant);
+          await expect(newRun).resolves.toEqual({ ok: true });
+          idle.pause();
+          const before = idle.state();
+          oldReply.resolve(grantIn(2 * policy.durationMs));
+          await expect(oldRun).resolves.toMatchObject({ ok: false, failure: { kind: 'cancelled' } });
+          expect(idle.state()).toEqual(before);
+          expect(idle.state()).toMatchObject({ paused: true, leader: false, deadline: newGrant.deadline });
+        }
+        expect(JSON.parse(localStorage.getItem(KEY)!).deadline).toBe(newGrant.deadline);
+        expect(session.current()).not.toBeNull();
+        idle.stop();
+      });
+    }
+  }
+
   it('마감 전 재개에서 연장이 실패하면 기존 마감으로 계속한다', async () => {
     const { session, idle, requestExtend } = paused();
     const deadline = idle.state().deadline;

@@ -7,11 +7,11 @@ description: 등록·수정·대화창 폼의 저장·저장 확인·저장 완�
 
 `/form`의 `useSaveForm`(저장 수명)·연결 hook·Provider와 registry `form`의 `Form`·`FormGuard` 복사본을 쓰는 기준이다. registry는 프로젝트에 설치해 소유하는 UI 원본 묶음이다. 입력·대화창·진행 표시는 registry `inputs`·`dialog`·`pending`·`blocking-progress`로 설치한다. 인자와 타입은 설치된 소스를 따른다.
 
-이 책임만 골라 사용할 수 있다. 선택한 한 책임 안에서는 키트 수명 처리와 자체 구현을 섞지 않는다. 선택 설치 peer(해당 기능을 쓸 때만 설치하는 동료 라이브러리)를 설치하지 않아 실행하지 못한 기능은 "검사하지 않음"으로 기록한다. 예시는 같은 버전 저장소의 파일이며 설치본 node_modules 안의 파일이 아니다.
+이 책임만 골라 사용할 수 있다. 선택한 한 책임 안에서는 키트 수명 처리와 자체 구현을 섞지 않는다. 선택 설치 peer(해당 기능을 쓸 때만 설치하는 동료 라이브러리)를 설치하지 않아 실행하지 못한 기능은 "검사하지 않음"으로 기록한다. 예시는 같은 버전의 실제 starter 코드에서 가져와 패키지에 함께 담는다. 링크로 읽고 조립 방식만 참고한다. 예제만 따로 실행하는 용도는 아니다.
 
 ## registry 폼 UI
 
-실제 조립 예: [apps/starter/src/features/products/screens/ProductForm.tsx](../../../../apps/starter/src/features/products/screens/ProductForm.tsx). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/products/screens/ProductForm.tsx](../../references/apps/starter/src/features/products/screens/ProductForm.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 registry `form`의 `FormGuard`를 앱(Router 안)에 한 번 둔다. 복사본은 `/form`의 `useFormGuardBinding`과 `FormGuardProvider`, `useFormRootBinding`과 `FormBindingProvider`로 연결한다. 화면은 `const editor = useSaveForm({...})`를 만들고 `<Form editor={editor}>` 안에 부품을 원하는 배치로 둔다. 각 부품은 같은 편집 상태를 context로 읽어서, 칸·버튼·오류 줄의 위치를 바꿔도 저장·검증·focus 연결을 다시 쓰지 않는다. 칸 이름을 값 타입으로 좁히려면 `const F = Form.of<Values>()`로 같은 부품을 쓴다.
 
@@ -37,7 +37,7 @@ registry `form`의 `FormGuard`를 앱(Router 안)에 한 번 둔다. 복사본�
 
 ## 화면 전체 진행 덮개
 
-실제 조립 예: [apps/starter/src/routes/_app.tsx](../../../../apps/starter/src/routes/_app.tsx). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/routes/_app.tsx](../../references/apps/starter/src/routes/_app.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 registry `blocking-progress`의 `BlockingProgress messages={{ loading, create, edit, delete, wait? }}`를 앱 셸(로그인 뒤 화면 골격)에 한 번 두고 셸 본문을 children으로 감싼다. 공통 등록·정리·복원은 `/dialog`의 `useBlockingProgressBinding`·`BlockingProgressProvider`가 맡고 복사본은 반환 속성과 ref를 연결한다. 문구는 프로젝트가 준다(`wait`는 둘째 줄).
 - 무엇이 덮는가: 등록·수정 폼 저장(`useSaveForm({ progress })`), 확인창을 거친 삭제 실행(`useConfirmationState({ progress: 'delete' })`, 아래 「폼 없는 확인」), 페이지 진입 조회(`useList({ progress: 'page' })`·`useRecord(options, id, { progress: 'page' })` — 각 skill), 화면 고유의 진입 대기(`useBlockingProgress('loading', active)`, 예: 수정 폼을 열기 전 보조 조회). 쓰기(등록·수정·삭제)가 조회보다 앞선다. 덮개 밖(셸 없는 화면·단위 시험)에서는 아무 일도 하지 않는다.
@@ -47,7 +47,7 @@ registry `blocking-progress`의 `BlockingProgress messages={{ loading, create, e
 
 ## 기본 부품
 
-실제 조립 예: [apps/starter/src/app/NoticeOutlet.tsx](../../../../apps/starter/src/app/NoticeOutlet.tsx). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/app/NoticeOutlet.tsx](../../references/apps/starter/src/app/NoticeOutlet.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 registry `inputs`는 `Button`·`Input`·`TextArea`·`Select`·`Checkbox`, `dialog`는 `Dialog`·`ConfirmDialog`·`AlertDialog`, `pending`은 `Pending`, `blocking-progress`는 `BlockingProgress`를 제공한다. 진행 등록은 `/dialog`의 `useBlockingProgress`, 대화창 연결은 `useDialogBinding`·`useConfirmBinding`·`useAcknowledgeBinding`을 쓴다. 대화창은 열린 순간 첫 칸에 포커스하고 Tab·Shift+Tab 순환을 창 안에서 같은 이벤트로 처리한다(포커스가 창 밖에 한 순간도 나가지 않는다). `ConfirmDialog`는 실행 중(`pending`) 닫기·재실행을 막고, `AlertDialog`는 확인만 받으며 연타해도 한 번만 알린다. 둘 다 `pending`이면 버튼 뒤에 진행 표시(`pendingLabel`은 화면 낭독기 문구)가 선다.
 - `Pending`(`label` = 화면 낭독기 문구): 진행 중 표시 하나(회전 표시 `.wk-spinner` + `.wk-visually-hidden` 문구). 목록 다운로드·덮개를 선언하지 않은 `Form.Submit`·확인창이 쓰는 그 부품이다. 키트 폼으로 아직 옮기지 않은 화면도 같은 규칙이다: 등록·수정 저장이면 `useSaveForm`에 `progress`를 주고 버튼만 잠근다, 그 밖의 진행이면 버튼을 잠그고 바로 뒤에 이 부품을 둔다. 설치한 `Pending` 한 부품을 재사용한다.
@@ -55,13 +55,13 @@ registry `inputs`는 `Button`·`Input`·`TextArea`·`Select`·`Checkbox`, `dialo
 
 ## headless 연결
 
-실제 조립 예: [apps/starter/src/shared/ui/web-kit/form/ui.tsx](../../../../apps/starter/src/shared/ui/web-kit/form/ui.tsx). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/shared/ui/web-kit/form/ui.tsx](../../references/apps/starter/src/shared/ui/web-kit/form/ui.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 headless는 화면 배치 없이 상태와 연결 함수만 쓰는 방식이다. 특수 표현도 `/form`의 `useFormRootBinding`·`useFormFieldBinding`·`useFormDialogScope`·`useFormCancel`과 Provider를 사용한다. ref는 실제 요소를 가리키는 참조이고 반환된 이벤트·속성과 함께 해당 요소에 연결한다. 제출·참조 확인·값 적용·오류 focus 순서를 복사본에서 다시 만들지 않는다. registry 폼은 이 연결을 이미 포함한다.
 
 ## 화면 선언
 
-실제 조립 예: [apps/starter/src/features/products/screens/ProductCreateScreen.tsx](../../../../apps/starter/src/features/products/screens/ProductCreateScreen.tsx). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/products/screens/ProductCreateScreen.tsx](../../references/apps/starter/src/features/products/screens/ProductCreateScreen.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 - schema: 동기 Standard Schema(zod 4). 비동기 검증은 받지 않는다. 폼 값의 File·Blob은 복사되지 않고 그대로 저장 함수까지 간다.
 - `source { id, values }`: 원본을 폼 값으로 바꾼 것. 등록 화면이면 기본값이다.
@@ -77,7 +77,7 @@ headless는 화면 배치 없이 상태와 연결 함수만 쓰는 방식이다.
 
 ## 줄 추가·삭제·이동 입력
 
-실제 조립 예: [apps/starter/src/features/shows/screens/ShowCreateScreen.tsx](../../../../apps/starter/src/features/shows/screens/ShowCreateScreen.tsx). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/shows/screens/ShowCreateScreen.tsx](../../references/apps/starter/src/features/shows/screens/ShowCreateScreen.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 연락처·회차처럼 줄을 늘렸다 줄이는 입력은 항상 `Form.Array`(부품 없이 쓰면 `FormArrayField`)로 만든다. 폼 라이브러리의 배열 필드(`mode="array"`)를 직접 조립하지 않는다.
 
@@ -92,7 +92,7 @@ headless는 화면 배치 없이 상태와 연결 함수만 쓰는 방식이다.
 
 ## 키트 보장
 
-실제 조립 예: [apps/starter/src/features/products/screens/ProductEditScreen.test.tsx](../../../../apps/starter/src/features/products/screens/ProductEditScreen.test.tsx). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/products/screens/ProductEditScreen.test.tsx](../../references/apps/starter/src/features/products/screens/ProductEditScreen.test.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 - 제출 흐름:
   - 제출은 `submit()` 하나다. 이미 떠 있는 blur 오류가 있어도 전체 검증을 다시 돌린다. 검증에 실패하면 저장과 확인창이 0건이고, 화면 순서상 첫 오류 입력으로 focus한다. 칸을 떠날 때의 검증은 TanStack 필드 `validators.onBlur`로 둔다.
@@ -119,7 +119,7 @@ headless는 화면 배치 없이 상태와 연결 함수만 쓰는 방식이다.
 
 ## 프로젝트 연결
 
-실제 조립 예: [apps/starter/src/features/products/screens/ProductEditScreen.tsx](../../../../apps/starter/src/features/products/screens/ProductEditScreen.tsx). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/products/screens/ProductEditScreen.tsx](../../references/apps/starter/src/features/products/screens/ProductEditScreen.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 - headless 화면도 패키지 hook·Provider의 확인창·이탈 판정을 표현에 연결한다(이탈은 `useLeave`·`FormGuard`의 판정). registry 폼을 쓰는 화면에는 별도 보호를 겹치지 않는다. `onSaved`가 불리는 순간 화면은 이미 저장 결과를 반영한다(저장 중 입력이 그대로면 clean, 바뀌었으면 입력을 보존한 dirty). 그러므로 저장 직후 이동에서 이탈 보호를 우회하지 않는다.
 - 오류 문구는 `createFormMessages(prefix)`로 번역 참조를 저장하고, 렌더할 때 해소한다.
@@ -127,13 +127,13 @@ headless는 화면 배치 없이 상태와 연결 함수만 쓰는 방식이다.
 
 ## 폼 없는 확인 실행
 
-실제 조립 예: [apps/starter/src/features/products/screens/ProductDetailScreen.tsx](../../../../apps/starter/src/features/products/screens/ProductDetailScreen.tsx). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/products/screens/ProductDetailScreen.tsx](../../references/apps/starter/src/features/products/screens/ProductDetailScreen.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 삭제·상태 변경처럼 입력 없이 확인만 받는 작업은 `/dialog`의 `useConfirmationState`에 실행 함수와 실패 처리를 연결한다. `request`로 대상을 정하고 `confirm`으로 실행한다. 실행 중에는 재실행·닫기·대상 교체가 막힌다. 성공하면 닫힌다. 실패는 `onError`가 닫기 또는 보이기를 정한다. 표시는 registry `dialog`의 `ConfirmDialog`에 `state`를 연결한다. 삭제면 `progress: 'delete'`를 준다: 실행하는 동안 화면 전체 진행 덮개가 `messages.delete` 문구로 덮고 `covered`가 true이므로 확인창은 `open={state.kind === 'open' && !covered}`로 내린다(확인창 → 덮개 → 이동, 실패하면 덮개가 닫히고 확인창이 실패 문구와 함께 다시 열린다). 상태 변경 등 그 밖의 확인 실행은 선언하지 않는다(확인창 안 진행 표시).
 
 ## 확인 방법
 
-실제 조립 예: [apps/starter/src/shared/ui/web-kit/checks/form-ui.test.tsx](../../../../apps/starter/src/shared/ui/web-kit/checks/form-ui.test.tsx). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/shared/ui/web-kit/checks/form-ui.test.tsx](../../references/apps/starter/src/shared/ui/web-kit/checks/form-ui.test.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 단위·브라우저 CI에서 실행하고 `web-kit-check`를 필수 단계로 둔다. starter 통과로 대신하지 않는다. 실제 사용 UI와 검사 대상의 일치는 별도 검토로 판정한다. 설치·결과 파일 연결은 [소비 안내](../../docs/consuming.md#복사본-적합성-검사)를 따른다.
 
@@ -147,7 +147,7 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 
 ## 공용 선택과 읽기 쉬운 연결
 
-실제 조립 예: [apps/starter/src/features/products/screens/ProductForm.tsx](../../../../apps/starter/src/features/products/screens/ProductForm.tsx). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/products/screens/ProductForm.tsx](../../references/apps/starter/src/features/products/screens/ProductForm.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 `Form.Choice`는 같은 필드 검증·별표·오류 초점에 registry `choice`의 `Choice`를 연결한다. 공통 선택·검색 수명은 `/choice`의 `useChoiceBinding`이 맡는다. 값은 단일 leaf ID 또는 다중 leaf ID 배열이며 가지는 값이 아니다. `nodes`에 트리, `appearance`에 vertical/horizontal/dropdown/menu/search를 준다. 단일 menu에서 가지는 탐색만, 다중 트리에서 가지는 전체·일부·없음을 구분한다. `search(text, signal)`을 주면 기본 250ms 입력 정지 후 서버를 조회하며 늦은 이전 결과는 버린다. 서버 코드·선택지 내용·표시 문구는 프로젝트가 제공한다.
 
@@ -157,13 +157,13 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 
 ## 같은 폼의 두 번째 저장
 
-실제 조립 예: [apps/starter/src/features/form-workflows/screens/FormWorkflowScreen.tsx](../../../../apps/starter/src/features/form-workflows/screens/FormWorkflowScreen.tsx). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/form-workflows/screens/FormWorkflowScreen.tsx](../../references/apps/starter/src/features/form-workflows/screens/FormWorkflowScreen.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 `useSaveForm({ schema, save, secondary: { schema: draftSchema, save: saveDraft, onSaved } })`로 임시저장처럼 다른 검증을 선언하고 `<Form.Submit mode="secondary">임시 저장</Form.Submit>`으로 실행한다. `secondary`의 schema 출력 타입은 해당 save에 추론된다. 두 저장은 제출 잠금·오류 처리·기준선·이탈 보호를 공유한다. 기본 저장의 필수 오류가 남아 있어도 두 번째 검증이 통과하면 저장할 수 있다. 두 번째 동작의 `confirm`·`acknowledge`·`onSaved`는 기본 동작에서 상속하지 않는다. 확인창은 기존 `Form.Confirm`, 완료 확인은 `Form.Saved`를 쓴다. 실제 필수 칸·요청·성공 뒤 이동은 프로젝트 서버 계약으로 정한다.
 
 ## 폼 안 원본과 참조
 
-실제 조립 예: [apps/starter/src/features/form-workflows/model/form.ts](../../../../apps/starter/src/features/form-workflows/model/form.ts). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/form-workflows/model/form.ts](../../references/apps/starter/src/features/form-workflows/model/form.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 `references`에 `{ source: values => 원본ID목록, fields: values => 참조필드경로목록, onRemove, message }`를 선언한다. 참조 칸 값은 문자열 ID 또는 ID 배열이며 빈 문자열은 참조 없음이다. 원본 이름은 현재 원본에서 표시하고 이름을 ID로 삼지 않는다. 원본 칸 값 자체가 참조 기준이면 그 값을 ID로 선언한다.
 

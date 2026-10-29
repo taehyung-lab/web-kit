@@ -33,7 +33,8 @@
     "docs",
     "GLOSSARY.md",
     "README.md",
-    "bin"
+    "bin",
+    "references"
   ],
   "peerDependencies": {
     "@tanstack/react-form": "1.33.5",
@@ -74,7 +75,8 @@
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "check": "pnpm typecheck && pnpm test"
+    "check": "pnpm typecheck && pnpm test",
+    "prepack": "node ../../scripts/build-package-references.mjs"
   },
   "peerDependenciesMeta": {
     "@tanstack/react-form": {

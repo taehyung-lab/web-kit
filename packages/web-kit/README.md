@@ -1,15 +1,15 @@
 # web-kit
 
-React 19 + TanStack(Router·Query·Form) + zod 4 + axios/orval을 쓰는 웹 프로젝트의 공용 키트다. 서버 응답 구조와 코드 의미는 프로젝트의 `ResponseContract`가 해석한다. 기존 Spring 응답 봉투 도우미도 선택해서 쓸 수 있다. 공통 동작은 패키지 hook·Provider가, 화면 배치는 registry로 설치한 프로젝트 소유 복사본이 맡는다. registry는 복사할 UI와 공통 검사 연결 파일의 묶음이다. 업무 정책·서버 연결 차이는 프로젝트가 정한다. 현재 제공 범위는 아래 표와 `package.json` exports다([4.0 배포 결정](../../docs/decisions/0011-web-kit-4-ui-distribution.md)).
+React 19 + TanStack(Router·Query·Form) + zod 4 + axios/orval을 쓰는 웹 프로젝트의 공용 키트다. 서버 응답 구조와 코드 의미는 프로젝트의 `ResponseContract`가 해석한다. 기존 Spring 응답 봉투 도우미도 선택해서 쓸 수 있다. 공통 동작은 패키지 hook·Provider가, 화면 배치는 registry로 설치한 프로젝트 소유 복사본이 맡는다. registry는 복사할 UI와 공통 검사 연결 파일의 묶음이다. 업무 정책·서버 연결 차이는 프로젝트가 정한다. 현재 제공 범위는 아래 표와 `package.json` exports다([4.0 배포 결정](references/docs/decisions/0011-web-kit-4-ui-distribution.md)).
 
-정본: https://github.com/taehyung-lab/web-kit · 패키지 `@boosterlab/web-kit` · 이 문서의 대상 버전 `4.1.0-rc.7` 후보(아직 정식 발행 전) · 결정 기록 [docs/decisions](../../docs/decisions/). 이 패키지는 저장소의 `packages/web-kit`이고, 사용 예이자 소비 검사 앱은 같은 저장소의 [`apps/starter`](../../apps/starter)다.
+정본: https://github.com/taehyung-lab/web-kit · 패키지 `@boosterlab/web-kit` · 이 문서의 대상 버전 `4.1.0-rc.7` 후보(아직 정식 발행 전) · 결정 기록 [docs/decisions](references/docs/decisions). 이 패키지는 저장소의 `packages/web-kit`이고, 사용 예이자 소비 검사 앱은 같은 저장소의 [`apps/starter`](references/apps/starter)다.
 
 ## 구조
 
 목록의 결과 출처와 목록 복귀 문맥은 [용어](GLOSSARY.md)에서 구분한다.
 
 - **core**(루트 `.`): 외부 상태나 실행 없이 입력만으로 결과를 정하는 순수 규칙이다(실패 12종 해석, 기간 검증, 체크 트리 선택, query 직렬화). `tests/core-boundary.test.ts`는 루트에서 따라가는 파일에 라이브러리 의존이 없는지만 검사한다. 순수한지는 이 정의와 검토로 판단한다. `session`처럼 라이브러리에 의존하지 않아도 실행·부수효과가 있는 코드는 core가 아니며, 자기 subpath로 공개한다.
-- **책임별 입구(subpath)**: `/list`·`/form`처럼 책임별 상태·hook·Provider를 공개한다. 이름을 새로 만들 때는 [0011 판단표](../../docs/decisions/0011-web-kit-4-ui-distribution.md)를 따른다.
+- **책임별 입구(subpath)**: `/list`·`/form`처럼 책임별 상태·hook·Provider를 공개한다. 이름을 새로 만들 때는 [0011 판단표](references/docs/decisions/0011-web-kit-4-ui-distribution.md)를 따른다.
 - **registry 복사본**: 원본은 `packages/ui-registry/src`, 정의는 루트 `registry.json`, 빌드 결과는 `public/r`에 있다. 폼·필터·표·상세 등 표현을 소비 프로젝트에 설치한다. 공통 처리 순서는 패키지가 끝내고 복사본은 반환된 ref·속성·이벤트를 연결한다. 제품 실행 코드는 registry를 import하지 않는다.
 - **skills**: module별 사용 기준이다. 코드와 같은 버전으로 배포한다.
 
@@ -39,6 +39,7 @@ React·ReactDOM은 필수 peer(소비 앱이 설치하는 동료 라이브러리
 
 | 스킬 | 언제 읽나 |
 |---|---|
+| `web-kit-auth` | 로그인 전 코드 인증·기한·재전송·인증 요청 진행 |
 | `web-kit-http` | API 호출, 실패, 재발급, 로그인/로그아웃, QueryClient, 무효화 |
 | `web-kit-list` | 목록 검색·조회·선택·일괄 작업·엑셀 다운로드 흐름·목록 부품 |
 | `web-kit-permission` | 경로 진입 차단·메뉴 숨김·버튼 비활성 연결 |
@@ -47,11 +48,15 @@ React·ReactDOM은 필수 peer(소비 앱이 설치하는 동료 라이브러리
 
 프로젝트는 설치본의 스킬을 `.agents/skills/`에 링크하고, 업무 정책 문서와 읽는 순서는 자기 AGENTS.md 지도에 둔다. 키트 문장을 프로젝트 문서에 복사하지 않는다. 링크 기준은 web-kit 의존성을 선언한 패키지의 `node_modules`다(monorepo에서 루트 호이스팅에 기대지 않는다). 예: 저장소 루트에서 `PKG=apps/admin`(단일 패키지면 `PKG=.`).
 
+기능 선택은 [소비 안내의 선택 표](docs/consuming.md#기능을-골라-쓰기)에서 시작한다. 스킬의 예제 링크는 설치 패키지 안의 자동 생성 `references/`로 이어진다. 원본은 실제 starter이며 예제 복사본을 직접 수정하지 않는다. 코드 예제는 읽기용 `.txt`로 담아 검사 러너가 복사본을 실행하지 않게 한다.
+
 기존 코드 교체와 저장 adapter 검사는 [소비 안내](docs/consuming.md)를 따른다.
 
 ```sh
 mkdir -p .agents/skills
-for name in web-kit-http web-kit-list web-kit-permission web-kit-form web-kit-record; do
+for skill in "$PKG"/node_modules/@boosterlab/web-kit/skills/web-kit-*; do
+  [ -f "$skill/SKILL.md" ] || continue
+  name="${skill##*/}"
   link=".agents/skills/$name"
   if [ -e "$link" ] || [ -L "$link" ]; then
     printf '%s\n' "기존 경로를 확인하세요: $link" >&2
@@ -93,7 +98,7 @@ pnpm dlx shadcn@4.19.1 add @web-kit/form
 
 항목의 npm·registry 의존과 단위/브라우저 검사 연결 파일도 함께 설치한다. UI는 `src/shared/ui/web-kit`에 생긴다. 기본 스타일은 설치한 `ui/styles.css`를 앱에서 한 번 import한다. 예: `@/shared/ui/web-kit/form/ui`의 Form, `@boosterlab/web-kit/form`의 useSaveForm.
 
-5. 설치 기록을 남긴다. 패키지 `version`, registry `sourceRef`·`sourceCommit`, 항목 이름, 원본 JSON/파일 SHA-256, 원본→설치 경로, **설치 직후** 파일의 `installedHash`, 사용한 CLI·components 설정 지문을 기록한다. SHA-256은 파일 내용이 같은지 비교하는 지문이다. CLI가 import나 별칭을 바꿀 수 있어 원본과 설치 지문을 같은 값으로 가정하지 않는다. 실제 형식은 [설치 기록](../../apps/starter/registry-installation.json), 로컬 후보 설치·기록 예는 [설치 스크립트](../../scripts/install-starter-registry.mjs)를 참고한다. 이 스크립트는 이 저장소 starter 전용이며 일반 프로젝트 갱신 명령이 아니다.
+5. 설치 기록을 남긴다. 패키지 `version`, registry `sourceRef`·`sourceCommit`, 항목 이름, 원본 JSON/파일 SHA-256, 원본→설치 경로, **설치 직후** 파일의 `installedHash`, 사용한 CLI·components 설정 지문을 기록한다. SHA-256은 파일 내용이 같은지 비교하는 지문이다. CLI가 import나 별칭을 바꿀 수 있어 원본과 설치 지문을 같은 값으로 가정하지 않는다. 실제 형식은 [설치 기록](references/apps/starter/registry-installation.json), 로컬 후보 설치·기록 예는 [설치 스크립트](references/scripts/install-starter-registry.mjs.txt)를 참고한다. 이 스크립트는 이 저장소 starter 전용이며 일반 프로젝트 갱신 명령이 아니다.
 6. 설치한 스킬을 링크하고, 함께 설치한 검사 연결을 자기 CI에서 실행한다. [소비 안내](docs/consuming.md#복사본-적합성-검사)의 `web-kit-check`를 필수 단계로 둔다. package.json·lockfile·tgz·복사본·설치 기록·검사 연결을 함께 관리한다.
 
 설치 기록의 installed 경로는 기록 파일이 있는 프로젝트 루트 기준으로 쓴다(starter의 기존 `apps/starter/` 접두도 점검기가 읽는다). 원본 commit은 받은 registry의 commit이며 소비 프로젝트의 현재 commit과 혼동하지 않는다. 다른 버전 조합을 검증 없이 섞지 않는다.
@@ -136,9 +141,9 @@ pnpm dlx shadcn@4.19.1 add @web-kit/form
 
 Node 24.19.0, 빈 NODE_OPTIONS, pnpm 10.33.0. `pnpm check`는 키트·링크·registry 일치를 확인한다. `pnpm starter:sync` 후 `pnpm starter:check`는 타입·lint·단위·빌드·브라우저·strict 지문 점검을 실행한다. 처음에는 starter의 Playwright chromium 설치가 필요하다.
 
-[즉시 조회](../../apps/starter/src/features/products/model/list-search.ts)와 [검색 후 조회](../../apps/starter/src/features/members/model/list-search.ts)는 같은 목록 구현의 gated 값 차이다(0003 완료 기준 6). 예제는 조립 방식만 참고하고 필드·기본값·문구·권한은 프로젝트가 정한다.
+[즉시 조회](references/apps/starter/src/features/products/model/list-search.ts.txt)와 [검색 후 조회](references/apps/starter/src/features/members/model/list-search.ts.txt)는 같은 목록 구현의 gated 값 차이다(0003 완료 기준 6). 예제는 조립 방식만 참고하고 필드·기본값·문구·권한은 프로젝트가 정한다.
 
-발행 순서는 같은 commit 후보(패키지+registry) → starter → 실제 소비처 검증 → 교정·독립 검증 → 실서버 확인 → 정식 발행이다. [유지보수](../../docs/maintaining.md)가 기록·산출물 기준을 정한다. mock·starter 통과로 실제 소비처나 서버 계약 확인을 대신하지 않는다.
+발행 순서는 같은 commit 후보(패키지+registry) → starter → 실제 소비처 검증 → 교정·독립 검증 → 실서버 확인 → 정식 발행이다. [유지보수](references/docs/maintaining.md)가 기록·산출물 기준을 정한다. mock·starter 통과로 실제 소비처나 서버 계약 확인을 대신하지 않는다.
 
 ## 4.1 인증 단계 추가
 

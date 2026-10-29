@@ -11,7 +11,7 @@ description: 로그인 전 이메일·OTP 코드 확인, 남은 시간·만료, 
 
 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-검사 조립 예: [starter 인증 검사 화면](../../../../apps/starter/src/shared/ui/web-kit/checks/auth.page.tsx). starter 제품 로그인에는 인증 단계가 없어 제품 연결은 검사하지 않음.
+검사 조립 예: [starter 인증 검사 화면](../../references/apps/starter/src/shared/ui/web-kit/checks/auth.page.tsx.txt). starter 제품 로그인에는 인증 단계가 없어 제품 연결은 검사하지 않음.
 
 1. 프로젝트가 로그인 성공 전 임시 인증 정보를 메모리에서 소유한다. 새 로그인은 새 `scope`와 새 기한을 만들고, 같은 로그인 안 방식 전환은 `scope`만 바꾸며 이메일 코드 기한은 유지한다. 새로고침 후에는 로그인부터 다시 시작한다. URL·영속 저장소에 임시 자격정보를 넣지 않는다.
 2. 앱 진입점에서 `/session/idle`의 `createServerClock({ key })`를 한 번 만든다. 로그인 전 `useAuthChallenge`와 로그인 후 `createIdleTimer({ clock, ... })`에 **같은 객체**를 넘긴다. 기존 유휴 타이머 key가 `app-idle`이면 시계 key는 기존 저장 형식인 `app-idle:clock`이다. 로그인 전 응답은 `clock.observe(offsetMs)`로 관측하고 로그인 후는 기존 `idle.observe(sample)` 연결을 유지한다. offset은 서버 시각−로컬 시각(ms)이며 헤더 해석은 프로젝트 서버 계약이다.
@@ -24,7 +24,7 @@ description: 로그인 전 이메일·OTP 코드 확인, 남은 시간·만료, 
 
 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-실행 예: [starter 단위 검사 연결](../../../../apps/starter/src/shared/ui/web-kit/checks/auth.test.tsx). 실제 인증 서버 검증은 소비 프로젝트 책임이다.
+실행 예: [starter 단위 검사 연결](../../references/apps/starter/src/shared/ui/web-kit/checks/auth.test.tsx.txt). 실제 인증 서버 검증은 소비 프로젝트 책임이다.
 
 - 남은 초는 절대 기한에서 올림 계산하고 0 아래로 내려가지 않는다. 타이머가 늦어져도 다음 갱신·탭 복귀 때 현재 시각으로 다시 계산한다. 요청 직전에는 표시 tick과 무관하게 현재 시각을 검사한다.
 - 코드 기한이 끝나면 확인·Enter 제출을 차단한다. 전체 기한이 끝나면 확인·재전송과 늦은 응답 적용을 차단한다. 입력은 계속 편집할 수 있다. 유효 숫자와 자리수는 요청 전에 검사한다.
@@ -36,7 +36,7 @@ description: 로그인 전 이메일·OTP 코드 확인, 남은 시간·만료, 
 
 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-브라우저 조립 예: [starter 브라우저 검사 연결](../../../../apps/starter/tests/e2e/web-kit/auth.spec.ts).
+브라우저 조립 예: [starter 브라우저 검사 연결](../../references/apps/starter/tests/e2e/web-kit/auth.spec.ts.txt).
 
 registry `auth`의 단위·브라우저 연결 파일을 실제 복사본과 함께 실행하고 `web-kit-check`를 필수 CI에 둔다. 입력을 바꾸면 `enterCode`·`readCode` 행동 어댑터만 그 모양에 맞춘다. 공통 검사는 입력 개수나 DOM 배치 대신 남은 시간·편집 값·Enter·요청 횟수·결과 적용을 관찰한다. 저장소의 한 칸/여섯 칸 검사는 모양 변경의 예이며 소비처 연결 증명을 대신하지 않는다.
 

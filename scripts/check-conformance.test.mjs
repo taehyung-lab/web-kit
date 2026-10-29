@@ -1,7 +1,7 @@
 // 파일 책임: 적합성 점검 명령이 정상·누락·버전·지문 위반을 구별하는지 실제 파일 입력으로 검사한다.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -27,7 +27,27 @@ function fixture(run) {
 test('점검: 정상 입력은 통과하고 자동 판정의 한계를 알린다', () => fixture(({ audit }) => { const r = audit(); assert.equal(r.status, 0); assert.match(r.stdout, /독립 검토/); }));
 test('점검: 연결 파일이 없으면 지난 성공 보고서도 거절한다', () => fixture(({ dir, audit }) => { rmSync(join(dir, 'inputs.test.tsx')); const r = audit(); assert.equal(r.status, 1); assert.match(r.stderr, /검사 연결 없음/); }));
 test('점검: 빠진 검사를 거절한다', () => fixture(({ unit, audit }) => { unit.testResults = []; const r = audit(); assert.equal(r.status, 1); assert.match(r.stderr, /필수 검사 누락/); }));
-for (const status of ['pending', 'failed', 'skipped']) test('점검: ' + status + ' 결과를 거절한다', () => fixture(({ unit, audit }) => { unit.testResults[0].assertionResults[0].status = status; assert.equal(audit().status, 1); }));
+for (const status of ['pending', 'failed', 'skipped']) test('점검: ' + status + ' 결과를 두 소비 모드 모두 거절한다', () => fixture(({ unit, audit }) => { unit.testResults[0].assertionResults[0].status = status; assert.equal(audit().status, 1); assert.equal(audit(false).status, 1); }));
 test('점검: 대상 registry와 commit 불일치를 거절한다', () => fixture(({ unit, audit }) => { unit.testResults[0].assertionResults[0].fullName = '[web-kit:inputs-unit|4.1.0-rc.7|v9|old] contract'; const r = audit(); assert.equal(r.status, 1); assert.match(r.stderr, /불일치/); }));
 test('점검: 지문 변경은 기본 알림이고 strict에서는 실패다', () => fixture(({ dir, audit }) => { writeFileSync(join(dir, 'inputs.test.tsx'), '// modified\n'); assert.equal(audit(false).status, 0); assert.equal(audit().status, 1); }));
 test('점검: only 연결은 통과 결과가 있어도 거절한다', () => fixture(({ dir, audit }) => { writeFileSync(join(dir, 'inputs.test.tsx'), 'test.only("focused", () => {});'); const r = audit(false); assert.equal(r.status, 1); assert.match(r.stderr, /skip\/only/); }));
+
+// 서로 다른 선택 조합에 전체 registry나 쓰지 않는 기능의 검사를 강제하지 않는다.
+for (const names of [['inputs'], ['auth'], ['record', 'retry']]) {
+  test('부분 채택: ' + names.join('+') + '만 연결해 검사하고 필수 의존 누락은 거절한다', () => fixture(({ installation, unit, audit, dir }) => {
+    const contracts = JSON.parse(readFileSync(fileURLToPath(new URL('../packages/web-kit/src/testing/requirements.json', import.meta.url)), 'utf8'));
+    const content = '// connection\n';
+    installation.items = names.map((name) => ({ name, files: contracts[name].connections.map((connection) => {
+      writeFileSync(join(dir, connection), content);
+      return { source: 'checks/' + connection, installed: connection, installedHash: createHash('sha256').update(content).digest('hex') };
+    }) }));
+    unit.testResults[0].assertionResults = names.flatMap((name) => contracts[name].ids.map((id) => ({ fullName: `[web-kit:${id}|${installation.version}|${installation.sourceRef}|${installation.sourceCommit}] contract`, status: 'passed' })));
+    assert.equal(audit(false).status, 0);
+    unit.testResults[0].assertionResults.pop();
+    assert.equal(audit(false).status, 1, '선택한 기능의 필수 결과 누락은 실패');
+    if (names.includes('record')) {
+      installation.items = installation.items.filter((item) => item.name !== 'retry');
+      assert.match(audit(false).stderr, /의존 항목 기록 없음/);
+    }
+  }));
+}

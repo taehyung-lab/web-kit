@@ -208,6 +208,8 @@ export function createIdleTimer<C extends Credentials>({
   let inFlight: Promise<ExtendResult> | undefined;
   let releaseLeader: (() => void) | undefined;
   let resuming: Promise<ExtendResult> | undefined;
+  /** 같은 세션이어도 stop 뒤 다시 연결한 타이머는 이전 요청을 소유하지 않는다. */
+  let requestLifetime = 0;
   /** 재개 응답을 기다리는 중 다시 pause()가 왔다. 마지막 요청(멈춤/재개)이 이긴다. */
   let pauseRequested = false;
   let state: IdleState = {
@@ -376,7 +378,17 @@ export function createIdleTimer<C extends Credentials>({
     seedOpenedAt = Date.now();
   }
 
+  /** 이전 연결의 요청을 버린다. 늦은 완료는 새 연결의 상태를 바꾸지 못한다. */
+  function invalidateRequests() {
+    requestLifetime += 1;
+    inFlight = undefined;
+    resuming = undefined;
+    pauseRequested = false;
+    update({ extending: false });
+  }
+
   function onSessionChange(change: SessionChange) {
+    invalidateRequests();
     if (change.kind === 'ended') {
       grantSlot.write(null);
       deactivate();
@@ -401,11 +413,13 @@ export function createIdleTimer<C extends Credentials>({
     if (state.phase === 'inactive') return Promise.resolve({ ok: false });
     if (inFlight !== undefined) return inFlight;
     const generation = session.generation();
+    const lifetime = requestLifetime;
+    const isCurrent = () => lifetime === requestLifetime && generation === session.generation();
     update({ extending: true });
     const run = (async (): Promise<ExtendResult> => {
       try {
         const sample = await requestExtend();
-        if (generation !== session.generation()) return { ok: false, failure: new RequestFailure({ kind: 'cancelled' }) };
+        if (!isCurrent()) return { ok: false, failure: new RequestFailure({ kind: 'cancelled' }) };
         const sessionId = currentSessionId();
         let adopted = false;
         if (sample !== null && sample.deadline !== undefined && sessionId !== undefined) {
@@ -415,10 +429,10 @@ export function createIdleTimer<C extends Credentials>({
         const rest = left();
         return adopted && rest !== null && rest > policy.warningMs ? { ok: true } : { ok: false };
       } catch (failure: unknown) {
-        return { ok: false, failure };
+        return { ok: false, failure: isCurrent() ? failure : new RequestFailure({ kind: 'cancelled' }) };
       } finally {
-        inFlight = undefined;
-        if (generation === session.generation()) {
+        if (isCurrent()) {
+          inFlight = undefined;
           update({ extending: false });
           evaluate();
         }
@@ -453,6 +467,7 @@ export function createIdleTimer<C extends Credentials>({
       adopt(stored, false);
     },
     stop() {
+      invalidateRequests();
       update({ paused: false });
       if (!started) return;
       started = false;
@@ -475,6 +490,7 @@ export function createIdleTimer<C extends Credentials>({
         return Promise.resolve<ExtendResult>({ ok: false });
       }
       const generation = session.generation();
+      const lifetime = requestLifetime;
       const sentAt = Date.now();
       lastAttemptAt = sentAt;
       const run = (async (): Promise<ExtendResult> => {
@@ -483,22 +499,24 @@ export function createIdleTimer<C extends Credentials>({
           result = await extend();
           return result;
         } finally {
-          resuming = undefined;
-          // 기다리는 중 다시 멈췄으면 받은 마감은 extend가 저장한 채로 두고 멈춤을 유지한다.
-          if (pauseRequested) pauseRequested = false;
-          else if (state.paused) {
-            update({ paused: false });
-            const rest = left();
-            if (generation === session.generation() && state.phase !== 'inactive' && (rest === null || rest <= 0)) {
-              // 서버가 거절했으면 대표 여부와 관계없이 이 탭이 끝낸다.
-              // 일시 실패면 경고 구간 길이의 시한을 저장해 평소 경고(연장 버튼만)로 보인다. 저장하므로 새로고침·새 탭도 같은 시한을 받는다.
-              const sessionId = currentSessionId();
-              if ((!result.ok && rejectsSession(result.failure)) || sessionId === undefined) session.expireIdle();
-              else adopt({ sessionId, deadline: now() + policy.warningMs, sentAt }, true);
-            }
-            if (detach !== undefined && state.phase !== 'inactive') {
-              takeLeader();
-              evaluate();
+          if (lifetime === requestLifetime && generation === session.generation()) {
+            resuming = undefined;
+            // 기다리는 중 다시 멈췄으면 받은 마감은 extend가 저장한 채로 두고 멈춤을 유지한다.
+            if (pauseRequested) pauseRequested = false;
+            else if (state.paused) {
+              update({ paused: false });
+              const rest = left();
+              if (state.phase !== 'inactive' && (rest === null || rest <= 0)) {
+                // 서버가 거절했으면 대표 여부와 관계없이 이 탭이 끝낸다.
+                // 일시 실패면 경고 구간 길이의 시한을 저장해 평소 경고(연장 버튼만)로 보인다. 저장하므로 새로고침·새 탭도 같은 시한을 받는다.
+                const sessionId = currentSessionId();
+                if ((!result.ok && rejectsSession(result.failure)) || sessionId === undefined) session.expireIdle();
+                else adopt({ sessionId, deadline: now() + policy.warningMs, sentAt }, true);
+              }
+              if (detach !== undefined && state.phase !== 'inactive') {
+                takeLeader();
+                evaluate();
+              }
             }
           }
         }

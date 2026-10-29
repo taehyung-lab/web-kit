@@ -2,6 +2,23 @@
 
 설치·버전 고정은 [README](../README.md#설치와-업그레이드), 동작 보장은 설치한 버전의 스킬, 정확한 인자·타입은 같은 패키지의 공개 소스가 정본이다. 이 문서는 연결과 기존 구현 교체 순서만 맡는다.
 
+## 기능을 골라 쓰기
+
+전체 페이지를 공용으로 고정하지 않는다. 필요한 기능의 입구와 UI만 선택한다. 한 패키지에 기능이 함께 배포되는 것과 모든 기능을 사용하는 것은 다르다. 스킬이 연결돼 있어도 해당 기능을 제품에 추가하라는 뜻은 아니다.
+
+| 프로젝트의 차이 | 어디에서 표현하나 | 실제 조립 예 |
+|---|---|---|
+| 같은 목록인데 검색 시작 시점이 다름 | 같은 `/list`에 조회 조건을 전달 | [즉시 조회](../references/apps/starter/src/features/products/model/list-search.ts.txt), [검색 후 조회](../references/apps/starter/src/features/members/model/list-search.ts.txt) |
+| 같은 저장 폼인데 일부만 첨부·배열이 필요 | `/form` 상태를 유지하며 필요한 UI를 조합 | [복잡한 폼](../references/apps/starter/src/features/shows/screens/ShowCreateScreen.tsx.txt) |
+| 같은 인증 처리인데 입력 모양이 다름 | `/auth` 진행은 공유하고 프로젝트 UI를 바꿈 | [한 칸·여섯 칸 검사](../references/apps/starter/src/shared/ui/web-kit/checks/auth.page.tsx.txt) |
+| 저장 후 승인 등 업무의 성공 정의가 다름 | 프로젝트 요청 함수·완료 동작에서 연결 | [저장 연결 예](../references/apps/starter/src/features/products/screens/ProductCreateScreen.tsx.txt) |
+
+예를 들어 A·B가 목록과 폼을 같이 쓰고, C는 즉시 조회와 첨부를 더하며, D는 목록 없이 폼을 승인 과정에 연결할 수 있다. web-kit에 A/B/C/D 분기를 만들지 않는다. 두 프로젝트만 같은 기능을 써도 공용화할 수 있지만, 특정 업무를 공유한다면 별도의 업무 책임인지 먼저 판단한다.
+
+UI가 필요하면 registry의 해당 항목을 선택한다. `form`·`list`·`record`·`auth`를 각각 설치할 수 있으며 필요한 내부 의존과 검사 연결이 따라온다. 사용하지 않는 항목의 검사는 요구하지 않고, 채택한 항목과 그 의존의 필수 검사는 모두 실행한다. `all`은 전체 예제용이며 필수 선택이 아니다. 직접 UI를 만들 때도 채택한 공용 상태·오류·이벤트 순서와 실제 연결 검사를 유지한다.
+
+내부 starter를 복사하면 실행 가능한 예제 앱 전체로 시작한다. 빈 최소 앱이나 기능 선택 생성기는 아니다. 예제를 제거할 때는 사용 코드·route·검사 연결·설치 항목과 의존을 함께 확인한다. 사용하는 UI를 남겨 둔 채 설치 기록만 줄이지 않는다.
+
 ## 새 프로젝트
 
 1. 현재 스택·서버 응답 규약이 README의 적용 범위와 맞는지 확인한다. 결과 코드 의미·재발급·쿠키 계약은 서버 근거로 정한다.
@@ -30,7 +47,7 @@ pnpm exec web-kit-check --installation registry-installation.json --unit .web-ki
 
 연결 없음·필수 검사 누락/skip/실패·대상 버전 불일치는 실패다. 일반 프로젝트의 디자인 수정은 정상일 수 있어 현재 파일과 installedHash의 차이는 기본 알림이다. 설치본을 수정 없이 사용해야 하는 검사 앱은 `--strict-fingerprints`를 붙여 변경도 실패로 만든다. 선택 peer를 설치하지 않아 기능 검사를 실행하지 못했다면 "검사하지 않음"으로 기록하며 필수 검사 성공으로 간주하지 않는다.
 
-실제 제품이 검사한 UI를 사용하는지는 점검 명령이 자동 판정하지 않는다. 사용 import와 검사 연결의 일치를 독립 검토한다. [실제 CI 연결](../../../apps/starter/package.json)과 [검사 연결 예](../../../apps/starter/src/shared/ui/web-kit/checks/form-ui.test.tsx)는 조립 방식만 참고하며 제품 값은 프로젝트가 정한다.
+실제 제품이 검사한 UI를 사용하는지는 점검 명령이 자동 판정하지 않는다. 사용 import와 검사 연결의 일치를 독립 검토한다. [실제 CI 연결](../references/apps/starter/package.json)과 [검사 연결 예](../references/apps/starter/src/shared/ui/web-kit/checks/form-ui.test.tsx.txt)는 조립 방식만 참고하며 제품 값은 프로젝트가 정한다.
 
 ## 3.1 → 4.0과 갱신
 
@@ -50,4 +67,4 @@ pnpm exec web-kit-check --installation registry-installation.json --unit .web-ki
 
 ## 프로젝트가 추가할 것
 
-제품 값은 제품 기록, 서버 계약은 그 계약의 근거, 반복되는 제품 고유 판단만 프로젝트 역할 스킬에 둔다. 배포된 `web-kit-*` 스킬은 설치본 링크를 유지한다. 공통 보장을 고칠 때는 키트의 코드·스킬·검사를 함께 바꾸고, 제품 차이는 프로젝트에 남긴다. 키트 변경 절차는 [유지보수](../../../docs/maintaining.md)를 따른다.
+제품 값은 제품 기록, 서버 계약은 그 계약의 근거, 반복되는 제품 고유 판단만 프로젝트 역할 스킬에 둔다. 배포된 `web-kit-*` 스킬은 설치본 링크를 유지한다. 공통 보장을 고칠 때는 키트의 코드·스킬·검사를 함께 바꾸고, 제품 차이는 프로젝트에 남긴다. 키트 변경 절차는 [유지보수](../references/docs/maintaining.md)를 따른다.

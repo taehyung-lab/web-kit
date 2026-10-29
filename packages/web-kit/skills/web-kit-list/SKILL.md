@@ -7,11 +7,11 @@ description: 목록 필터·기간 프리셋·키워드 칩·표·페이지 이�
 
 `/search`의 `defineSearch`, `/list`의 `useList`·`useListDownload`·`ListProvider`와 registry `list` 항목의 목록 복사본을 쓰는 기준이다. registry는 프로젝트에 설치해 소유하는 UI 원본 묶음이다. 공통 상태와 이벤트 순서는 패키지 hook이 맡는다. 인자와 타입은 설치된 소스를 따른다.
 
-이 책임만 골라 사용할 수 있다. 선택한 한 책임 안에서는 키트 수명 처리와 자체 구현을 섞지 않는다. 선택 설치 peer(해당 기능을 쓸 때만 설치하는 동료 라이브러리)를 설치하지 않아 실행하지 못한 기능은 "검사하지 않음"으로 기록한다. 예시는 같은 버전 저장소의 파일이며 설치본 node_modules 안의 파일이 아니다.
+이 책임만 골라 사용할 수 있다. 선택한 한 책임 안에서는 키트 수명 처리와 자체 구현을 섞지 않는다. 선택 설치 peer(해당 기능을 쓸 때만 설치하는 동료 라이브러리)를 설치하지 않아 실행하지 못한 기능은 "검사하지 않음"으로 기록한다. 예시는 같은 버전의 실제 starter 코드에서 가져와 패키지에 함께 담는다. 링크로 읽고 조립 방식만 참고한다. 예제만 따로 실행하는 용도는 아니다.
 
 ## 화면 선언
 
-실제 조립 예: [apps/starter/src/features/members/model/list-search.ts](../../../../apps/starter/src/features/members/model/list-search.ts). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/members/model/list-search.ts](../../references/apps/starter/src/features/members/model/list-search.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 - URL 하나에 `defineSearch` 하나를 선언한다.
   - 필드마다 schema와 default를 둔다. schema는 URL 값을 읽는 동기 Standard Schema이고 `.catch`를 붙이지 않는다. default는 제품이 정한 값 그대로다.
@@ -29,7 +29,7 @@ description: 목록 필터·기간 프리셋·키워드 칩·표·페이지 이�
 
 ## 키트 보장
 
-실제 조립 예: [apps/starter/src/features/products/screens/ProductListScreen.test.tsx](../../../../apps/starter/src/features/products/screens/ProductListScreen.test.tsx). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/products/screens/ProductListScreen.test.tsx](../../references/apps/starter/src/features/products/screens/ProductListScreen.test.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 - **URL:**
   - 틀린 필드와 그 묶음만 기본값으로 돌린다. 나머지 유효한 값은 유지한다.
@@ -58,7 +58,7 @@ description: 목록 필터·기간 프리셋·키워드 칩·표·페이지 이�
 
 ## registry 목록과 제품 선언
 
-실제 조립 예: [apps/starter/src/features/products/screens/ProductListScreen.tsx](../../../../apps/starter/src/features/products/screens/ProductListScreen.tsx). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/products/screens/ProductListScreen.tsx](../../references/apps/starter/src/features/products/screens/ProductListScreen.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 `/list`의 `<ListProvider model={model}>`를 상태 전달의 기본으로 두고 registry `list`의 표시 wrapper와 부품을 조립한다. 각 부품에 `model` props를 직접 넘기는 방식도 허용하며 명시한 model을 우선한다. 복사본 `<List model={model}>` 안에 `List.Filter`·`FilterActions`·`Detail`·`Text`·`Select`·`MultiSelect`·`Period`·`Keywords`·`Result`·`Table`·`Total`·`PageSize`·`SortSelect`·`Pagination`·`Actions`·`BulkAction`·`Download`를 원하는 배치로 둔다. 부품은 context로 같은 상태를 읽으므로 필터를 위·왼쪽으로 옮겨도 조회·정렬·선택 연결을 다시 쓰지 않는다. 프로젝트 입력칸은 `useListField(name)`로 같은 초안에 연결한다.
 
@@ -77,7 +77,7 @@ description: 목록 필터·기간 프리셋·키워드 칩·표·페이지 이�
 
 ## 확인 방법
 
-실제 조립 예: [apps/starter/src/shared/ui/web-kit/checks/list-ui.test.tsx](../../../../apps/starter/src/shared/ui/web-kit/checks/list-ui.test.tsx). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/shared/ui/web-kit/checks/list-ui.test.tsx](../../references/apps/starter/src/shared/ui/web-kit/checks/list-ui.test.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 단위·브라우저 CI에서 실행하고 `web-kit-check`를 필수 단계로 둔다. starter 통과로 대신하지 않는다. 실제 사용 UI와 검사 대상의 일치는 별도 검토로 판정한다. 설치·결과 파일 연결은 [소비 안내](../../docs/consuming.md#복사본-적합성-검사)를 따른다.
 
@@ -94,7 +94,7 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 
 ## 이름 있는 부품과 공용 선택
 
-실제 조립 예: [apps/starter/src/features/products/screens/ProductFilters.tsx](../../../../apps/starter/src/features/products/screens/ProductFilters.tsx). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/products/screens/ProductFilters.tsx](../../references/apps/starter/src/features/products/screens/ProductFilters.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 새 화면은 `/list`의 `ListProvider`·`useListModel`·`useListField`와 registry `list`의 `FilterPanel`, `FilterActions`, `TextFilter`, `ChoiceFilter`, `PeriodFilter`, `ListResult`, `ResultTable`, `PageSize`, `Pagination`으로 조립할 수 있다. 복사본의 기존 `List.*` 표기와 같은 상태·구현을 쓴다. `useListFilterBinding`·`useListPeriodBinding`·`useBulkConfirmation` 등 패키지 연결 hook의 반환값을 표현에 연결하며 순서를 다시 구현하지 않는다. 화면은 제목·필터·업무 작업·결과로 읽히도록 나누고 열 선언과 요청 변환은 해당 책임에 둔다.
 
@@ -104,4 +104,4 @@ registry `choice`는 `/choice`의 `useChoiceBinding`을 쓴다. 이를 쓰는 `C
 
 `Choice`의 단일 선택 해제는 `clearLabel`을 지정했을 때만 제공한다. `placeholder`만으로 해제를 허용하지 않는다. 서버 검색 함수가 다시 만들어져도 진행 중 검색은 유지한다. 검색 범위가 상위 값에 따라 달라지면 `searchKey`에 해당 원시 값 배열을 전달해 이전 검색을 취소하고 다시 조회한다.
 
-즉시 조회와 검색 후 조회, 두 조회 방식의 실제 예는 [즉시 조회 선언](../../../../apps/starter/src/features/products/model/list-search.ts)과 [검색 후 조회 선언](../../../../apps/starter/src/features/members/model/list-search.ts)의 gated 값 차이로 확인한다. 두 화면 모두 같은 useList와 registry list를 사용한다. 요청 수 관찰은 [회원 화면 검사](../../../../apps/starter/src/features/members/screens/MemberListScreen.test.tsx)에 있다.
+즉시 조회와 검색 후 조회, 두 조회 방식의 실제 예는 [즉시 조회 선언](../../references/apps/starter/src/features/products/model/list-search.ts.txt)과 [검색 후 조회 선언](../../references/apps/starter/src/features/members/model/list-search.ts.txt)의 gated 값 차이로 확인한다. 두 화면 모두 같은 useList와 registry list를 사용한다. 요청 수 관찰은 [회원 화면 검사](../../references/apps/starter/src/features/members/screens/MemberListScreen.test.tsx.txt)에 있다.

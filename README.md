@@ -26,10 +26,25 @@ Node 24.19, pnpm 10.33.
 
 ## 새 프로젝트 시작
 
-1. 검증한 버전의 `apps/starter`를 새 저장소로 복사한다. 현재 `4.1.0-rc.7`은 후보이며 원격 정식 발행 전이다.
-2. 발행된 키트를 받는다: `gh release download v<버전> --repo taehyung-lab/web-kit --pattern 'boosterlab-web-kit-<버전>.tgz' --dir vendor` 후 `package.json`의 `@boosterlab/web-kit`을 `file:vendor/boosterlab-web-kit-<버전>.tgz`로 바꾸고 `pnpm install`.
-3. [4.0 설치 안내](packages/web-kit/README.md#설치와-업그레이드)에 따라 같은 commit의 registry를 `components.json`의 tag 고정 URL로 연결하고 shadcn 4.19.1로 필요한 항목을 설치한다. 설치 기록과 함께 설치한 검사 연결 파일을 관리한다.
-4. [agent-workflow-kit](https://github.com/taehyung-lab/agent-workflow-kit)을 버전 태그로 설치하고 `AGENTS.md`의 프로젝트 지도를 그 저장소 사실로 채운다(모르는 것은 `미확인`).
-5. Playwright chromium을 설치하고 `pnpm check`로 자기 복사본의 단위·브라우저·web-kit-check를 확인한 뒤 예시 기능을 실제 화면으로 바꾼다. 조립 방식만 참고하며 필드·기본값·문구·권한은 프로젝트 근거로 정한다.
+내부 `apps/starter`를 실행 가능한 예시 앱으로 복사한다. 기능별 선택 방식은 [소비 안내](packages/web-kit/docs/consuming.md#기능을-골라-쓰기)를 따른다. 최소 빈 앱이나 프로젝트별 템플릿을 여러 개 만들지 않는다.
 
-책임 단위로 일부만 채택할 수 있고 한 책임 안에서는 키트·자체 수명 처리를 섞지 않는다. [3.1 → 4.0 이전](packages/web-kit/README.md#31--40-이전)과 [복사본 갱신](packages/web-kit/README.md#복사본-갱신)을 따른다. 발행은 후보 → starter → 실제 소비처 → 교정·독립 검증 → 실서버 확인 → 정식 발행 순서다. [유지보수](docs/maintaining.md)가 세부 기준을 정한다.
+```sh
+pnpm starter:create ../my-web --workflow-kit /path/to/agent-workflow-kit
+```
+
+대상은 아직 없는 폴더여야 한다. AWK는 `scripts/starter/agent-workflow-kit.version`에 적힌 커밋의 깨끗한 checkout을 지정한다. 현재는 태그가 없는 로컬 후보의 재현용 입력이다. 정식 도입에서는 검증한 AWK 태그가 이 커밋으로 해소되는지 확인한다. 이 명령은 원격 다운로드·Git 초기화·의존성 설치·발행을 하지 않는다.
+
+명령은 현재 패키지와 starter vendor/lockfile의 일치를 먼저 확인한다. 다른 경우 유지보수자가 `pnpm starter:sync`와 `pnpm starter:check`로 후보를 맞춘다. 새 폴더에는 AWK, web-kit 스킬, 프로젝트 지도, 프로젝트용 README·CI가 들어간다. 로컬 비밀·의존성·빌드·실행 결과와 추적되지 않은 파일은 복사하지 않는다. 검사 앱의 strict 지문 검사는 유지하고 새 프로젝트에는 정상 UI 수정이 가능한 소비 검사 모드를 적용한다.
+
+생성한 폴더에서 다음을 실행한다.
+
+```sh
+pnpm install --frozen-lockfile
+pnpm exec playwright install chromium
+pnpm check
+pnpm dev:mock
+```
+
+후보의 registry tag가 발행되지 않았다면 복사된 UI로만 로컬 확인한다. 새 항목 설치·갱신은 검증된 tag 발행 뒤 [설치 안내](packages/web-kit/README.md#설치와-업그레이드)를 따른다. 새 프로젝트의 사용 스킬은 설치 패키지 안의 예제까지 읽을 수 있다.
+
+발행은 후보 → starter → 실제 소비처 → 교정·독립 검증 → 실서버 확인 → 정식 발행 순서다. [유지보수](docs/maintaining.md)가 세부 기준을 정한다.
