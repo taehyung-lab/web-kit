@@ -8,6 +8,8 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const starter = join(root, 'apps/starter');
 const templates = join(root, 'scripts/starter');
+/** 고정 커밋(agent-workflow-kit.version)에 해당하는 AWK 발행 tag. */
+const workflowKitTag = 'v1.0.0';
 const excluded = new Set(['node_modules', 'dist', 'coverage', '.git', 'work', 'test-results', 'playwright-report', '.web-kit-results', '.DS_Store']);
 
 /** JSON과 파일 지문은 실제 복사할 파일에서 읽는다. */
@@ -46,7 +48,11 @@ function validateSource(workflowKit) {
   if (realpathSync(git(workflowKit, 'rev-parse', '--show-toplevel')) !== realpathSync(workflowKit))
     throw new Error('AWK 저장소의 루트 경로를 지정하세요.');
   if (git(workflowKit, 'status', '--porcelain')) throw new Error('AWK에 저장하지 않은 변경이 있습니다. 깨끗한 고정 버전을 사용하세요.');
-  if (git(workflowKit, 'rev-parse', 'HEAD') !== expected) throw new Error(`이 starter의 AWK 고정 버전은 ${expected}입니다. 그 버전의 별도 checkout을 지정하세요.`);
+  if (git(workflowKit, 'rev-parse', 'HEAD') !== expected) throw new Error(`이 starter의 AWK 고정 버전은 ${workflowKitTag}(${expected})입니다. 그 버전의 별도 checkout을 지정하세요.`);
+  // tag를 받아 둔 checkout이면 그 tag가 고정 커밋으로 해소되는지도 확인한다.
+  let tagged = '';
+  try { tagged = git(workflowKit, 'rev-parse', '-q', '--verify', `refs/tags/${workflowKitTag}^{commit}`); } catch { /* tag가 없는 checkout은 커밋으로만 확인한다. */ }
+  if (tagged && tagged !== expected) throw new Error(`AWK tag ${workflowKitTag}가 고정 커밋 ${expected}이 아닌 ${tagged}를 가리킵니다.`);
   // 설치는 하지 않고 기존 포장 비교 경로로 후보와 vendor가 같은 내용인지 확인한다.
   execFileSync(process.execPath, [join(root, 'scripts/sync-starter.mjs'), '--frozen', '--verify-only'], { cwd: root, stdio: 'pipe' });
   const version = json(join(root, 'packages/web-kit/package.json')).version;
@@ -77,7 +83,7 @@ function validateSource(workflowKit) {
         throw new Error(`검사 앱의 원본 복사본이 달라졌습니다: ${file.installed}`);
     }
   }
-  return { version, installation };
+  return { version, installation, workflowKit: { tag: workflowKitTag, commit: expected } };
 }
 
 /** 새 폴더를 완성한 뒤에만 목적지로 옮긴다. 기존 폴더는 비어 있어도 건드리지 않는다. */
@@ -87,7 +93,7 @@ export function createStarter(destination, workflowKit) {
   if (existsSync(destination) || (() => { try { lstatSync(destination); return true; } catch { return false; } })())
     throw new Error('대상 폴더가 이미 있습니다. 새 경로를 지정하세요.');
   if (!existsSync(dirname(destination))) throw new Error('대상 상위 폴더를 먼저 만드세요.');
-  const { version, installation } = validateSource(workflowKit);
+  const { version, installation, workflowKit: pinned } = validateSource(workflowKit);
   const stage = mkdtempSync(join(dirname(destination), '.web-kit-start-'));
   try {
     const tracked = git(root, 'ls-files', '--', 'apps/starter').split('\n').map((path) => path.replace(/^apps\/starter\//, ''));
@@ -113,7 +119,7 @@ export function createStarter(destination, workflowKit) {
     // 복사 도중 다른 작업이 대상 폴더를 만들었으면 덮어쓰지 않는다.
     if (existsSync(destination)) throw new Error('복사 도중 대상 폴더가 생겼습니다. 다른 경로로 다시 시작하세요.');
     renameSync(stage, destination);
-    return { destination, version };
+    return { destination, version, workflowKit: pinned };
   } finally { rmSync(stage, { recursive: true, force: true }); }
 }
 
@@ -125,7 +131,7 @@ if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToP
   } else {
     try {
       const result = createStarter(args[0], args[2]);
-      console.log(`생성 완료: ${result.destination}\nweb-kit ${result.version}; AWK는 .agents/agent-workflow-kit.version에 고정했습니다.\n새 폴더에서 pnpm install --frozen-lockfile → pnpm exec playwright install chromium → pnpm check → pnpm dev:mock 순서로 실행하세요.`);
+      console.log(`생성 완료: ${result.destination}\nweb-kit ${result.version}; AWK ${result.workflowKit.tag}(${result.workflowKit.commit.slice(0, 7)})를 .agents/agent-workflow-kit.version에 고정했습니다.\n새 폴더에서 pnpm install --frozen-lockfile → pnpm exec playwright install chromium → pnpm check → pnpm dev:mock 순서로 실행하세요.`);
       if (result.version.includes('-')) console.log('후보 버전입니다. 복사된 UI는 로컬에서 사용할 수 있지만 registry 추가 설치는 해당 tag 발행 전에는 사용할 수 없습니다. 실서버 검증·정식 발행 완료를 뜻하지 않습니다.');
     } catch (error) { console.error(error.message); process.exitCode = 1; }
   }

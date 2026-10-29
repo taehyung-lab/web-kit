@@ -13,7 +13,7 @@ pnpm check
 pnpm dev:mock
 ```
 
-mock 계정은 `admin` / `password`다. 실제 서버 검증은 별도다. `package.json`에서 web-kit 파일을, `.agents/agent-workflow-kit.version`에서 AWK 커밋을 확인한다. 두 키트의 스킬은 `.agents/skills/`에 연결돼 있다. 새 에이전트 세션에서 작업에 맞는 스킬을 찾는지도 확인한다.
+mock 계정은 `admin` / `password`다. 실제 서버 검증은 별도다. `package.json`에서 web-kit 파일을, `.agents/agent-workflow-kit.version`에서 AWK 커밋을 확인한다(AWK tag `v1.0.0` = `c55ccc2`). 두 키트의 스킬은 `.agents/skills/`에 연결돼 있다. 새 에이전트 세션에서 작업에 맞는 스킬을 찾는지도 확인한다.
 
 후보 버전의 registry tag는 아직 발행되지 않았을 수 있다. 현재 복사된 UI는 사용할 수 있지만, 새 UI 항목 추가·업데이트는 검증한 tag가 발행된 뒤 진행한다.
 

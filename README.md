@@ -13,6 +13,8 @@ scripts/           starter 맞추기, registry 일치·문서 링크 검사, 검
 
 starter는 기본 연결과 조립 예이며 모든 프로젝트의 고정 페이지가 아니다. 프로젝트는 기능별로 선택해 쓰고 자기 업무·서버 계약·화면을 소유한다. [페이지 일부만 다른 경우](docs/decisions/0003-web-kit-3-redesign.md#페이지-일부만-다른-경우)의 책임 구분을 따른다. 공용 수정은 패키지 업데이트로 받되, UI 복사본 교정이 필요한 변경은 프로젝트 수정과 대조해 적용한다.
 
+최신 발행: web-kit `4.1.0`(tag `v4.1.0`, 패키지 tgz·registry `public/r`가 같은 commit). 함께 쓰는 agent-workflow-kit(AWK)은 tag `v1.0.0`(= commit `c55ccc2`)이다. 4.0.0은 따로 발행하지 않았다.
+
 ## 명령
 
 Node 24.19, pnpm 10.33.
@@ -32,7 +34,7 @@ Node 24.19, pnpm 10.33.
 pnpm starter:create ../my-web --workflow-kit /path/to/agent-workflow-kit
 ```
 
-대상은 아직 없는 폴더여야 한다. AWK는 `scripts/starter/agent-workflow-kit.version`에 적힌 커밋의 깨끗한 checkout을 지정한다. 현재는 태그가 없는 로컬 후보의 재현용 입력이다. 정식 도입에서는 검증한 AWK 태그가 이 커밋으로 해소되는지 확인한다. 이 명령은 원격 다운로드·Git 초기화·의존성 설치·발행을 하지 않는다.
+대상은 아직 없는 폴더여야 한다. AWK는 tag `v1.0.0`의 깨끗한 checkout을 지정한다(`git clone --branch v1.0.0 https://github.com/taehyung-lab/agent-workflow-kit`). `scripts/starter/agent-workflow-kit.version`에는 그 tag의 커밋 `c55ccc2dc1f6616979e2f904dac738efbcb35bc3`이 적혀 있다. 명령은 checkout의 HEAD가 이 커밋인지 확인하고, checkout에 `v1.0.0` tag가 있으면 그 tag도 같은 커밋으로 해소되는지 확인한다. 이 명령은 원격 다운로드·Git 초기화·의존성 설치·발행을 하지 않는다.
 
 명령은 현재 패키지와 starter vendor/lockfile의 일치를 먼저 확인한다. 다른 경우 유지보수자가 `pnpm starter:sync`와 `pnpm starter:check`로 후보를 맞춘다. 새 폴더에는 AWK, web-kit 스킬, 프로젝트 지도, 프로젝트용 README·CI가 들어간다. 로컬 비밀·의존성·빌드·실행 결과와 추적되지 않은 파일은 복사하지 않는다. 검사 앱의 strict 지문 검사는 유지하고 새 프로젝트에는 정상 UI 수정이 가능한 소비 검사 모드를 적용한다.
 
