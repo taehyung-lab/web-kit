@@ -77,3 +77,11 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
 ## 미확인 외부 계약
 
 E1(401이 업무 실행 전인가), E2(일반·재발급 요청의 status·resultCode 의미), E3(동시 재발급, 이전 refresh 토큰 재사용, 늦은 응답의 쿠키 변경)는 설치된 web-kit 패키지의 결정 기록 0001(web-kit 1.0 구조와 수명 계약)이 기준이다. 확인되기 전까지 해당 부분은 보류한다.
+
+## 프로젝트별 응답 계약
+
+`createHttp({ response: { read(body, status, requestId) } })`로 서버 형식·성공 판정·코드 의미를 프로젝트가 해석한다. 결과는 `{ ok: true, data }` 또는 `{ ok: false, failure: RequestFailure }`다. HTTP 거절은 성공으로 바꿀 수 없다. 네트워크·취소·타임아웃과 세션 회복은 키트가 맡는다. 같은 코드의 메시지 키도 프로젝트마다 다를 수 있으며 번역 문구는 키트에 넣지 않는다.
+
+기존 응답 봉투를 쓰는 소비자는 `readEnvelope`·`toRequestFailure`를 자기 계약 함수 안에서 사용할 수 있다. `response` 생략 시 기존 동작을 유지한다. 실제 데이터 타입을 넘기면 `http.requestData<T>`를 쓴다. 기존 생성 봉투 타입을 푸는 `http.request<T>`는 호환용으로 유지한다.
+
+사용자 정의 `response.read`는 성공 값 또는 `RequestFailure`를 반환한다. 응답 형식이 잘못되어도 실패 값을 반환하며 예외를 던지지 않는다. 키트는 반환된 실패의 상태 코드와 요청 식별자를 실제 HTTP 응답 값으로 맞추므로 응답 본문이 재발급 여부를 바꿀 수 없다.

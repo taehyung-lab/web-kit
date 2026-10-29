@@ -157,7 +157,10 @@ it('F4 필드 오류가 모두 칸에 붙으면 폼 한 줄은 없고, 붙지 �
       fieldError: (error) => (error.field === 'name' ? { field: 'name', message: '중복' } : undefined),
     });
     return (
-      <F editor={editor} renderFailure={(value) => (value instanceof RequestFailure && value.kind === 'forbidden' ? null : '저장 실패 한 줄')}>
+      <F
+        editor={editor}
+        renderFailure={(value) => (value instanceof RequestFailure && value.kind === 'forbidden' ? null : '저장 실패 한 줄')}
+      >
         <F.Failure />
         <F.Text name="name" label="이름" />
         <F.Text name="contact" label="연락처" disabled />
@@ -303,6 +306,8 @@ it('F8 확인창은 마지막 버튼의 Tab을 같은 이벤트 안에서 첫 �
   const dialog = await screen.findByRole('alertdialog');
   const cancel = screen.getByText('취소');
   const confirm = screen.getByText('저장하기');
+  // jsdom에는 배치 계산이 없다. 이 검사에서 보이는 두 버튼의 기하만 제공하며 실제 표시 여부는 브라우저 검사로 검증한다.
+  for (const button of [cancel, confirm]) button.getClientRects = () => [new DOMRect(0, 0, 80, 32)] as unknown as DOMRectList;
   confirm.focus();
   const forward = fireEvent.keyDown(confirm, { key: 'Tab' });
   expect(forward).toBe(false);
@@ -361,16 +366,13 @@ it('선택은 값이 비었을 때만 빈 선택지를 두고, 선택지 상태(
     const editor = useSaveForm({ schema, source: { id: 1, values: { ...values, kind: '' } }, save: async () => undefined });
     return (
       <F editor={editor} renderFailure={() => '선택지 실패'}>
-        <button type="button" onClick={() => setStatus({ failure: new Error('x') })}>실패로</button>
-        <button type="button" onClick={() => setStatus('ready')}>준비로</button>
-        <F.Select
-          name="kind"
-          label="종류"
-          options={[{ value: 'x', label: '엑스' }]}
-          status={status}
-          onRetry={retry}
-          onChange={changed}
-        />
+        <button type="button" onClick={() => setStatus({ failure: new Error('x') })}>
+          실패로
+        </button>
+        <button type="button" onClick={() => setStatus('ready')}>
+          준비로
+        </button>
+        <F.Select name="kind" label="종류" options={[{ value: 'x', label: '엑스' }]} status={status} onRetry={retry} onChange={changed} />
         <F.Submit />
       </F>
     );
@@ -414,4 +416,29 @@ it('useLeave는 Router 밖 이탈(같은 메뉴 다시 누르기)을 같은 판�
   expect(run).toHaveBeenCalledTimes(1);
   fireEvent.click(screen.getByText('이동'));
   expect(run).toHaveBeenCalledTimes(2);
+});
+
+it('Form.Choice는 필수 오류에 초점을 주고 고른 leaf 값으로 저장한다', async () => {
+  const save = vi.fn(async (_values: Values) => undefined);
+  /** 공용 선택 입력의 검증과 제출을 실제 폼에 연결한다. */
+  function ChoiceEditor() {
+    const editor = useSaveForm({ schema, source: { id: 'choice', values: { ...values, kind: '' } }, save });
+    return (
+      <F editor={editor}>
+        <F.Choice name="kind" label="종류" nodes={[{ value: 'x', label: '엑스' }]} appearance="dropdown" placeholder="선택" />
+        <F.Submit />
+      </F>
+    );
+  }
+  await mount(() => <ChoiceEditor />);
+  fireEvent.click(screen.getByText('저장'));
+  const trigger = screen.getByRole('button', { name: '종류' });
+  await waitFor(() => expect(document.activeElement).toBe(trigger));
+  expect(screen.getByRole('alert').textContent).toBe('종류 필요');
+  expect(save).not.toHaveBeenCalled();
+  fireEvent.click(trigger);
+  fireEvent.click(await screen.findByRole('radio', { name: '엑스' }));
+  await act(async () => fireEvent.click(screen.getByText('저장')));
+  await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+  expect(save.mock.calls[0]?.[0]).toMatchObject({ kind: 'x' });
 });

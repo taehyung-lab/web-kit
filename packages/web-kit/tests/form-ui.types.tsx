@@ -19,3 +19,13 @@ export function checkFields() {
   // @ts-expect-error 숫자 값은 변환을 선언한 Field로 연결한다.
   <F.Text name="count" label="수량" />;
 }
+
+const ChoiceForm = Form.of<{ single: string; many: string[] }>();
+const choiceNodes = [{ value: 'a', label: 'A' }];
+const singleChoice = <ChoiceForm.Choice name="single" label="단일" nodes={choiceNodes} />;
+const multipleChoice = <ChoiceForm.Choice name="many" label="다중" nodes={choiceNodes} multiple />;
+// @ts-expect-error 배열 필드는 다중으로 명시한다.
+const wrongSingleChoice = <ChoiceForm.Choice name="many" label="다중" nodes={choiceNodes} />;
+// @ts-expect-error 문자열 필드에 배열 값을 넣지 않는다.
+const wrongMultipleChoice = <ChoiceForm.Choice name="single" label="단일" nodes={choiceNodes} multiple />;
+void [singleChoice, multipleChoice, wrongSingleChoice, wrongMultipleChoice];

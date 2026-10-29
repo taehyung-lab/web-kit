@@ -1,6 +1,7 @@
 // 파일 책임: 폼 기본 UI의 묶음 부품(Form.*)과 앱에 한 번 두는 이탈 보호(FormGuard).
 // 각 부품은 같은 편집 상태(useSaveForm 결과)를 context로 읽어서, 칸·버튼·오류 줄을 어디에 두어도 저장·검증·focus 연결을 다시 쓰지 않는다.
 // 저장 수명은 useSaveForm이, 이탈 판정은 createFormNavigation이 소유하고 여기는 표시와 사용자 입력 연결만 맡는다.
+import { Choice as ChoiceInput, type ChoiceProps } from '../ui/choice';
 import { useBlocker, useRouter, type NavigateOptions } from '@tanstack/react-router';
 import { useSelector, type AnyFormApi, type DeepKeys, type DeepValue } from '@tanstack/react-form';
 import {
@@ -303,6 +304,13 @@ function Field<V = unknown>({
       )}
     </editor.form.Field>
   );
+}
+
+/** 폼 검증·필수 표시·오류 초점을 같은 선택 입력에 연결한다. */
+function Choice({ name, description, ...props }: FormFieldProps & Omit<ChoiceProps, 'value' | 'onValueChange'>) {
+  return <Field<ChoiceProps['value']> name={name} label={props.label} description={description} disabled={props.disabled}>
+    {({ value, change, blur, ...control }) => <ChoiceInput {...props} {...control} value={value} onValueChange={change} onBlur={blur} />}
+  </Field>;
 }
 
 /**
@@ -917,6 +925,7 @@ export const Form = Object.assign(FormRoot, {
   Text,
   TextArea,
   Select,
+  Choice,
   Checkbox,
   File: FileField,
   Array: ArrayField,
@@ -946,6 +955,7 @@ export type TypedForm<T> = typeof FormRoot & {
   ) => ReactNode;
   readonly Text: (props: Named<PropsOf<typeof Text>, KeysOf<T, string>>) => ReactNode;
   readonly TextArea: (props: Named<PropsOf<typeof TextArea>, KeysOf<T, string>>) => ReactNode;
+  readonly Choice: (props: Omit<PropsOf<typeof Choice>, 'name' | 'multiple'> & ({ readonly name: KeysOf<T, string | undefined>; readonly multiple?: false } | { readonly name: KeysOf<T, readonly string[]>; readonly multiple: true })) => ReactNode;
   readonly Select: (props: Named<PropsOf<typeof Select>, KeysOf<T, string>>) => ReactNode;
   readonly Checkbox: (props: Named<PropsOf<typeof Checkbox>, KeysOf<T, boolean>>) => ReactNode;
   readonly File: (props: Named<PropsOf<typeof FileField>, KeysOf<T, FormFileValue>>) => ReactNode;

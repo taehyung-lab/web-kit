@@ -1,7 +1,7 @@
 // 파일 책임: web-kit 초기 연결의 유일한 진입점. 세션 수명·요청 처리·QueryClient를 이 앱의 저장 위치·공개 경로·헤더·재발급 계약에 연결한다.
 // 생성 endpoint(orval)는 여기의 apiRequest(= http.request) 하나로 호출된다. adapter 구현(저장소·재발급)은 짧아서 이 파일에 함께 둔다.
-import { createResultCodeTable, isRequestFailure, RequestFailure } from '@boosterlab/web-kit';
-import { createHttp, type Http, type Unwrapped } from '@boosterlab/web-kit/http';
+import { createResultCodeTable, isRequestFailure, RequestFailure, readEnvelope, toRequestFailure } from '@boosterlab/web-kit';
+import { createHttp, type Http, type Unwrapped, type ResponseContract } from '@boosterlab/web-kit/http';
 import { createQueryClient } from '@boosterlab/web-kit/query';
 import { createSession, type Credentials } from '@boosterlab/web-kit/session';
 import { createBrowserSessionStore } from '@boosterlab/web-kit/session/browser';
@@ -52,9 +52,15 @@ export const session = createSession<Credentials>({
   signOut: (credentials) => signOut(credentials.accessToken),
 });
 
+/** 이 프로젝트의 응답 봉투와 코드 의미를 공통 성공·실패로 바꾼다. */
+const readAppResponse: ResponseContract['read'] = (body, status, requestId) =>
+  status >= 200 && status < 300
+    ? readEnvelope(body, resultCodes, requestId)
+    : { ok: false, failure: toRequestFailure({ type: 'response', body, status, requestId }, resultCodes) };
+
 export const http: Http = createHttp({
   session,
-  results: resultCodes,
+  response: { read: readAppResponse },
   isPublic: (config) => PUBLIC_PATHS.some((path) => config.url === path),
   // 운영 헤더: 화면 언어.
   prepare: (headers) => {

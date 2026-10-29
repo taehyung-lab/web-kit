@@ -244,14 +244,37 @@ test('save confirmation traps focus and Escape returns to the save button', asyn
   await save.click();
   const dialog = page.getByRole('alertdialog');
   await expect(dialog).toBeVisible();
-  for (let i = 0; i < 5; i++) {
-    await page.keyboard.press('Tab');
-    expect(await dialog.evaluate((node) => node.contains(document.activeElement))).toBe(true);
+  await page.evaluate(() => {
+    const dialog = document.querySelector('[role="alertdialog"]')!;
+    (window as unknown as { focusEscaped: boolean }).focusEscaped = false;
+    document.addEventListener('focusin', (event) => {
+      if (dialog.isConnected && !dialog.contains(event.target as Node)) (window as unknown as { focusEscaped: boolean }).focusEscaped = true;
+    });
+  });
+  for (const key of ['Tab', 'Shift+Tab']) {
+    for (let i = 0; i < 12; i++) {
+      await page.keyboard.press(key);
+      expect(await dialog.evaluate((node) => node.contains(document.activeElement))).toBe(true);
+    }
   }
+  expect(await page.evaluate(() => (window as unknown as { focusEscaped: boolean }).focusEscaped)).toBe(false);
   await page.screenshot({ path: testInfo.outputPath('save-dialog.png'), fullPage: true });
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
   await expect(save).toBeFocused();
   await expect(name).toHaveValue('Keyboard edit');
   await page.screenshot({ path: testInfo.outputPath('edit-form.png'), fullPage: true });
+});
+
+// 새 공용 선택 칸을 포장한 패키지로 소비하며 값·URL 복원을 확인한다.
+test('choice filters keep selected values in the URL and restore their labels', async ({ page }) => {
+  await signIn(page);
+  await page.getByRole('button', { name: '분류', exact: true }).click();
+  await page.getByRole('radio', { name: 'Stationery' }).check();
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: '검색', exact: true }).click();
+  await expect(page).toHaveURL(/categoryId=c-stationery/);
+  await page.reload();
+  await expect(page.getByRole('button', { name: '분류', exact: true })).toHaveText('Stationery');
+  await expect(page.getByRole('cell', { name: 'Notebook A5' })).toBeVisible();
 });

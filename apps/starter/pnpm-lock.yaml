@@ -221,8 +221,8 @@ packages:
         optional: true
 
   '@boosterlab/web-kit@file:vendor/boosterlab-web-kit.tgz':
-    resolution: {integrity: sha512-Z6zty4GcOuo8wLtPsn/Q9NZ8EShk7LEK+gqAJ1gQa2gGjDztWHWvGY7UsmfaEO9cND05DHG+QpCkrojPTrjnPA==, tarball: file:vendor/boosterlab-web-kit.tgz}
-    version: 3.0.0
+    resolution: {integrity: sha512-p2uzvM63cFit1NtqZHRpDC8Aw+o9O4wKN6QmbPe/J2S+rL54ErqoQMxgLyVokV2K3EswyGyczHUNFC6J0tIPxw==, tarball: file:vendor/boosterlab-web-kit.tgz}
+    version: 3.1.0
     peerDependencies:
       '@base-ui/react': 1.7.0
       '@tanstack/react-form': 1.33.5
@@ -2246,6 +2246,9 @@ packages:
   symbol-tree@3.2.4:
     resolution: {integrity: sha512-9QNk5KwDF+Bvz+PyObkmSYjI5ksVUYtjW7AU22r2NKcfLJcXp96hkDWU3+XndOsUb+AQ9QhfzfCT2O+CNWT5Tw==}
 
+  tabbable@6.3.0:
+    resolution: {integrity: sha512-EIHvdY5bPLuWForiR/AN2Bxngzpuwn1is4asboytXtpTgsArc+WmSJKVLlhdh71u7jFcryDqB2A8lQvj78MkyQ==}
+
   tagged-tag@1.0.0:
     resolution: {integrity: sha512-yEFYrVhod+hdNyx7g5Bnkkb0G6si8HJurOoOEgC8B/O0uXLHlaey/65KRv6cuWBNhBgHKAROVpc7QyYqE5gFng==}
     engines: {node: '>=20'}
@@ -2726,6 +2729,7 @@ snapshots:
     dependencies:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
+      tabbable: 6.3.0
     optionalDependencies:
       '@base-ui/react': 1.7.0(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@tanstack/react-form': 1.33.5(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -4618,6 +4622,8 @@ snapshots:
   strip-final-newline@4.0.0: {}
 
   symbol-tree@3.2.4: {}
+
+  tabbable@6.3.0: {}
 
   tagged-tag@1.0.0: {}
 

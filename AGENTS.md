@@ -55,7 +55,7 @@ lockfile에 없는 의존성 추가·lockfile 변경·원격 스크립트 실행
 저장소가 관리하는 근거의 위치와 한 줄 설명만 둔다. 작업 상태는 작업 기록이, 역할 선택은 description이 맡아 관리한다. 이 절과 그 아래 저장소별 절은 프로젝트가 관리하며, 위 키트 영역은 고치지 않는다.
 
 - 제품 원문·사용자 결정·결정권자: 키트는 제품 정책을 갖지 않는다(소비 프로젝트가 소유). 수명 결정·보장의 출처·백엔드 확인 보류(E1–E3)는 `docs/decisions/0001-web-kit-1.0.md`, 3.0 재설계의 범위·구조·순서·완료 기준은 `docs/decisions/0003-web-kit-3-redesign.md`(0002를 대체). 결정권자는 사용자.
-- 코드 진입·상태 관리 위치·외부 계약: 저장소는 키트 패키지 `packages/web-kit`과 소비 검사 앱 `apps/starter`(루트 `README.md`). 키트 구조와 subpath는 `packages/web-kit/README.md` 「구조」와 `packages/web-kit/package.json` `exports`, 소스는 `packages/web-kit/src/`. 사용 계약(보장)은 `packages/web-kit/skills/web-kit-*`가 코드와 같은 버전으로 배포되는 정본이다. 외부 계약은 Spring 응답 봉투(`packages/web-kit/README.md` 첫 문단)와 결정 기록의 백엔드 확인.
+- 코드 진입·상태 관리 위치·외부 계약: 저장소는 키트 패키지 `packages/web-kit`과 소비 검사 앱 `apps/starter`(루트 `README.md`). 키트 구조와 subpath는 `packages/web-kit/README.md` 「구조」와 `packages/web-kit/package.json` `exports`, 소스는 `packages/web-kit/src/`. 사용 계약(보장)은 `packages/web-kit/skills/web-kit-*`가 코드와 같은 버전으로 배포되는 정본이다. 외부 응답 계약은 소비 프로젝트의 `ResponseContract`가 소유한다(`packages/web-kit/src/http.ts`). 기존 Spring 봉투 해석은 선택 가능한 호환 도우미다. 공용화 경계·새 사용 입구는 `docs/decisions/0009-common-consumption.md`, 별도 작업의 선택 칸 합의는 `docs/decisions/0010-list-and-choice-agreements.md`에 있다.
 - 실행·검사 명령·관찰 환경·시험 데이터: 루트 `package.json` scripts(`check`, `starter:sync`, `starter:check`), `packages/web-kit/tests/`, `scripts/*.test.mjs`, starter의 `apps/starter/tests/`. 로컬 검사는 Node 24.19로 돌린다(Node 26이나 외부 `NODE_OPTIONS`에서는 jsdom 저장소 검사가 실패한다). CI `.github/workflows/check.yml`은 키트 검사와 같은 commit의 `apps/starter` tarball 소비 검사를 맡는다. 검증 조합 기록·호환성·발행 기준은 `docs/maintaining.md`.
 - 권한·보호 대상·작업 한도·질문 통로: 원격 `origin`(public). 발행은 `docs/maintaining.md` 「소비 검사와 발행」의 검증한 산출물만 사용한다. 질문은 사용자.
 

@@ -8,7 +8,14 @@ import { useTranslation } from 'react-i18next';
 import { failureCopyKey } from '@/shared/lib/failure-copy';
 import { useFormCopy } from '@/shared/lib/form-messages';
 import { productQuery, useUpdateProduct } from '../api/products';
-import { productFieldError, productFormSchema, toProductFormValues, toProductUpsertRequest, type ProductFormValues } from '../model/form';
+import {
+  productFieldError,
+  productFormSchema,
+  toProductFormValues,
+  toProductUpsertRequest,
+  type ProductFormValues,
+  type ProductFormOutput,
+} from '../model/form';
 import type { Product } from '../model/product';
 import { ProductFields } from './ProductForm';
 
@@ -46,13 +53,18 @@ function ProductEditForm({ product }: { readonly product: Product }) {
   const navigate = useNavigate();
   const copy = useFormCopy();
   const update = useUpdateProduct(product.id);
+  /** 제출 값을 서버 요청으로 바꾸고 저장된 값을 편집 기준으로 돌려준다. */
+  async function saveProduct(output: ProductFormOutput) {
+    const saved = await update.mutateAsync(toProductUpsertRequest(output));
+    return { saved: toProductFormValues(saved) };
+  }
   const editor = useSaveForm({
     schema: productFormSchema,
     source: { id: product.id, values: toProductFormValues(product) },
     confirm: true,
     progress: 'edit',
     fieldError: productFieldError,
-    save: async (output) => ({ saved: toProductFormValues(await update.mutateAsync(toProductUpsertRequest(output))) }),
+    save: saveProduct,
     onSaved: () => navigate({ to: '/products/$productId', params: { productId: product.id } }),
   });
   const detail = { to: '/products/$productId' as const, params: { productId: product.id } };

@@ -1,5 +1,6 @@
 // 파일 책임: 약관 등록 화면(레퍼런스 11.2.3 재현). 검증 → 저장 확인 → 저장 → 저장 완료 확인 → 새 약관 상세. 취소는 상품 목록으로 간다.
 // 흐름(확인·완료 확인·이탈 보호·오류 위치)은 키트 값(confirm·acknowledge)으로만 켠다.
+import type { z } from 'zod';
 import { useSaveForm } from '@boosterlab/web-kit/form';
 import { Form } from '@boosterlab/web-kit/form/ui';
 import { useNavigate } from '@tanstack/react-router';
@@ -17,6 +18,10 @@ export function TermsCreateScreen() {
   const navigate = useNavigate();
   const create = useCreateTerms();
   const copy = useFormCopy();
+  /** 검증된 약관을 등록하고 상세 화면에 필요한 식별자를 돌려준다. */
+  async function saveTerms(values: z.output<typeof termsFormSchema>) {
+    return { id: (await create.mutateAsync(values)).termsId };
+  }
   const editor = useSaveForm({
     schema: termsFormSchema,
     source: SOURCE,
@@ -24,7 +29,7 @@ export function TermsCreateScreen() {
     progress: 'create',
     acknowledge: true,
     fieldError: termsFieldError,
-    save: async (values) => ({ id: (await create.mutateAsync(values)).termsId }),
+    save: saveTerms,
     onSaved: (result) => navigate({ to: '/terms/$termsId', params: { termsId: result.id } }),
   });
   return (

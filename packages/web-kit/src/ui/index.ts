@@ -4,3 +4,5 @@ export { AlertDialog, ConfirmDialog, Dialog, type DialogProps } from './dialog';
 export { Pending } from './pending';
 export { BlockingProgress, type BlockingProgressMessages } from './blocking-progress';
 export { useBlockingProgress, type BlockingKind } from '../progress';
+
+export { Choice, type ChoiceProps, type ChoiceNode, type ChoiceValue } from './choice';

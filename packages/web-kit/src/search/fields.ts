@@ -1,6 +1,7 @@
 // 파일 책임: 목록 URL 검색 선언 하나에서 필드별 복구·기본값·정규 URL·route 연결(validateSearch·진입 주소 교정)을 만든다.
 import type { FetchQueryOptions } from '@tanstack/react-query';
 import { redirect } from '@tanstack/react-router';
+import type { CheckboxTreeNode } from '../checkbox-tree';
 import type { SortFirst } from './interactions';
 
 type StandardResult<T> =
@@ -26,6 +27,8 @@ export interface FieldCheck<TData = any> {
   readonly options: (parents: Readonly<Record<string, unknown>>) => FetchQueryOptions<TData, any, TData, any>;
   /** 선택지 응답 → 이 필드가 가질 수 있는 값. 필드 값과 같은 타입으로 낸다. */
   readonly allowed: (data: TData) => readonly unknown[];
+  /** 같은 선택지 응답을 칸 표시용 트리로 바꾼다. */
+  readonly tree?: (data: TData) => readonly CheckboxTreeNode[];
 }
 
 export interface SearchField<T> {
@@ -36,6 +39,9 @@ export interface SearchField<T> {
   /** 필드 값 → URL 값. 없으면 값 그대로 쓴다(router의 기본 직렬화). */
   readonly encode?: (value: T) => unknown;
   readonly check?: FieldCheck;
+  /** 필수 조건과 빈 값 안내. 문구는 소비 프로젝트가 제공한다. */
+  readonly required?: { readonly when?: (values: Readonly<Record<string, unknown>>) => boolean; readonly message: string };
+
 }
 
 /** 함께 맞아야 할 필드 묶음. 한 필드라도 못 읽거나 valid가 거짓이면 묶음 전체를 기본값으로 돌린다. */

@@ -2,19 +2,12 @@
 // 열린 직후부터 닫힐 때까지 키보드 포커스가 창 밖으로 한 순간도 나가지 않게 한다(Base UI의 focus guard 경유를 막는다).
 import { Dialog as BaseDialog } from '@base-ui/react/dialog';
 import { useCallback, useRef, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
+import { tabbable } from 'tabbable';
 import { Pending } from './pending';
 
-const TABBABLE =
-  'a[href],button:not([disabled]),input:not([disabled]):not([type="hidden"]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
-
-/** 창 안에서 Tab으로 갈 수 있는 요소를 문서 순서로 고른다(숨김·guard 제외). */
-function tabbables(root: HTMLElement): HTMLElement[] {
-  return Array.from(root.querySelectorAll<HTMLElement>(TABBABLE)).filter(
-    (element) =>
-      !element.hasAttribute('data-base-ui-focus-guard') &&
-      element.getAttribute('aria-hidden') !== 'true' &&
-      !element.closest('[hidden],[inert]'),
-  );
+/** 표시·disabled·radio 그룹 규칙을 포함해 현재 Tab 대상만 고른다. */
+function tabbables(root: HTMLElement): ReturnType<typeof tabbable> {
+  return tabbable(root).filter((element) => !element.hasAttribute('data-base-ui-focus-guard'));
 }
 
 /**
@@ -22,7 +15,10 @@ function tabbables(root: HTMLElement): HTMLElement[] {
  * Base UI는 끝에서 팝업 밖 guard에 포커스를 둔 뒤 다음 프레임에 되돌리므로, 그 한 프레임 동안 포커스가 창 밖에 있었다.
  */
 function trapTab(event: KeyboardEvent<HTMLElement>) {
-  if (event.key !== 'Tab' || event.defaultPrevented) return;
+  if (event.key !== 'Tab' || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+  const target = event.target;
+  // 포털로 열린 하위 선택창과 중첩 대화창의 키보드는 해당 창이 맡는다.
+  if (target instanceof HTMLElement && (!event.currentTarget.contains(target) || target.closest('[role="dialog"], [role="alertdialog"]') !== event.currentTarget)) return;
   const items = tabbables(event.currentTarget);
   if (items.length === 0) {
     event.preventDefault();
@@ -94,7 +90,11 @@ export function Dialog({
           tabIndex={-1}
           className={join('wk-dialog', className)}
           aria-describedby={undefined}
-          initialFocus={() => (popup.current === null ? true : (tabbables(popup.current)[0] ?? popup.current))}
+          initialFocus={() => {
+            if (popup.current === null) return true;
+            (tabbables(popup.current)[0] ?? popup.current).focus();
+            return false;
+          }}
           finalFocus={returnFocus ?? true}
           onKeyDown={(event) => {
             trapTab(event);

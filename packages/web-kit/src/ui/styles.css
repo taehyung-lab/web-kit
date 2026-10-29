@@ -485,3 +485,19 @@ fieldset.wk-field {
 :where(.wk-section-content) {
   padding: 0 16px 16px;
 }
+
+/* 선택 칸 팝업은 대화창 안에서도 같은 토큰과 키보드 강조를 쓴다. */
+.wk-choice-popup {
+  z-index: 1002;
+  background: var(--wk-bg);
+  color: var(--wk-fg);
+  border: 1px solid var(--wk-border);
+  border-radius: var(--wk-radius);
+  padding: var(--wk-space);
+  max-height: min(60vh, 24rem);
+  overflow: auto;
+  min-width: var(--anchor-width, 12rem);
+}
+.wk-choice-popup [role='option'], .wk-choice-popup [role='menuitem'] { padding: 6px 10px; cursor: pointer; }
+.wk-choice-popup [data-highlighted] { background: var(--wk-accent); color: var(--wk-accent-fg, #fff); }
+.wk-check[data-checked], .wk-check[data-indeterminate] { color: var(--wk-accent-fg, #fff); }
