@@ -1,6 +1,6 @@
 # web-kit
 
-관리자 웹의 공용 키트와, 그 키트로 만든 시작용 앱을 함께 관리하는 저장소다. 범위·구조·완료 기준은 [4.0 배포 결정](docs/decisions/0011-web-kit-4-ui-distribution.md)와 [재설계 완료 기준](docs/decisions/0003-web-kit-3-redesign.md)이 정한다.
+관리자 웹의 공용 키트와, 그 키트로 만든 시작용 앱을 함께 관리하는 저장소다. 범위·책임은 [공용 구조](docs/decisions/0003-web-kit-3-redesign.md), UI 소유·배포 이유는 [4.0 결정](docs/decisions/0011-web-kit-4-ui-distribution.md), 완료·발행 조건은 [유지보수](docs/maintaining.md)가 정한다.
 
 ```
 packages/web-kit   @boosterlab/web-kit — 공통 상태·hook·Provider·적합성 검사·web-kit-check
@@ -10,6 +10,8 @@ apps/starter       새 관리자 웹의 틀이자 키트 소비 검사 앱. 동�
 docs/              결정 기록(decisions/)과 변경·발행 기준(maintaining.md)
 scripts/           starter 맞추기, registry 일치·문서 링크 검사, 검증 기록
 ```
+
+starter는 기본 연결과 조립 예이며 모든 프로젝트의 고정 페이지가 아니다. 프로젝트는 기능별로 선택해 쓰고 자기 업무·서버 계약·화면을 소유한다. [페이지 일부만 다른 경우](docs/decisions/0003-web-kit-3-redesign.md#페이지-일부만-다른-경우)의 책임 구분을 따른다. 공용 수정은 패키지 업데이트로 받되, UI 복사본 교정이 필요한 변경은 프로젝트 수정과 대조해 적용한다.
 
 ## 명령
 

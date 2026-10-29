@@ -1,6 +1,6 @@
 # 0004. 세션 유휴 타이머를 키트로 옮기고, 종료 순서를 세션 한 곳에서 정한다
 
-- 상태: 채택 (2026-10-27, 3단계 설계). 결정권자는 사용자이며 [0003](0003-web-kit-3-redesign.md) §3·§4·§6 범위 안의 해법 선택이다.
+- 상태: 채택 (2026-10-27, 세션 설계). 결정권자는 사용자이며 [0003](0003-web-kit-3-redesign.md) §3·§4·§6 범위 안의 해법 선택이다.
 - 근거 자료: DT v2 `fb91fa5`(`apps/admin/src/app/session/`, `packages/api-client/src/web-kit.ts`·`http/session-*.ts`, `public/session-timeout-popup.*`, DT 결정 0001·0003), 레퍼런스 `89f8f655`(`src/api/http/reissue.ts`·`credential.ts`), web-kit `5e86d4e`(`session.ts`·`http.ts`·`query.ts`·`browser-session-store.ts`).
 - 보장 내용의 정본은 `packages/web-kit/skills/web-kit-http`다. 여기에는 무엇을 골랐는지와 이유만 둔다.
 
