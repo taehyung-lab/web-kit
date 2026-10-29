@@ -2,7 +2,7 @@
 // 무엇이 진행 중인지는 등록(폼 저장·페이지 첫 조회)이, 문구는 프로젝트가 정한다. 덮개가 닫힐 때 잃은 포커스를 본문으로 돌린다
 // (본문 DOM 안에서 마지막으로 포커스한 요소 → 사라졌으면 본문 첫 h1 → 그것도 없으면 본문 영역).
 import type { ReactNode } from 'react';
-import { BlockingProgressProvider, useBlockingProgressBinding } from '../progress';
+import { BlockingProgressProvider, useBlockingProgressBinding } from '@boosterlab/web-kit/dialog';
 import { Spinner } from './pending';
 
 /** 종류별 주 문구와 보조 문구(없으면 그리지 않음). */

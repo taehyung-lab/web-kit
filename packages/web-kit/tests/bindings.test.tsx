@@ -6,12 +6,12 @@ import { useState, type ReactNode } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { ListProvider, useListModel, useList, type ListModel } from '../src/list';
-import { List, type ListColumn } from '../src/list-ui';
+import { List, type ListColumn } from '../../ui-registry/src/list-ui';
 import { defineSearch } from '../src/search';
-import { useDialogBinding, useConfirmBinding, useAcknowledgeBinding, useBlockingProgressBinding, BlockingProgressProvider, useBlockingProgress } from '../src/form/confirmation';
+import { useDialogBinding, useConfirmBinding, useAcknowledgeBinding, useBlockingProgressBinding, BlockingProgressProvider, useBlockingProgress } from '../src/confirmation';
 import { useRetryFocus } from '../src/record';
 import { useOptionsRetryFocus, useFormRootBinding, useFormFieldBinding, useSaveForm, formTextBinding } from '../src/form';
-import { CheckboxTree } from '../src/CheckboxTree';
+import { CheckboxTree } from '../../ui-registry/src/CheckboxTree';
 
 afterEach(cleanup);
 

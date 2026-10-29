@@ -2,7 +2,7 @@
 // 열린 직후부터 닫힐 때까지 키보드 포커스가 창 밖으로 한 순간도 나가지 않게 한다(Base UI의 focus guard 경유를 막는다).
 import { Dialog as BaseDialog } from '@base-ui/react/dialog';
 import { type ReactNode, type RefObject } from 'react';
-import { useDialogBinding, useConfirmBinding, useAcknowledgeBinding } from '../dialog-binding';
+import { useDialogBinding, useConfirmBinding, useAcknowledgeBinding } from '@boosterlab/web-kit/dialog';
 import { Pending } from './pending';
 
 export interface DialogProps {
@@ -35,15 +35,15 @@ export function Dialog({
   returnFocus,
   className,
 }: DialogProps) {
-  const binding = useDialogBinding({ open, closable, onClose, returnFocus });
+  const { rootProps, popupRef, popupProps } = useDialogBinding({ open, closable, onClose, returnFocus });
   return (
-    <BaseDialog.Root {...binding.rootProps}>
+    <BaseDialog.Root {...rootProps}>
       <BaseDialog.Portal>
         <BaseDialog.Backdrop className="wk-backdrop" />
         <BaseDialog.Popup
-          ref={binding.popupRef}
+          ref={popupRef}
           role={role}
-          {...binding.popupProps}
+          {...popupProps}
           className={join('wk-dialog', className)}
           aria-describedby={undefined}
 

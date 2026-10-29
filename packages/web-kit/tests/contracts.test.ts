@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { serializeFlatListParams, serializeSpringParams } from '../src/api';
 import { createFormMessages } from '../src/form';
 import { checkboxTreeSelection } from '../src/checkbox-tree';
-import { validateDateRange } from '../src/search/date-range';
+import { validateDateRange } from '../src/date-range';
 
 describe('query 문자열', () => {
   for (const serialize of [serializeFlatListParams, serializeSpringParams]) {

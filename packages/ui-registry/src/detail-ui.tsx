@@ -1,7 +1,7 @@
 // 파일 책임: 상세 기본 UI의 묶음 부품(Record.*). useRecord가 판정한 네 상태(대기·없음·실패·준비됨)와 갱신 실패를 그리고,
 // 준비된 내용은 Record.Fields·Field·History로 배치한다. 문구·앱 경계 무표시는 프로젝트가 renderFailure·missing 값으로 정한다.
 import { createContext, useContext, useId, type ReactNode } from 'react';
-import type { RecordState } from './record';
+import type { RecordState } from '@boosterlab/web-kit/record';
 import { RetryRegion } from './ui/retry';
 
 const defaultMessages = {

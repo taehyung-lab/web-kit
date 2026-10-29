@@ -3,7 +3,7 @@
 import type { StandardSchemaV1 } from '@tanstack/react-form';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
-import { CheckboxTree } from '../src/CheckboxTree';
+import { CheckboxTree } from '../../ui-registry/src/CheckboxTree';
 import { useSaveForm } from '../src/form/save-form';
 
 afterEach(cleanup);

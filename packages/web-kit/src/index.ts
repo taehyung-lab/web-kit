@@ -3,6 +3,6 @@ export {
   RequestFailure, isRequestFailure, createResultCodeTable, toRequestFailure, readEnvelope,
   type FailureKind, type FieldError, type ResultCodeRow, type ResultCodeTable, type TransportOutcome,
 } from './failure';
-export { validateDateRange, type DateRangeIssue } from './search/date-range';
+export { validateDateRange, type DateRangeIssue } from './date-range';
 export { checkboxTreeSelection, treeLeaves, treeLeafNodes, type CheckboxTreeNode } from './checkbox-tree';
 export { serializeFlatListParams, serializeSpringParams } from './api';

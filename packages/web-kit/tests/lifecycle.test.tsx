@@ -9,8 +9,8 @@ import {
   screen,
 } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { useConfirmationState } from "../src/form/confirmation";
-import { FieldFrame } from "../src/form/field";
+import { useConfirmationState } from "../src/confirmation";
+import { FieldFrame } from "../../ui-registry/src/form/field";
 import { activateTableRow } from "../src/row-activation";
 
 afterEach(() => {

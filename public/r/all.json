@@ -1,0 +1,22 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "all",
+  "title": "web-kit 전체 표현",
+  "registryDependencies": [
+    "@web-kit/inputs",
+    "@web-kit/pending",
+    "@web-kit/dialog",
+    "@web-kit/blocking-progress",
+    "@web-kit/choice",
+    "@web-kit/retry",
+    "@web-kit/ui",
+    "@web-kit/form",
+    "@web-kit/list",
+    "@web-kit/record",
+    "@web-kit/checkbox-tree",
+    "@web-kit/filter-error",
+    "@web-kit/styles"
+  ],
+  "files": [],
+  "type": "registry:block"
+}

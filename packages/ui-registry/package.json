@@ -1,0 +1,16 @@
+{
+  "name": "@boosterlab/web-kit-registry",
+  "version": "4.0.0-rc.1",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@base-ui/react": "1.7.0",
+    "@tanstack/react-form": "1.33.5",
+    "@tanstack/react-router": "1.170.32",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.5",
+    "@boosterlab/web-kit": "workspace:*"
+  }
+}

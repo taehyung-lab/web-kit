@@ -1,6 +1,6 @@
 /** 실패 자리의 다시 시도 버튼이 사라질 때만 결과로 focus를 옮긴다. */
 import type { ReactNode } from 'react';
-import { useRetryFocus } from '../retry-focus';
+import { useRetryFocus } from '@boosterlab/web-kit/record';
 /** 재시도 전에 다른 곳으로 이동한 focus는 빼앗지 않는다. */
 export function RetryRegion({
   failed,

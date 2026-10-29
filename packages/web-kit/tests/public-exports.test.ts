@@ -3,9 +3,11 @@ import { expect, it } from 'vitest';
 import * as core from '../src/index';
 import * as form from '../src/form';
 import * as list from '../src/list';
-import * as dialog from '../src/form/confirmation';
-const entries = { core, form, list, dialog };
+import * as dialog from '../src/confirmation';
+import * as choice from '../src/choice-binding';
+const entries = { core, form, list, dialog, choice };
 const expected = {
+  "choice": ["useChoiceBinding"],
   "core": [
     "RequestFailure",
     "checkboxTreeSelection",
@@ -37,7 +39,6 @@ const expected = {
     "removeRow",
     "requestFormChange",
     "sectionErrorCount",
-    "useChoiceBinding",
     "useFormBinding",
     "useFormCancel",
     "useFormConfirmBinding",
@@ -63,7 +64,6 @@ const expected = {
     "listViewBinding",
     "resolveListReturn",
     "useBulkConfirmation",
-    "useChoiceBinding",
     "useList",
     "useListChoiceBinding",
     "useListDetailsBinding",
@@ -87,6 +87,6 @@ const expected = {
     "useDialogBinding"
   ]
 };
-it.each(['core', 'form', 'list', 'dialog'] as const)('%s 공개 이름은 승인된 목록과 정확히 같다', (name) => {
+it.each(['core', 'form', 'list', 'dialog', 'choice'] as const)('%s 공개 이름은 승인된 목록과 정확히 같다', (name) => {
   expect(Object.keys(entries[name]).sort()).toEqual(expected[name]);
 });

@@ -37,6 +37,7 @@
 | `./search` | 주소 읽기·복구·확정 계산 필요 | 루트 날짜 검증은 동일 구현 | 기존 경로 유지 | 패키지 유지 | `src/search/index.ts:1` |
 | `./list` | 목록 수명·선택·다운로드·행 활성화 필요 | UI context가 옮겨올 단일 소유자 | 기존 API에 Provider·읽기 hook 연결 추가 | 패키지 유지 | `src/list.ts:1`, `src/list-ui.tsx:117` |
 | `./filter` | 독립 상태 책임 없음 | 루트 날짜·트리 재노출, 표현만 남음 | 순수 계산은 루트, FilterError·CheckboxTree는 별도 registry 항목 | 제거 | `src/filter.ts:2`, 합의 11 |
+| `./choice` | 목록·폼이 공유하는 선택 검색·값·이름 보존 연결 | /list·/form의 작업 2 재노출을 제거하고 단일 입구로 통합 | registry Choice가 이 입구를 사용; 3.1 공개 경로가 아니므로 제거 영향 없음 | 패키지 신설 | 0010 공통 선택 칸, 2026-10-29 작업 3 coordinator 승인; 루트는 순수 계산이라 React hook을 둘 수 없고 /dialog는 확인창 책임이므로 제외 |
 | `./form` | 저장 수명·배열·참조·이탈 판정 필요 | UI의 연결 절차를 이곳으로 모음 | 기존 API 유지, 공통 hook을 연결 | 패키지 유지 | `src/form/index.ts:2`, `src/form/ui.tsx:185` |
 | `./form/ui` | 표시 외 등록·제출 격리·입력 적용 순서 필요 | /form 상태와 결합된 연결 | 상태·연결은 /form, Form 부품은 registry | registry로 이전 | `src/form/ui.tsx:52`, `:185`, `:286`, `:999` |
 | `./dialog` | 폼 밖 확인 실행 수명 필요 | /ui Dialog는 표현이며 서로 다른 책임 | 기존 useConfirmationState 경로 유지, 창은 registry | 패키지 유지 | `src/form/confirmation.ts:1` |

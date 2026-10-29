@@ -1,6 +1,6 @@
 /** 확인 대상과 실행 상태를 소유하고 오류 정책·다이얼로그 표현은 프로젝트에 맡긴다. */
 import { useEffect, useRef, useState } from "react";
-import { useBlockingProgress } from "../progress";
+import { useBlockingProgress } from "./progress";
 
 type ConfirmationState<T, F> =
   | { readonly kind: "closed" }
@@ -89,6 +89,6 @@ export function useConfirmationState<T, F>({
   };
 }
 
-export { useDialogBinding, useConfirmBinding, useAcknowledgeBinding } from '../dialog-binding';
-export { useBlockingProgressBinding, BlockingProgressProvider, useBlockingProgress } from '../progress';
-export type { BlockingKind } from '../progress';
+export { useDialogBinding, useConfirmBinding, useAcknowledgeBinding } from './dialog-binding';
+export { useBlockingProgressBinding, BlockingProgressProvider, useBlockingProgress } from './progress';
+export type { BlockingKind } from './progress';

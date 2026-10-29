@@ -7,9 +7,9 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { useListDownload, type DownloadTarget } from '../src/list-download';
-import { List, useListField, type ListColumn } from '../src/list-ui';
+import { List, useListField, type ListColumn } from '../../ui-registry/src/list-ui';
 import { defineSearch, type SearchDefinition } from '../src/search/fields';
-import { Pending } from '../src/ui';
+import { Pending } from '../../ui-registry/src/ui';
 import { useList, type ListPage } from '../src/use-list';
 
 interface Row {

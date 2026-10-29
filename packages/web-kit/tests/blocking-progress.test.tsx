@@ -8,14 +8,14 @@ import { createPortal } from 'react-dom';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { z } from 'zod';
 import { RequestFailure } from '../src/failure';
-import { useConfirmationState } from '../src/form/confirmation';
+import { useConfirmationState } from '../src/confirmation';
 import { useSaveForm, type SaveFormOptions } from '../src/form/save-form';
-import { Form } from '../src/form/ui';
+import { Form } from '../../ui-registry/src/form/ui';
 import { useBlockingProgress } from '../src/progress';
 import { useRecord } from '../src/record';
 import { defineSearch } from '../src/search/fields';
-import { BlockingProgress } from '../src/ui/blocking-progress';
-import { ConfirmDialog } from '../src/ui/dialog';
+import { BlockingProgress } from '../../ui-registry/src/ui/blocking-progress';
+import { ConfirmDialog } from '../../ui-registry/src/ui/dialog';
 import { useList, type ListPage } from '../src/use-list';
 
 afterEach(cleanup);

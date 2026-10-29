@@ -1,7 +1,7 @@
 // 파일 책임: 필드 라벨·설명·오류의 배치를 제공하고 패키지 접근성 연결을 사용한다.
 /** 필드의 라벨·설명·오류 접근성 구조를 렌더한다. 번역·필수 판정·스타일은 소비자가 제공한다. */
 import type { ReactNode } from "react";
-import { formFieldFeedback } from "./binding";
+import { formFieldFeedback } from "@boosterlab/web-kit/form";
 
 export interface FieldControlProps {
   readonly id: string;

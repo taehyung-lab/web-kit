@@ -1,34 +1,27 @@
 {
   "name": "@boosterlab/web-kit",
-  "version": "3.1.0",
+  "version": "4.0.0-rc.1",
   "private": true,
   "type": "module",
-  "sideEffects": [
-    "**/*.css"
-  ],
+  "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
     "./failure": "./src/failure.ts",
     "./session": "./src/session.ts",
     "./http": "./src/http.ts",
     "./query": "./src/query.ts",
-    "./ui": "./src/ui/index.ts",
     "./search": "./src/search/index.ts",
     "./list": "./src/list.ts",
-    "./filter": "./src/filter.ts",
     "./form": "./src/form/index.ts",
-    "./form/ui": "./src/form/ui.tsx",
-    "./dialog": "./src/form/confirmation.ts",
+    "./dialog": "./src/confirmation.ts",
     "./record": "./src/record.ts",
-    "./detail/ui": "./src/detail-ui.tsx",
     "./api": "./src/api.ts",
     "./testing": "./src/testing.tsx",
     "./testing/session": "./src/session-testing.ts",
-    "./list/ui": "./src/list-ui.tsx",
     "./permission": "./src/permission.tsx",
     "./session/browser": "./src/browser-session-store.ts",
     "./session/idle": "./src/session-idle.ts",
-    "./styles.css": "./src/ui/styles.css"
+    "./choice": "./src/choice-binding.ts"
   },
   "files": [
     "src",
@@ -38,7 +31,6 @@
     "README.md"
   ],
   "peerDependencies": {
-    "@base-ui/react": "1.7.0",
     "@tanstack/react-form": "1.33.5",
     "@tanstack/react-query": "5.102.6",
     "@tanstack/react-router": "1.170.32",
@@ -85,9 +77,6 @@
       "optional": true
     },
     "@tanstack/react-router": {
-      "optional": true
-    },
-    "@base-ui/react": {
       "optional": true
     },
     "@tanstack/react-virtual": {

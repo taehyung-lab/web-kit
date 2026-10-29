@@ -15,7 +15,6 @@ export { inSection, sectionErrorCount, useFormSection, type FormSectionState } f
 
 export { requestFormChange, writeFormValues, type FormReference, type ReferenceChange } from './references';
 
-export { useChoiceBinding, type ChoiceBindingOptions, type ChoiceNode, type ChoiceValue } from '../choice-binding';
 
 export {
   FormBindingProvider, FormGuardProvider, FormDialogScopeProvider,
@@ -25,3 +24,5 @@ export {
   useFormConfirmBinding, useFormSavedBinding, useFormSubmitBinding,
   formTextBinding, formFileBinding, formFieldFeedback,
 } from './binding';
+
+export type { LeaveReason } from './navigation';

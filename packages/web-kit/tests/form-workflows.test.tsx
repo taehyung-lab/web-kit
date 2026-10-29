@@ -3,7 +3,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { Form } from '../src/form/ui';
+import { Form } from '../../ui-registry/src/form/ui';
 import { useSaveForm, type SaveFormEditor } from '../src/form/save-form';
 import type { FormReference } from '../src/form/references';
 

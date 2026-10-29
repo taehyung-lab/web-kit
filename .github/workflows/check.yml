@@ -18,6 +18,7 @@ jobs:
           node-version: 24.19.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
+      # check는 고정 shadcn 재빌드와 커밋된 public/r 산출물 일치도 확인한다.
       - run: pnpm check
   # 발행할 산출물 그대로 같은 commit의 apps/starter에 설치해 소비 쪽 검사(check·브라우저)를 돌린다.
   # starter lockfile의 키트 지문이 이 산출물과 다르면 실패한다: 키트를 바꾼 PR은 starter도 함께 맞춘다.

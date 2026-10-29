@@ -1,7 +1,7 @@
 // 파일 책임: 폼 기본 UI의 묶음 부품(Form.*)과 앱에 한 번 두는 이탈 보호(FormGuard).
 // 각 부품은 같은 편집 상태(useSaveForm 결과)를 context로 읽어서, 칸·버튼·오류 줄을 어디에 두어도 저장·검증·focus 연결을 다시 쓰지 않는다.
 // 저장 수명은 useSaveForm이, 이탈 판정은 createFormNavigation이 소유하고 여기는 표시와 사용자 입력 연결만 맡는다.
-import { FormGuardProvider, FormDialogScopeProvider, useFormGuardBinding, useFormRootBinding, useFormFieldBinding, formTextBinding, useOptionsRetryFocus, useFormCancel, useFormDialogScope, useFormConfirmBinding, useFormSavedBinding, FormBindingProvider, useFormBinding, useFormSubmitBinding, formFileBinding } from './binding';
+import { FormGuardProvider, FormDialogScopeProvider, useFormGuardBinding, useFormRootBinding, useFormFieldBinding, formTextBinding, useOptionsRetryFocus, useFormCancel, useFormDialogScope, useFormConfirmBinding, useFormSavedBinding, FormBindingProvider, useFormBinding, useFormSubmitBinding, formFileBinding } from '@boosterlab/web-kit/form';
 import { Choice as ChoiceInput, type ChoiceProps } from '../ui/choice';
 import { type NavigateOptions } from '@tanstack/react-router';
 import { type AnyFormApi, type DeepKeys, type DeepValue } from '@tanstack/react-form';
@@ -15,11 +15,11 @@ import {
 } from 'react';
 import { AlertDialog, ConfirmDialog, Dialog } from '../ui/dialog';
 import { Pending } from '../ui/pending';
-import { FormArrayField, type FormArrayRows } from './array';
+import { FormArrayField, type FormArrayRows } from '@boosterlab/web-kit/form';
 import { FieldFrame, type FieldControlProps } from './field';
-import type { FormFileValue } from './file';
-import { FormRejection, type SaveFormEditor } from './save-form';
-import { useFormSection } from './sections';
+import type { FormFileValue } from '@boosterlab/web-kit/form';
+import { FormRejection, type SaveFormEditor } from '@boosterlab/web-kit/form';
+import { useFormSection } from '@boosterlab/web-kit/form';
 
 // ─── 이탈 보호 ───────────────────────────────────────────────────────────────
 
@@ -83,7 +83,7 @@ export function FormGuard({
  * 저장 중이면 아무것도 하지 않고, 입력이 없으면 바로, 있으면 확인 뒤에 run을 실행한다.
  * run이 Router로 이동하면 이미 물었으므로 `ignoreBlocker: true`로 이동한다.
  */
-export { useLeave } from './binding';
+export { useLeave } from '@boosterlab/web-kit/form';
 
 // ─── 폼 ─────────────────────────────────────────────────────────────────────
 
@@ -848,7 +848,7 @@ function FormDialog({
 }
 
 /** 지금 폼의 편집 상태를 읽는다(프로젝트가 자기 표시를 그릴 때). */
-export { useFormEditor } from './binding';
+export { useFormEditor } from '@boosterlab/web-kit/form';
 
 /** 표시 클래스 이름을 연결한다. */
 function join(...names: readonly (string | undefined)[]): string {
@@ -920,4 +920,4 @@ export type TypedForm<T> = typeof FormRoot & {
 };
 
 export { FieldFrame, FieldFeedback, type FieldControlProps } from './field';
-export type { LeaveReason } from './navigation';
+export type { LeaveReason } from '@boosterlab/web-kit/form';

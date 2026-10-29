@@ -1,11 +1,11 @@
 // 파일 책임: 목록 기본 UI의 묶음 부품(List.*). 각 부품은 같은 목록 상태(useList)를 context로 읽어서, 필터·표·페이지 이동을
 // 어디에 두어도 조회·정렬·선택 연결을 다시 쓰지 않는다. 검색 직전 보장(기간 검증·입력 중 키워드)은 상태가 맡고 부품은 표시만 한다.
-import { ListProvider as ModelProvider, useListModel, useListField, useListFilterBinding, useListDetailsBinding, useBulkConfirmation, useListChoiceBinding, useListMultiChoiceBinding, useListPeriodBinding, listPaginationBinding, useListDownloadBinding, useListKeywordBinding, listViewBinding, listRowBinding, useListVirtualRows, type PeriodShortcut, type DownloadControl, type ListModel } from './list-binding';
+import { ListProvider as ModelProvider, useListModel, useListField, useListFilterBinding, useListDetailsBinding, useBulkConfirmation, useListChoiceBinding, useListMultiChoiceBinding, useListPeriodBinding, listPaginationBinding, useListDownloadBinding, useListKeywordBinding, listViewBinding, listRowBinding, useListVirtualRows, type PeriodShortcut, type DownloadControl, type ListModel } from '@boosterlab/web-kit/list';
 import { Choice as ChoiceInput, type ChoiceProps } from './ui/choice';
 import { Checkbox } from '@base-ui/react/checkbox';
 import { createContext, useContext, useId, useRef, type ReactNode, type RefObject } from 'react';
-import type { DownloadKind } from './list-download';
-import { type Keyword } from './search/interactions';
+import type { DownloadKind } from '@boosterlab/web-kit/list';
+import { type Keyword } from '@boosterlab/web-kit/search';
 import { ConfirmDialog } from './ui/dialog';
 import { Pending } from './ui/pending';
 
@@ -301,7 +301,7 @@ function MultiSelect({
   );
 }
 
-export type { PeriodShortcut } from './list-binding';
+export type { PeriodShortcut } from '@boosterlab/web-kit/list';
 
 /** 기간: 기준 선택(선택)·단축·직접 입력. 맞지 않는 기간은 검색할 때 상태가 기본값으로 돌린다. */
 function Period({
@@ -838,7 +838,7 @@ function BulkAction<T>({
   );
 }
 
-export type { DownloadControl } from './list-binding';
+export type { DownloadControl } from '@boosterlab/web-kit/list';
 
 /** 다운로드 종류 선택과 실행 버튼. 진행 중에는 잠기고 실패는 원인과 함께 남는다. kinds 순서대로 보인다. */
 function Download({

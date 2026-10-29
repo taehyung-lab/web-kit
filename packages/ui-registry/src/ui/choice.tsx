@@ -5,8 +5,8 @@ import { Combobox } from '@base-ui/react/combobox';
 import { Menu } from '@base-ui/react/menu';
 import { Popover } from '@base-ui/react/popover';
 import type { ReactNode } from 'react';
-import { useChoiceBinding } from '../choice-binding';
-import { treeLeaves, treeLeafNodes, type CheckboxTreeNode } from '../checkbox-tree';
+import { useChoiceBinding } from '@boosterlab/web-kit/choice';
+import { treeLeaves, treeLeafNodes, type CheckboxTreeNode } from '@boosterlab/web-kit';
 
 export type ChoiceNode = CheckboxTreeNode;
 export type ChoiceValue = string | readonly string[] | undefined;

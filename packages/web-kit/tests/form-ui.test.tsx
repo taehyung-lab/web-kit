@@ -7,7 +7,7 @@ import { afterEach, beforeAll, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { RequestFailure } from '../src/failure';
 import { useSaveForm, type SaveFormOptions } from '../src/form/save-form';
-import { Form, FormGuard, useLeave } from '../src/form/ui';
+import { Form, FormGuard, useLeave } from '../../ui-registry/src/form/ui';
 
 afterEach(cleanup);
 beforeAll(() => {

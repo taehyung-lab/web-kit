@@ -1,0 +1,19 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "blocking-progress",
+  "title": "web-kit blocking-progress",
+  "description": "web-kit blocking-progress 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
+  "dependencies": [],
+  "registryDependencies": [
+    "@web-kit/pending"
+  ],
+  "files": [
+    {
+      "path": "packages/ui-registry/src/ui/blocking-progress.tsx",
+      "content": "// 파일 책임: 화면 전체 진행 덮개. 등록소를 제공하고, 진행이 있으면 본문을 막고(inert·aria-busy) 가운데 진행 표시와 문구를 띄운다.\n// 무엇이 진행 중인지는 등록(폼 저장·페이지 첫 조회)이, 문구는 프로젝트가 정한다. 덮개가 닫힐 때 잃은 포커스를 본문으로 돌린다\n// (본문 DOM 안에서 마지막으로 포커스한 요소 → 사라졌으면 본문 첫 h1 → 그것도 없으면 본문 영역).\nimport type { ReactNode } from 'react';\nimport { BlockingProgressProvider, useBlockingProgressBinding } from '@boosterlab/web-kit/dialog';\nimport { Spinner } from './pending';\n\n/** 종류별 주 문구와 보조 문구(없으면 그리지 않음). */\nexport interface BlockingProgressMessages {\n  readonly loading: string;\n  readonly create: string;\n  readonly edit: string;\n  readonly delete: string;\n  readonly wait?: string;\n}\n\n/**\n * 앱 셸에 한 번 두는 덮개. children(앱 본문)은 진행 중 inert·aria-busy가 되어 클릭·포커스·낭독에서 빠진다.\n * 대화창(portal)은 children 밖이라 덮개 위에서 조작된다. 덮개 층은 CSS 변수 `--wk-blocking-layer`(기본은 키트 대화창 아래).\n * 상태 문구 영역(role=status)은 늘 있고 열릴 때 문구가 들어가 낭독기가 바뀜을 읽는다. 최소 표시 시간·지연은 없다.\n * `indicator`는 가운데 진행 표시를 프로젝트 모양으로 바꾼다(없으면 키트 원형 회전 표시). 덮개 전체가 낭독기에 숨겨져 있어(문구는 상태 영역이 읽는다) 표시는 그림만 맡고,\n * 움직임 줄이기 설정은 그 표시를 준 프로젝트가 맞춘다.\n */\nexport function BlockingProgress({\n  messages,\n  indicator,\n  children,\n}: {\n  readonly messages: BlockingProgressMessages;\n  readonly indicator?: ReactNode;\n  readonly children: ReactNode;\n}) {\n  const binding = useBlockingProgressBinding();\n  const { kind, open, contentRef, contentProps } = binding;\n  return (\n    <BlockingProgressProvider binding={binding}>\n      <div\n        ref={contentRef}\n        className=\"wk-blocking-root\"\n        {...contentProps}\n      >\n        {children}\n      </div>\n      {open ? (\n        <div className=\"wk-blocking\" aria-hidden=\"true\">\n          <div className=\"wk-blocking-box\">\n            {indicator === undefined ? <Spinner large /> : indicator}\n            <div className=\"wk-blocking-text\">\n              <p>{messages[kind!]}</p>\n              {messages.wait === undefined ? null : <p>{messages.wait}</p>}\n            </div>\n          </div>\n        </div>\n      ) : null}\n      <div role=\"status\" aria-live=\"polite\" aria-atomic=\"true\" className=\"wk-blocking-status wk-visually-hidden\">\n        {open ? [messages[kind!], messages.wait].filter((text) => text !== undefined).join(' ') : ''}\n      </div>\n    </BlockingProgressProvider>\n  );\n}\n",
+      "type": "registry:file",
+      "target": "~/src/shared/ui/web-kit/ui/blocking-progress.tsx"
+    }
+  ],
+  "type": "registry:block"
+}

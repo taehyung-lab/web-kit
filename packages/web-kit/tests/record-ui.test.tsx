@@ -2,7 +2,7 @@
 // 파일 책임: Record 묶음 부품이 useRecord 상태(대기·없음·실패·준비됨·갱신 실패)와 항목·이력을 화면에 그리는 결과를 검사한다.
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
-import { Record } from '../src/detail-ui';
+import { Record } from '../../ui-registry/src/detail-ui';
 import { RequestFailure } from '../src/failure';
 import type { RecordState } from '../src/record';
 

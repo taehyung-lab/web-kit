@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { afterEach, beforeAll, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { useSaveForm } from '../src/form';
-import { Form, FormGuard } from '../src/form/ui';
+import { Form, FormGuard } from '../../ui-registry/src/form/ui';
 
 afterEach(cleanup);
 beforeAll(() => {

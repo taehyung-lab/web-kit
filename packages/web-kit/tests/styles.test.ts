@@ -5,7 +5,7 @@ import { expect, it } from 'vitest';
 const { readFileSync } = (
   globalThis as unknown as { process: { getBuiltinModule: (id: 'node:fs') => { readFileSync: (path: URL, encoding: 'utf8') => string } } }
 ).process.getBuiltinModule('node:fs');
-const css = readFileSync(new URL('../src/ui/styles.css', import.meta.url), 'utf8');
+const css = readFileSync(new URL('../../ui-registry/src/ui/styles.css', import.meta.url), 'utf8');
 
 /** 선택자 하나로 시작하는 규칙 본문들. */
 function blocks(selector: string): string[] {

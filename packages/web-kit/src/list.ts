@@ -13,5 +13,3 @@ export {
   listPaginationBinding, listViewBinding, listRowBinding,
   type ListModel, type PeriodShortcut, type DownloadControl,
 } from './list-binding';
-
-export { useChoiceBinding, type ChoiceBindingOptions, type ChoiceNode, type ChoiceValue } from './choice-binding';

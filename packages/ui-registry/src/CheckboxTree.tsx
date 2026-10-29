@@ -1,6 +1,6 @@
 // 파일 책임: 부모/자식 선택을 표시하는 공통 트리. checkbox 표현·번역·스타일은 프로젝트 adapter에서 받는다.
 import type { ReactNode } from 'react';
-import { checkboxTreeSelection, treeLeaves, type CheckboxTreeNode } from './checkbox-tree';
+import { checkboxTreeSelection, treeLeaves, type CheckboxTreeNode } from '@boosterlab/web-kit';
 export interface TreeStyles {
   readonly root?: string;
   readonly list?: string;

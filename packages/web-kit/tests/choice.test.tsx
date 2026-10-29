@@ -3,7 +3,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
-import { Choice, type ChoiceProps, type ChoiceValue } from '../src/ui/choice';
+import { Choice, type ChoiceProps, type ChoiceValue } from '../../ui-registry/src/ui/choice';
 const nodes = [
   {
     label: '전체',
