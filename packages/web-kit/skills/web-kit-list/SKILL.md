@@ -36,7 +36,7 @@ description: 목록 필터·기간 프리셋·키워드 칩·표·페이지 이�
   - 정규 URL이 아니면 replace로 바꾼다. 기본값과 같은 값은 URL에서 뺀다.
 - **확정:**
   - `submit`은 입력 중 키워드를 합치고 초안을 검증한 뒤 page 1로 확정한다. 정렬·페이지 크기는 지금 값을 유지한다. 초안은 필터 조건이 바뀔 때만 새로 만들어지고, 페이지·크기·정렬만 바뀌면 고치던 초안이 남는다.
-  - `periods`로 선언한 기간은 한쪽만·없는 날짜·역순이면 검색할 때 그 쌍만 기본값으로 돌리고 나머지 조건으로 확정한다(주소의 잘못된 값과 같은 규칙, 0003 §5). 검색을 막거나 문구를 띄우지 않는다. 입력 UI가 키트 `List.Period`가 아니거나 숨겨져도 지킨다. 검색을 막는 검증은 제품 규칙(`validateDraft`)만 쓴다.
+  - `periods`로 선언한 기간은 한쪽만·없는 날짜·역순이면 검색할 때 그 쌍만 기본값으로 돌리고 나머지 조건으로 확정한다(주소의 잘못된 값과 같은 규칙). 검색을 막거나 문구를 띄우지 않는다. 입력 UI가 키트 `List.Period`가 아니거나 숨겨져도 지킨다. 검색을 막는 검증은 제품 규칙(`validateDraft`)만 쓴다.
   - 키워드 입력 중 글자는 `keywordInput(name, choices)` 상태에 있고 초안과 수명이 같다(페이지·정렬 이동에는 남고 필터 교체·초기화에는 지워진다). 추가를 누르지 않아도 `submit`이 trim·중복 제거해 합친다.
   - 같은 조건이면 재조회하고(진행 중인 요청이 있으면 합류한다), 다르면 URL을 바꾼다. `refresh()`도 같다.
   - `validateDraft`가 실패하면 입력·URL·결과를 유지하고 새 조회를 하지 않는다.
@@ -104,4 +104,4 @@ registry `choice`는 `/choice`의 `useChoiceBinding`을 쓴다. 이를 쓰는 `C
 
 `Choice`의 단일 선택 해제는 `clearLabel`을 지정했을 때만 제공한다. `placeholder`만으로 해제를 허용하지 않는다. 서버 검색 함수가 다시 만들어져도 진행 중 검색은 유지한다. 검색 범위가 상위 값에 따라 달라지면 `searchKey`에 해당 원시 값 배열을 전달해 이전 검색을 취소하고 다시 조회한다.
 
-0003 완료 기준 6의 두 조회 방식은 [즉시 조회 선언](../../../../apps/starter/src/features/products/model/list-search.ts)과 [검색 후 조회 선언](../../../../apps/starter/src/features/members/model/list-search.ts)의 gated 값 차이로 확인한다. 두 화면 모두 같은 useList와 registry list를 사용한다. 요청 수 관찰은 [회원 화면 검사](../../../../apps/starter/src/features/members/screens/MemberListScreen.test.tsx)에 있다.
+즉시 조회와 검색 후 조회, 두 조회 방식의 실제 예는 [즉시 조회 선언](../../../../apps/starter/src/features/products/model/list-search.ts)과 [검색 후 조회 선언](../../../../apps/starter/src/features/members/model/list-search.ts)의 gated 값 차이로 확인한다. 두 화면 모두 같은 useList와 registry list를 사용한다. 요청 수 관찰은 [회원 화면 검사](../../../../apps/starter/src/features/members/screens/MemberListScreen.test.tsx)에 있다.
