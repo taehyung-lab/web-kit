@@ -7,7 +7,11 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
 
 이 키트의 `/failure`, `/session`, `/session/idle`, `/http`, `/query`를 연결하는 기준이다. 함수 인자와 타입은 설치된 소스의 export를 따른다.
 
+이 책임만 골라 사용할 수 있다. 선택한 한 책임 안에서는 키트 수명 처리와 자체 구현을 섞지 않는다. 선택 설치 peer(해당 기능을 쓸 때만 설치하는 동료 라이브러리)를 설치하지 않아 실행하지 못한 기능은 "검사하지 않음"으로 기록한다. 예시는 같은 버전 저장소의 파일이며 설치본 node_modules 안의 파일이 아니다.
+
 ## 화면 선언
+
+실제 조립 예: [apps/starter/src/features/products/api/products.ts](../../../../apps/starter/src/features/products/api/products.ts). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 - 화면은 생성 endpoint 함수나 queryOptions를 쓰고, 전송 예외를 직접 해석하지 않는다. 받는 실패는 `RequestFailure`(12종 `kind`)다.
 - 쓰기 뒤 다시 읽을 조회는 mutation `meta: { invalidates: [key, …] }`로 선언한다. 성공했을 때와 `resultUnknown`일 때 실행된다.
@@ -15,6 +19,8 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
 - 문구는 `kind`와 `messageKey`로 고른다. 서버 resultMessage는 실패에 담기지 않는다.
 
 ## 키트 보장
+
+실제 조립 예: [apps/starter/src/app/session.test.tsx](../../../../apps/starter/src/app/session.test.tsx). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 - **실패:** status 기본 분류는 결과 코드 표 `(status, code)` 행보다 뒤다. HTTP 200 안의 다른 resultCode는 business, 봉투가 아니면 contract다. 파일로 받는 요청(`responseType: 'blob'`)도 응답이 JSON이면 본문을 JSON으로 읽어 같은 규칙으로 해석한다(다운로드 실패 문구가 resultCode를 따른다). 취소는 `cancelled`이고 화면 상태·알림에 들어가지 않는다.
 - **세션 수명** 한 곳이 세대를 판정한다.
@@ -46,6 +52,10 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
 
 ## 프로젝트 연결
 
+유휴 타이머는 starter 실제 예 없음(검사하지 않음). [session-idle.test.ts](../../tests/session-idle.test.ts)가 키트의 시간·대표 탭·종료 보장 검사이며 소비처 연결 검사를 대신하지 않는다.
+
+실제 조립 예: [apps/starter/src/app/web-kit.ts](../../../../apps/starter/src/app/web-kit.ts). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+
 키트 초기 연결의 진입점은 한 곳이다(기본 `app/web-kit.ts`): session·http·QueryClient를 만들고 아래 adapter를 넘긴다. adapter 구현은 각자 자리에 둔다.
 
 - 결과 코드 표는 서버 enum에 있는 행만 옮겨 적는다. 이름만 보고 행을 더하지 않는다.
@@ -55,7 +65,7 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
 - `reissue(credentials)`: 재발급 endpoint 호출. 공개 요청으로 보낸다. 재발급 응답의 결과 코드 의미가 일반 요청과 다르면, 이 adapter가 실패에 `endsSession`·`messageKey`를 실어 던진다(결과 코드 표는 일반 요청용이다).
 - `isPublic`: 로그인 전·재발급·로그아웃 경로. 공개 요청에는 토큰이 실리지 않고, 세션도 건드리지 않는다.
 - `prepare`: 언어·메뉴 같은 운영 헤더.
-- 서버 로그아웃은 `createSession({ signOut })`에 넘긴다. 받은 자격증명의 토큰을 헤더에 직접 실어 공개 요청으로 보낸다. 로그아웃 버튼은 `session.end()`만 부른다. 그 뒤 로그인 이동은 앱 안 이동(router navigate)으로 한다. `window.location`으로 문서를 다시 읽으면 브라우저가 진행 중인 `signOut` 요청을 끊어 서버 세션이 남는다(DT live 관찰 2026-10-27).
+- 서버 로그아웃은 `createSession({ signOut })`에 넘긴다. 받은 자격증명의 토큰을 헤더에 직접 실어 공개 요청으로 보낸다. 로그아웃 버튼은 `session.end()`만 부른다. 그 뒤 로그인 이동은 앱 안 이동(router navigate)으로 한다. `window.location`으로 문서를 다시 읽으면 브라우저가 진행 중인 `signOut` 요청을 끊어 서버 세션이 남는다.
 - `session.subscribe`의 `ended`에서 로그인 이동·안내를 한다. `by`로 이 탭의 로그아웃(local), 다른 탭(other-tab), 서버 인증 계약(server)을 구별한다. 토큰 저장 위치는 프로젝트 정책이다.
 - 유휴 마감을 쓰면 `createIdleTimer({ session, key, policy, extend })`를 같은 진입점에서 만들고, 앱 시작 때 라우터보다 먼저 `start()`를 부른다. 프로젝트가 정하는 것: 시간 정책(`durationMs`·`warningMs`·`activityThrottleMs`), 저장 key, 서버 연장 호출(그 응답의 서버 시각 표본을 돌려준다), `observe`에서 응답 헤더를 `ServerTimeSample`(보낸 시각·서버 마감·시계 차이)로 바꾸는 일, 경고 디자인(팝업·모달·알림·제목)과 `ended`의 `idle` 안내, 연장 실패 안내. 대표 탭(`leader`)만 경고를 띄운다.
 - 연결 상태 표시·서버 시각 동기화 같은 관찰은 `observe`로 받는다. 재전송·재발급을 포함한 전송 시도마다 한 번 오고, 응답이 없으면 `response`가 없다.
@@ -64,6 +74,10 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
 - `notify`에서 어떤 실패를 어디에 보일지 출처로 고른다(예: 활성 조회의 forbidden만 모달). 화면이 이미 보이는 쓰기 실패와 겹치지 않게 한다.
 
 ## 확인 방법
+
+실제 조립 예: [apps/starter/src/app/session.test.tsx](../../../../apps/starter/src/app/session.test.tsx). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+
+registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 단위·브라우저 CI에서 실행하고 `web-kit-check`를 필수 단계로 둔다. starter 통과로 대신하지 않는다. 실제 사용 UI와 검사 대상의 일치는 별도 검토로 판정한다. 설치·결과 파일 연결은 [소비 안내](../../docs/consuming.md#복사본-적합성-검사)를 따른다.
 
 - 저장 adapter는 `/testing/session`의 `checkSessionStoreAdapter`로 저장 실패 뒤 재발급·다른 탭 변경·종료를 확인한다. 실제 adapter에 실패를 주입하는 fixture 연결은 [소비 안내](../../docs/consuming.md#저장-adapter-검사)를 따른다.
 - 실제 adapter로 다음을 관찰한다.
@@ -76,9 +90,13 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
 
 ## 미확인 외부 계약
 
+실제 조립 예: [apps/starter/src/features/auth/api/auth.ts](../../../../apps/starter/src/features/auth/api/auth.ts). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+
 E1(401이 업무 실행 전인가), E2(일반·재발급 요청의 status·resultCode 의미), E3(동시 재발급, 이전 refresh 토큰 재사용, 늦은 응답의 쿠키 변경)는 설치된 web-kit 패키지의 결정 기록 0001(web-kit 1.0 구조와 수명 계약)이 기준이다. 확인되기 전까지 해당 부분은 보류한다.
 
 ## 프로젝트별 응답 계약
+
+실제 조립 예: [apps/starter/src/app/web-kit.ts](../../../../apps/starter/src/app/web-kit.ts). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 `createHttp({ response: { read(body, status, requestId) } })`로 서버 형식·성공 판정·코드 의미를 프로젝트가 해석한다. 결과는 `{ ok: true, data }` 또는 `{ ok: false, failure: RequestFailure }`다. HTTP 거절은 성공으로 바꿀 수 없다. 네트워크·취소·타임아웃과 세션 회복은 키트가 맡는다. 같은 코드의 메시지 키도 프로젝트마다 다를 수 있으며 번역 문구는 키트에 넣지 않는다.
 
