@@ -1,5 +1,5 @@
 // 파일 책임: 상품 결과 열의 제목·표시·정렬 연결을 선언한다.
-import type { ListColumn } from '@boosterlab/web-kit/list/ui';
+import type { ListColumn } from '@/shared/ui/web-kit/list-ui';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { categoryOptionsQuery } from '../api/categories';

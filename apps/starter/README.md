@@ -2,7 +2,7 @@
 
 web-kit 저장소의 `apps/starter`. 새 관리자 웹의 틀이자, 키트를 바꿀 때 함께 고치는 소비 검사 앱이다. 새 프로젝트를 시작하는 순서는 [저장소 README](../../README.md#새-프로젝트-시작)를 따른다.
 
-관리자 웹을 새로 만들 때 쓰는 기본 앱이다. 키트 연결(세션·요청·QueryClient), 키트 기본 UI, 예시 기능 하나(상품 목록·상세·등록·수정·로그인), mock API, 화면 테스트, CI까지 갖춰 두었다. 예시 기능의 값(검색 기본값·문구·업무 규칙)은 스타터가 정한 예시이며 제품 결정이 아니다.
+관리자 웹을 새로 만들 때 쓰는 기본 앱이다. 키트 연결(세션·요청·QueryClient), registry로 설치한 UI 복사본, 예시 기능 하나(상품 목록·상세·등록·수정·로그인), mock API, 화면 테스트, CI까지 갖춰 두었다. 예시 기능의 값(검색 기본값·문구·업무 규칙)은 스타터가 정한 예시이며 제품 결정이 아니다.
 
 ## 스택
 
@@ -111,6 +111,14 @@ mock 통과나 HTTP 200만으로 서버 계약을 확인했다고 보지 않는�
 
 ## 키트 갱신
 
-현재 대상은 3.1.0이다. 정식 발행에는 main CI에서 검증한 tarball과 `verification.json`을 그대로 사용한다. `selection.run`의 결과는 실제 성공 ID인 `{ completedIds }`로 반환한다. 예시 API가 개수만 주는 부분 성공에서는 ID를 추측하지 않고 선택을 보존한다.
+현재 대상은 4.0.0-rc.1 후보이다. 정식 발행에는 main CI에서 검증한 tarball과 `verification.json`을 그대로 사용한다. `selection.run`의 결과는 실제 성공 ID인 `{ completedIds }`로 반환한다. 예시 API가 개수만 주는 부분 성공에서는 ID를 추측하지 않고 선택을 보존한다.
 
 새 버전을 받는 방법은 각 키트 README의 업데이트·업그레이드를 따른다. 받은 뒤 이 저장소의 `pnpm check`와 `pnpm test:e2e`를 통과시킨다.
+
+### UI 복사본 설치
+
+화면은 `src/shared/ui/web-kit`의 소비 프로젝트 소스다. Form은 `@/shared/ui/web-kit/form/ui`, List는 `@/shared/ui/web-kit/list-ui`, 기본 입력과 대화창은 `@/shared/ui/web-kit/ui`에서 import한다. 공통 상태 hook은 계속 `@boosterlab/web-kit/form`, `/list`, `/dialog`, `/choice`에서 가져온다.
+
+`components.json`의 `@web-kit`은 `v4.0.0-rc.1` tag에 고정되어 있다. 아직 원격 발행 전인 후보는 저장소 루트에서 `pnpm registry:build` 후 `node scripts/install-starter-registry.mjs`로 설치한다. 이 명령은 설치 동안만 같은 checkout의 로컬 JSON을 가리키고, 실제 shadcn 4.19.1 CLI가 복사본을 만든 뒤 tag 설정을 복원한다. **재실행하면 현재 복사본을 덮어쓰므로 프로젝트 변경을 먼저 비교한다.**
+
+`registry-installation.json`은 설치 항목·원본 버전·기준 commit·원본과 설치 파일 SHA-256·components 설정 지문을 보관한다. 갱신 시 이 기록으로 이전 원본을 찾고 새 원본과 프로젝트 복사본을 비교한다. 키트 tarball의 `starter:sync`는 UI 복사본을 갱신하지 않는다.

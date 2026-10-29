@@ -1,5 +1,5 @@
 // 파일 책임: 약관 상세. 단건 상태 판정은 web-kit useRecord가 하고, 여기서는 항목 배치만 정한다.
-import { Record } from '@boosterlab/web-kit/detail/ui';
+import { Record } from '@/shared/ui/web-kit/detail-ui';
 import { useRecord } from '@boosterlab/web-kit/record';
 import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';

@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSaveForm } from '@boosterlab/web-kit/form';
-import { Form } from '@boosterlab/web-kit/form/ui';
+import { Form } from '@/shared/ui/web-kit/form/ui';
 import { useFormCopy } from '@/shared/lib/form-messages';
 import { saveWorkflow } from '../api/workflows';
 import { draftSchema, publishSchema, initialWorkflow, workflowReferences, type WorkflowValues } from '../model/form';

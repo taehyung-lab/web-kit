@@ -1,7 +1,7 @@
 // 파일 책임: 설치된 키트의 폼 전체 오류를 프로젝트 번역으로 표시하는 연결을 검사한다.
 import { i18n } from '@/app/i18n';
 import { useSaveForm } from '@boosterlab/web-kit/form';
-import { Form } from '@boosterlab/web-kit/form/ui';
+import { Form } from '@/shared/ui/web-kit/form/ui';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import { z } from 'zod';

@@ -1,5 +1,5 @@
 // 파일 책임: 상품 목록의 보기 크기와 일괄 비활성화 업무를 연결한다.
-import { PageSize, ListActions, BulkAction } from '@boosterlab/web-kit/list/ui';
+import { PageSize, ListActions, BulkAction } from '@/shared/ui/web-kit/list-ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDeactivateProducts } from '../api/products';

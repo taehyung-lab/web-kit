@@ -1,7 +1,7 @@
 // 파일 책임: 수정 원본·업무 검증·저장 요청·확인 내용을 키트에 제공한다.
-import { Record } from '@boosterlab/web-kit/detail/ui';
+import { Record } from '@/shared/ui/web-kit/detail-ui';
 import { useSaveForm } from '@boosterlab/web-kit/form';
-import { Form } from '@boosterlab/web-kit/form/ui';
+import { Form } from '@/shared/ui/web-kit/form/ui';
 import { useRecord } from '@boosterlab/web-kit/record';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';

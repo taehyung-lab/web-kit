@@ -1,0 +1,179 @@
+{
+  "version": "4.0.0-rc.1",
+  "sourceRef": "v4.0.0-rc.1",
+  "shadcn": "4.19.1",
+  "sourceCommit": "3d27d8b84a86d8cc3147ed6e21ba89bfe2aad4c8",
+  "sourceWorkingTree": "Source fingerprints identify the installed candidate, including uncommitted changes.",
+  "method": "pnpm exec shadcn add ./public/r/all.json --cwd apps/starter --yes --overwrite; local absolute namespace during installation",
+  "componentsHash": "d6e3cd65a7ba1d1b8327520732c01e54ae1ba90624e4eea9c726062e39815559",
+  "installationComponentsHash": "b5bf441aebf0e1e5deb0f728f526547485bb72ee6756b7e71ff992d169eefe1e",
+  "items": [
+    {
+      "name": "inputs",
+      "artifactHash": "50294f2b51a2056f206d436036f7a5b10502ebafe715413fb16564ae808bc2fd",
+      "files": [
+        {
+          "source": "packages/ui-registry/src/ui/inputs.tsx",
+          "installed": "apps/starter/src/shared/ui/web-kit/ui/inputs.tsx",
+          "sourceHash": "bbc95d85a1fbb4c76acad1b49938acbe5e2b53aed0858da268328cb1f9c0df43",
+          "installedHash": "bbc95d85a1fbb4c76acad1b49938acbe5e2b53aed0858da268328cb1f9c0df43"
+        }
+      ]
+    },
+    {
+      "name": "pending",
+      "artifactHash": "d038cb0ff2c3862b1aefec5e23735543cea466398aa32451f7c12b1f26e7e96a",
+      "files": [
+        {
+          "source": "packages/ui-registry/src/ui/pending.tsx",
+          "installed": "apps/starter/src/shared/ui/web-kit/ui/pending.tsx",
+          "sourceHash": "ae448d8ab39bf6949d6f2812acf02c652262e3a91046e564e6adc9a4a003af95",
+          "installedHash": "ae448d8ab39bf6949d6f2812acf02c652262e3a91046e564e6adc9a4a003af95"
+        }
+      ]
+    },
+    {
+      "name": "dialog",
+      "artifactHash": "571496a8b9a884a7f9b39fe94df28df27e8d1f23e9d420eda556bf246b078ae9",
+      "files": [
+        {
+          "source": "packages/ui-registry/src/ui/dialog.tsx",
+          "installed": "apps/starter/src/shared/ui/web-kit/ui/dialog.tsx",
+          "sourceHash": "4e390fd5d914222adc00e21258910b2c1d56af962467914f1ebe12d89ee78277",
+          "installedHash": "4e390fd5d914222adc00e21258910b2c1d56af962467914f1ebe12d89ee78277"
+        }
+      ]
+    },
+    {
+      "name": "blocking-progress",
+      "artifactHash": "15e5ef3530d7ec844b4a3b08bfb35211fe29441317091599d3cea9151d48aff2",
+      "files": [
+        {
+          "source": "packages/ui-registry/src/ui/blocking-progress.tsx",
+          "installed": "apps/starter/src/shared/ui/web-kit/ui/blocking-progress.tsx",
+          "sourceHash": "17b461bc65a4775f56e46599f54f7a061b93a74ff90061c7197dda7041b3f9bf",
+          "installedHash": "17b461bc65a4775f56e46599f54f7a061b93a74ff90061c7197dda7041b3f9bf"
+        }
+      ]
+    },
+    {
+      "name": "choice",
+      "artifactHash": "36cbcd11df6bcc880dda4536bd713648c5ae49048fe366dcdf3d09587f4da290",
+      "files": [
+        {
+          "source": "packages/ui-registry/src/ui/choice.tsx",
+          "installed": "apps/starter/src/shared/ui/web-kit/ui/choice.tsx",
+          "sourceHash": "259fed08aca7b27c322b43bba584289e1ca68a3fac2a8de0661e21f4f1f1daac",
+          "installedHash": "259fed08aca7b27c322b43bba584289e1ca68a3fac2a8de0661e21f4f1f1daac"
+        }
+      ]
+    },
+    {
+      "name": "retry",
+      "artifactHash": "3865f745a1c48238fa2af75316a279ddc562cd6c5a9b0448e53b77af4373643b",
+      "files": [
+        {
+          "source": "packages/ui-registry/src/ui/retry.tsx",
+          "installed": "apps/starter/src/shared/ui/web-kit/ui/retry.tsx",
+          "sourceHash": "7fae77b73661751cb214053ce714f49c7196fd8f2bad7885c4f3c82e82626b65",
+          "installedHash": "7fae77b73661751cb214053ce714f49c7196fd8f2bad7885c4f3c82e82626b65"
+        }
+      ]
+    },
+    {
+      "name": "ui",
+      "artifactHash": "b91e43517661697f55f018fc7b2c642918f883b062570a22f6e31b0aa4de61a2",
+      "files": [
+        {
+          "source": "packages/ui-registry/src/ui/index.ts",
+          "installed": "apps/starter/src/shared/ui/web-kit/ui/index.ts",
+          "sourceHash": "de49cad83018778ccec744261222becb7f61d1a12db262195dd43fb779eae6fd",
+          "installedHash": "de49cad83018778ccec744261222becb7f61d1a12db262195dd43fb779eae6fd"
+        }
+      ]
+    },
+    {
+      "name": "form",
+      "artifactHash": "6656e1880b063df4abbcf32fb10f60512723c6971dd040432f949b7f8877d57e",
+      "files": [
+        {
+          "source": "packages/ui-registry/src/form/ui.tsx",
+          "installed": "apps/starter/src/shared/ui/web-kit/form/ui.tsx",
+          "sourceHash": "0e303f3c9ad4638dd409d074a8f03a711effaf46b4fc5d4be524cda523044249",
+          "installedHash": "0e303f3c9ad4638dd409d074a8f03a711effaf46b4fc5d4be524cda523044249"
+        },
+        {
+          "source": "packages/ui-registry/src/form/field.tsx",
+          "installed": "apps/starter/src/shared/ui/web-kit/form/field.tsx",
+          "sourceHash": "79b4d5d36f83e5d4ae7e9a6f7c1f707da122ff56c5b2fd722a09849b38875c71",
+          "installedHash": "79b4d5d36f83e5d4ae7e9a6f7c1f707da122ff56c5b2fd722a09849b38875c71"
+        }
+      ]
+    },
+    {
+      "name": "list",
+      "artifactHash": "ad8b5495409e8d3455c7e13570d952d4c30d827d6bf40521d13bb17bc092e269",
+      "files": [
+        {
+          "source": "packages/ui-registry/src/list-ui.tsx",
+          "installed": "apps/starter/src/shared/ui/web-kit/list-ui.tsx",
+          "sourceHash": "f7be25fd93b3b907f9b29858df5be43e46e3ceea6d5f620a9317dea018daaab6",
+          "installedHash": "f7be25fd93b3b907f9b29858df5be43e46e3ceea6d5f620a9317dea018daaab6"
+        }
+      ]
+    },
+    {
+      "name": "record",
+      "artifactHash": "1b16fb892a483652b898b34f310466d177ad876b11671b60fcb1e12411ef8147",
+      "files": [
+        {
+          "source": "packages/ui-registry/src/detail-ui.tsx",
+          "installed": "apps/starter/src/shared/ui/web-kit/detail-ui.tsx",
+          "sourceHash": "53fcab21fd9a5858787b22cc04a0652e24f748d81dcff5177cfa39ff7cbe600a",
+          "installedHash": "53fcab21fd9a5858787b22cc04a0652e24f748d81dcff5177cfa39ff7cbe600a"
+        }
+      ]
+    },
+    {
+      "name": "checkbox-tree",
+      "artifactHash": "cf761cc5ed40358bb191a9ed5ca4e888ae0c91f427fc5b0d204cb93581378ce0",
+      "files": [
+        {
+          "source": "packages/ui-registry/src/CheckboxTree.tsx",
+          "installed": "apps/starter/src/shared/ui/web-kit/CheckboxTree.tsx",
+          "sourceHash": "d075c20e90a0f263a9e4e1d675feecd3e80d0814681653c3c01bb43edeedbb45",
+          "installedHash": "d075c20e90a0f263a9e4e1d675feecd3e80d0814681653c3c01bb43edeedbb45"
+        }
+      ]
+    },
+    {
+      "name": "filter-error",
+      "artifactHash": "531bccfb61c88fc650717274185932b79ca3291ac5f40a4f8afb60ea64671cb6",
+      "files": [
+        {
+          "source": "packages/ui-registry/src/search/filter-error.tsx",
+          "installed": "apps/starter/src/shared/ui/web-kit/search/filter-error.tsx",
+          "sourceHash": "ab71704968ce814dad39644a2ddbddfd0fcde97b4ba13fa868cf87240713e66b",
+          "installedHash": "ab71704968ce814dad39644a2ddbddfd0fcde97b4ba13fa868cf87240713e66b"
+        }
+      ]
+    },
+    {
+      "name": "styles",
+      "artifactHash": "1a648453d66310928ac110ed3144eb37f6be1a79ac7284ebea0a20abd7a68805",
+      "files": [
+        {
+          "source": "packages/ui-registry/src/ui/styles.css",
+          "installed": "apps/starter/src/shared/ui/web-kit/ui/styles.css",
+          "sourceHash": "1ca860cc68c0dfe452a3c7342a81ef04965a2e88fc2ef79bb9f292c1ce679e60",
+          "installedHash": "1ca860cc68c0dfe452a3c7342a81ef04965a2e88fc2ef79bb9f292c1ce679e60"
+        }
+      ]
+    },
+    {
+      "name": "all",
+      "artifactHash": "8fab69c4efb321527f45727a3c125d3afe8fd2a2c8bc7496d2858738b2386af5",
+      "files": []
+    }
+  ]
+}
