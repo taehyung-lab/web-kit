@@ -1,6 +1,6 @@
 ---
 name: web-kit-http
-description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동기화·토큰 재발급·로그인/로그아웃·세션 유휴 마감과 만료 경고·연장·QueryClient·조회 재시도·쓰기 뒤 무효화를 만들거나 바꿀 때 읽는다. 폼 저장 수명은 web-kit-form, 단건 상태는 web-kit-record로 보낸다.
+description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동기화·토큰 재발급·로그인/로그아웃·세션 유휴 마감과 만료 경고·연장·QueryClient·조회 재시도·쓰기 뒤 무효화를 만들거나 바꿀 때 읽는다. 로그인 전 코드·기한·재전송은 web-kit-auth, 폼 저장 수명은 web-kit-form, 단건 상태는 web-kit-record로 보낸다.
 ---
 
 # web-kit http · session · failure · query

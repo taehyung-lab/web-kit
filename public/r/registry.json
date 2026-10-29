@@ -415,6 +415,51 @@
       ]
     },
     {
+      "name": "auth",
+      "type": "registry:block",
+      "title": "web-kit 인증 코드",
+      "description": "로그인 전 인증 코드·기한·재전송 표현과 검사 연결",
+      "dependencies": [],
+      "registryDependencies": [],
+      "devDependencies": [
+        "vitest@4.1.11",
+        "@testing-library/react@16.3.2",
+        "@playwright/test@1.62.1"
+      ],
+      "files": [
+        {
+          "path": "packages/ui-registry/src/auth.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/auth.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/auth-six.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/auth-six.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/auth.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/auth.test.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/auth.page.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/auth.page.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/auth.spec.ts",
+          "type": "registry:file",
+          "target": "~/tests/e2e/web-kit/auth.spec.ts"
+        },
+        {
+          "path": "packages/ui-registry/checks/auth.html",
+          "type": "registry:file",
+          "target": "~/web-kit-checks/auth.html"
+        }
+      ]
+    },
+    {
       "name": "all",
       "type": "registry:block",
       "title": "web-kit 전체 표현",
@@ -431,7 +476,8 @@
         "@web-kit/record",
         "@web-kit/checkbox-tree",
         "@web-kit/filter-error",
-        "@web-kit/styles"
+        "@web-kit/styles",
+        "@web-kit/auth"
       ],
       "files": []
     }

@@ -1,5 +1,7 @@
 // 파일 책임: 세션 유휴 마감(로그인과 서버 연장만 마감을 바꿈 — 경고 구간 밖 활동은 서버 연장, 경고 구간 안은 연장 버튼만, 일반 응답·재발급은 늘리지 않음)·경고 구간·대표 탭·만료 종료를 판정한다.
 // 세대·저장·종료 순서는 session이 맡고, 경고 화면(팝업·모달·알림)은 프로젝트가 이 상태를 보고 그린다.
+import { createServerClock, type ServerClock } from './server-clock';
+export { createServerClock, type ServerClock } from './server-clock';
 import { RequestFailure } from './failure';
 import type { Credentials, Session, SessionChange } from './session';
 
@@ -159,6 +161,7 @@ export function createIdleTimer<C extends Credentials>({
   policy,
   extend: requestExtend,
   environment = {},
+  clock: suppliedClock,
 }: {
   readonly session: Session<C>;
   /** 마감·시계 보정을 탭 사이에 공유하는 저장 key와 대표 잠금 이름의 접두. */
@@ -166,18 +169,20 @@ export function createIdleTimer<C extends Credentials>({
   readonly policy: IdlePolicy;
   readonly extend: () => Promise<ServerTimeSample | null>;
   readonly environment?: IdleEnvironment;
+  /** 인증 단계와 같은 객체를 전달한다. 생략하면 기존 저장 key를 쓰는 시계를 만든다. */
+  readonly clock?: ServerClock;
 }): IdleTimer {
   const storage = environment.storage ?? (() => window.localStorage);
   const grantSlot = createSlot(storage, key);
-  const clockSlot = createSlot(storage, `${key}:clock`);
+  const clock = suppliedClock ?? createServerClock({ key: `${key}:clock`, storage });
   const locks =
     environment.locks !== undefined ? environment.locks : typeof navigator === 'undefined' ? null : (navigator.locks ?? null);
 
+  let updatingClock = false;
   let started = false;
   let unsubscribeSession: (() => void) | undefined;
   let detach: (() => void) | undefined;
   let grant: Grant | null = null;
-  let offset = 0;
   let seedOpenedAt: number | null = null;
   let lastAttemptAt = Number.NEGATIVE_INFINITY;
   let inFlight: Promise<ExtendResult> | undefined;
@@ -192,7 +197,7 @@ export function createIdleTimer<C extends Credentials>({
   const listeners = new Set<() => void>();
   const tickListeners = new Set<() => void>();
 
-  const now = () => Date.now() + offset;
+  const now = clock.now;
   const remaining = () => (state.phase === 'inactive' || state.deadline === null ? null : state.deadline - now());
 
   /** 상태를 바꾸고, 실제로 바뀌었을 때만 알린다. */
@@ -218,10 +223,10 @@ export function createIdleTimer<C extends Credentials>({
     return true;
   }
 
+  /** 서버 표본은 공유 시계 소유자에게 전달한다. */
   function applyOffset(value: number | undefined) {
-    if (value === undefined || !Number.isFinite(value)) return;
-    offset = value;
-    clockSlot.write(String(value));
+    updatingClock = true;
+    try { clock.observe(value); } finally { updatingClock = false; }
   }
 
   /** 남은 시간으로 단계를 정하고, 대표 탭이면 만료로 끝낸다. */
@@ -238,6 +243,7 @@ export function createIdleTimer<C extends Credentials>({
   }
 
   function tick() {
+    if (updatingClock) return;
     evaluate();
     for (const listener of [...tickListeners]) listener();
   }
@@ -265,11 +271,6 @@ export function createIdleTimer<C extends Credentials>({
     if (event.key === grantSlot.key || event.key === null) {
       const stored = parseGrant(grantSlot.read());
       if (stored !== null) adopt(stored, false);
-    }
-    if (event.key === clockSlot.key || event.key === null) {
-      const value = Number(clockSlot.read());
-      if (clockSlot.read() !== null && Number.isFinite(value)) offset = value;
-      evaluate();
     }
   }
 
@@ -301,8 +302,7 @@ export function createIdleTimer<C extends Credentials>({
   /** 세션이 있는 동안의 리스너·시계·대표 잠금을 붙인다. */
   function activate() {
     if (detach !== undefined) return;
-    const stored = Number(clockSlot.read());
-    if (clockSlot.read() !== null && Number.isFinite(stored)) offset = stored;
+    const unsubscribeClock = clock.subscribe(tick);
     update({ phase: 'active' });
     for (const name of ACTIVITY_EVENTS) window.addEventListener(name, onActivity, { passive: true });
     document.addEventListener('visibilitychange', onVisible);
@@ -316,6 +316,7 @@ export function createIdleTimer<C extends Credentials>({
       window.removeEventListener('pageshow', onVisible);
       window.removeEventListener('storage', onStorage);
       stopClock();
+      unsubscribeClock();
       releaseLeader();
     };
   }
@@ -398,8 +399,8 @@ export function createIdleTimer<C extends Credentials>({
       const sessionId = currentSessionId();
       if (sessionId === undefined) return;
       const stored = parseGrant(grantSlot.read());
-      const storedOffset = Number(clockSlot.read());
-      if (clockSlot.read() !== null && Number.isFinite(storedOffset)) offset = storedOffset;
+      const refreshClock = clock.subscribe(() => undefined);
+      refreshClock();
       if (stored === null || stored.sessionId !== sessionId || stored.deadline - now() <= 0) {
         session.expireIdle();
         return;

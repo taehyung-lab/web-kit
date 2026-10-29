@@ -54,6 +54,7 @@
 | `./permission` | 닫힘 기본 권한 판정·상태 전달 필요 | 목록·폼과 분리, Allowed는 배치 없는 조건부 전달 | Provider·useAllowed·Allowed 등 기존 연결 유지 | 패키지 유지 | `src/permission.tsx:1`, 0005 권한 행 |
 | `./session/browser` | 브라우저 저장·탭 연결 필요 | session 상태를 저장하는 어댑터 | 기존 경로 유지 | 패키지 유지 | `src/browser-session-store.ts:1` |
 | `./session/idle` | 유휴 시간 수명 필요 | 다른 기능이 암묵적으로 import하면 안 됨 | 기존 명시적 연결 유지 | 패키지 유지 | `src/session-idle.ts:1`, `tests/core-boundary.test.ts:98` |
+| `./auth` | 로그인 전 코드 기한·진행·늦은 응답 격리 | /session/idle의 시계 객체만 공유; 세션 수명과 독립 | 기존 입구 유지, 프로젝트 인증 단계만 새 hook과 registry로 이전 | 4.1 추가 | 0012, 사용자 합의 2026-10-29 |
 | `./styles.css` | 복사한 UI의 표현 자산 필요 | 패키지 로직에 스타일 책임 없음 | registry의 스타일 자산·프로젝트 토큰으로 이전 | registry로 이전 | `src/ui/styles.css:1`, `tests/styles.test.ts:18` |
 
 `/ui` 등의 기존 경로를 같은 이름의 headless 입구로 남기는 결정은 하지 않는다. 해당 경로는 제거하고 남는 공통 처리를 책임에 맞는 패키지 입구에 둔다. 새 포커스·진행 연결의 세부 모듈명은 구현 설계에서 정하되 목록↔폼 의존을 만들지 않는다.

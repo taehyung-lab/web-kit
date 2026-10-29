@@ -7,3 +7,9 @@ export declare function checkDialogBrowser(options: BrowserConformanceOptions): 
 export declare function checkProgressBrowser(options: BrowserConformanceOptions): void;
 /** 실제 Enter 제출과 선택 포털의 연결을 검사한다. */
 export declare function checkFormBrowser(options: BrowserConformanceOptions): void;
+export declare function checkAuthBrowser(options: {
+    url: string;
+    target: import('./target.mjs').ConformanceTarget;
+    enterCode: (page: import('@playwright/test').Page, code: string) => Promise<void>;
+    readCode: (page: import('@playwright/test').Page) => Promise<string>;
+}): void;

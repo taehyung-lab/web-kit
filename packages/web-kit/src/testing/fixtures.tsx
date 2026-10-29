@@ -93,3 +93,5 @@ export function createFormConformancePage({ Form, FormGuard, Choice }: { FormGua
   /** 검사 전용 Router 안에서 실제 보호 범위를 제공한다. */
   return function GuardedFormConformancePage() { return <RouterProvider router={router} />; };
 }
+
+export { createAuthConformancePage, type AuthConformanceFormProps } from './auth-fixture';

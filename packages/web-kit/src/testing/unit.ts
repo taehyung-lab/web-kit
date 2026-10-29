@@ -11,3 +11,4 @@ export { checkRecordUiConformance } from './unit/record-ui';
 export { checkStylesConformance } from './unit/styles';
 export { checkCheckboxTreeFocusConformance } from './unit/checkbox-tree-focus';
 export { checkDialogConformance, checkRetryConformance, checkInputsConformance, checkPendingConformance, checkFilterErrorConformance } from './unit/primitives';
+export { checkAuthConformance } from './unit/auth';

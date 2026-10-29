@@ -5,8 +5,10 @@ import * as form from '../src/form';
 import * as list from '../src/list';
 import * as dialog from '../src/confirmation';
 import * as choice from '../src/choice-binding';
-const entries = { core, form, list, dialog, choice };
+import * as auth from '../src/auth';
+const entries = { core, form, list, dialog, choice, auth };
 const expected = {
+  "auth": ["getAuthTiming", "isAuthCode", "remainingAuthSeconds", "useAuthChallenge"],
   "choice": ["useChoiceBinding"],
   "core": [
     "RequestFailure",
@@ -87,16 +89,17 @@ const expected = {
     "useDialogBinding"
   ]
 };
-it.each(['core', 'form', 'list', 'dialog', 'choice'] as const)('%s 공개 이름은 승인된 목록과 정확히 같다', (name) => {
+it.each(['core', 'form', 'list', 'dialog', 'choice', 'auth'] as const)('%s 공개 이름은 승인된 목록과 정확히 같다', (name) => {
   expect(Object.keys(entries[name]).sort()).toEqual(expected[name]);
 });
 
 /** 4.0 공개 입구에서 시각 UI 경로가 다시 늘어나지 않게 고정한다. */
-it('4.0 패키지 subpath는 승인된 20개 입구만 공개한다', () => {
+it('4.1 패키지 subpath는 승인된 21개 입구만 공개한다', () => {
   const manifest = Object.values((import.meta as unknown as { glob: (pattern: string, options: object) => Record<string, string> }).glob('../package.json', { query: '?raw', import: 'default', eager: true }))[0]!;
   expect(Object.keys(JSON.parse(manifest).exports).sort()).toEqual([
   ".",
   "./api",
+  "./auth",
   "./choice",
   "./dialog",
   "./failure",

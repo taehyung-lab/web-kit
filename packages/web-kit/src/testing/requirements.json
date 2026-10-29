@@ -273,7 +273,22 @@
       "record",
       "checkbox-tree",
       "filter-error",
-      "styles"
+      "styles",
+      "auth"
     ]
+  },
+  "auth": {
+    "ids": [
+      "auth-unit",
+      "B-auth"
+    ],
+    "connections": [
+      "auth.test.tsx",
+      "auth.spec.ts",
+      "auth.page.tsx",
+      "auth.html",
+      "auth-six.tsx"
+    ],
+    "dependencies": []
   }
 }

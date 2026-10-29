@@ -106,3 +106,33 @@ export function checkFormBrowser({ url, target }) {
         expect(await page.getByRole('dialog').evaluate((node) => node.contains(document.activeElement))).toBe(true);
     });
 }
+
+/** 입력 행동 어댑터로 한 칸과 여러 칸의 실제 Enter·기한·재전송을 검사한다. */
+export function checkAuthBrowser({ url, target, enterCode, readCode }) {
+    test(conformanceTitle('B-auth', target, '인증 입력 모양과 무관한 Enter·만료·재전송'), async ({ page }) => {
+        await page.clock.install({ time: new Date(100000) });
+        await page.goto(url);
+        await expect(page.getByRole('timer')).toHaveText('남은 시간 5');
+        await expect(page.getByRole('button', { name: '재전송', exact: true })).toBeDisabled();
+        await expect(page.getByLabel('resend-wait')).toHaveText('대기 3');
+        await enterCode(page, '123456');
+        await page.keyboard.press('Enter');
+        await page.keyboard.press('Enter');
+        await expect(page.getByLabel('요청 횟수')).toHaveText('1');
+        await page.getByRole('button', { name: '응답 성공' }).click();
+        await expect(page.getByLabel('적용 코드')).toHaveText('123456');
+        await page.clock.runFor(5000);
+        await expect(page.getByRole('timer')).toHaveText('남은 시간 0');
+        await expect(page.getByText('만료됨', { exact: true })).toBeVisible();
+        await enterCode(page, '654321');
+        expect(await readCode(page)).toBe('654321');
+        await page.keyboard.press('Enter');
+        await expect(page.getByLabel('요청 횟수')).toHaveText('1');
+        await expect(page.getByRole('button', { name: '확인', exact: true })).toBeDisabled();
+        await page.getByRole('button', { name: '재전송', exact: true }).click();
+        await page.getByRole('button', { name: '응답 성공' }).click();
+        await expect(page.getByRole('timer')).toHaveText('남은 시간 5');
+        await expect(page.getByRole('button', { name: '재전송', exact: true })).toBeDisabled();
+        await expect(page.getByLabel('resend-wait')).toHaveText('대기 3');
+    });
+}

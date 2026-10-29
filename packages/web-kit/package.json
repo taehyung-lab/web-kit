@@ -1,6 +1,6 @@
 {
   "name": "@boosterlab/web-kit",
-  "version": "4.0.0-rc.3",
+  "version": "4.1.0-rc.1",
   "private": true,
   "type": "module",
   "sideEffects": false,
@@ -24,7 +24,8 @@
     "./choice": "./src/choice-binding.ts",
     "./testing/unit": "./src/testing/unit.ts",
     "./testing/browser": "./src/testing/browser.mjs",
-    "./testing/fixtures": "./src/testing/fixtures.tsx"
+    "./testing/fixtures": "./src/testing/fixtures.tsx",
+    "./auth": "./src/auth.ts"
   },
   "files": [
     "src",

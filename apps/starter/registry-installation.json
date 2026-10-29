@@ -1,12 +1,12 @@
 {
-  "version": "4.0.0-rc.3",
-  "sourceRef": "v4.0.0-rc.3",
+  "version": "4.1.0-rc.1",
+  "sourceRef": "v4.1.0-rc.1",
   "shadcn": "4.19.1",
-  "sourceCommit": "d19dc4030473644c288f886d845cb488a97cc9de",
+  "sourceCommit": "5560ca64fb3a38885135cadc8dff856e5d5eee3b",
   "sourceWorkingTree": "Source fingerprints identify the installed candidate, including uncommitted changes.",
   "method": "pnpm exec shadcn add ./public/r/all.json --cwd apps/starter --yes --overwrite; local absolute namespace during installation",
   "componentsHash": "ec2541ca88c2275e7663bc8c21bb6abf7adb94d540fb08924c34f3c59a0f150d",
-  "installationComponentsHash": "b5bf441aebf0e1e5deb0f728f526547485bb72ee6756b7e71ff992d169eefe1e",
+  "installationComponentsHash": "3fc0c558c8b9e2ea6254635a8f999181bf92166e5ce057e8685f79ba0e9228a1",
   "items": [
     {
       "name": "inputs",
@@ -321,8 +321,50 @@
       ]
     },
     {
+      "name": "auth",
+      "artifactHash": "0b88182d60fc2f75d78c0fcdf2a8a151c275399fe5e585eaf1902c895639b544",
+      "files": [
+        {
+          "source": "packages/ui-registry/src/auth.tsx",
+          "installed": "apps/starter/src/shared/ui/web-kit/auth.tsx",
+          "sourceHash": "53358b0eb85f14886daadbbed6388dc6002c3cecb54aef7a7b8e17f34907c2d0",
+          "installedHash": "53358b0eb85f14886daadbbed6388dc6002c3cecb54aef7a7b8e17f34907c2d0"
+        },
+        {
+          "source": "packages/ui-registry/checks/auth-six.tsx",
+          "installed": "apps/starter/src/shared/ui/web-kit/checks/auth-six.tsx",
+          "sourceHash": "98af4152f600b56e6b9c09dd632ae5d65d7bca290704e6d38b284a1799bacc69",
+          "installedHash": "98af4152f600b56e6b9c09dd632ae5d65d7bca290704e6d38b284a1799bacc69"
+        },
+        {
+          "source": "packages/ui-registry/checks/auth.test.tsx",
+          "installed": "apps/starter/src/shared/ui/web-kit/checks/auth.test.tsx",
+          "sourceHash": "70524de1b9f6c0a5ad4daa27fa1dc5c163cf77220faf9d0256695beb0b7462fe",
+          "installedHash": "70524de1b9f6c0a5ad4daa27fa1dc5c163cf77220faf9d0256695beb0b7462fe"
+        },
+        {
+          "source": "packages/ui-registry/checks/auth.page.tsx",
+          "installed": "apps/starter/src/shared/ui/web-kit/checks/auth.page.tsx",
+          "sourceHash": "29195aec64db68949efc87f273bf4142a6fb96bfe94b1662ef9dfdb55d4cfb13",
+          "installedHash": "29195aec64db68949efc87f273bf4142a6fb96bfe94b1662ef9dfdb55d4cfb13"
+        },
+        {
+          "source": "packages/ui-registry/checks/auth.spec.ts",
+          "installed": "apps/starter/tests/e2e/web-kit/auth.spec.ts",
+          "sourceHash": "52a51abe5bf20dd5e9a4e1d453e08164ae218c03931ceea60909bc16c79fc098",
+          "installedHash": "52a51abe5bf20dd5e9a4e1d453e08164ae218c03931ceea60909bc16c79fc098"
+        },
+        {
+          "source": "packages/ui-registry/checks/auth.html",
+          "installed": "apps/starter/web-kit-checks/auth.html",
+          "sourceHash": "a51c65d3296ad1893a99a34bcc07f9dbebefc7e17d36406430044dabc3d3282c",
+          "installedHash": "a51c65d3296ad1893a99a34bcc07f9dbebefc7e17d36406430044dabc3d3282c"
+        }
+      ]
+    },
+    {
       "name": "all",
-      "artifactHash": "8fab69c4efb321527f45727a3c125d3afe8fd2a2c8bc7496d2858738b2386af5",
+      "artifactHash": "d56bae78a93f6a9ba727f20b7e7276864cb723dd47912b45fa65b93a67c9d2f1",
       "files": []
     }
   ]
