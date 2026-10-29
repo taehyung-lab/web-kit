@@ -3,8 +3,9 @@
 // 늦게 온 서버 오류를 제출한 그 줄의 지금 위치에 붙인다. 줄 정체성을 값 안의 key로 추측하지 않는다.
 // TanStack Form의 removeValue·moveValue는 중첩 배열에서 경로의 첫 번호(바깥 줄)를 바꿔 다른 줄의 오류를 옮기고, 줄 key가 고정된 화면에서는
 // 다시 마운트되는 칸이 옮긴 오류를 지우므로 쓰지 않는다. 줄 작업은 이벤트 처리 안에서 부른다(값 반영을 동기로 끝낸다).
-import type { AnyFormApi } from '@tanstack/react-form';
+import { getBy, setBy, type AnyFormApi } from '@tanstack/react-form';
 import { flushSync } from 'react-dom';
+import { requestFormChange, writeFormValues } from './references';
 
 /** 줄 작업 하나: 배열 경로와 이전 번호 → 새 번호(지워졌으면 undefined). */
 interface RowOp {
@@ -57,6 +58,18 @@ type FieldMeta = NonNullable<ReturnType<AnyFormApi['getFieldMeta']>>;
 
 /** 값을 바꾸고, 그 배열 아래 칸 meta(오류 포함)를 줄과 함께 옮기고, 기록한 뒤 배열 칸을 다시 검증한다. */
 function apply(form: AnyFormApi, path: string, next: unknown[], map: (index: number) => number | undefined): Promise<void> {
+  const candidate = setBy(form.state.values, path, next);
+  return requestFormChange(form, candidate, (accepted) => applyRows(form, path, getBy(accepted, path) as unknown[], map, accepted));
+}
+
+/** 참조 확인을 마친 값과 줄 위치 기록을 같은 변경에 적용한다. */
+function applyRows(
+  form: AnyFormApi,
+  path: string,
+  next: unknown[],
+  map: (index: number) => number | undefined,
+  accepted: unknown,
+): Promise<void> {
   const op: RowOp = { path, map };
   const head = `${path}[`;
   const before = new Map<string, FieldMeta>();
@@ -67,7 +80,7 @@ function apply(form: AnyFormApi, path: string, next: unknown[], map: (index: num
   }
   // 값을 먼저 화면에 반영한다. 줄 key가 고정된 화면은 칸 부품이 새 이름으로 다시 마운트되며, 그때 TanStack이 이전 이름의 meta를
   // 처음 상태로 되돌린다. 그 정리가 끝난 뒤에 옮긴 meta를 써야 오류가 사라지지 않는다.
-  flushSync(() => form.setFieldValue(path, next as never, { dontValidate: true }));
+  flushSync(() => writeFormValues(form, accepted));
   const moved = new Map<string, FieldMeta>();
   for (const [field, meta] of before) {
     const target = shift(field, op);
@@ -78,7 +91,15 @@ function apply(form: AnyFormApi, path: string, next: unknown[], map: (index: num
     const index = Number(field.slice(head.length, field.indexOf(']', head.length)));
     // 줄이 사라진 칸은 지우고, 새로 생긴 줄 자리의 칸은 오류 없는 처음 상태로 둔다.
     if (index >= next.length) form.deleteField(field);
-    else form.setFieldMeta(field, (meta) => ({ ...meta, errorMap: {}, errorSourceMap: {}, isTouched: false, isBlurred: false, isDirty: false }));
+    else
+      form.setFieldMeta(field, (meta) => ({
+        ...meta,
+        errorMap: {},
+        errorSourceMap: {},
+        isTouched: false,
+        isBlurred: false,
+        isDirty: false,
+      }));
   }
   for (const [field, meta] of moved) form.setFieldMeta(field, meta);
   logOf(form).push(op);

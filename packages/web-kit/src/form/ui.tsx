@@ -1,9 +1,11 @@
 // 파일 책임: 폼 기본 UI의 묶음 부품(Form.*)과 앱에 한 번 두는 이탈 보호(FormGuard).
 // 각 부품은 같은 편집 상태(useSaveForm 결과)를 context로 읽어서, 칸·버튼·오류 줄을 어디에 두어도 저장·검증·focus 연결을 다시 쓰지 않는다.
 // 저장 수명은 useSaveForm이, 이탈 판정은 createFormNavigation이 소유하고 여기는 표시와 사용자 입력 연결만 맡는다.
+import { flushSync } from 'react-dom';
+import { requestFormChange, writeFormValues } from './references';
 import { Choice as ChoiceInput, type ChoiceProps } from '../ui/choice';
 import { useBlocker, useRouter, type NavigateOptions } from '@tanstack/react-router';
-import { useSelector, type AnyFormApi, type DeepKeys, type DeepValue } from '@tanstack/react-form';
+import { getBy, setBy, useSelector, type AnyFormApi, type DeepKeys, type DeepValue } from '@tanstack/react-form';
 import {
   createContext,
   useContext,
@@ -52,7 +54,11 @@ export function FormGuard({
   messages,
 }: {
   readonly children: ReactNode;
-  readonly messages?: { readonly navigate?: Partial<FormGuardMessages['navigate']>; readonly cancel?: Partial<FormGuardMessages['cancel']>; readonly navigationFailed?: string };
+  readonly messages?: {
+    readonly navigate?: Partial<FormGuardMessages['navigate']>;
+    readonly cancel?: Partial<FormGuardMessages['cancel']>;
+    readonly navigationFailed?: string;
+  };
 }) {
   const [owner] = useState(createFormNavigation);
   useSyncExternalStore(owner.subscribe, owner.getSnapshot, owner.getSnapshot);
@@ -125,7 +131,10 @@ const defaultFormMessages = {
   count: (current: number, max: number) => `${current}/${max}`,
   sectionErrors: (count: number) => `오류 ${count}개`,
 };
-export type FormMessages = typeof defaultFormMessages;
+export type FormMessages = typeof defaultFormMessages & {
+  readonly referenceTitle?: (count: number) => string;
+  readonly referenceConfirm?: string;
+};
 
 /** 실패가 보이는 자리. save는 저장 실패 한 줄, completion은 저장 뒤 완료 처리 실패, options는 선택지 조회 실패다. */
 export type FormFailurePlace = 'save' | 'completion' | 'options';
@@ -234,6 +243,22 @@ function FormRoot({
       >
         {children}
       </form>
+      <ConfirmDialog
+        open={editor.referenceChange !== undefined}
+        title={
+          value.copy.referenceTitle?.(editor.referenceChange?.count ?? 0) ??
+          `${editor.referenceChange?.count ?? 0}곳에서 쓰고 있습니다. 함께 정리할까요?`
+        }
+        confirmLabel={value.copy.referenceConfirm ?? '함께 정리'}
+        cancelLabel={value.copy.cancel}
+        onConfirm={() => editor.referenceChange?.confirm()}
+        onCancel={() => editor.referenceChange?.cancel()}
+      />
+      {editor.referenceFailure !== undefined && (
+        <p role="alert" className="wk-error">
+          {value.formatError([editor.referenceFailure]) ?? editor.referenceFailure}
+        </p>
+      )}
     </FormContext.Provider>
   );
 }
@@ -251,7 +276,7 @@ export interface FormFieldProps {
 export interface FormControl<V = unknown> extends FieldControlProps {
   readonly name: string;
   readonly value: V;
-  readonly change: (value: V) => void;
+  readonly change: (value: V, onApplied?: () => void) => void;
   readonly blur: () => void;
   readonly disabled: boolean;
   readonly 'aria-required': boolean;
@@ -292,7 +317,15 @@ function Field<V = unknown>({
                 ...control,
                 name,
                 value: field.state.value as V,
-                change: (value) => field.handleChange(value as never),
+                change: (value, onApplied) => {
+                  void requestFormChange(editor.form, setBy(editor.form.state.values, name, value), (accepted) => {
+                    flushSync(() => {
+                      writeFormValues(editor.form, accepted);
+                      field.handleChange(getBy(accepted, name) as never);
+                      onApplied?.();
+                    });
+                  });
+                },
                 blur: field.handleBlur,
                 disabled,
                 'aria-required': isRequired,
@@ -308,9 +341,11 @@ function Field<V = unknown>({
 
 /** 폼 검증·필수 표시·오류 초점을 같은 선택 입력에 연결한다. */
 function Choice({ name, description, ...props }: FormFieldProps & Omit<ChoiceProps, 'value' | 'onValueChange'>) {
-  return <Field<ChoiceProps['value']> name={name} label={props.label} description={description} disabled={props.disabled}>
-    {({ value, change, blur, ...control }) => <ChoiceInput {...props} {...control} value={value} onValueChange={change} onBlur={blur} />}
-  </Field>;
+  return (
+    <Field<ChoiceProps['value']> name={name} label={props.label} description={description} disabled={props.disabled}>
+      {({ value, change, blur, ...control }) => <ChoiceInput {...props} {...control} value={value} onValueChange={change} onBlur={blur} />}
+    </Field>
+  );
 }
 
 /**
@@ -493,8 +528,8 @@ function Select({
             value={selected}
             onBlur={blur}
             onChange={(event) => {
-              change(event.target.value);
-              onChange?.(event.target.value);
+              const next = event.target.value;
+              change(next, () => onChange?.(next));
             }}
           >
             {selected === '' ? <option value="">{placeholder ?? copy.choose}</option> : null}
@@ -533,8 +568,14 @@ function Checkbox({ onChange, ...field }: FormFieldProps & { readonly onChange?:
                 checked={state.state.value === true}
                 onBlur={state.handleBlur}
                 onChange={(event) => {
-                  state.handleChange(event.target.checked as never);
-                  onChange?.(event.target.checked);
+                  const checked = event.target.checked;
+                  void requestFormChange(editor.form, setBy(editor.form.state.values, field.name, checked), (accepted) => {
+                    flushSync(() => {
+                      writeFormValues(editor.form, accepted);
+                      state.handleChange(getBy(accepted, field.name) as never);
+                      onChange?.(checked);
+                    });
+                  });
                 }}
               />
               {field.label}
@@ -716,7 +757,7 @@ export function FormSection({
  * 칸 오류가 모두 칸에 붙은 검증 실패는 칸이 알리므로 여기에 그리지 않는다. 위치는 놓는 곳이 정한다.
  */
 function Failure({ className }: { readonly className?: string }) {
-  const { editor, copy, renderFailure } = useFormContext();
+  const { editor, copy, renderFailure, formatError } = useFormContext();
   const save = editor.formFailure === undefined ? undefined : renderFailure(editor.formFailure, 'save');
   const completion = editor.completionFailure === undefined ? undefined : renderFailure(editor.completionFailure, 'completion');
   const showCompletion = editor.completionFailure !== undefined && completion !== null && !editor.acknowledge;
@@ -724,7 +765,11 @@ function Failure({ className }: { readonly className?: string }) {
     <>
       {editor.formFailure !== undefined && save !== null ? (
         <p role="alert" className={join('wk-form-failure', className)}>
-          {save ?? (editor.formFailure instanceof FormRejection ? editor.formFailure.root : undefined) ?? copy.saveFailed}
+          {save ??
+            (editor.formFailure instanceof FormRejection && editor.formFailure.root !== undefined
+              ? formatError([editor.formFailure.root]) ?? editor.formFailure.root
+              : undefined) ??
+            copy.saveFailed}
         </p>
       ) : null}
       {showCompletion ? (
@@ -745,15 +790,38 @@ function Failure({ className }: { readonly className?: string }) {
  * 저장 요청·완료 처리가 진행 중이면 버튼 바로 뒤에 진행 표시(문구는 화면 낭독기용 `messages.saving`)를 둔다.
  * 등록·수정 폼(`useSaveForm({ progress })`)은 화면 전체 진행 덮개가 대신하므로 그리지 않는다(사용자 결정 2026-10-28, 0008).
  */
-function Submit({ children, className }: { readonly children?: ReactNode; readonly className?: string }) {
-  const { editor, copy } = useFormContext();
-  const locked = editor.stage.kind !== 'idle';
+function Submit({
+  children,
+  className,
+  mode = 'primary',
+}: {
+  readonly children?: ReactNode;
+  readonly className?: string;
+  readonly mode?: 'primary' | 'secondary';
+}) {
+  const { editor, copy, submitOrigin } = useFormContext();
+  const locked = editor.stage.kind !== 'idle' || (mode === 'secondary' && editor.submitSecondary === undefined);
   return (
     <>
-      <button type="submit" className={join('wk-button wk-button-primary', className)} aria-disabled={locked || undefined}>
+      <button
+        type={mode === 'primary' ? 'submit' : 'button'}
+        className={join('wk-button wk-button-primary', className)}
+        aria-disabled={locked || undefined}
+        onClick={
+          mode === 'secondary'
+            ? (event) => {
+                if (locked) return;
+                submitOrigin.current = event.currentTarget;
+                void editor.submitSecondary?.();
+              }
+            : undefined
+        }
+      >
         {children ?? copy.submit}
       </button>
-      {editor.progress === undefined && inProgress(editor) ? <Pending label={copy.saving} /> : null}
+      {editor.progress === undefined && (editor.saveMode ?? 'primary') === mode && inProgress(editor) ? (
+        <Pending label={copy.saving} />
+      ) : null}
     </>
   );
 }
@@ -840,7 +908,15 @@ function Confirm({
  * 저장 완료 확인창. useSaveForm({ acknowledge: true })일 때 저장 뒤 열리고, 확인하면 완료 처리(onSaved, 보통 이동)를 한 번 실행한다.
  * 완료 처리가 실패하면 창 안에 알리고 확인이 완료 처리만 다시 한다(저장 요청은 다시 나가지 않는다).
  */
-function Saved({ title, confirmLabel, children }: { readonly title?: ReactNode; readonly confirmLabel?: string; readonly children?: ReactNode }) {
+function Saved({
+  title,
+  confirmLabel,
+  children,
+}: {
+  readonly title?: ReactNode;
+  readonly confirmLabel?: string;
+  readonly children?: ReactNode;
+}) {
   const { editor, copy, renderFailure } = useFormContext();
   const attempts = useRef({ failure: undefined as unknown, count: 0 });
   if (editor.completionFailure !== undefined && editor.completionFailure !== attempts.current.failure)
@@ -955,7 +1031,13 @@ export type TypedForm<T> = typeof FormRoot & {
   ) => ReactNode;
   readonly Text: (props: Named<PropsOf<typeof Text>, KeysOf<T, string>>) => ReactNode;
   readonly TextArea: (props: Named<PropsOf<typeof TextArea>, KeysOf<T, string>>) => ReactNode;
-  readonly Choice: (props: Omit<PropsOf<typeof Choice>, 'name' | 'multiple'> & ({ readonly name: KeysOf<T, string | undefined>; readonly multiple?: false } | { readonly name: KeysOf<T, readonly string[]>; readonly multiple: true })) => ReactNode;
+  readonly Choice: (
+    props: Omit<PropsOf<typeof Choice>, 'name' | 'multiple'> &
+      (
+        | { readonly name: KeysOf<T, string | undefined>; readonly multiple?: false }
+        | { readonly name: KeysOf<T, readonly string[]>; readonly multiple: true }
+      ),
+  ) => ReactNode;
   readonly Select: (props: Named<PropsOf<typeof Select>, KeysOf<T, string>>) => ReactNode;
   readonly Checkbox: (props: Named<PropsOf<typeof Checkbox>, KeysOf<T, boolean>>) => ReactNode;
   readonly File: (props: Named<PropsOf<typeof FileField>, KeysOf<T, FormFileValue>>) => ReactNode;

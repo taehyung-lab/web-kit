@@ -1,4 +1,5 @@
 // 파일 책임: openapi/sample.json 계약을 흉내 내는 msw handler. Spring 봉투, 401 → 재발급, 필드 오류, 없음, HTTP 200 업무 거절을 낸다.
+import { draftSchema, publishSchema } from '@/features/form-workflows/model/form';
 import type { Product, ProductUpsertRequest } from '@/api/generated/models';
 import { delay, http, HttpResponse, type DefaultBodyType } from 'msw';
 import { mockDb, type MockTerms } from './db';
@@ -41,6 +42,19 @@ function duplicateCode(body: ProductUpsertRequest, selfId?: string) {
 let uploadedFiles = 0;
 
 export const handlers = [
+  // 작성 예제 전용 계약: 임시 저장과 게시의 검증을 구분하고 끊긴 참조는 둘 다 거절한다.
+  http.post(`${API}/form-workflows`, async ({ request }) => {
+    const denied = unauthorized(request);
+    if (denied) return denied;
+    await latency();
+    const body = (await request.json()) as { mode?: string; values?: unknown };
+    if (body.mode !== 'draft' && body.mode !== 'publish') return envelope(400, 4000, 'Invalid mode', null);
+    const parsed = (body.mode === 'draft' ? draftSchema : publishSchema).safeParse(body.values);
+    if (!parsed.success) return envelope(400, 4000, 'Invalid values', null);
+    if (parsed.data.selected !== '' && !parsed.data.items.some((item) => item.id === parsed.data.selected))
+      return envelope(400, 4000, 'Invalid reference', null);
+    return ok({ saved: parsed.data });
+  }),
   // 공연 예시: 파일 업로드(multipart) → 파일 id.
   http.post(`${API}/files`, async ({ request }) => {
     const denied = unauthorized(request);
@@ -128,7 +142,9 @@ export const handlers = [
     const page = Number(query.get('page') ?? 0);
     const size = Number(query.get('size') ?? 20);
     const rows = mockDb.products
-      .filter((product) => keyword === undefined || product.name.toLowerCase().includes(keyword) || product.code.toLowerCase().includes(keyword))
+      .filter(
+        (product) => keyword === undefined || product.name.toLowerCase().includes(keyword) || product.code.toLowerCase().includes(keyword),
+      )
       .filter((product) => statuses.length === 0 || statuses.includes(product.status))
       .filter((product) => categoryId === null || product.categoryId === categoryId)
       .filter((product) => from === null || product.createdAt.slice(0, 10) >= from)
@@ -139,7 +155,9 @@ export const handlers = [
         const order = left < right ? -1 : left > right ? 1 : 0;
         return direction === 'asc' ? order : -order;
       });
-    const content = rows.slice(page * size, page * size + size).map(({ stock: _stock, description: _description, options: _options, updatedAt: _updatedAt, ...summary }) => summary);
+    const content = rows
+      .slice(page * size, page * size + size)
+      .map(({ stock: _stock, description: _description, options: _options, updatedAt: _updatedAt, ...summary }) => summary);
     return ok({ content, totalElements: rows.length });
   }),
 
@@ -157,7 +175,9 @@ export const handlers = [
     const [sortKey = 'joinedAt', direction = 'desc'] = (query.get('sort') ?? '').split(',');
     const page = Number(query.get('page') ?? 0);
     const size = Number(query.get('size') ?? 100);
-    const rows = MEMBERS.filter((member) => keywords.every(([field, value]) => String(member[field]).toLowerCase().includes(value.toLowerCase())))
+    const rows = MEMBERS.filter((member) =>
+      keywords.every(([field, value]) => String(member[field]).toLowerCase().includes(value.toLowerCase())),
+    )
       .filter((member) => methods.length === 0 || methods.includes(member.signupMethod))
       .filter((member) => statuses.length === 0 || statuses.includes(member.accountStatus))
       .filter((member) => from === null || member[periodType].slice(0, 10) >= from)
@@ -179,7 +199,13 @@ export const handlers = [
     const duplicate = duplicateCode(body);
     if (duplicate) return duplicate;
     const now = new Date().toISOString();
-    const created: Product = { ...body, description: body.description ?? null, productId: `p-${Date.now()}`, createdAt: now, updatedAt: now };
+    const created: Product = {
+      ...body,
+      description: body.description ?? null,
+      productId: `p-${Date.now()}`,
+      createdAt: now,
+      updatedAt: now,
+    };
     mockDb.products = [created, ...mockDb.products];
     return ok(created);
   }),
@@ -190,7 +216,9 @@ export const handlers = [
     if (denied) return denied;
     const { productIds } = (await request.json()) as { productIds: string[] };
     if (productIds.length > BULK_LIMIT) return envelope(200, 3001, 'Too many items at once', null);
-    mockDb.products = mockDb.products.map((product) => (productIds.includes(product.productId) ? { ...product, status: 'INACTIVE' } : product));
+    mockDb.products = mockDb.products.map((product) =>
+      productIds.includes(product.productId) ? { ...product, status: 'INACTIVE' } : product,
+    );
     return ok({ deactivatedCount: productIds.length });
   }),
 

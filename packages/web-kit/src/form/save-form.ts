@@ -17,8 +17,27 @@ import { isRequestFailure, type FieldError } from '../failure';
 import { useBlockingProgress } from '../progress';
 import { followRows, rowMark } from './rows';
 import { revealFormSections } from './sections';
+import { useFormReferences, referenceIssues, type FormReference, type ReferenceChange } from './references';
 
-export interface SaveFormOptions<TInput, TOutput, TResult = { readonly saved?: TInput } | void> {
+/** 같은 폼에서 다른 검증과 요청으로 저장하는 두 번째 동작. */
+export interface SecondarySave<TInput, TOutput, TResult> {
+  readonly schema: StandardSchemaV1<TInput, TOutput>;
+  readonly save: (values: TOutput, submitted: TInput, step: SaveStep) => Promise<TResult>;
+  readonly confirm?: boolean;
+  readonly acknowledge?: boolean;
+  readonly onSaved?: (result: TResult) => unknown;
+}
+
+export interface SaveFormOptions<
+  TInput,
+  TOutput,
+  TResult = { readonly saved?: TInput } | void,
+  TSecondaryOutput = TInput,
+  TSecondaryResult = TResult,
+> {
+  readonly references?: readonly FormReference<TInput>[];
+  /** 임시저장처럼 검증과 요청이 다른 동작. 완료 동작은 기본 저장에서 상속하지 않는다. */
+  readonly secondary?: SecondarySave<TInput, TSecondaryOutput, TSecondaryResult>;
   /** 입력 → 저장 값 동기 검증. zod 4 등 Standard Schema 구현이면 되고, 비동기 검증(async refine 등)은 받지 않는다. */
   readonly schema: StandardSchemaV1<TInput, TOutput>;
   /** 편집 대상. 등록이면 기본값. id가 바뀌면 새 폼, 같은 id의 새 values는 원본 재도착이다. */
@@ -148,10 +167,17 @@ export function formFieldControlId(formId: string, field: string): string {
  * 성공하면 저장 결과가 기준선이 되고, 저장 중 입력이 바뀌지 않았을 때만 입력에도 반영한다.
  * 늦은 결과는 고정한 레코드·폼 수명이 같을 때만 반영한다.
  */
-export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput } | void>(
-  options: SaveFormOptions<TInput, TOutput, TResult>,
-): SaveFormEditor<TInput, TResult> {
+export function useSaveForm<
+  TInput,
+  TOutput,
+  TResult = { readonly saved?: TInput } | void,
+  TSecondaryOutput = TInput,
+  TSecondaryResult = TResult,
+>(
+  options: SaveFormOptions<TInput, TOutput, TResult, TSecondaryOutput, TSecondaryResult>,
+): SaveFormEditor<TInput, TResult | TSecondaryResult> {
   const latest = useRef(options);
+  const primaryAction = useRef(options);
   latest.current = options;
   const { source } = options;
   const [defaults, setDefaults] = useState(source.values);
@@ -177,12 +203,12 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
   const mounted = useRef(false);
   const identity = useRef(source.id);
   const decided = useRef(source.values);
-  const pendingOutput = useRef<TOutput | undefined>(undefined);
-  /** 확인 대기 중인 제출 값을 고정한 순간의 줄 작업 기록 위치. */
-  const pendingMark = useRef(0);
+  const pendingSave = useRef<((token: object) => Promise<void>) | undefined>(undefined);
+  const completion = useRef<{ acknowledge?: boolean }>({});
+  const [saveMode, setSaveMode] = useState<'primary' | 'secondary'>('primary');
   const focusTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   /** 저장이 성공해 완료 처리를 기다리는 결과. 완료 처리를 다시 시도할 때 같은 결과를 쓴다. */
-  const savedResult = useRef<{ readonly result: TResult; readonly identity: unknown } | undefined>(undefined);
+  const savedResult = useRef<{ readonly complete: () => unknown; readonly identity: unknown } | undefined>(undefined);
   /** 저장 도중 사용자에게 묻고 있는 물음 수. 0보다 크면 진행 덮개를 내린다. */
   const [asking, setAsking] = useState(0);
 
@@ -196,15 +222,17 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
       // TanStack Form은 값을 바꿀 때마다 새 객체를 만든다. 제출 순간의 참조가 곧 고정된 S다(File 등은 그대로 유지).
       const submitted = value;
       const mark = rowMark(form);
-      const result = await latest.current.schema['~standard'].validate(submitted);
+      const action = primaryAction.current;
+      const result = await action.schema['~standard'].validate(submitted);
       if (!isCurrent(meta) || result.issues !== undefined) return;
-      if (latest.current.confirm === true) {
-        pendingOutput.current = result.value;
-        pendingMark.current = mark;
+      if (rejectReferences(submitted, mark)) return;
+      const run = (step: SaveStep) => action.save(result.value, submitted, step);
+      if (action.confirm === true) {
+        pendingSave.current = (token) => execute(token, submitted, run, mark, action.onSaved);
         setStage({ kind: 'confirming', values: submitted });
         return;
       }
-      await execute(meta, submitted, result.value, mark);
+      await execute(meta, submitted, run, mark, action.onSaved);
     },
     onSubmitInvalid: ({ formApi, meta }) => {
       if (meta === undefined || !isCurrent(meta)) return;
@@ -214,6 +242,12 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
       focusFirst(invalid);
     },
   });
+  const references = useFormReferences<TInput>(
+    form,
+    source.id,
+    options.references ?? [],
+    () => submission.current === undefined && stageRef.current.kind === 'idle',
+  );
   const values = useSelector(form.store, (state) => state.values);
   /** 필수 판정 캐시. 값이 바뀌면 새로 판정한다. */
   const requiredCache = useRef<{ values: unknown; fields: Map<string, boolean> }>({ values: undefined, fields: new Map() });
@@ -324,6 +358,17 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
     return { attached, unattached, missed };
   }
 
+  /** 직접 값 변경도 두 저장 전에 같은 참조 무결성 검사로 거절한다. */
+  function rejectReferences(submitted: TInput, mark: number): boolean {
+    const issues = referenceIssues(submitted, latest.current.references ?? []);
+    if (issues.length === 0) return false;
+    const error = new FormRejection(issues);
+    const { attached, unattached, missed } = attachFieldErrors(error, submitted, mark);
+    setRejection({ failure: error, unattached, missed });
+    focusFirst(attached);
+    return true;
+  }
+
   /** 물음이 끝날 때까지 덮개를 내린다. 폼이 내려간 뒤 끝난 물음은 상태를 건드리지 않는다. */
   async function waitForUser<T>(question: Promise<T>): Promise<T> {
     setAsking((count) => count + 1);
@@ -335,13 +380,19 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
   }
 
   /** 저장 한 번. 이 제출이 아직 현재 제출일 때만 결과를 반영한다. */
-  async function execute(token: object, submitted: TInput, output: TOutput, mark: number) {
+  async function execute<TActionResult>(
+    token: object,
+    submitted: TInput,
+    run: (step: SaveStep) => Promise<TActionResult>,
+    mark: number,
+    onSaved?: (result: TActionResult) => unknown,
+  ) {
     const current = () => isCurrent(token);
     if (!current()) return;
     setStage({ kind: 'saving', values: submitted });
-    let result: TResult;
+    let result: TActionResult;
     try {
-      result = await latest.current.save(output, submitted, { waitForUser });
+      result = await run({ waitForUser });
     } catch (error: unknown) {
       if (!current()) return;
       setStage({ kind: 'idle' });
@@ -356,13 +407,13 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
     const declared =
       typeof result === 'object' && result !== null && 'saved' in result ? (result as { readonly saved?: TInput }).saved : undefined;
     const saved = declared ?? submitted;
-    savedResult.current = { result, identity: identity.current };
+    savedResult.current = { complete: () => onSaved?.(result), identity: identity.current };
     flushSync(() => {
       if (evaluate(form.state.values, submitted)) replace(saved);
       else setBaseline(saved);
       setStage({ kind: 'saved', completing: false });
     });
-    if (latest.current.acknowledge !== true) await complete();
+    if (completion.current.acknowledge !== true) await complete();
   }
 
   /**
@@ -377,7 +428,7 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
     setStage({ kind: 'saved', completing: true });
     setCompletionFailure(undefined);
     try {
-      await latest.current.onSaved?.(pending.result);
+      await pending.complete();
     } catch (error: unknown) {
       if (!stillHere()) return;
       setStage({ kind: 'saved', completing: false });
@@ -391,9 +442,13 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
 
   /** 검증 → 확인 대기 또는 저장. 진행 중·확인 대기 중에는 다시 들어가지 않는다. */
   async function submit() {
-    if (submission.current !== undefined || stageRef.current.kind !== 'idle') return;
+    if (references.isPending() || submission.current !== undefined || stageRef.current.kind !== 'idle') return;
     const token = {};
     submission.current = token;
+    pendingSave.current = undefined;
+    completion.current = { acknowledge: latest.current.acknowledge };
+    primaryAction.current = latest.current;
+    setSaveMode('primary');
     cancelFocus();
     clearServerErrors();
     setRejection(undefined);
@@ -413,16 +468,59 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
     }
   }
 
+  /** 두 번째 검증만 실행하고 같은 잠금·저장·기준선 갱신 경로로 보낸다. */
+  async function submitSecondary() {
+    const action = latest.current.secondary;
+    if (action === undefined || references.isPending() || submission.current !== undefined || stageRef.current.kind !== 'idle') return;
+    const token = {};
+    submission.current = token;
+    setSaveMode('secondary');
+    completion.current = { acknowledge: action.acknowledge };
+    cancelFocus();
+    clearServerErrors();
+    setRejection(undefined);
+    setCompletionFailure(undefined);
+    const submitted = form.state.values;
+    const mark = rowMark(form);
+    try {
+      const result = await action.schema['~standard'].validate(submitted);
+      if (!isCurrent(token)) return;
+      if (result.issues !== undefined) {
+        const fields = result.issues.filter((issue) => (issue.path?.length ?? 0) > 0);
+        const root = result.issues.filter((issue) => (issue.path?.length ?? 0) === 0).map((issue) => issue.message);
+        const error = new FormRejection(
+          fields.map((issue) => ({ field: issuePath(issue.path), message: issue.message })),
+          root[0],
+        );
+        const { attached, unattached, missed } = attachFieldErrors(error, submitted, mark);
+        setRejection({ failure: error, unattached, missed });
+        focusFirst(attached);
+        return;
+      }
+      if (rejectReferences(submitted, mark)) return;
+      // 두 번째 schema에서 얻은 값과 저장 함수를 확인창을 여는 시점에 고정한다.
+      const run = (step: SaveStep) => action.save(result.value, submitted, step);
+      if (action.confirm === true) {
+        pendingSave.current = (token) => execute(token, submitted, run, mark, action.onSaved);
+        setStage({ kind: 'confirming', values: submitted });
+      } else {
+        await execute(token, submitted, run, mark, action.onSaved);
+      }
+    } finally {
+      release(token);
+    }
+  }
+
   /** 확인창에 보여 준 S로 저장한다. */
   async function confirm() {
     const requested = stageRef.current;
-    const output = pendingOutput.current;
-    if (submission.current !== undefined || requested.kind !== 'confirming' || output === undefined) return;
+    const run = pendingSave.current;
+    if (submission.current !== undefined || requested.kind !== 'confirming' || run === undefined) return;
     const token = {};
     submission.current = token;
-    pendingOutput.current = undefined;
+    pendingSave.current = undefined;
     try {
-      await execute(token, requested.values, output, pendingMark.current);
+      await run(token);
     } finally {
       release(token);
     }
@@ -436,7 +534,7 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
   /** 실행 전 확인만 취소한다. */
   function cancel() {
     if (submission.current !== undefined || stageRef.current.kind !== 'confirming') return;
-    pendingOutput.current = undefined;
+    pendingSave.current = undefined;
     setStage({ kind: 'idle' });
   }
 
@@ -446,7 +544,7 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
       identity.current = source.id;
       decided.current = source.values;
       submission.current = undefined;
-      pendingOutput.current = undefined;
+      pendingSave.current = undefined;
       savedResult.current = undefined;
       cancelFocus();
       setStage({ kind: 'idle' });
@@ -476,7 +574,7 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
 
   // 등록·수정 폼의 저장(완료 창이 없으면 완료 처리까지)을 진행 덮개에 알린다. 사용자에게 묻는 동안은 내린다.
   const blocking =
-    (stage.kind === 'saving' && asking === 0) || (stage.kind === 'saved' && stage.completing && options.acknowledge !== true);
+    (stage.kind === 'saving' && asking === 0) || (stage.kind === 'saved' && stage.completing && completion.current.acknowledge !== true);
   useBlockingProgress(options.progress ?? 'create', options.progress !== undefined && blocking);
 
   // 입력을 고치면 지우기로 한 실패는 지금 입력이 제출 때 입력과 달라진 동안 보이지 않는다.
@@ -493,8 +591,12 @@ export function useSaveForm<TInput, TOutput, TResult = { readonly saved?: TInput
 
   return {
     form,
+    referenceChange: references.change,
+    referenceFailure: references.failure,
     identity: source.id,
-    acknowledge: options.acknowledge === true,
+    acknowledge: completion.current.acknowledge === true,
+    saveMode,
+    submitSecondary: options.secondary === undefined ? undefined : submitSecondary,
     progress: options.progress,
     stage,
     /** 저장 실패 원본. 표시 방식은 화면이 kind로 정한다. */
@@ -548,6 +650,10 @@ export interface SaveFormEditor<TInput, TResult = unknown> {
   /** 필수 표시(별표·aria-required): 그 칸만 비운 지금 값을 schema가 거부하는가. */
   readonly isRequired: (field: DeepKeys<TInput>) => boolean;
   readonly submit: () => Promise<void>;
+  readonly referenceChange?: ReferenceChange;
+  readonly referenceFailure?: string;
+  readonly submitSecondary?: () => Promise<void>;
+  readonly saveMode?: 'primary' | 'secondary';
   readonly confirm: () => Promise<void>;
   readonly cancel: () => void;
   readonly complete: () => Promise<void>;

@@ -1,4 +1,5 @@
 // 파일 책임: i18next 인스턴스와 ko/en 리소스 묶음. 공용·feature 문구를 모아 한 namespace로 등록하고, 고른 언어를 기억한다.
+import { workflowResources } from '@/features/form-workflows/i18n';
 import { authResources } from '@/features/auth/i18n';
 import { memberResources } from '@/features/members/i18n';
 import { productResources } from '@/features/products/i18n';
@@ -32,7 +33,18 @@ void i18n.use(initReactI18next).init({
   resources: Object.fromEntries(
     LANGUAGES.map((lng) => [
       lng,
-      { translation: { ...sharedResources[lng], ...appResources[lng], ...authResources[lng], ...productResources[lng], ...memberResources[lng], ...termsResources[lng], ...showResources[lng] } },
+      {
+        translation: {
+          ...sharedResources[lng],
+          ...appResources[lng],
+          ...authResources[lng],
+          ...productResources[lng],
+          ...memberResources[lng],
+          ...termsResources[lng],
+          ...showResources[lng],
+          ...workflowResources[lng],
+        },
+      },
     ]),
   ),
 });

@@ -56,6 +56,7 @@ function AppLayout() {
               >
                 {t('app.nav.shows')}
               </Link>
+              <Link to="/form-workflows" className="rounded-md px-3 py-1.5 text-slate-600 hover:bg-slate-100">{t('workflows.title')}</Link>
             </nav>
             <div className="ml-auto flex items-center gap-2">
               <div role="group" aria-label={t('app.language')} className="flex rounded-md border border-slate-200 p-0.5 text-xs">

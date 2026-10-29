@@ -1,6 +1,6 @@
 // 파일 책임: 폼 검증·서버 필드 오류 문구를 번역 참조로 저장하고 렌더할 때 현재 언어로 해소한다(web-kit createFormMessages).
 // 키트 Form에 넘길 이 앱의 문구 값(useFormCopy)도 여기서 한 번 만든다.
-import { createFormMessages } from '@boosterlab/web-kit/form';
+import { createFormMessages, FormRejection } from '@boosterlab/web-kit/form';
 import type { FormMessages, RenderFormFailure } from '@boosterlab/web-kit/form/ui';
 import { useTranslation } from 'react-i18next';
 import { failureCopyKey } from './failure-copy';
@@ -38,6 +38,7 @@ export function useFormCopy(): {
       sectionErrors: (count: number) => t('common.sectionErrors', { count }),
     },
     formatError,
-    renderFailure: (failure, place) => (place === 'completion' ? undefined : t(failureCopyKey(failure))),
+    renderFailure: (failure, place) =>
+      place === 'completion' || (failure instanceof FormRejection && failure.root !== undefined) ? undefined : t(failureCopyKey(failure)),
   };
 }
