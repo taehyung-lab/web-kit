@@ -24,7 +24,7 @@ Node 24.19, pnpm 10.33.
 
 ## 새 프로젝트 시작
 
-1. 검증한 버전의 `apps/starter`를 새 저장소로 복사한다. 현재 `4.1.0-rc.4`은 후보이며 원격 정식 발행 전이다.
+1. 검증한 버전의 `apps/starter`를 새 저장소로 복사한다. 현재 `4.1.0-rc.5`은 후보이며 원격 정식 발행 전이다.
 2. 발행된 키트를 받는다: `gh release download v<버전> --repo taehyung-lab/web-kit --pattern 'boosterlab-web-kit-<버전>.tgz' --dir vendor` 후 `package.json`의 `@boosterlab/web-kit`을 `file:vendor/boosterlab-web-kit-<버전>.tgz`로 바꾸고 `pnpm install`.
 3. [4.0 설치 안내](packages/web-kit/README.md#설치와-업그레이드)에 따라 같은 commit의 registry를 `components.json`의 tag 고정 URL로 연결하고 shadcn 4.19.1로 필요한 항목을 설치한다. 설치 기록과 함께 설치한 검사 연결 파일을 관리한다.
 4. [agent-workflow-kit](https://github.com/taehyung-lab/agent-workflow-kit)을 버전 태그로 설치하고 `AGENTS.md`의 프로젝트 지도를 그 저장소 사실로 채운다(모르는 것은 `미확인`).

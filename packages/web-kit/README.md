@@ -2,7 +2,7 @@
 
 React 19 + TanStack(Router·Query·Form) + zod 4 + axios/orval을 쓰는 웹 프로젝트의 공용 키트다. 서버 응답 구조와 코드 의미는 프로젝트의 `ResponseContract`가 해석한다. 기존 Spring 응답 봉투 도우미도 선택해서 쓸 수 있다. 공통 동작은 패키지 hook·Provider가, 화면 배치는 registry로 설치한 프로젝트 소유 복사본이 맡는다. registry는 복사할 UI와 공통 검사 연결 파일의 묶음이다. 업무 정책·서버 연결 차이는 프로젝트가 정한다. 현재 제공 범위는 아래 표와 `package.json` exports다([4.0 배포 결정](../../docs/decisions/0011-web-kit-4-ui-distribution.md)).
 
-정본: https://github.com/taehyung-lab/web-kit · 패키지 `@boosterlab/web-kit` · 이 문서의 대상 버전 `4.1.0-rc.4` 후보(아직 정식 발행 전) · 결정 기록 [docs/decisions](../../docs/decisions/). 이 패키지는 저장소의 `packages/web-kit`이고, 사용 예이자 소비 검사 앱은 같은 저장소의 [`apps/starter`](../../apps/starter)다.
+정본: https://github.com/taehyung-lab/web-kit · 패키지 `@boosterlab/web-kit` · 이 문서의 대상 버전 `4.1.0-rc.5` 후보(아직 정식 발행 전) · 결정 기록 [docs/decisions](../../docs/decisions/). 이 패키지는 저장소의 `packages/web-kit`이고, 사용 예이자 소비 검사 앱은 같은 저장소의 [`apps/starter`](../../apps/starter)다.
 
 ## 구조
 
@@ -67,7 +67,7 @@ done
 
 4.0은 책임 단위로 필요한 부분만 채택한다. 한 책임 안에서는 키트의 상태 수명·이벤트 처리와 자체 구현을 섞지 않는다. 배치와 디자인은 설치한 복사본에서 바꾸고 공통 동작은 패키지 hook으로 연결한다.
 
-1. 검증된 같은 commit의 패키지 tarball(tgz 압축 파일)과 registry를 선택한다. 현재 후보 `4.1.0-rc.4`의 원격 tag/release는 아직 없으므로 아래 tag 예시는 발행 뒤 사용한다. 후보 검사는 저장소의 로컬 산출물을 사용한다.
+1. 검증된 같은 commit의 패키지 tarball(tgz 압축 파일)과 registry를 선택한다. 현재 후보 `4.1.0-rc.5`의 원격 tag/release는 아직 없으므로 아래 tag 예시는 발행 뒤 사용한다. 후보 검사는 저장소의 로컬 산출물을 사용한다.
 2. tgz를 `vendor/`에 보관하고 설치한다. 대부분 소스 TS/TSX이므로 Vite/TypeScript가 컴파일하며 Vite에는 `optimizeDeps: { extensions: ['.tsx'] }`를 둔다. Playwright 검사 입구는 Node가 실행할 수 있는 mjs다.
 
 ```sh
@@ -79,7 +79,7 @@ pnpm add @boosterlab/web-kit@file:vendor/boosterlab-web-kit.tgz
 ```json
 {
   "registries": {
-    "@web-kit": "https://raw.githubusercontent.com/taehyung-lab/web-kit/v4.1.0-rc.4/public/r/{name}.json"
+    "@web-kit": "https://raw.githubusercontent.com/taehyung-lab/web-kit/v4.1.0-rc.5/public/r/{name}.json"
   }
 }
 ```
@@ -149,4 +149,4 @@ Node 24.19.0, 빈 NODE_OPTIONS, pnpm 10.33.0. `pnpm check`는 키트·링크·re
 
 기존 로그인 전 타이머와 제출 진행을 `/auth`로 옮긴다. 서버 요청·기한 값·문구·등록 흐름은 프로젝트가 제공한다. `/session/idle`의 `createServerClock` 객체를 인증 단계와 유휴 타이머에 함께 넘긴다. 기존 유휴 타이머 API는 clock을 생략해도 유지된다. starter 로그인은 코드 인증 단계가 없으므로 제품 흐름을 추가하지 않으며, 설치된 검사 화면에서 두 입력 모양을 확인한다.
 
-4.1.0-rc.4는 유휴 타이머에 `pause()`·`resume()`·`state().paused`를 더한다(기존 API는 그대로). 유휴 마감을 적용하지 않는 화면(예: 비밀번호 변경)에서 `stop()`·`start()`를 조합하던 연결을 이 둘로 바꾼다. 재개는 서버 연장 결과로 마감을 다시 받는다. 기준은 [web-kit-http](skills/web-kit-http/SKILL.md)의 유휴 마감 절이다.
+4.1.0-rc.4는 유휴 타이머에 `pause()`·`resume()`·`state().paused`를 더한다(기존 API는 그대로). 유휴 마감을 적용하지 않는 화면(예: 비밀번호 변경)에서 `stop()`·`start()`를 조합하던 연결을 이 둘로 바꾼다. 재개는 서버 연장 결과로 마감을 다시 받는다. 직접 구현한 `IdleTimer` 대역(검사용 가짜 객체)은 `pause`·`resume`을 추가한다. 4.1.0-rc.5부터 마감 없는 연장 응답은 경고 구간 밖에서도 `{ ok: false }`이고, 재개 중 일시 실패는 로그아웃하지 않는다. 기준은 [web-kit-http](skills/web-kit-http/SKILL.md)의 유휴 마감 절이다.
