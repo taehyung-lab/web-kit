@@ -1,6 +1,6 @@
 {
   "name": "@boosterlab/web-kit-registry",
-  "version": "4.0.0-rc.1",
+  "version": "4.0.0-rc.2",
   "private": true,
   "type": "module",
   "devDependencies": {
@@ -11,6 +11,14 @@
     "react-dom": "19.2.8",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.5",
-    "@boosterlab/web-kit": "workspace:*"
+    "@boosterlab/web-kit": "workspace:*",
+    "eslint": "10.9.1",
+    "@eslint/js": "10.0.1",
+    "typescript-eslint": "8.68.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.11.0"
+  },
+  "scripts": {
+    "lint": "eslint src checks"
   }
 }

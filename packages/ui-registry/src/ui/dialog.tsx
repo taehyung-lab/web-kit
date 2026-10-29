@@ -1,7 +1,7 @@
 // 파일 책임: 기본 대화창 세 가지(Dialog·ConfirmDialog·AlertDialog)와 그 포커스 규칙.
 // 열린 직후부터 닫힐 때까지 키보드 포커스가 창 밖으로 한 순간도 나가지 않게 한다(Base UI의 focus guard 경유를 막는다).
 import { Dialog as BaseDialog } from '@base-ui/react/dialog';
-import { type ReactNode, type RefObject } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import { useDialogBinding, useConfirmBinding, useAcknowledgeBinding } from '@boosterlab/web-kit/dialog';
 import { Pending } from './pending';
 

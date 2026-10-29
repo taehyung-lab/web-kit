@@ -111,7 +111,7 @@ mock 통과나 HTTP 200만으로 서버 계약을 확인했다고 보지 않는�
 
 ## 키트 갱신
 
-현재 대상은 4.0.0-rc.1 후보이다. 정식 발행에는 main CI에서 검증한 tarball과 `verification.json`을 그대로 사용한다. `selection.run`의 결과는 실제 성공 ID인 `{ completedIds }`로 반환한다. 예시 API가 개수만 주는 부분 성공에서는 ID를 추측하지 않고 선택을 보존한다.
+현재 대상은 4.0.0-rc.2 후보이다. 정식 발행에는 main CI에서 검증한 tarball과 `verification.json`을 그대로 사용한다. `selection.run`의 결과는 실제 성공 ID인 `{ completedIds }`로 반환한다. 예시 API가 개수만 주는 부분 성공에서는 ID를 추측하지 않고 선택을 보존한다.
 
 새 버전을 받는 방법은 각 키트 README의 업데이트·업그레이드를 따른다. 받은 뒤 이 저장소의 `pnpm check`와 `pnpm test:e2e`를 통과시킨다.
 
@@ -119,7 +119,7 @@ mock 통과나 HTTP 200만으로 서버 계약을 확인했다고 보지 않는�
 
 화면은 `src/shared/ui/web-kit`의 소비 프로젝트 소스다. Form은 `@/shared/ui/web-kit/form/ui`, List는 `@/shared/ui/web-kit/list-ui`, 기본 입력과 대화창은 `@/shared/ui/web-kit/ui`에서 import한다. 공통 상태 hook은 계속 `@boosterlab/web-kit/form`, `/list`, `/dialog`, `/choice`에서 가져온다.
 
-`components.json`의 `@web-kit`은 `v4.0.0-rc.1` tag에 고정되어 있다. 아직 원격 발행 전인 후보는 저장소 루트에서 `pnpm registry:build` 후 `node scripts/install-starter-registry.mjs`로 설치한다. 이 명령은 설치 동안만 같은 checkout의 로컬 JSON을 가리키고, 실제 shadcn 4.19.1 CLI가 복사본을 만든 뒤 tag 설정을 복원한다. **재실행하면 현재 복사본을 덮어쓰므로 프로젝트 변경을 먼저 비교한다.**
+`components.json`의 `@web-kit`은 `v4.0.0-rc.2` tag에 고정되어 있다. 아직 원격 발행 전인 후보는 저장소 루트에서 `pnpm registry:build` 후 `node scripts/install-starter-registry.mjs`로 설치한다. 이 명령은 설치 동안만 같은 checkout의 로컬 JSON을 가리키고, 실제 shadcn 4.19.1 CLI가 복사본을 만든 뒤 tag 설정을 복원한다. **재실행하면 현재 복사본을 덮어쓰므로 프로젝트 변경을 먼저 비교한다.**
 
 `registry-installation.json`은 설치 항목·원본 버전·기준 commit·원본과 설치 파일 SHA-256·components 설정 지문을 보관한다. 갱신 시 이 기록으로 이전 원본을 찾고 새 원본과 프로젝트 복사본을 비교한다. 키트 tarball의 `starter:sync`는 UI 복사본을 갱신하지 않는다.
 
@@ -138,5 +138,5 @@ pnpm exec web-kit-check --installation registry-installation.json --unit .web-ki
 
 점검은 설치 항목별 연결 파일과 필수 검사, 누락·skip·실패, 결과의 패키지 버전·registry ref·원본 commit을 확인한다. Vitest의 `allowOnly: false`와 Playwright의 `forbidOnly: true`로 집중 실행을 CI에서 거절한다. starter는 설치 복사본을 그대로 검증하므로 지문 변경도 실패다. 일반 소비 프로젝트는 `--strict-fingerprints`를 빼면 수정된 복사본을 알림으로만 보고하고 실제 적합성 결과로 판정한다.
 
-출력 예: `web-kit 적합성 통과: 14항목, 120개 식별자, package 4.0.0-rc.1, registry v4.0.0-rc.1@<sourceCommit>`.
+출력 예: `web-kit 적합성 통과: 14항목, 120개 식별자, package 4.0.0-rc.2, registry v4.0.0-rc.2@<sourceCommit>`.
 실제 제품이 이 검사 대상 복사본을 사용하는지는 이 명령이 자동 판정하지 않는다. 사용 경로와 검사 연결의 일치는 별도 검토한다. 개별 브라우저 적합성을 실행할 때는 등록 함수 위치가 패키지로 기록되므로 파일 경로 대신 `pnpm exec playwright test --grep 'B-dialog'`처럼 식별자로 선택한다.

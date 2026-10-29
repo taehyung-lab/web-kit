@@ -17,6 +17,6 @@
     "hooks": "@/shared/lib"
   },
   "registries": {
-    "@web-kit": "https://raw.githubusercontent.com/taehyung-lab/web-kit/v4.0.0-rc.1/public/r/{name}.json"
+    "@web-kit": "https://raw.githubusercontent.com/taehyung-lab/web-kit/v4.0.0-rc.2/public/r/{name}.json"
   }
 }
