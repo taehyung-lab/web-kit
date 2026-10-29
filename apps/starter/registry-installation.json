@@ -1,11 +1,11 @@
 {
-  "version": "4.0.0-rc.1",
-  "sourceRef": "v4.0.0-rc.1",
+  "version": "4.0.0-rc.2",
+  "sourceRef": "v4.0.0-rc.2",
   "shadcn": "4.19.1",
-  "sourceCommit": "4ea1bd22df4f6143a79fed6c5a84ebcdf7ea3665",
+  "sourceCommit": "d764f87832187f23d7571bbe84bb65e91d69ec9f",
   "sourceWorkingTree": "Source fingerprints identify the installed candidate, including uncommitted changes.",
   "method": "pnpm exec shadcn add ./public/r/all.json --cwd apps/starter --yes --overwrite; local absolute namespace during installation",
-  "componentsHash": "d6e3cd65a7ba1d1b8327520732c01e54ae1ba90624e4eea9c726062e39815559",
+  "componentsHash": "815fd884a21a2fe37f60f5f20098d067b96e81bf9ddd1b967a389f9172c06ba1",
   "installationComponentsHash": "b5bf441aebf0e1e5deb0f728f526547485bb72ee6756b7e71ff992d169eefe1e",
   "items": [
     {
@@ -46,13 +46,13 @@
     },
     {
       "name": "dialog",
-      "artifactHash": "b9ff73e6760a88bd2ddc3a22be6346b037e5994296defdf89d47508489a85eb3",
+      "artifactHash": "81823fb1e0c25d089ff5b53e8e1f829b4325d7b8775863bcc0ab001fa491df87",
       "files": [
         {
           "source": "packages/ui-registry/src/ui/dialog.tsx",
           "installed": "apps/starter/src/shared/ui/web-kit/ui/dialog.tsx",
-          "sourceHash": "4e390fd5d914222adc00e21258910b2c1d56af962467914f1ebe12d89ee78277",
-          "installedHash": "4e390fd5d914222adc00e21258910b2c1d56af962467914f1ebe12d89ee78277"
+          "sourceHash": "0c557d5d0c6f88d087701a9222a1697d1c595653554343f084511fc70299faa6",
+          "installedHash": "0c557d5d0c6f88d087701a9222a1697d1c595653554343f084511fc70299faa6"
         },
         {
           "source": "packages/ui-registry/checks/dialog.test.tsx",
@@ -166,13 +166,13 @@
     },
     {
       "name": "form",
-      "artifactHash": "4332bf586d1287ff120f5d006422a578ab186fe010afacf4cc9782893613351c",
+      "artifactHash": "e2f52c197839a4f5339189b153786a5123aca0985e25a2ff19c2d3860fbca4d6",
       "files": [
         {
           "source": "packages/ui-registry/src/form/ui.tsx",
           "installed": "apps/starter/src/shared/ui/web-kit/form/ui.tsx",
-          "sourceHash": "0e303f3c9ad4638dd409d074a8f03a711effaf46b4fc5d4be524cda523044249",
-          "installedHash": "0e303f3c9ad4638dd409d074a8f03a711effaf46b4fc5d4be524cda523044249"
+          "sourceHash": "8fecae7eb7e944a9901e2ea7cb24309878078173af36c0156bfb655257593078",
+          "installedHash": "8fecae7eb7e944a9901e2ea7cb24309878078173af36c0156bfb655257593078"
         },
         {
           "source": "packages/ui-registry/src/form/field.tsx",
@@ -232,13 +232,13 @@
     },
     {
       "name": "list",
-      "artifactHash": "1aefc3eb6f071a1fadc7f17ab818da8933d8bd6e2f6211732059141387a9807b",
+      "artifactHash": "375d7d28232e8b0a2b7d434cb2cb2aa0c2142187620f783c6e2aec7054d20289",
       "files": [
         {
           "source": "packages/ui-registry/src/list-ui.tsx",
           "installed": "apps/starter/src/shared/ui/web-kit/list-ui.tsx",
-          "sourceHash": "f7be25fd93b3b907f9b29858df5be43e46e3ceea6d5f620a9317dea018daaab6",
-          "installedHash": "f7be25fd93b3b907f9b29858df5be43e46e3ceea6d5f620a9317dea018daaab6"
+          "sourceHash": "29740aa688466f63bc848219e4d38a676b90ad1410821c698933bc07c1f54c21",
+          "installedHash": "29740aa688466f63bc848219e4d38a676b90ad1410821c698933bc07c1f54c21"
         },
         {
           "source": "packages/ui-registry/checks/list-ui.test.tsx",

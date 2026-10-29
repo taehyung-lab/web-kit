@@ -3,8 +3,8 @@
 // 저장 수명은 useSaveForm이, 이탈 판정은 createFormNavigation이 소유하고 여기는 표시와 사용자 입력 연결만 맡는다.
 import { FormGuardProvider, FormDialogScopeProvider, useFormGuardBinding, useFormRootBinding, useFormFieldBinding, formTextBinding, useOptionsRetryFocus, useFormCancel, useFormDialogScope, useFormConfirmBinding, useFormSavedBinding, FormBindingProvider, useFormBinding, useFormSubmitBinding, formFileBinding } from '@boosterlab/web-kit/form';
 import { Choice as ChoiceInput, type ChoiceProps } from '../ui/choice';
-import { type NavigateOptions } from '@tanstack/react-router';
-import { type AnyFormApi, type DeepKeys, type DeepValue } from '@tanstack/react-form';
+import type { NavigateOptions } from '@tanstack/react-router';
+import type { AnyFormApi, DeepKeys, DeepValue } from '@tanstack/react-form';
 import {
   createContext,
   useContext,

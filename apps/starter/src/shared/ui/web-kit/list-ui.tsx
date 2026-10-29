@@ -5,7 +5,7 @@ import { Choice as ChoiceInput, type ChoiceProps } from './ui/choice';
 import { Checkbox } from '@base-ui/react/checkbox';
 import { createContext, useContext, useId, useRef, type ReactNode, type RefObject } from 'react';
 import type { DownloadKind } from '@boosterlab/web-kit/list';
-import { type Keyword } from '@boosterlab/web-kit/search';
+import type { Keyword } from '@boosterlab/web-kit/search';
 import { ConfirmDialog } from './ui/dialog';
 import { Pending } from './ui/pending';
 
