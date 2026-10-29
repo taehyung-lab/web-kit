@@ -1,11 +1,11 @@
 {
-  "version": "4.1.0-rc.7",
-  "sourceRef": "v4.1.0-rc.7",
+  "version": "4.1.0",
+  "sourceRef": "v4.1.0",
   "shadcn": "4.19.1",
-  "sourceCommit": "05b9970b908d937800c4560816a1083fe56c2d1f",
+  "sourceCommit": "c720dd2472e7297e56018fb1f22efefe93b44896",
   "sourceWorkingTree": "Source fingerprints identify the installed candidate, including uncommitted changes.",
   "method": "pnpm exec shadcn add ./public/r/all.json --cwd apps/starter --yes --overwrite; local absolute namespace during installation",
-  "componentsHash": "9366129928e172c06f02b93fc2ba7496d215840fb9f4becbf8d259941645a5d0",
+  "componentsHash": "a5c80a05becfb76041cb6655cc6e714d799cd52047140825109a91b8851733be",
   "installationComponentsHash": "3fc0c558c8b9e2ea6254635a8f999181bf92166e5ce057e8685f79ba0e9228a1",
   "items": [
     {
