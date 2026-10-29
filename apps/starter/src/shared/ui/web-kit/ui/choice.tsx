@@ -100,7 +100,7 @@ export function Choice(props: ChoiceProps) {
       <Menu.SubmenuRoot key={key}>
         <Menu.SubmenuTrigger disabled={disabled}>{node.label}</Menu.SubmenuTrigger>
         <Menu.Portal>
-          <Menu.Positioner>
+          <Menu.Positioner className="wk-choice-positioner">
             <Menu.Popup className="wk-choice-popup">{node.children.map(menu)}</Menu.Popup>
           </Menu.Positioner>
         </Menu.Portal>
@@ -127,7 +127,7 @@ export function Choice(props: ChoiceProps) {
         <span aria-live="polite">{summary}</span>
         {clear}
         <Combobox.Portal>
-          <Combobox.Positioner>
+          <Combobox.Positioner className="wk-choice-positioner">
             <Combobox.Popup className="wk-choice-popup">
               {result.pending && <p role="status">{props.messages?.loading ?? '불러오는 중입니다.'}</p>}
               {result.failed && (
@@ -169,7 +169,7 @@ export function Choice(props: ChoiceProps) {
           {summary}
         </Menu.Trigger>
         <Menu.Portal>
-          <Menu.Positioner>
+          <Menu.Positioner className="wk-choice-positioner">
             <Menu.Popup className="wk-choice-popup">
               {!multiple && props.clearLabel !== undefined && selected.length > 0 && (
                 <Menu.Item disabled={disabled} onClick={() => select(undefined)}>
@@ -189,7 +189,7 @@ export function Choice(props: ChoiceProps) {
           {summary}
         </Popover.Trigger>
         <Popover.Portal>
-          <Popover.Positioner>
+          <Popover.Positioner className="wk-choice-positioner">
             <Popover.Popup className="wk-choice-popup" aria-label={label}>
               {tree}
             </Popover.Popup>

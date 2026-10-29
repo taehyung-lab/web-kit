@@ -122,3 +122,21 @@ mock 통과나 HTTP 200만으로 서버 계약을 확인했다고 보지 않는�
 `components.json`의 `@web-kit`은 `v4.0.0-rc.1` tag에 고정되어 있다. 아직 원격 발행 전인 후보는 저장소 루트에서 `pnpm registry:build` 후 `node scripts/install-starter-registry.mjs`로 설치한다. 이 명령은 설치 동안만 같은 checkout의 로컬 JSON을 가리키고, 실제 shadcn 4.19.1 CLI가 복사본을 만든 뒤 tag 설정을 복원한다. **재실행하면 현재 복사본을 덮어쓰므로 프로젝트 변경을 먼저 비교한다.**
 
 `registry-installation.json`은 설치 항목·원본 버전·기준 commit·원본과 설치 파일 SHA-256·components 설정 지문을 보관한다. 갱신 시 이 기록으로 이전 원본을 찾고 새 원본과 프로젝트 복사본을 비교한다. 키트 tarball의 `starter:sync`는 UI 복사본을 갱신하지 않는다.
+
+
+### 복사본 적합성 검사와 점검
+
+registry는 UI와 함께 `src/shared/ui/web-kit/checks/*.test.tsx`, `tests/e2e/web-kit/*.spec.ts`, 검사 화면 연결 파일을 설치한다. 이 파일은 실제 복사본을 `@boosterlab/web-kit/testing/unit`, `/testing/browser`, `/testing/fixtures`의 공통 검사에 넘기며 단언은 패키지가 소유한다. 검사 화면은 `web-kit-checks/*.html`이며 제품 route에 추가하지 않는다.
+
+`pnpm check`는 타입·lint·단위·빌드·브라우저 검사를 실행한 뒤 아래 점검을 필수로 실행한다. 처음에는 `pnpm exec playwright install chromium`이 필요하다. JSON 결과는 `.web-kit-results/`에 생성되며 git에는 넣지 않는다.
+
+```sh
+pnpm conformance:check
+# 풀어 쓰면:
+pnpm exec web-kit-check --installation registry-installation.json --unit .web-kit-results/unit.json --browser .web-kit-results/browser.json --strict-fingerprints
+```
+
+점검은 설치 항목별 연결 파일과 필수 검사, 누락·skip·실패, 결과의 패키지 버전·registry ref·원본 commit을 확인한다. Vitest의 `allowOnly: false`와 Playwright의 `forbidOnly: true`로 집중 실행을 CI에서 거절한다. starter는 설치 복사본을 그대로 검증하므로 지문 변경도 실패다. 일반 소비 프로젝트는 `--strict-fingerprints`를 빼면 수정된 복사본을 알림으로만 보고하고 실제 적합성 결과로 판정한다.
+
+출력 예: `web-kit 적합성 통과: 14항목, 120개 식별자, package 4.0.0-rc.1, registry v4.0.0-rc.1@<sourceCommit>`.
+실제 제품이 이 검사 대상 복사본을 사용하는지는 이 명령이 자동 판정하지 않는다. 사용 경로와 검사 연결의 일치는 별도 검토한다. 개별 브라우저 적합성을 실행할 때는 등록 함수 위치가 패키지로 기록되므로 파일 경로 대신 `pnpm exec playwright test --grep 'B-dialog'`처럼 식별자로 선택한다.

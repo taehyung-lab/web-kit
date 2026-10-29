@@ -9,3 +9,5 @@ coverage/
 /work/
 test-results/
 playwright-report/
+
+.web-kit-results/

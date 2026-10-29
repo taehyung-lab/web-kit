@@ -8,6 +8,9 @@ export default defineConfig({
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   test: {
     environment: 'jsdom',
+    allowOnly: false,
+    reporters: ['default', 'json'],
+    outputFile: { json: '.web-kit-results/unit.json' },
     environmentOptions: { jsdom: { url: 'http://localhost:3000' } },
     env: { VITE_API_BASE_URL: '', VITE_API_TIMEOUT_MS: '5000' },
     // Node 25+ 기본 Web Storage 전역이 jsdom localStorage를 가린다. Node 24(CI 기준)에서도 같은 조건으로 끈다.

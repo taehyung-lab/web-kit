@@ -13,7 +13,7 @@ importers:
         version: 1.7.0(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@boosterlab/web-kit':
         specifier: file:vendor/boosterlab-web-kit.tgz
-        version: file:vendor/boosterlab-web-kit.tgz(@tanstack/react-form@1.33.5(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@tanstack/react-query@5.102.6(react@19.2.8))(@tanstack/react-router@1.170.32(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@tanstack/react-virtual@3.14.9(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(axios@1.20.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+        version: file:vendor/boosterlab-web-kit.tgz(@playwright/test@1.62.1)(@tanstack/react-form@1.33.5(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@tanstack/react-query@5.102.6(react@19.2.8))(@tanstack/react-router@1.170.32(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@tanstack/react-virtual@3.14.9(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(axios@1.20.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(vitest@4.1.11(@types/node@24.13.3)(jsdom@30.0.1)(msw@2.15.0(@types/node@24.13.3)(typescript@5.9.3))(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))(zod@4.4.3)
       '@tanstack/react-form':
         specifier: 1.33.5
         version: 1.33.5(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -221,17 +221,24 @@ packages:
         optional: true
 
   '@boosterlab/web-kit@file:vendor/boosterlab-web-kit.tgz':
-    resolution: {integrity: sha512-+yBkd/mEpEOfAQbQDSecT/371O1lF37y9Q9wnTHtujjl5jRd8pDb27k9jEXugB+XbaF/HA5crjQlVhjA58F20Q==, tarball: file:vendor/boosterlab-web-kit.tgz}
+    resolution: {integrity: sha512-FdOYOxRITLeCHXZQOETwzy7v/PNUtrYdrFmk6Wkz6sUItbSTFtfWzopv+N8lCKzTQNUvzpPJhHBK7YpRnH2GGA==, tarball: file:vendor/boosterlab-web-kit.tgz}
     version: 4.0.0-rc.1
+    hasBin: true
     peerDependencies:
+      '@playwright/test': 1.62.1
       '@tanstack/react-form': 1.33.5
       '@tanstack/react-query': 5.102.6
       '@tanstack/react-router': 1.170.32
       '@tanstack/react-virtual': ^3.14.9
+      '@testing-library/react': 16.3.2
       axios: 1.20.0
       react: ^19.0.0
       react-dom: ^19.0.0
+      vitest: 4.1.11
+      zod: ^4.0.0
     peerDependenciesMeta:
+      '@playwright/test':
+        optional: true
       '@tanstack/react-form':
         optional: true
       '@tanstack/react-query':
@@ -240,7 +247,13 @@ packages:
         optional: true
       '@tanstack/react-virtual':
         optional: true
+      '@testing-library/react':
+        optional: true
       axios:
+        optional: true
+      vitest:
+        optional: true
+      zod:
         optional: true
 
   '@bramus/specificity@2.4.3':
@@ -2722,17 +2735,21 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.2.18
 
-  '@boosterlab/web-kit@file:vendor/boosterlab-web-kit.tgz(@tanstack/react-form@1.33.5(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@tanstack/react-query@5.102.6(react@19.2.8))(@tanstack/react-router@1.170.32(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@tanstack/react-virtual@3.14.9(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(axios@1.20.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+  '@boosterlab/web-kit@file:vendor/boosterlab-web-kit.tgz(@playwright/test@1.62.1)(@tanstack/react-form@1.33.5(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@tanstack/react-query@5.102.6(react@19.2.8))(@tanstack/react-router@1.170.32(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@tanstack/react-virtual@3.14.9(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(axios@1.20.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(vitest@4.1.11(@types/node@24.13.3)(jsdom@30.0.1)(msw@2.15.0(@types/node@24.13.3)(typescript@5.9.3))(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))(zod@4.4.3)':
     dependencies:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
       tabbable: 6.3.0
     optionalDependencies:
+      '@playwright/test': 1.62.1
       '@tanstack/react-form': 1.33.5(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@tanstack/react-query': 5.102.6(react@19.2.8)
       '@tanstack/react-router': 1.170.32(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@tanstack/react-virtual': 3.14.9(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@testing-library/react': 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       axios: 1.20.0
+      vitest: 4.1.11(@types/node@24.13.3)(jsdom@30.0.1)(msw@2.15.0(@types/node@24.13.3)(typescript@5.9.3))(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+      zod: 4.4.3
 
   '@bramus/specificity@2.4.3':
     dependencies:
