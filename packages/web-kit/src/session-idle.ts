@@ -64,7 +64,8 @@ export interface IdleTimer {
   /**
    * 멈춤을 풀고 서버 연장을 한 번 보낸다. 결과는 extend()와 같다. 멈춰 있지 않으면 연장하지 않는다.
    * 마감이 없거나 지났을 때 서버가 세션을 거절하면(401·세션 종료 응답) 이 탭이 그 자리에서 idle로 끝낸다.
-   * 그 밖의 실패(통신·시간초과·서버 오류·마감 없는 응답)는 로그인을 유지하고, 경고 단계에서 간격마다 연장을 다시 시도한다.
+   * 그 밖의 실패(통신·시간초과·서버 오류·마감 없는 응답)는 로그인을 유지하고, 지금부터 경고 구간 길이의 시한을 저장해 평소 경고로 보인다.
+   * 그 시한 안에는 extend()(연장 버튼)만 연장하고, 누르지 않으면 시한에 끝난다. 키트가 스스로 다시 연장하지 않는다.
    * 응답을 기다리는 중 다시 pause()가 오면 받은 마감만 저장하고 멈춘 채로 둔다(마지막 요청이 이긴다).
    */
   readonly resume: () => Promise<ExtendResult>;
@@ -209,8 +210,6 @@ export function createIdleTimer<C extends Credentials>({
   let resuming: Promise<ExtendResult> | undefined;
   /** 재개 응답을 기다리는 중 다시 pause()가 왔다. 마지막 요청(멈춤/재개)이 이긴다. */
   let pauseRequested = false;
-  /** 재개 연장이 일시 실패해 지난 마감을 서버로 확인하지 못했다. 서버가 거절할 때만 끝낸다. */
-  let unconfirmed = false;
   let state: IdleState = {
     phase: 'inactive',
     deadline: null,
@@ -244,7 +243,6 @@ export function createIdleTimer<C extends Credentials>({
     if (next.sessionId !== currentSessionId()) return false;
     if (grant !== null && grant.sessionId === next.sessionId && next.sentAt < grant.sentAt) return false;
     grant = next;
-    if (next.deadline - now() > 0) unconfirmed = false;
     if (persist) grantSlot.write(JSON.stringify(next));
     update({ deadline: next.deadline, durationMs: Math.max(policy.durationMs, next.deadline - now()) });
     evaluate();
@@ -259,20 +257,10 @@ export function createIdleTimer<C extends Credentials>({
 
   /** 남은 시간으로 단계를 정하고, 대표 탭이면 만료로 끝낸다. */
   function evaluate() {
-    if (state.phase === 'inactive' || state.paused) return;
-    if (state.deadline === null && !unconfirmed) return;
-    const left = state.deadline === null ? 0 : state.deadline - now();
+    if (state.phase === 'inactive' || state.deadline === null || state.paused) return;
+    const left = state.deadline - now();
     if (left <= 0) {
       if (state.extending) return; // 연장 결과를 본 뒤 다시 판단한다.
-      if (unconfirmed) {
-        // 확인 대기: 경고로 연장 수단을 보이고, 간격마다 서버 연장을 다시 시도한다.
-        update({ phase: 'warning' });
-        if (Date.now() - lastAttemptAt >= policy.activityThrottleMs) {
-          lastAttemptAt = Date.now();
-          void extend();
-        }
-        return;
-      }
       if (state.leader || left <= -FOLLOWER_GRACE_MS) session.expireIdle();
       return;
     }
@@ -371,7 +359,6 @@ export function createIdleTimer<C extends Credentials>({
   function deactivate() {
     detach?.();
     detach = undefined;
-    unconfirmed = false;
     grant = null;
     seedOpenedAt = null;
     lastAttemptAt = Number.NEGATIVE_INFINITY;
@@ -415,7 +402,6 @@ export function createIdleTimer<C extends Credentials>({
     if (inFlight !== undefined) return inFlight;
     const generation = session.generation();
     update({ extending: true });
-    let confirmedRejection = false;
     const run = (async (): Promise<ExtendResult> => {
       try {
         const sample = await requestExtend();
@@ -429,19 +415,12 @@ export function createIdleTimer<C extends Credentials>({
         const rest = left();
         return adopted && rest !== null && rest > policy.warningMs ? { ok: true } : { ok: false };
       } catch (failure: unknown) {
-        // 확인 대기 중 서버가 세션을 거절하면 확인이 끝난 것이다. 아래 판단에서 지난 마감으로 끝낸다.
-        if (unconfirmed && rejectsSession(failure)) {
-          unconfirmed = false;
-          confirmedRejection = true;
-        }
         return { ok: false, failure };
       } finally {
         inFlight = undefined;
         if (generation === session.generation()) {
           update({ extending: false });
-          // 확인 대기를 끝낸 거절은 대표 여부와 관계없이 이 탭이 끝낸다.
-          if (confirmedRejection && !state.paused && state.phase !== 'inactive' && (left() ?? 0) <= 0) session.expireIdle();
-          else evaluate();
+          evaluate();
         }
       }
     })();
@@ -496,7 +475,8 @@ export function createIdleTimer<C extends Credentials>({
         return Promise.resolve<ExtendResult>({ ok: false });
       }
       const generation = session.generation();
-      lastAttemptAt = Date.now();
+      const sentAt = Date.now();
+      lastAttemptAt = sentAt;
       const run = (async (): Promise<ExtendResult> => {
         let result: ExtendResult = { ok: false };
         try {
@@ -510,9 +490,11 @@ export function createIdleTimer<C extends Credentials>({
             update({ paused: false });
             const rest = left();
             if (generation === session.generation() && state.phase !== 'inactive' && (rest === null || rest <= 0)) {
-              // 서버가 거절했으면 대표 여부와 관계없이 이 탭이 끝낸다. 일시 실패면 확인 대기로 이어 간다.
-              if (!result.ok && rejectsSession(result.failure)) session.expireIdle();
-              else unconfirmed = true;
+              // 서버가 거절했으면 대표 여부와 관계없이 이 탭이 끝낸다.
+              // 일시 실패면 경고 구간 길이의 시한을 저장해 평소 경고(연장 버튼만)로 보인다. 저장하므로 새로고침·새 탭도 같은 시한을 받는다.
+              const sessionId = currentSessionId();
+              if ((!result.ok && rejectsSession(result.failure)) || sessionId === undefined) session.expireIdle();
+              else adopt({ sessionId, deadline: now() + policy.warningMs, sentAt }, true);
             }
             if (detach !== undefined && state.phase !== 'inactive') {
               takeLeader();

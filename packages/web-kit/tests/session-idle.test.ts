@@ -440,7 +440,7 @@ describe('멈춤과 재개(마감을 적용하지 않는 화면)', () => {
     }
   });
 
-  it('재개 중 일시 실패(통신·시간초과·서버 오류·마감 없는 응답)로는 로그아웃하지 않고, 경고 상태에서 간격마다 연장을 다시 시도한다', async () => {
+  it('재개 중 일시 실패(통신·시간초과·서버 오류·마감 없는 응답)는 로그아웃하지 않고 경고 구간 길이의 평소 경고를 보인다', async () => {
     const transient = [
       () => Promise.reject(new RequestFailure({ kind: 'network' })),
       () => Promise.reject(new RequestFailure({ kind: 'timeout' })),
@@ -452,34 +452,89 @@ describe('멈춤과 재개(마감을 적용하지 않는 화면)', () => {
       const { session, idle, requestExtend, signOut } = paused();
       vi.advanceTimersByTime(policy.durationMs + 1_000);
       requestExtend.mockImplementationOnce(reply);
-      const result = await idle.resume();
-      expect(result.ok).toBe(false);
-      await vi.advanceTimersByTimeAsync(10_000);
+      const graceEnd = Date.now() + policy.warningMs;
+      await expect(idle.resume()).resolves.toMatchObject({ ok: false });
       expect(session.current()).not.toBeNull();
       expect(signOut).not.toHaveBeenCalled();
-      expect(idle.state()).toMatchObject({ phase: 'warning', paused: false, leader: true });
-      expect(requestExtend).toHaveBeenCalledTimes(1);
-      // 간격이 지나면 다시 시도한다. 서버가 마감을 주면 그 마감으로 이어 간다.
-      requestExtend.mockImplementationOnce(async () => grantIn(policy.durationMs));
-      await vi.advanceTimersByTimeAsync(policy.activityThrottleMs);
-      expect(requestExtend).toHaveBeenCalledTimes(2);
-      expect(idle.state()).toMatchObject({ phase: 'active' });
-      expect(session.current()).not.toBeNull();
+      expect(idle.state()).toMatchObject({ phase: 'warning', paused: false, leader: true, deadline: graceEnd });
+      expect(idle.remaining()).toBe(policy.warningMs);
+      expect(JSON.parse(localStorage.getItem(KEY)!).deadline).toBe(graceEnd);
+      // 연장 버튼으로 이어 간다.
+      requestExtend.mockResolvedValueOnce(grantIn(policy.durationMs));
+      await expect(idle.extend()).resolves.toEqual({ ok: true });
+      expect(idle.state().phase).toBe('active');
       idle.stop();
     }
   });
 
-  it('일시 실패 뒤 다시 시도한 연장을 서버가 거절하면 그때 유휴 종료한다', async () => {
+  it('재개 일시 실패 뒤 아무 조작이 없으면 키트가 스스로 연장하지 않고 경고 시한에 끝낸다', async () => {
+    // 통신이 계속 실패하는 경우와 서버가 계속 마감 없는 응답을 주는 경우(판정 V4·V5).
+    for (const reply of [() => Promise.reject(new RequestFailure({ kind: 'network' })), () => Promise.resolve(null)]) {
+      localStorage.clear();
+      const { session, idle, requestExtend } = paused();
+      requestExtend.mockImplementation(reply);
+      vi.advanceTimersByTime(policy.durationMs + 1_000);
+      const changes: SessionChange[] = [];
+      session.subscribe((change) => changes.push(change));
+      await idle.resume();
+      await vi.advanceTimersByTimeAsync(policy.warningMs - 1_000);
+      expect(session.current()).not.toBeNull();
+      await vi.advanceTimersByTimeAsync(2 * 60 * 60_000);
+      expect(requestExtend).toHaveBeenCalledTimes(1);
+      expect(changes).toEqual([{ kind: 'ended', by: 'idle' }]);
+      idle.stop();
+    }
+  });
+
+  it('재개가 일시 실패해도 마감이 남아 있으면 평소 활성 상태이고 조작 때만 간격마다 연장한다', async () => {
     const { session, idle, requestExtend } = paused();
-    vi.advanceTimersByTime(policy.durationMs + 1_000);
-    requestExtend.mockRejectedValueOnce(new RequestFailure({ kind: 'network' }));
+    requestExtend.mockRejectedValue(new RequestFailure({ kind: 'network' }));
+    const deadline = idle.state().deadline;
+    vi.advanceTimersByTime(60_000);
     await idle.resume();
+    expect(idle.state()).toMatchObject({ phase: 'active', deadline });
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+    expect(requestExtend).toHaveBeenCalledTimes(1);
+    window.dispatchEvent(new MouseEvent('click'));
+    window.dispatchEvent(new MouseEvent('click'));
+    await flush();
+    expect(requestExtend).toHaveBeenCalledTimes(2);
     expect(session.current()).not.toBeNull();
-    const changes: SessionChange[] = [];
-    session.subscribe((change) => changes.push(change));
-    requestExtend.mockRejectedValueOnce(new RequestFailure({ kind: 'unauthorized', status: 401 }));
-    await vi.advanceTimersByTimeAsync(policy.activityThrottleMs);
-    expect(changes).toEqual([{ kind: 'ended', by: 'idle' }]);
+  });
+
+  it('재개 일시 실패 뒤 경고에서 연장 버튼도 일시 실패하면 경고를 유지하고 시한에 끝낸다(다시 시도는 버튼으로만)', async () => {
+    const { session, idle, requestExtend } = paused();
+    requestExtend.mockRejectedValue(new RequestFailure({ kind: 'network' }));
+    vi.advanceTimersByTime(policy.durationMs + 1_000);
+    await idle.resume();
+    await vi.advanceTimersByTimeAsync(10_000);
+    await expect(idle.extend()).resolves.toMatchObject({ ok: false });
+    expect(idle.state().phase).toBe('warning');
+    window.dispatchEvent(new MouseEvent('click'));
+    await flush();
+    expect(requestExtend).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(policy.warningMs);
+    expect(session.current()).toBeNull();
+    expect(requestExtend).toHaveBeenCalledTimes(2);
+  });
+
+  it('재개 일시 실패 뒤의 경고 중 새로고침·새 탭은 로그아웃하지 않고 같은 경고 시한을 이어 보인다', async () => {
+    const tab = paused();
+    vi.advanceTimersByTime(policy.durationMs + 1_000);
+    tab.requestExtend.mockRejectedValueOnce(new RequestFailure({ kind: 'network' }));
+    await tab.idle.resume();
+    const graceEnd = tab.idle.state().deadline;
+    tab.idle.stop();
+    vi.advanceTimersByTime(5_000);
+
+    const session = createSession<Creds>({ store: memoryStore(tab.store.value()), reissue: vi.fn() });
+    const reopened = createIdleTimer({ session, key: KEY, policy, extend: vi.fn(), environment: { locks: null } });
+    reopened.start();
+    expect(session.current()).not.toBeNull();
+    expect(reopened.state()).toMatchObject({ phase: 'warning', deadline: graceEnd });
+    expect(reopened.remaining()).toBe(policy.warningMs - 5_000);
+    vi.advanceTimersByTime(policy.warningMs);
+    expect(session.current()).toBeNull();
   });
 
   it('재개 응답을 기다리는 중 다시 멈추면 응답 뒤에도 멈춘 채로 있고, 받은 마감은 저장한다', async () => {
