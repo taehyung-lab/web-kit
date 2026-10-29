@@ -7,9 +7,9 @@ import { requestFormChange, writeFormValues } from './references';
 import { createFormNavigation, type FormNavigation as Navigation, type LeaveReason } from './navigation';
 import { lockField, type SaveFormEditor } from './save-form';
 type AnyEditor = SaveFormEditor<any, any>;
-export const GuardContext = createContext<Navigation | undefined>(undefined);
+const GuardContext = createContext<Navigation | undefined>(undefined);
 /** 대화창 안 폼의 범위. 닫기는 이 범위의 폼만 묻는다. */
-export const ScopeContext = createContext<{ readonly id: object; readonly close: () => void } | undefined>(undefined);
+const ScopeContext = createContext<{ readonly id: object; readonly close: () => void } | undefined>(undefined);
 
 
 /** 보호 등록소와 Router 이탈 요청을 같은 판정으로 연결한다. */
@@ -41,7 +41,7 @@ function useLocked(editor: AnyEditor, name: string, disabled: boolean) {
 }
 
 /** 오류 값 중 첫 문자열 문구를 고른다. 원시 응답 객체는 보이지 않는다. */
-export function firstMessage(errors: readonly unknown[]): string | undefined {
+function firstMessage(errors: readonly unknown[]): string | undefined {
   for (const error of errors) {
     if (typeof error === 'string') return error;
     if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string') return error.message;
@@ -50,13 +50,13 @@ export function firstMessage(errors: readonly unknown[]): string | undefined {
 }
 
 /** 저장 요청 또는 저장 뒤 완료 처리(이동 등)가 진행 중인가. 이 동안 버튼은 잠기고 저장 버튼 옆에 진행 표시가 선다. */
-export function inProgress(editor: AnyEditor): boolean {
+function inProgress(editor: AnyEditor): boolean {
   return editor.stage.kind === 'saving' || (editor.stage.kind === 'saved' && editor.stage.completing);
 }
 
 
 /** 폼 등록·최신 상태 알림·제출 전파 차단·버튼 기억을 연결한다. */
-export function useFormRootBinding(editor: AnyEditor, protect = true) {
+export function useFormRootBinding(editor: AnyEditor, protect = true, formatError?: (errors: readonly unknown[]) => string | undefined) {
   const owner = useContext(GuardContext);
   if (protect && owner === undefined) throw new Error('<Form> requires <FormGuard> (or protect={false})');
   const scope = useContext(ScopeContext);
@@ -77,7 +77,7 @@ export function useFormRootBinding(editor: AnyEditor, protect = true) {
   useLayoutEffect(() => {
     owner?.changed();
   }, [owner, editor.isDirty, editor.isSaving, editor.identity]);
-  return { submitOrigin, formProps: { noValidate: true,
+  return { submitOrigin, formatError: formatError ?? firstMessage, formProps: { noValidate: true,
     onSubmit: (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       event.stopPropagation();
@@ -103,10 +103,16 @@ export function useFormFieldBinding(editor: AnyEditor, name: string, disabled = 
     },
   };
 }
-/** 이미 긴 서버 값은 줄일 수 있고 상한을 넘는 추가 입력만 거절한다. */
-export function applyFormText(value: string, next: string, maxLength: number | undefined, change: (next: string) => void) {
-  if (maxLength !== undefined && next.length > Math.max(maxLength, value.length)) return;
-  change(next);
+/** 문자열 입력에 기존 값과 상한을 반영한 변경 연결을 제공한다. */
+export function formTextBinding(value: unknown, maxLength: number | undefined, change: (next: string) => void) {
+  const text = typeof value === 'string' ? value : '';
+  return {
+    value: text,
+    change: (next: string) => {
+      if (maxLength !== undefined && next.length > Math.max(maxLength, text.length)) return;
+      change(next);
+    },
+  };
 }
 /** 선택지 재시도 버튼에서 상태 영역, 준비된 입력으로 포커스를 넘긴다. */
 export function useOptionsRetryFocus(retry?: () => void) {
@@ -174,7 +180,7 @@ export function useFormSavedBinding(editor: AnyEditor) {
 }
 
 /** 폼 상태와 제출 시작 요소를 표현 설정 없이 전달한다. */
-export const FormBindingContext = createContext<{ editor: AnyEditor; submitOrigin: { current: HTMLElement | null } } | undefined>(undefined);
+const FormBindingContext = createContext<{ editor: AnyEditor; submitOrigin: { current: HTMLElement | null } } | undefined>(undefined);
 /** 같은 편집 상태를 폼의 모든 부품에 전달한다. */
 export function FormBindingProvider({ editor, submitOrigin, children }: { editor: AnyEditor; submitOrigin: { current: HTMLElement | null }; children: ReactNode }) {
   return createElement(FormBindingContext.Provider, { value: { editor, submitOrigin } }, children);
@@ -221,4 +227,19 @@ export function formFieldFeedback(id: string, message?: string, describedBy: rea
   const errorId = message === undefined ? undefined : id + '-error';
   const ids = errorId === undefined ? describedBy : [...describedBy, errorId];
   return { errorId, control: { id, 'aria-describedby': ids.length === 0 ? undefined : ids.join(' '), 'aria-invalid': message !== undefined } };
+}
+
+/** 이탈 보호 hook의 소유자를 배치 없이 자식 폼에 전달한다. */
+export function FormGuardProvider({ binding, children }: {
+  readonly binding: ReturnType<typeof useFormGuardBinding>;
+  readonly children: ReactNode;
+}) {
+  return createElement(GuardContext.Provider, { value: binding }, children);
+}
+/** 대화창 hook의 범위를 배치 없이 자식 폼에 전달한다. */
+export function FormDialogScopeProvider({ binding, children }: {
+  readonly binding: ReturnType<typeof useFormDialogScope>;
+  readonly children: ReactNode;
+}) {
+  return createElement(ScopeContext.Provider, { value: binding.scope }, children);
 }

@@ -1,7 +1,7 @@
 // 파일 책임: 폼 기본 UI의 묶음 부품(Form.*)과 앱에 한 번 두는 이탈 보호(FormGuard).
 // 각 부품은 같은 편집 상태(useSaveForm 결과)를 context로 읽어서, 칸·버튼·오류 줄을 어디에 두어도 저장·검증·focus 연결을 다시 쓰지 않는다.
 // 저장 수명은 useSaveForm이, 이탈 판정은 createFormNavigation이 소유하고 여기는 표시와 사용자 입력 연결만 맡는다.
-import { GuardContext, ScopeContext, useFormGuardBinding, useFormRootBinding, useFormFieldBinding, applyFormText, useOptionsRetryFocus, useFormCancel, useFormDialogScope, useFormConfirmBinding, useFormSavedBinding, firstMessage, FormBindingProvider, useFormBinding, useFormSubmitBinding, formFileBinding } from './binding';
+import { FormGuardProvider, FormDialogScopeProvider, useFormGuardBinding, useFormRootBinding, useFormFieldBinding, formTextBinding, useOptionsRetryFocus, useFormCancel, useFormDialogScope, useFormConfirmBinding, useFormSavedBinding, FormBindingProvider, useFormBinding, useFormSubmitBinding, formFileBinding } from './binding';
 import { Choice as ChoiceInput, type ChoiceProps } from '../ui/choice';
 import { type NavigateOptions } from '@tanstack/react-router';
 import { type AnyFormApi, type DeepKeys, type DeepValue } from '@tanstack/react-form';
@@ -57,7 +57,7 @@ export function FormGuard({
   };
   const text = copy[owner.reason ?? 'navigate'];
   return (
-    <GuardContext.Provider value={owner}>
+    <FormGuardProvider binding={owner}>
       {children}
       <ConfirmDialog
         open={owner.pending}
@@ -74,7 +74,7 @@ export function FormGuard({
           {copy.navigationFailed}
         </p>
       )}
-    </GuardContext.Provider>
+    </FormGuardProvider>
   );
 }
 
@@ -152,11 +152,11 @@ function FormRoot({
   readonly formatError?: (errors: readonly unknown[]) => string | undefined;
   readonly children: ReactNode;
 } & Omit<FormHTMLAttributes<HTMLFormElement>, 'onSubmit' | 'noValidate' | 'children'>) {
-  const { submitOrigin, formProps: binding } = useFormRootBinding(editor, protect);
+  const { submitOrigin, formProps: binding, formatError: resolvedFormatError } = useFormRootBinding(editor, protect, formatError);
   const value: FormContextValue = {
     copy: { ...defaultFormMessages, ...messages },
     renderFailure: renderFailure ?? (() => undefined),
-    formatError: formatError ?? firstMessage,
+    formatError: resolvedFormatError,
   };
   return (
     <FormBindingProvider editor={editor} submitOrigin={submitOrigin}><FormContext.Provider value={value}>
@@ -291,7 +291,8 @@ function Text({
   return (
     <Field<string> {...field}>
       {({ value, change, blur, ...control }) => {
-        const text = typeof value === 'string' ? value : '';
+        const textBinding = formTextBinding(value, maxLength, change);
+        const text = textBinding.value;
         return (
           <>
             <input
@@ -308,7 +309,7 @@ function Text({
               onBlur={blur}
               onChange={(event) => {
                 const next = event.target.value;
-                applyFormText(text, next, maxLength, change);
+                textBinding.change(next);
               }}
             />
             {showCount && maxLength !== undefined ? (
@@ -335,7 +336,8 @@ function TextArea({
   return (
     <Field<string> {...field}>
       {({ value, change, blur, ...control }) => {
-        const text = typeof value === 'string' ? value : '';
+        const textBinding = formTextBinding(value, maxLength, change);
+        const text = textBinding.value;
         return (
           <>
             <textarea
@@ -348,7 +350,7 @@ function TextArea({
               onBlur={blur}
               onChange={(event) => {
                 const next = event.target.value;
-                applyFormText(text, next, maxLength, change);
+                textBinding.change(next);
               }}
             />
             {showCount && maxLength !== undefined ? (
@@ -827,9 +829,10 @@ function FormDialog({
   readonly children: ReactNode;
   readonly className?: string;
 }) {
-  const { scope, busy, requestClose } = useFormDialogScope(onClose);
+  const binding = useFormDialogScope(onClose);
+  const { busy, requestClose } = binding;
   return (
-    <ScopeContext.Provider value={scope}>
+    <FormDialogScopeProvider binding={binding}>
       <Dialog
         open
         title={title}
@@ -840,7 +843,7 @@ function FormDialog({
       >
         {children}
       </Dialog>
-    </ScopeContext.Provider>
+    </FormDialogScopeProvider>
   );
 }
 

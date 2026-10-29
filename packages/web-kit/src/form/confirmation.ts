@@ -90,5 +90,5 @@ export function useConfirmationState<T, F>({
 }
 
 export { useDialogBinding, useConfirmBinding, useAcknowledgeBinding } from '../dialog-binding';
-export { useBlockingProgressBinding, BlockingRegistryContext, useBlockingProgress } from '../progress';
+export { useBlockingProgressBinding, BlockingProgressProvider, useBlockingProgress } from '../progress';
 export type { BlockingKind } from '../progress';

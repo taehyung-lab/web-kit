@@ -28,7 +28,7 @@ export interface ChoiceBindingOptions {
 }
 
 /** 입력 정지 뒤 검색하고 취소를 무시하는 서버의 늦은 응답도 버린다. */
-export function useChoiceSearch(props: ChoiceBindingOptions, text: string) {
+function useChoiceSearch(props: ChoiceBindingOptions, text: string) {
   const [state, setState] = useState<{ nodes: readonly ChoiceNode[]; pending: boolean; failed: boolean }>({
     nodes: props.nodes,
     pending: false,

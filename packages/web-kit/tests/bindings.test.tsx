@@ -8,9 +8,9 @@ import { z } from 'zod';
 import { ListProvider, useListModel, useList, type ListModel } from '../src/list';
 import { List, type ListColumn } from '../src/list-ui';
 import { defineSearch } from '../src/search';
-import { useDialogBinding, useConfirmBinding, useAcknowledgeBinding, useBlockingProgressBinding, BlockingRegistryContext, useBlockingProgress } from '../src/form/confirmation';
+import { useDialogBinding, useConfirmBinding, useAcknowledgeBinding, useBlockingProgressBinding, BlockingProgressProvider, useBlockingProgress } from '../src/form/confirmation';
 import { useRetryFocus } from '../src/record';
-import { useOptionsRetryFocus, useFormRootBinding, useFormFieldBinding, useSaveForm, applyFormText } from '../src/form';
+import { useOptionsRetryFocus, useFormRootBinding, useFormFieldBinding, useSaveForm, formTextBinding } from '../src/form';
 import { CheckboxTree } from '../src/CheckboxTree';
 
 afterEach(cleanup);
@@ -130,7 +130,7 @@ it('진행 binding은 본문을 잠그고 덮개 종료 후 잃은 포커스를 
   function Registration({ active }: { active: boolean }) { useBlockingProgress('edit', active); return null; }
   function Progress({ active }: { active: boolean }) {
     const binding = useBlockingProgressBinding();
-    return <BlockingRegistryContext.Provider value={binding.registry}><div data-testid="content" ref={binding.contentRef} {...binding.contentProps}><button>본문</button><Registration active={active} /></div></BlockingRegistryContext.Provider>;
+    return <BlockingProgressProvider binding={binding}><div data-testid="content" ref={binding.contentRef} {...binding.contentProps}><button>본문</button><Registration active={active} /></div></BlockingProgressProvider>;
   }
   const view = render(<Progress active={false} />);
   screen.getByText('본문').focus();
@@ -171,7 +171,7 @@ it('폼 root·field binding은 제출을 격리하고 화면 값으로 한 번 �
   expect(outer).not.toHaveBeenCalled();
 });
 it('텍스트 길이 제한의 공통 계산은 긴 기존 값의 감소를 허용한다', () => {
-  function Text() { const [value, set] = useState('long'); return <input aria-label="제한" value={value} onChange={(e) => applyFormText(value, e.target.value, 2, set)} />; }
+  function Text() { const [value, set] = useState('long'); return <input aria-label="제한" value={value} onChange={(e) => formTextBinding(value, 2, set).change(e.target.value)} />; }
   render(<Text />); fireEvent.change(screen.getByLabelText('제한'), { target: { value: 'longer' } });
   expect((screen.getByLabelText('제한') as HTMLInputElement).value).toBe('long');
   fireEvent.change(screen.getByLabelText('제한'), { target: { value: 'lon' } });
