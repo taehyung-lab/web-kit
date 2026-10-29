@@ -221,7 +221,7 @@ packages:
         optional: true
 
   '@boosterlab/web-kit@file:vendor/boosterlab-web-kit.tgz':
-    resolution: {integrity: sha512-FdOYOxRITLeCHXZQOETwzy7v/PNUtrYdrFmk6Wkz6sUItbSTFtfWzopv+N8lCKzTQNUvzpPJhHBK7YpRnH2GGA==, tarball: file:vendor/boosterlab-web-kit.tgz}
+    resolution: {integrity: sha512-Ima5e3BNQPurHUw7nNUxORkXW5pkWgu5+xxLHOy0pHscvEWWI2H05BUN6HL1ukG7XLvJer+Ril5BzjNJNHdvow==, tarball: file:vendor/boosterlab-web-kit.tgz}
     version: 4.0.0-rc.1
     hasBin: true
     peerDependencies:
