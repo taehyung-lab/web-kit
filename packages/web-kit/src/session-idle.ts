@@ -1,4 +1,4 @@
-// 파일 책임: 세션 유휴 마감(로그인과 서버 연장만 마감을 바꿈 — 경고 구간 밖 활동은 서버 연장, 경고 구간 안은 연장 버튼만, 일반 응답·재발급은 늘리지 않음)·경고 구간·대표 탭·만료 종료를 판정한다.
+// 파일 책임: 세션 유휴 마감(로그인과 서버 연장만 마감을 바꿈 — 경고 구간 밖 활동은 서버 연장, 경고 구간 안은 연장 버튼만, 일반 응답·재발급은 늘리지 않음)·경고 구간·대표 탭·만료 종료·화면 단위 멈춤과 서버 연장 재개를 판정한다.
 // 세대·저장·종료 순서는 session이 맡고, 경고 화면(팝업·모달·알림)은 프로젝트가 이 상태를 보고 그린다.
 import { createServerClock, type ServerClock } from './server-clock';
 export { createServerClock, type ServerClock } from './server-clock';
@@ -38,6 +38,8 @@ export interface IdleState {
   readonly extending: boolean;
   /** 경고 구간에서 사용자가 경고를 닫아 다시 띄우지 않는 대기 상태. */
   readonly dismissed: boolean;
+  /** pause()로 이 탭의 경고·만료를 멈춘 상태. 멈춘 동안 단계는 warning이 되지 않는다. */
+  readonly paused: boolean;
 }
 
 /** 연장 결과. 성공은 서버 마감을 채택했고 경고 구간을 벗어났다는 뜻이다. */
@@ -54,7 +56,17 @@ export interface IdleTimer {
   readonly extend: () => Promise<ExtendResult>;
   /** 경고 닫기. 연장하지 않고 대기 상태가 된다. */
   readonly dismiss: () => void;
-  /** 남은 시간(ms). 세션이 없으면 null. 표시용이며 상태 구독과 따로 쓴다. */
+  /**
+   * 이 탭의 경고·만료를 멈춘다(예: 유휴 마감을 적용하지 않는 화면). 대표 탭 자격을 내놓고 활동 연장도 하지 않는다.
+   * start() 전에 부르면 start()가 지난 마감으로 끝내지 않고 resume()의 서버 연장 결과에 맡긴다. 세션 종료·stop()이 풀어 준다.
+   */
+  readonly pause: () => void;
+  /**
+   * 멈춤을 풀고 서버 연장을 한 번 보낸다. 결과는 extend()와 같다.
+   * 연장이 실패해 마감이 없거나 지났으면 이 탭이 그 자리에서 idle로 끝낸다. 멈춰 있지 않으면 연장하지 않는다.
+   */
+  readonly resume: () => Promise<ExtendResult>;
+  /** 남은 시간(ms). 세션이 없거나 멈춘 동안은 null. 표시용이며 상태 구독과 따로 쓴다. */
   readonly remaining: () => number | null;
   readonly state: () => IdleState;
   /** 상태가 바뀔 때만 알린다(매초 아님). useSyncExternalStore에 그대로 넘길 수 있다. */
@@ -186,6 +198,8 @@ export function createIdleTimer<C extends Credentials>({
   let seedOpenedAt: number | null = null;
   let lastAttemptAt = Number.NEGATIVE_INFINITY;
   let inFlight: Promise<ExtendResult> | undefined;
+  let releaseLeader: (() => void) | undefined;
+  let resuming: Promise<ExtendResult> | undefined;
   let state: IdleState = {
     phase: 'inactive',
     deadline: null,
@@ -193,12 +207,14 @@ export function createIdleTimer<C extends Credentials>({
     leader: false,
     extending: false,
     dismissed: false,
+    paused: false,
   };
   const listeners = new Set<() => void>();
   const tickListeners = new Set<() => void>();
 
   const now = clock.now;
-  const remaining = () => (state.phase === 'inactive' || state.deadline === null ? null : state.deadline - now());
+  const left = () => (state.phase === 'inactive' || state.deadline === null ? null : state.deadline - now());
+  const remaining = () => (state.paused ? null : left());
 
   /** 상태를 바꾸고, 실제로 바뀌었을 때만 알린다. */
   function update(patch: Partial<IdleState>) {
@@ -231,7 +247,7 @@ export function createIdleTimer<C extends Credentials>({
 
   /** 남은 시간으로 단계를 정하고, 대표 탭이면 만료로 끝낸다. */
   function evaluate() {
-    if (state.phase === 'inactive' || state.deadline === null) return;
+    if (state.phase === 'inactive' || state.deadline === null || state.paused) return;
     const left = state.deadline - now();
     if (left <= 0) {
       if (state.extending) return; // 연장 결과를 본 뒤 다시 판단한다.
@@ -250,7 +266,7 @@ export function createIdleTimer<C extends Credentials>({
 
   /** 경고 구간 밖의 명시적 조작은 간격마다 서버 연장을 부른다. */
   function onActivity() {
-    if (state.phase !== 'active') return;
+    if (state.phase !== 'active' || state.paused) return;
     if (document.visibilityState !== 'visible' || !document.hasFocus()) return;
     const localNow = Date.now();
     if (localNow - lastAttemptAt < policy.activityThrottleMs) return;
@@ -274,7 +290,16 @@ export function createIdleTimer<C extends Credentials>({
     }
   }
 
-  /** 대표 잠금을 기다린다. 잠금이 없는 환경에서는 바로 대표다. */
+  /** 대표 잠금을 기다린다. 잠금이 없는 환경에서는 바로 대표다. 이미 쥐었거나 기다리는 중이면 그대로 둔다. */
+  function takeLeader() {
+    releaseLeader ??= claimLeader();
+  }
+
+  function dropLeader() {
+    releaseLeader?.();
+    releaseLeader = undefined;
+  }
+
   function claimLeader(): () => void {
     if (locks === null) {
       update({ leader: true });
@@ -309,7 +334,7 @@ export function createIdleTimer<C extends Credentials>({
     window.addEventListener('pageshow', onVisible);
     window.addEventListener('storage', onStorage);
     const stopClock = startClock(tick);
-    const releaseLeader = claimLeader();
+    if (!state.paused) takeLeader();
     detach = () => {
       for (const name of ACTIVITY_EVENTS) window.removeEventListener(name, onActivity);
       document.removeEventListener('visibilitychange', onVisible);
@@ -317,7 +342,7 @@ export function createIdleTimer<C extends Credentials>({
       window.removeEventListener('storage', onStorage);
       stopClock();
       unsubscribeClock();
-      releaseLeader();
+      dropLeader();
     };
   }
 
@@ -345,6 +370,7 @@ export function createIdleTimer<C extends Credentials>({
     if (change.kind === 'ended') {
       grantSlot.write(null);
       deactivate();
+      update({ paused: false });
       return;
     }
     if (change.kind === 'started') {
@@ -375,8 +401,8 @@ export function createIdleTimer<C extends Credentials>({
           applyOffset(sample.clockOffsetMs);
           adopt({ sessionId, deadline: sample.deadline, sentAt: sample.sentAt }, true);
         }
-        const left = remaining();
-        return left !== null && left > policy.warningMs ? { ok: true } : { ok: false };
+        const rest = left();
+        return rest !== null && rest > policy.warningMs ? { ok: true } : { ok: false };
       } catch (failure: unknown) {
         return { ok: false, failure };
       } finally {
@@ -401,7 +427,14 @@ export function createIdleTimer<C extends Credentials>({
       const stored = parseGrant(grantSlot.read());
       const refreshClock = clock.subscribe(() => undefined);
       refreshClock();
-      if (stored === null || stored.sessionId !== sessionId || stored.deadline - now() <= 0) {
+      const usable = stored !== null && stored.sessionId === sessionId;
+      if (state.paused) {
+        // 멈춘 화면에서 시작: 지난 마감도 그대로 두고 resume()의 서버 연장이 판정한다.
+        activate();
+        if (usable) adopt(stored, false);
+        return;
+      }
+      if (!usable || stored.deadline - now() <= 0) {
         session.expireIdle();
         return;
       }
@@ -409,11 +442,45 @@ export function createIdleTimer<C extends Credentials>({
       adopt(stored, false);
     },
     stop() {
+      update({ paused: false });
       if (!started) return;
       started = false;
       unsubscribeSession?.();
       unsubscribeSession = undefined;
       deactivate();
+    },
+    pause() {
+      if (state.paused) return;
+      update({ paused: true, dismissed: false, ...(state.phase === 'warning' ? { phase: 'active' as const } : {}) });
+      dropLeader();
+    },
+    resume() {
+      if (resuming !== undefined) return resuming;
+      if (!state.paused) return Promise.resolve<ExtendResult>({ ok: state.phase !== 'inactive' });
+      if (state.phase === 'inactive') {
+        update({ paused: false });
+        return Promise.resolve<ExtendResult>({ ok: false });
+      }
+      const generation = session.generation();
+      const run = (async (): Promise<ExtendResult> => {
+        try {
+          return await extend();
+        } finally {
+          resuming = undefined;
+          if (state.paused) {
+            update({ paused: false });
+            const rest = left();
+            // 같은 세션의 연장이 끝났는데 마감이 없거나 지났으면 대표 여부와 관계없이 이 탭이 끝낸다.
+            if (generation === session.generation() && state.phase !== 'inactive' && (rest === null || rest <= 0)) session.expireIdle();
+            else if (detach !== undefined) {
+              takeLeader();
+              evaluate();
+            }
+          }
+        }
+      })();
+      resuming = run;
+      return run;
     },
     observe(sample) {
       if (state.phase === 'inactive') return;

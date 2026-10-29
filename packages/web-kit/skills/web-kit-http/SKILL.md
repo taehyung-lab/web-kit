@@ -48,6 +48,10 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
   - 연장 요청 중에는 마감이 지나도 그 결과를 본 뒤 판단한다. 경고 UI 열림은 만료를 막지 않는다.
   - `start()`는 이 세션의 저장 마감이 없거나 지났으면 그 자리에서 `idle`로 끝낸다(라우터를 만들기 전에 부르면 끝난 세션이 화면에 들어가지 않는다).
   - 상태(`state`·`subscribe`)는 단계가 바뀔 때만 알리고, 남은 시간(`remaining`·`subscribeTick`)은 따로 매초 읽는다.
+  - **멈춤·재개:** `pause()`는 이 탭의 경고·만료를 멈춘다(`state().paused`). 멈춘 동안 단계는 `warning`이 되지 않고, `remaining()`은 null이며, 조작은 연장하지 않고, 이 탭은 대표 자격을 내놓는다. 세션 구독·다른 탭의 마감 수신·`observe`의 시계 보정과 로그인 직후 첫 마감 확정은 계속된다. 경고 중에 멈추면 경고가 사라진다.
+  - `resume()`은 멈춤을 풀며 서버 연장을 한 번 보내고 `extend()`와 같은 결과를 돌려준다. 연장 마감을 채택하면 그 마감으로 이어 간다. 연장이 실패했는데 마감이 없거나 이미 지났으면 이 탭이 그 자리에서 `idle`로 끝내고, 아직 남았으면 기존 마감으로 계속한다. 일반 응답의 마감 표본으로 재개하지 않는다(마감을 바꾸는 것은 로그인과 서버 연장뿐).
+  - `start()` 전에 `pause()`를 부르면 `start()`가 지난 저장 마감으로 끝내지 않고 `resume()`의 연장 결과가 판정한다. 세션 종료(`ended`)와 `stop()`은 멈춤을 풀며, 다른 계정 교체(`replaced`)는 멈춤을 유지한다.
+  - 멈춤은 그 탭에만 적용된다. 다른 탭은 평소대로 돌며, 대표가 된 다른 탭이 마감에 세션을 끝내면 멈춘 탭도 다른 탭 종료로 끝난다. 다른 탭의 연장 마감은 멈춘 탭도 받는다.
 - **query:** 조회 자동 재시도는 network·timeout·server-error만 대상이고 횟수는 프로젝트가 정한다. 쓰기는 자동 재시도하지 않는다. 조회·쓰기의 최종 실패는 출처(`query`/`mutation`)와 함께 취소를 빼고 한 번 `notify`된다. 이전 세션의 쓰기는 알리지 않는다. 세션이 바뀌면 진행 중 조회를 중단하고 캐시 전체를 비운다. 이전 세션의 쓰기는 무효화를 일으키지 않는다. 서버에서 이미 실행된 쓰기를 취소한다고 보장하지는 않는다.
 
 ## 프로젝트 연결
@@ -67,7 +71,7 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
 - `prepare`: 언어·메뉴 같은 운영 헤더.
 - 서버 로그아웃은 `createSession({ signOut })`에 넘긴다. 받은 자격증명의 토큰을 헤더에 직접 실어 공개 요청으로 보낸다. 로그아웃 버튼은 `session.end()`만 부른다. 그 뒤 로그인 이동은 앱 안 이동(router navigate)으로 한다. `window.location`으로 문서를 다시 읽으면 브라우저가 진행 중인 `signOut` 요청을 끊어 서버 세션이 남는다.
 - `session.subscribe`의 `ended`에서 로그인 이동·안내를 한다. `by`로 이 탭의 로그아웃(local), 다른 탭(other-tab), 서버 인증 계약(server)을 구별한다. 토큰 저장 위치는 프로젝트 정책이다.
-- 유휴 마감을 쓰면 `createIdleTimer({ session, key, policy, extend })`를 같은 진입점에서 만들고, 앱 시작 때 라우터보다 먼저 `start()`를 부른다. 프로젝트가 정하는 것: 시간 정책(`durationMs`·`warningMs`·`activityThrottleMs`), 저장 key, 서버 연장 호출(그 응답의 서버 시각 표본을 돌려준다), `observe`에서 응답 헤더를 `ServerTimeSample`(보낸 시각·서버 마감·시계 차이)로 바꾸는 일, 경고 디자인(팝업·모달·알림·제목)과 `ended`의 `idle` 안내, 연장 실패 안내. 대표 탭(`leader`)만 경고를 띄운다.
+- 유휴 마감을 쓰면 `createIdleTimer({ session, key, policy, extend })`를 같은 진입점에서 만들고, 앱 시작 때 라우터보다 먼저 `start()`를 부른다. 프로젝트가 정하는 것: 시간 정책(`durationMs`·`warningMs`·`activityThrottleMs`), 저장 key, 서버 연장 호출(그 응답의 서버 시각 표본을 돌려준다), `observe`에서 응답 헤더를 `ServerTimeSample`(보낸 시각·서버 마감·시계 차이)로 바꾸는 일, 경고 디자인(팝업·모달·알림·제목)과 `ended`의 `idle` 안내, 연장 실패 안내, 유휴 마감을 적용하지 않을 화면과 그 화면에 들어올 때 `pause()`·나갈 때 `resume()`을 부르는 위치. 대표 탭(`leader`)만 경고를 띄운다.
 - 연결 상태 표시·서버 시각 동기화 같은 관찰은 `observe`로 받는다. 재전송·재발급을 포함한 전송 시도마다 한 번 오고, 응답이 없으면 `response`가 없다.
 - orval mutator는 `http.request` 하나로 둔다.
 - 요청 query는 `/api`에서 서버 계약에 맞는 것을 고른다. `serializeSpringParams`는 재귀 객체용이고, `serializeFlatListParams`는 한 단계 깊이의 목록용이다(중첩은 TypeError). 둘 다 null·undefined는 빼고 빈 문자열·0·false는 보존한다.

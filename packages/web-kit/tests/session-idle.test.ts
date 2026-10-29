@@ -356,3 +356,151 @@ describe('대표 탭', () => {
     expect(idle.state().deadline).toBe(later);
   });
 });
+
+describe('멈춤과 재개(마감을 적용하지 않는 화면)', () => {
+  /** 로그인한 뒤 pause()까지 마친 탭. */
+  function paused(options?: Parameters<typeof setup>[0]) {
+    const tab = setup(options);
+    tab.idle.start();
+    tab.session.start({ accessToken: 't' });
+    tab.idle.pause();
+    return tab;
+  }
+
+  it('멈춘 채 마감이 지나도 경고·로그아웃이 없고, 조작도 연장하지 않는다', () => {
+    const { session, idle, requestExtend, signOut } = paused();
+    const phases = new Set<string>();
+    idle.subscribe(() => phases.add(idle.state().phase));
+    vi.advanceTimersByTime(policy.durationMs - 30_000);
+    window.dispatchEvent(new MouseEvent('click'));
+    vi.advanceTimersByTime(10 * 60_000);
+    expect(phases.has('warning')).toBe(false);
+    expect(idle.state()).toMatchObject({ phase: 'active', paused: true, leader: false });
+    expect(idle.remaining()).toBeNull();
+    expect(session.current()).not.toBeNull();
+    expect(signOut).not.toHaveBeenCalled();
+    expect(requestExtend).not.toHaveBeenCalled();
+  });
+
+  it('경고 중에 멈추면 경고가 사라진다', () => {
+    const { session, idle } = setup();
+    idle.start();
+    session.start({ accessToken: 't' });
+    vi.advanceTimersByTime(policy.durationMs - 30_000);
+    expect(idle.state().phase).toBe('warning');
+    idle.pause();
+    expect(idle.state()).toMatchObject({ phase: 'active', paused: true });
+  });
+
+  it('재개는 서버 연장을 한 번 보내 그 마감으로 이어 가고, 지난 마감으로 끝내지 않는다', async () => {
+    const { session, idle, requestExtend } = paused();
+    vi.advanceTimersByTime(policy.durationMs + 10 * 60_000);
+    requestExtend.mockResolvedValueOnce(grantIn(policy.durationMs));
+    const expected = Date.now() + policy.durationMs;
+    await expect(idle.resume()).resolves.toEqual({ ok: true });
+    expect(requestExtend).toHaveBeenCalledTimes(1);
+    expect(idle.state()).toMatchObject({ phase: 'active', paused: false, deadline: expected, leader: true });
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(session.current()).not.toBeNull();
+    // 이어진 마감에서는 다시 경고·만료가 돈다.
+    await vi.advanceTimersByTimeAsync(policy.durationMs);
+    expect(session.current()).toBeNull();
+  });
+
+  it('재개 중 서버가 거절하면 지난 마감으로 유휴 종료한다', async () => {
+    for (const reply of [null, new RequestFailure({ kind: 'unauthorized', status: 401 })]) {
+      localStorage.clear();
+      const { session, idle, requestExtend, signOut } = paused();
+      const changes: SessionChange[] = [];
+      session.subscribe((change) => changes.push(change));
+      vi.advanceTimersByTime(policy.durationMs + 1_000);
+      if (reply === null) requestExtend.mockResolvedValueOnce(null);
+      else requestExtend.mockRejectedValueOnce(reply);
+      const result = await idle.resume();
+      expect(result.ok).toBe(false);
+      expect(changes).toEqual([{ kind: 'ended', by: 'idle' }]);
+      expect(signOut).toHaveBeenCalledTimes(1);
+      expect(idle.state()).toMatchObject({ phase: 'inactive', paused: false });
+      idle.stop();
+    }
+  });
+
+  it('마감 전 재개에서 연장이 실패하면 기존 마감으로 계속한다', async () => {
+    const { session, idle, requestExtend } = paused();
+    const deadline = idle.state().deadline;
+    vi.advanceTimersByTime(60_000);
+    requestExtend.mockResolvedValueOnce(null);
+    await idle.resume();
+    expect(idle.state()).toMatchObject({ phase: 'active', paused: false, deadline });
+    expect(session.current()).not.toBeNull();
+  });
+
+  it('start 전에 멈추면 지난 저장 마감으로 끝내지 않고 재개의 연장 결과로 정한다', async () => {
+    const first = setup();
+    first.idle.start();
+    first.session.start({ accessToken: 't' });
+    first.idle.stop();
+    vi.advanceTimersByTime(policy.durationMs + 60_000);
+    const expiredGrant = localStorage.getItem(KEY)!;
+
+    for (const reply of [grantIn(policy.durationMs), null]) {
+      localStorage.setItem(KEY, expiredGrant);
+      const store = memoryStore(first.store.value());
+      const session = createSession<Creds>({ store, reissue: vi.fn() });
+      const requestExtend = vi.fn(async () => (reply === null ? null : { ...reply, sentAt: Date.now() }));
+      const idle = createIdleTimer({ session, key: KEY, policy, extend: requestExtend, environment: { locks: null } });
+      idle.pause();
+      idle.start();
+      expect(session.current()).not.toBeNull();
+      expect(idle.state()).toMatchObject({ phase: 'active', paused: true });
+      await idle.resume();
+      expect(session.current() !== null).toBe(reply !== null);
+      idle.stop();
+    }
+  });
+
+  it('세션 종료와 stop은 멈춤을 풀어, 다음 로그인은 평소처럼 경고한다', () => {
+    const { session, idle } = paused();
+    session.end();
+    expect(idle.state().paused).toBe(false);
+    session.start({ accessToken: 'next' });
+    vi.advanceTimersByTime(policy.durationMs - 30_000);
+    expect(idle.state().phase).toBe('warning');
+    idle.pause();
+    idle.stop();
+    expect(idle.state().paused).toBe(false);
+  });
+
+  it('멈춘 탭은 대표를 내놓아 다른 탭이 마감에 끝내고, 다른 탭의 연장 마감은 멈춘 채 받는다', async () => {
+    const locks = fakeLocks();
+    const pausedTab = setup({ locks });
+    pausedTab.idle.start();
+    pausedTab.session.start({ accessToken: 't' });
+    await flush();
+    expect(pausedTab.idle.state().leader).toBe(true);
+    const store = memoryStore(pausedTab.store.value());
+    const otherSession = createSession<Creds>({ store, reissue: vi.fn() });
+    const other = createIdleTimer({ session: otherSession, key: KEY, policy, extend: vi.fn(), environment: { locks } });
+    other.start();
+    await flush();
+    expect(other.state().leader).toBe(false);
+
+    pausedTab.idle.pause();
+    await flush();
+    expect(pausedTab.idle.state().leader).toBe(false);
+    expect(other.state().leader).toBe(true);
+
+    // 다른 탭의 서버 연장: 저장 마감을 받되 멈춘 탭은 경고하지 않는다.
+    const sessionId = pausedTab.session.current()!.sessionId;
+    const later = Date.now() + 2 * policy.durationMs;
+    localStorage.setItem(KEY, JSON.stringify({ sessionId, deadline: later, sentAt: Date.now() }));
+    window.dispatchEvent(new StorageEvent('storage', { key: KEY }));
+    expect(pausedTab.idle.state()).toMatchObject({ deadline: later, paused: true, phase: 'active' });
+
+    // 다른 탭이 대표로 마감에 끝낸다. 멈춘 탭은 스스로 끝내지 않는다(종료는 세션 동기화로 받는다).
+    await vi.advanceTimersByTimeAsync(2 * policy.durationMs + 1_000);
+    expect(otherSession.current()).toBeNull();
+    expect(pausedTab.session.current()).not.toBeNull();
+    expect(pausedTab.idle.state().phase).not.toBe('warning');
+  });
+});
