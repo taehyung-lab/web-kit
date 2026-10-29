@@ -7,7 +7,7 @@ export interface AuthConformanceFormProps {
   readonly model: ReturnType<typeof useAuthChallenge>;
   readonly codeLength: number;
   readonly labels: { readonly code: string; readonly confirm: string; readonly resend: string;
-    readonly expired: string; readonly pending: string; readonly failure: string; readonly invalidCode: string;
+    readonly expired: string; readonly pending: string; readonly verifyFailure: string; readonly resendFailure: string; readonly invalidCode: string;
     readonly remaining: (seconds: number) => string; readonly resendWait: (seconds: number) => string };
 }
 
@@ -37,7 +37,7 @@ export function createAuthConformancePage(Form: ComponentType<AuthConformanceFor
       onResent: () => { setDeadlines((previous) => ({ ...previous, codeExpiresAt: clock.now() + 5000, resendAvailableAt: clock.now() + 3000 })); },
     });
     return <>
-      <Form model={model} codeLength={6} labels={{ code: '코드', confirm: '확인', resend: '재전송', expired: '만료됨', pending: '진행 중', failure: '실패함', invalidCode: '숫자 6자리를 입력하세요', remaining: (value) => `남은 시간 ${value}`, resendWait: (value) => `대기 ${value}` }} />
+      <Form model={model} codeLength={6} labels={{ code: '코드', confirm: '확인', resend: '재전송', expired: '만료됨', pending: '진행 중', verifyFailure: '확인 실패', resendFailure: '재전송 실패', invalidCode: '숫자 6자리를 입력하세요', remaining: (value) => `남은 시간 ${value}`, resendWait: (value) => `대기 ${value}` }} />
       <output aria-label="요청 횟수">{requests}</output><output aria-label="재전송 횟수">{resends}</output>
       <output aria-label="적용 코드">{applied}</output>
       <button onClick={() => response?.resolve()}>응답 성공</button>

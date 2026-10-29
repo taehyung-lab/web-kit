@@ -6,7 +6,7 @@ export interface AuthCodeFormProps {
   readonly model: ReturnType<typeof useAuthChallenge>;
   readonly codeLength: number;
   readonly labels: { readonly code: string; readonly confirm: string; readonly resend: string;
-    readonly expired: string; readonly pending: string; readonly failure: string; readonly invalidCode: string;
+    readonly expired: string; readonly pending: string; readonly verifyFailure: string; readonly resendFailure: string; readonly invalidCode: string;
     readonly remaining: (seconds: number) => string; readonly resendWait: (seconds: number) => string };
 }
 
@@ -25,10 +25,11 @@ export function AuthCodeForm({ model, codeLength, labels }: AuthCodeFormProps) {
     {invalid && <p id={errorId} role="alert">{labels.invalidCode}</p>}
     {model.remainingSeconds !== undefined && <p role="timer">{labels.remaining(model.remainingSeconds)}</p>}
     {(model.expired || model.codeExpired) && <p role="alert">{labels.expired}</p>}
-    {model.failure !== undefined && <p role="alert">{labels.failure}</p>}
+    {model.verifyFailure !== undefined && <p role="alert">{labels.verifyFailure}</p>}
     {model.pending !== null && <p role="status">{labels.pending}</p>}
     <button type="submit" disabled={!model.canSubmit}>{labels.confirm}</button>
     <button type="button" disabled={!model.canResend} onClick={() => { void model.resend(); }}>{labels.resend}</button>
+    {model.resendFailure !== undefined && <p role="alert">{labels.resendFailure}</p>}
     {model.resendRemainingSeconds > 0 && <p aria-label="resend-wait">{labels.resendWait(model.resendRemainingSeconds)}</p>}
   </form>;
 }

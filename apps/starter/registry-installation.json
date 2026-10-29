@@ -1,8 +1,8 @@
 {
-  "version": "4.1.0-rc.2",
-  "sourceRef": "v4.1.0-rc.2",
+  "version": "4.1.0-rc.3",
+  "sourceRef": "v4.1.0-rc.3",
   "shadcn": "4.19.1",
-  "sourceCommit": "b9f158198e5f43e1a17ee6a4c92d206cae9b6db8",
+  "sourceCommit": "72dbd0163270b4903f74d75a66f122b3bcb8aabf",
   "sourceWorkingTree": "Source fingerprints identify the installed candidate, including uncommitted changes.",
   "method": "pnpm exec shadcn add ./public/r/all.json --cwd apps/starter --yes --overwrite; local absolute namespace during installation",
   "componentsHash": "ec2541ca88c2275e7663bc8c21bb6abf7adb94d540fb08924c34f3c59a0f150d",
@@ -322,19 +322,19 @@
     },
     {
       "name": "auth",
-      "artifactHash": "8eda76838a8459194fafd00a06b13b5b6d6966eb85efdda0bb3f9a82963c768f",
+      "artifactHash": "b06ae29609ead2505c4c9647d3bd0d5e1c1dde064de02d041898b3347ecc2a56",
       "files": [
         {
           "source": "packages/ui-registry/src/auth.tsx",
           "installed": "apps/starter/src/shared/ui/web-kit/auth.tsx",
-          "sourceHash": "888be0f612222e86d8a1a84231b5d7c861b05e4491be35554f4b5bbf79d5f640",
-          "installedHash": "888be0f612222e86d8a1a84231b5d7c861b05e4491be35554f4b5bbf79d5f640"
+          "sourceHash": "3dc6ba3890e46cdcfc0c80a7308e9a44e580bb1d0bbed80fdffcab9d790e792d",
+          "installedHash": "3dc6ba3890e46cdcfc0c80a7308e9a44e580bb1d0bbed80fdffcab9d790e792d"
         },
         {
           "source": "packages/ui-registry/checks/auth-six.tsx",
           "installed": "apps/starter/src/shared/ui/web-kit/checks/auth-six.tsx",
-          "sourceHash": "7987c87295bdb598746f60187580ac8e7dd65c139b5e8283bf0c0635d6573cc4",
-          "installedHash": "7987c87295bdb598746f60187580ac8e7dd65c139b5e8283bf0c0635d6573cc4"
+          "sourceHash": "31d05526bf608f9eeed9ff341459ab3cdcda1b9c07e69ea1a6e33527540d54bf",
+          "installedHash": "31d05526bf608f9eeed9ff341459ab3cdcda1b9c07e69ea1a6e33527540d54bf"
         },
         {
           "source": "packages/ui-registry/checks/auth.test.tsx",

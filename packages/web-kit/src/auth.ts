@@ -51,13 +51,13 @@ export function useAuthChallenge<Result, Resent = void>(options: AuthChallengeOp
   const mounted = useRef(true);
   const [running, setRunning] = useState({ verify: false, resend: false });
   const pending = running.verify ? (running.resend ? 'both' : 'verify') : (running.resend ? 'resend' : null);
-  const [failure, setFailure] = useState<unknown>();
+  const [failures, setFailures] = useState<{ verify: unknown; resend: unknown }>({ verify: undefined, resend: undefined });
   const [, setTick] = useState(0);
   /** 취소·이동 시작 시 호출하여 늦은 성공·실패가 화면에 들어오지 않게 한다. */
   const invalidate = useCallback(() => {
     active.current = { verify: null, resend: null };
     setRunning({ verify: false, resend: false });
-    setFailure(undefined);
+    setFailures({ verify: undefined, resend: undefined });
   }, []);
   useLayoutEffect(() => {
     if (!Object.is(current.current.scope, options.scope)) invalidate();
@@ -88,7 +88,7 @@ export function useAuthChallenge<Result, Resent = void>(options: AuthChallengeOp
     if (kind === 'resend' && (!timing.canResend || input.resend === undefined)) return;
     const owner = {};
     active.current[kind] = owner;
-    setRunning((previous) => ({ ...previous, [kind]: true })); setFailure(undefined);
+    setRunning((previous) => ({ ...previous, [kind]: true })); setFailures((previous) => ({ ...previous, [kind]: undefined }));
     const live = () => mounted.current && active.current[kind] === owner &&
       Object.is(current.current.scope, input.scope) && !current.current.blocked &&
       !getAuthTiming(current.current, current.current.clock.now()).expired;
@@ -101,13 +101,13 @@ export function useAuthChallenge<Result, Resent = void>(options: AuthChallengeOp
         if (live()) await input.onResent?.(result);
       }
     } catch (error: unknown) {
-      if (live()) setFailure(error);
+      if (live()) setFailures((previous) => ({ ...previous, [kind]: error }));
     } finally {
       if (mounted.current && active.current[kind] === owner) { active.current[kind] = null; setRunning((previous) => ({ ...previous, [kind]: false })); }
     }
   }
   const timing = getAuthTiming(options, options.clock.now());
-  return { ...timing, pending, failure, invalidate,
+  return { ...timing, pending, verifyFailure: failures.verify, resendFailure: failures.resend, invalidate,
     canSubmit: timing.canSubmit && !options.blocked && !running.verify,
     canResend: timing.canResend && !options.blocked && !running.resend && options.resend !== undefined,
     submit: (code: string) => run('verify', code), resend: () => run('resend') };

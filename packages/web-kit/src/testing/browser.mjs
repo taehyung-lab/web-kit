@@ -163,4 +163,31 @@ export function checkAuthBrowser({ url, target, enterCode, readCode }) {
         }
     });
 
+    test(conformanceTitle('B-auth-failures', target, '확인·재전송 실패 안내의 독립된 수명'), async ({ page }) => {
+        await page.clock.install({ time: new Date(100000) });
+        await page.goto(url);
+        await page.clock.runFor(3000);
+        await enterCode(page, '123456');
+        const click = (name) => page.getByRole('button', { name, exact: true }).click();
+        await click('확인'); await click('응답 실패');
+        await expect(page.getByText('확인 실패', { exact: true })).toBeVisible();
+        await click('재전송');
+        await expect(page.getByText('확인 실패', { exact: true })).toBeVisible();
+        await click('응답 성공');
+        await expect(page.getByText('확인 실패', { exact: true })).toBeVisible();
+        await page.clock.runFor(3000);
+        await click('재전송'); await click('응답 실패');
+        await expect(page.getByText('확인 실패', { exact: true })).toBeVisible();
+        await expect(page.getByText('재전송 실패', { exact: true })).toBeVisible();
+        await click('확인');
+        await expect(page.getByText('확인 실패', { exact: true })).toHaveCount(0);
+        await expect(page.getByText('재전송 실패', { exact: true })).toBeVisible();
+        await click('응답 실패'); await click('재전송');
+        await expect(page.getByText('확인 실패', { exact: true })).toBeVisible();
+        await expect(page.getByText('재전송 실패', { exact: true })).toHaveCount(0);
+        await click('응답 실패'); await click('확인'); await click('응답 성공');
+        await expect(page.getByText('확인 실패', { exact: true })).toHaveCount(0);
+        await expect(page.getByText('재전송 실패', { exact: true })).toBeVisible();
+    });
+
 }

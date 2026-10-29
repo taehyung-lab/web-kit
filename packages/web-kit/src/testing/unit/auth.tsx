@@ -37,7 +37,7 @@ export function checkAuthConformance({ Form, enterCode, readCode }: {
     await click('방식 전환'); await click('응답 성공');
     expect(screen.getByLabelText('적용 코드').textContent).toBe('');
     await click('확인'); await click('응답 실패');
-    expect(screen.getByRole('alert').textContent).toBe('실패함');
+    expect(screen.getByRole('alert').textContent).toBe('확인 실패');
     await click('확인'); await click('응답 성공');
     expect(screen.getByLabelText('적용 코드').textContent).toBe('123456');
     await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
@@ -71,6 +71,33 @@ export function checkAuthConformance({ Form, enterCode, readCode }: {
       expect(screen.getByLabelText('재전송 횟수').textContent).toBe('1');
       view.unmount();
     }
+  });
+
+  it(conformanceTitle('auth-failures', target, '다른 종류 요청은 기존 실패 안내를 지우지 않는다'), async () => {
+    render(<Page />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+    enterCode('123456');
+    await click('확인'); await click('응답 실패');
+    expect(screen.getByText('확인 실패')).toBeTruthy();
+    await click('재전송');
+    expect(screen.getByText('확인 실패')).toBeTruthy();
+    await click('응답 성공');
+    expect(screen.getByText('확인 실패')).toBeTruthy();
+    await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+    await click('재전송'); await click('응답 실패');
+    expect(screen.getByText('확인 실패')).toBeTruthy();
+    expect(screen.getByText('재전송 실패')).toBeTruthy();
+    await click('확인');
+    expect(screen.queryByText('확인 실패')).toBeNull();
+    expect(screen.getByText('재전송 실패')).toBeTruthy();
+    await click('응답 실패');
+    await click('재전송');
+    expect(screen.getByText('확인 실패')).toBeTruthy();
+    expect(screen.queryByText('재전송 실패')).toBeNull();
+    await click('응답 실패');
+    await click('확인'); await click('응답 성공');
+    expect(screen.queryByText('확인 실패')).toBeNull();
+    expect(screen.getByText('재전송 실패')).toBeTruthy();
   });
 
 }

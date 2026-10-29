@@ -49,7 +49,7 @@ it('전환 뒤 옛 성공·실패가 새 진행을 끄거나 결과를 적용하
   rerender({ scope: 'google' });
   act(() => { b = result.current.submit('654321'); });
   await act(async () => { first.reject(new Error('old')); await a; });
-  expect(result.current.pending).toBe('verify'); expect(result.current.failure).toBeUndefined();
+  expect(result.current.pending).toBe('verify'); expect(result.current.verifyFailure).toBeUndefined(); expect(result.current.resendFailure).toBeUndefined();
   await act(async () => { second.resolve('new'); await b; });
   expect(onVerified).toHaveBeenCalledExactlyOnceWith('new');
 });
@@ -132,4 +132,13 @@ it('다른 탭의 시계 보정이 유휴 단계·남은 시간과 인증 남은
   expect(idle.remaining()).toBe(7000); expect(idle.state().phase).toBe('warning');
   expect(result.current.remainingSeconds).toBe(7);
   idle.stop(); session.dispose();
+});
+
+it('인증 hook 공개 결과는 종류별 실패 이름을 제공하고 공용 failure를 제거한다', () => {
+  const clock = createServerClock({ key: 'clock' });
+  const { result } = renderHook(() => useAuthChallenge({ scope: 1, clock, codeLength: 6, verify: vi.fn(), onVerified: vi.fn() }));
+  expect(Object.keys(result.current).sort()).toEqual([
+    'remainingSeconds', 'challengeRemainingSeconds', 'resendRemainingSeconds', 'expired', 'codeExpired',
+    'canSubmit', 'canResend', 'pending', 'verifyFailure', 'resendFailure', 'invalidate', 'submit', 'resend',
+  ].sort());
 });

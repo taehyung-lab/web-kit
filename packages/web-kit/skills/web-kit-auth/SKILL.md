@@ -18,7 +18,7 @@ description: 로그인 전 이메일·OTP 코드 확인, 남은 시간·만료, 
 3. `useAuthChallenge`에 `codeLength`, 절대 시각 `codeExpiresAt`·`expiresAt`·`resendAvailableAt`, `verify`·`onVerified`, 필요하면 `resend`·`onResent`를 연결한다. 기한은 같은 서버 시계 기준이다. 시간 값 기본값은 없고 전체 기한 생략은 전체 시간 정책을 끈다. 재전송 대기 생략은 별도 cooldown이 없다는 뜻이다. 예: 코드 5분·전체 30분 같은 값은 프로젝트 입력이며 키트 기본값이 아니다.
 4. 요청 함수는 요청·응답 반환만 맡고 세션 저장·화면 이동 같은 성공 효과는 `onVerified`에 둔다. `onResent`에서 **성공한 현재 요청에만** 새 코드 기한과 재전송 가능 시각을 적용한다. 서버가 주지 않으면 프로젝트 시간 정책을 공유 시계 `clock.now()`에 더한다. 성공 콜백은 이동 완료까지 Promise를 반환할 수 있다. 콜백 실행 뒤 추가 비동기 효과가 있다면 프로젝트가 자기 이동 수명도 확인한다.
 5. 취소·영역 이탈 또는 라우터 이동 시작에 `invalidate()`를 먼저 부른다. 화면 unmount 전 지연 구간에서도 옛 응답을 버린다. 방식 전환은 새 `scope`로도 무효화된다. 입력 값 초기화는 복사본의 key 또는 프로젝트 입력 상태로 연결한다.
-6. registry `AuthCodeForm`에 모델·자리수·문구를 넘긴다. 입력 오류 문구는 프로젝트 값(`labels.invalidCode`)이다. 복사본은 `isAuthCode`로 형식을 확인하여 요청 없이 오류를 보이고 입력칸에 연결한다. 만료 시 입력 편집은 유지하고 버튼과 Enter 제출을 막는다. 실패 값은 `model.failure`로 전달된다. 서버 오류 코드·계정 잠금·안내창 선택은 프로젝트가 해석하고, 제출을 막을 때 `blocked`를 전달한다. 등록 정보 생성·QR 해석·등록 완료 후 이동은 제품 계약이므로 프로젝트에 남긴다.
+6. registry `AuthCodeForm`에 모델·자리수·문구를 넘긴다. 입력 오류 문구는 프로젝트 값(`labels.invalidCode`)이다. 복사본은 `isAuthCode`로 형식을 확인하여 요청 없이 오류를 보이고 입력칸에 연결한다. 만료 시 입력 편집은 유지하고 버튼과 Enter 제출을 막는다. 실패 값은 `model.verifyFailure`와 `model.resendFailure`로 나뉜다. 각 종류의 시작은 자기 실패만 지우며 다른 종류의 시작·성공·실패는 기존 안내를 지우지 않는다. 복사본은 `labels.verifyFailure`와 `labels.resendFailure`를 각 요청 자리의 안내로 사용한다. 서버 오류 코드·계정 잠금·안내창 선택은 프로젝트가 해석하고, 제출을 막을 때 `blocked`를 전달한다. 등록 정보 생성·QR 해석·등록 완료 후 이동은 제품 계약이므로 프로젝트에 남긴다.
 
 ## 키트 보장
 
@@ -41,3 +41,5 @@ description: 로그인 전 이메일·OTP 코드 확인, 남은 시간·만료, 
 registry `auth`의 단위·브라우저 연결 파일을 실제 복사본과 함께 실행하고 `web-kit-check`를 필수 CI에 둔다. 입력을 바꾸면 `enterCode`·`readCode` 행동 어댑터만 그 모양에 맞춘다. 공통 검사는 입력 개수나 DOM 배치 대신 남은 시간·편집 값·Enter·요청 횟수·결과 적용을 관찰한다. 저장소의 한 칸/여섯 칸 검사는 모양 변경의 예이며 소비처 연결 증명을 대신하지 않는다.
 
 기존 인증 전용 interval·재전송 pending·늦은 응답 판정을 이 hook으로 교체하고, 기존 API 요청을 순수한 요청 함수로 만든 뒤 세션 적용을 성공 콜백으로 옮긴다. 기존 `/session/idle` 사용자는 clock 생략 시 이전 API가 유지된다. 인증 전 단계도 쓰는 앱은 위의 공유 객체 연결로 이전한다.
+
+4.1 후보 rc.2에서 rc.3으로 옮길 때는 `model.failure`를 확인용 `verifyFailure`와 재전송용 `resendFailure`로 나누고, 복사본 `labels.failure`도 `labels.verifyFailure`·`labels.resendFailure`로 바꾼다. 4.0 공개 API는 변경하지 않는다.
