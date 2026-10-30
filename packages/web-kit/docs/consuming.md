@@ -41,9 +41,11 @@ registry item은 함께 설치하는 파일 묶음이다. UI와 함께 설치된
 
 선택 소비는 기능별 작은 검사 입구를 사용한다. 폼은 `/testing/unit/form`, 인증은 `/testing/unit/auth`와 `/testing/fixtures/auth`, 폼의 UI 의존은 `/testing/unit/choice`·`/testing/unit/primitives`·`/testing/unit/styles`로 연결한다. 기존 `/testing/unit`·`/testing/fixtures`는 호환 입구로 남지만 전체 검사 의존을 불러올 수 있다. form의 zod는 검사 의존이며 사용하는 폼 schema 구현을 제한하지 않는다.
 
-## 4.1 → 5.0.0-rc.3
+## 4.1 → 5.0.0-rc.4
 
 5.0은 **사용 계약이 깨지는 변경**(major)이다. 다음 연결을 함께 이전한다.
+
+- **검색어·선택 칸(rc.4):** 입력만 하고 [검색]을 누르면 입력 중 글자는 검색에 포함되지 않고 칸에 남는다. Enter 연결은 패키지 바인딩에서 복사본으로 이동했으므로 registry `list` 복사본을 함께 갱신한다. 기본 Enter는 추가 후 검색이며, [추가]와 Enter는 `;`로 여러 검색어를 나눈다. 전체 선택지 밖 값은 표시·검색·저장에서 빠진다. 서버 검색의 일부 결과 밖 선택은 유지한다. `Form.Choice`의 서버 선택지는 `Form.Select`와 같은 `status`·`onRetry`를 연결한다(생략은 고정 선택지 `ready`). 정리만으로 폼 원본이나 이탈 보호는 바뀌지 않는다. 보장은 [web-kit-list](../skills/web-kit-list/SKILL.md)·[web-kit-form](../skills/web-kit-form/SKILL.md), 결정 이유는 [0016](../references/docs/decisions/0016-keywords-and-choice-values.md)에 있다.
 
 - **목록 검색(rc.3):** 같은 조건으로 다시 검색해도 행 체크가 모두 해제된다. 검색 응답이 성공·실패로 도착하기 전에는 이전 행을 보이면서 체크·일괄 변경·확인창 실행·다운로드를 잠근다. 배경 재조회는 선택을 유지하고 사라진 행만 정리한다. 이전 검색의 체크를 유지한다고 가정한 화면·검사를 갱신한다. 공용 `isCurrent`를 읽는 연결에는 별도 잠금 조건을 추가할 필요가 없다. 보장은 [web-kit-list](../skills/web-kit-list/SKILL.md), 결정 이유는 [0015](../references/docs/decisions/0015-list-selection-lifetime.md)에 있다.
 

@@ -13,6 +13,7 @@ import {
 } from '@tanstack/react-form';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
+import { normalizeChoiceValue, type ChoiceNode, type ChoiceValue } from '../choice-binding';
 import { isRequestFailure, type FieldError } from '../failure';
 import { useBlockingProgress } from '../progress';
 import { followRows, rowMark } from './rows';
@@ -212,15 +213,39 @@ export function useSaveForm<
   /** 저장 도중 사용자에게 묻고 있는 물음 수. 0보다 크면 진행 덮개를 내린다. */
   const [asking, setAsking] = useState(0);
 
+  const choices = useRef(new Map<string, { token: object; nodes: readonly ChoiceNode[] }>());
+  const [, updateChoices] = useState(0);
+  /** 원본 값은 그대로 두고 현재 전체 선택지에 맞춘 표시·검증·제출 값을 계산한다. */
+  function project(input: TInput): TInput {
+    let next = input;
+    for (const [name, { nodes }] of choices.current) {
+      const before = getBy(next, name) as ChoiceValue;
+      const after = normalizeChoiceValue(before, nodes);
+      if (!evaluate(before, after)) next = setBy(next, name, after);
+    }
+    return next;
+  }
+  /** 마운트된 선택 칸의 전체 선택지만 등록하고 해제한다. */
+  function registerChoice(name: string, nodes: readonly ChoiceNode[]) {
+    const token = {};
+    choices.current.set(name, { token, nodes });
+    updateChoices((tick) => tick + 1);
+    return () => {
+      if (choices.current.get(name)?.token !== token) return;
+      choices.current.delete(name);
+      updateChoices((tick) => tick + 1);
+    };
+  }
+
   const form = useForm({
     defaultValues: defaults,
     onSubmitMeta: undefined as object | undefined,
     validationLogic: revalidateLogic(),
-    validators: { onDynamic: options.schema },
+    validators: { onDynamic: { '~standard': { ...options.schema['~standard'], validate: (input: unknown) => latest.current.schema['~standard'].validate(project(input as TInput)) } } },
     onSubmit: async ({ value, meta }) => {
       if (meta === undefined || !isCurrent(meta)) return;
       // TanStack Form은 값을 바꿀 때마다 새 객체를 만든다. 제출 순간의 참조가 곧 고정된 S다(File 등은 그대로 유지).
-      const submitted = value;
+      const submitted = project(value);
       const mark = rowMark(form);
       const action = primaryAction.current;
       const result = await action.schema['~standard'].validate(submitted);
@@ -257,7 +282,7 @@ export function useSaveForm<
    * 다른 칸 값에 따른 조건부 필수도 같은 검증으로 나온다(다른 칸 오류가 있어도 돌도록 쓴 규칙이어야 한다 — skill 「필수 표시」).
    */
   function isRequired(field: string): boolean {
-    const current = form.state.values;
+    const current = project(form.state.values);
     if (requiredCache.current.values !== current) requiredCache.current = { values: current, fields: new Map() };
     const known = requiredCache.current.fields.get(field);
     if (known !== undefined) return known;
@@ -409,7 +434,7 @@ export function useSaveForm<
     const saved = declared ?? submitted;
     savedResult.current = { complete: () => onSaved?.(result), identity: identity.current };
     flushSync(() => {
-      if (evaluate(form.state.values, submitted)) replace(saved);
+      if (evaluate(project(form.state.values), submitted)) replace(saved);
       else setBaseline(saved);
       setStage({ kind: 'saved', completing: false });
     });
@@ -454,6 +479,7 @@ export function useSaveForm<
     setRejection(undefined);
     setCompletionFailure(undefined);
     try {
+      if (rejectReferences(form.state.values, rowMark(form))) return;
       // 이미 떠 있는 blur 오류가 있으면 TanStack 제출은 전체 검증 없이 멈춘다. 필드 단위 blur 검증과 폼 검증을
       // 먼저 다시 돌려, 고친 값의 오류는 지우고 남은 오류는 모두 보인다.
       await form.validateAllFields('blur');
@@ -480,9 +506,10 @@ export function useSaveForm<
     clearServerErrors();
     setRejection(undefined);
     setCompletionFailure(undefined);
-    const submitted = form.state.values;
+    const submitted = project(form.state.values);
     const mark = rowMark(form);
     try {
+      if (rejectReferences(form.state.values, mark)) return;
       const result = await action.schema['~standard'].validate(submitted);
       if (!isCurrent(token)) return;
       if (result.issues !== undefined) {
@@ -608,14 +635,15 @@ export function useSaveForm<
     /** 필드에 붙이지 못한 서버 필드 오류(저장 중 바뀐 필드·폼 경로로 바꾸지 못한 것). 폼 수준 표시의 근거다. */
     unattachedFieldErrors: unattached,
     /** 기준선(마지막으로 확정된 원본 또는 저장 결과). 차이로 요청을 만드는 화면이 읽는다. 바꾸지 않는다. */
-    baseline,
+    baseline: project(baseline),
+    registerChoice,
     /** 현재 입력이 기준선과 다른가. */
-    isDirty: !evaluate(values, baseline),
+    isDirty: !evaluate(project(values), project(baseline)),
     isSaving: stage.kind === 'saving',
     /** 같은 이벤트 안의 이동도 현재 입력과 기준선으로 판정한다. */
     getState: () => ({
       stage: stageRef.current.kind,
-      isDirty: !evaluate(form.state.values, baselineRef.current),
+      isDirty: !evaluate(project(form.state.values), project(baselineRef.current)),
       isSaving: stageRef.current.kind === 'saving',
     }),
     fieldId: (field: DeepKeys<TInput>) => formFieldControlId(form.formId, field),
@@ -643,6 +671,8 @@ export interface SaveFormEditor<TInput, TResult = unknown> {
   readonly completionFailure: unknown;
   readonly unattachedFieldErrors: readonly FieldError[];
   readonly baseline: TInput;
+  /** 복사형 Choice가 준비된 전체 선택지를 연결한다. 원본 값은 유지한다. */
+  readonly registerChoice: (name: string, nodes: readonly ChoiceNode[]) => () => void;
   readonly isDirty: boolean;
   readonly isSaving: boolean;
   readonly getState: () => { readonly stage: SaveStage<TInput>['kind']; readonly isDirty: boolean; readonly isSaving: boolean };

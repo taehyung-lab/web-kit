@@ -19,13 +19,17 @@ describe('member list (search to load)', () => {
     expect(memberRequests(requests).map((request) => request.line)).toEqual(['GET /api/members?page=0&size=100&sort=joinedAt,desc&periodType=joinedAt']);
   });
 
-  it('includes a typed keyword that was not added and keeps the filter on page moves', async () => {
+  it('excludes unadded text from Search and Enter adds then searches', async () => {
     const user = userEvent.setup();
     const { requests } = renderApp('/members');
     await screen.findByText('검색 조건을 정하고 검색을 누르세요.');
     await user.selectOptions(screen.getByRole('combobox', { name: '검색어 검색 대상' }), 'email');
     await user.type(screen.getByRole('textbox', { name: '검색어' }), 'member2');
     await user.click(screen.getByRole('button', { name: '검색' }));
+    await waitFor(() => expect(memberRequests(requests).at(-1)?.line).toBe('GET /api/members?page=0&size=100&sort=joinedAt,desc&periodType=joinedAt'));
+    expect((screen.getByRole('textbox', { name: '검색어' }) as HTMLInputElement).value).toBe('member2');
+    await user.click(screen.getByRole('textbox', { name: '검색어' }));
+    await user.keyboard('{Enter}');
     await waitFor(() =>
       expect(memberRequests(requests).at(-1)?.line).toBe('GET /api/members?page=0&size=100&sort=joinedAt,desc&periodType=joinedAt&keyword=email:member2'),
     );
@@ -37,6 +41,7 @@ describe('member list (search to load)', () => {
     const { requests } = renderApp('/members');
     await screen.findByText('검색 조건을 정하고 검색을 누르세요.');
     await user.type(screen.getByRole('textbox', { name: '검색어' }), 'member2');
+    await user.click(screen.getByRole('button', { name: '추가' }));
     await user.type(screen.getByLabelText('기간 시작'), '2026-03-10');
     await user.type(screen.getByLabelText('기간 종료'), '2026-03-01');
     await user.click(screen.getByRole('button', { name: '검색' }));

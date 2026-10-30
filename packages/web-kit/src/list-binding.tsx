@@ -4,8 +4,9 @@ import { activateTableRow } from './row-activation';
 import { useQuery } from '@tanstack/react-query';
 import type { DownloadBlock, DownloadKind, DownloadState } from './list-download';
 import { calendarDate, normalizeFilterSelection, shiftCalendarDate, type Keyword, type PeriodPreset } from './search/interactions';
-import type { ChoiceNode } from './choice-binding';
-import { createContext, useContext, useId, useRef, useState, type ReactNode, type FormEvent, type KeyboardEvent, type MouseEvent, type RefObject } from 'react';
+import { normalizeChoiceValue, type ChoiceNode, type ChoiceValue } from './choice-binding';
+import { sameSearchValue } from './search/fields';
+import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode, type FormEvent, type KeyboardEvent, type MouseEvent, type RefObject } from 'react';
 import type { FieldCheck, ViewKeys } from './search/fields';
 import type { DraftIssue, KeywordInput, ListStatus } from './use-list';
 
@@ -232,17 +233,12 @@ export function useListDownloadBinding(control: DownloadControl, kinds: readonly
   };
 }
 
-/** 키워드 Enter는 조합 중에는 기다리고 추가만 실행하며 폼 제출을 차단한다. */
+/** 키워드의 값·추가·검색 동작을 제공하고 키 연결은 복사형 UI에 맡긴다. */
 export function useListKeywordBinding(model: ListModel, name: string, choices: readonly string[]) {
   const input = model.keywordInput(name, choices);
   const items = ((model.draft as Record<string, unknown>)[name] as readonly Keyword[] | undefined) ?? [];
   return { input, items,
-    onKeyDown: (event: KeyboardEvent<HTMLInputElement>) => {
-      if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
-        event.preventDefault();
-        input.add();
-      }
-    },
+    submit: model.submit,
     remove: (index: number) => model.patchDraft({ [name]: items.filter((_, i) => i !== index) }),
   };
 }
@@ -286,4 +282,15 @@ export function useListVirtualRows<Row>(rows: readonly Row[], rowId: (row: Row) 
   const leading = items[0]?.start ?? 0;
   const trailing = Math.max(0, virtualizer.getTotalSize() - (items.at(-1)?.end ?? 0));
   return { items, leading, trailing, measureElement: virtualizer.measureElement };
+}
+
+/** 준비된 전체 선택지에 없는 초안 값만 정리한다. URL 복구는 기존 check가 맡는다. */
+export function useListChoiceNormalization(model: ListModel, name: string, nodes: readonly ChoiceNode[] | undefined) {
+  const value = (model.draft as Record<string, unknown>)[name] as ChoiceValue;
+  const signature = JSON.stringify([value, nodes]);
+  useEffect(() => {
+    if (nodes === undefined) return;
+    const next = normalizeChoiceValue(value, nodes);
+    if (!sameSearchValue(value, next)) model.patchDraft({ [name]: next });
+  }, [signature]);
 }

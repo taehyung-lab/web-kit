@@ -7,7 +7,7 @@ export { captureListReturn, resolveListReturn, type ListReturnContext } from './
 
 export {
   ListProvider, useListModel, useListField, useListFilterBinding,
-  useListDetailsBinding, useBulkConfirmation, useListChoiceBinding,
+  useListDetailsBinding, useBulkConfirmation, useListChoiceBinding, useListChoiceNormalization,
   useListMultiChoiceBinding, useListPeriodBinding, useListDownloadBinding,
   useListKeywordBinding, useListVirtualRows,
   listPaginationBinding, listViewBinding, listRowBinding,

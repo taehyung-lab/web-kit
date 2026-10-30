@@ -1,5 +1,4 @@
-// 파일 책임: 트리의 leaf 순서와 트리 밖 저장값을 보존하는 선택 계산을 맡는다.
-// 파일 책임: leaf 선택값으로 전체·부모 상태와 다음 선택값을 계산한다. 빈 값=전체 변환은 adapter 책임이다.
+// 파일 책임: 트리의 leaf 순서로 선택 상태와 다음 선택값을 계산한다.
 export type CheckboxTreeNode<T extends string = string> =
   | { readonly value: T; readonly label: string; readonly children?: undefined }
   | {
@@ -38,7 +37,7 @@ export function checkboxTreeSelection<T extends string>(
         if (checked) next.add(value);
         else next.delete(value);
       }
-      return [...all.filter((value) => next.has(value)), ...values.filter((value) => !all.includes(value) && next.has(value))];
+      return all.filter((value) => next.has(value));
     },
   };
 }

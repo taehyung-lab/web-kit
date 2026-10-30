@@ -1,7 +1,7 @@
 // 파일 책임: 폼 기본 UI의 묶음 부품(Form.*)과 앱에 한 번 두는 이탈 보호(FormGuard).
 // 각 부품은 같은 편집 상태(useSaveForm 결과)를 context로 읽어서, 칸·버튼·오류 줄을 어디에 두어도 저장·검증·focus 연결을 다시 쓰지 않는다.
 // 저장 수명은 useSaveForm이, 이탈 판정은 createFormNavigation이 소유하고 여기는 표시와 사용자 입력 연결만 맡는다.
-import { FormGuardProvider, FormDialogScopeProvider, useFormGuardBinding, useFormRootBinding, useFormFieldBinding, formTextBinding, useOptionsRetryFocus, useFormCancel, useFormDialogScope, useFormConfirmBinding, useFormSavedBinding, FormBindingProvider, useFormBinding, useFormSubmitBinding, formFileBinding } from '@boosterlab/web-kit/form';
+import { FormGuardProvider, FormDialogScopeProvider, useFormGuardBinding, useFormRootBinding, useFormFieldBinding, useFormChoiceBinding, formTextBinding, useOptionsRetryFocus, useFormCancel, useFormDialogScope, useFormConfirmBinding, useFormSavedBinding, FormBindingProvider, useFormBinding, useFormSubmitBinding, formFileBinding } from '@boosterlab/web-kit/form';
 import { Choice as ChoiceInput, type ChoiceProps } from '../ui/choice';
 import type { NavigateOptions } from '@tanstack/react-router';
 import type { AnyFormApi, DeepKeys, DeepValue } from '@tanstack/react-form';
@@ -255,10 +255,22 @@ function Field<V = unknown>({
 }
 
 /** 폼 검증·필수 표시·오류 초점을 같은 선택 입력에 연결한다. */
-function Choice({ name, description, ...props }: FormFieldProps & Omit<ChoiceProps, 'value' | 'onValueChange'>) {
+function Choice({ name, description, status = 'ready', onRetry, ...props }: FormFieldProps & Omit<ChoiceProps, 'value' | 'onValueChange'> & { readonly status?: OptionsStatus; readonly onRetry?: () => void }) {
+  const { editor, copy, renderFailure } = useFormContext();
+  useFormChoiceBinding(editor, name, status === 'ready' && props.search === undefined ? props.nodes : undefined);
+  const retry = useOptionsRetryFocus(onRetry);
   return (
-    <Field<ChoiceProps['value']> name={name} label={props.label} description={description} disabled={props.disabled}>
-      {({ value, change, blur, ...control }) => <ChoiceInput {...props} {...control} value={value} onValueChange={change} onBlur={blur} />}
+    <Field<ChoiceProps['value']> name={name} label={props.label} description={description} disabled={props.disabled} labelTarget={status === 'ready' ? 'control' : 'group'}>
+      {({ value, change, blur, ...control }, labelId) => {
+        if (status === 'ready') return <ChoiceInput {...props} {...control} value={value} onValueChange={change} onBlur={blur} />;
+        const failureText = status === 'loading' ? undefined : renderFailure(status.failure, 'options');
+        return <div {...control} role="group" tabIndex={-1} aria-labelledby={labelId} className="wk-options-state">
+          {status === 'loading' ? <span role="status">{copy.loading}</span> : failureText === null ? null : <span role="alert">
+            {failureText ?? copy.optionsFailed}
+            {onRetry !== undefined && <button type="button" className="wk-button wk-button-ghost" onClick={retry.onRetry}>{copy.retry}</button>}
+          </span>}
+        </div>;
+      }}
     </Field>
   );
 }

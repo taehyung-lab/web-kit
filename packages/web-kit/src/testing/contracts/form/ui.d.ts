@@ -109,7 +109,7 @@ declare function Field<V = unknown>({ name, label, description, disabled, labelT
     readonly children: (control: FormControl<V>, labelId: string) => ReactNode;
 }): import("react").JSX.Element;
 /** 폼 검증·필수 표시·오류 초점을 같은 선택 입력에 연결한다. */
-declare function Choice({ name, description, ...props }: FormFieldProps & Omit<ChoiceProps, 'value' | 'onValueChange'>): import("react").JSX.Element;
+declare function Choice({ name, description, status, onRetry, ...props }: FormFieldProps & Omit<ChoiceProps, 'value' | 'onValueChange'> & { readonly status?: OptionsStatus; readonly onRetry?: () => void }): import("react").JSX.Element;
 /**
  * 한 줄 문자열 입력. maxLength는 길어지는 편집만 거부한다(한글 조합 커밋이 maxLength를 넘겨도 꼬리를 자르지 않고 받지 않는다).
  * 서버가 준 초과 초기값은 줄이는 편집을 막지 않는다. showCount면 글자 수를 보인다.

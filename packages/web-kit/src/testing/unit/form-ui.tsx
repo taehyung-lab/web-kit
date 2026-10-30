@@ -484,24 +484,110 @@ it(title('G076', 'Form.Choice는 필수 오류에 초점을 주고 고른 leaf �
   await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
   expect(save.mock.calls[0]?.[0]).toMatchObject({ kind: 'x' });
 });
-it.each(['vertical', 'dropdown', 'menu'] as const)(title('form-choice-preserve', 'Form.Choice %s는 트리 밖 저장값을 제출까지 보존한다'), async (appearance) => {
+it.each(['vertical', 'horizontal', 'dropdown', 'menu'] as const)(title('form-choice-prune', 'Form.Choice %s는 트리 밖 저장값을 사용자 변경 없이 제출에서 뺀다'), async (appearance) => {
   const choiceSchema = z.object({ ids: z.array(z.string()) });
   const C = Form.of<z.input<typeof choiceSchema>>();
+  let current!: ReturnType<typeof useSaveForm<z.input<typeof choiceSchema>, z.output<typeof choiceSchema>>>;
   const save = vi.fn(async (_value: z.output<typeof choiceSchema>) => undefined);
   /** 저장된 값에 현재 선택지 밖 ID를 포함한 실제 편집 화면이다. */
   function ChoiceEditor() {
     const editor = useSaveForm({ schema: choiceSchema, source: { id: 'preserve', values: { ids: ['a', 'b', 'x'] } }, save });
+    current = editor;
     return <C editor={editor}><C.Choice name="ids" label="분류" multiple appearance={appearance} nodes={[
       { value: 'a', label: 'Alpha' }, { value: 'b', label: 'Beta' }, { value: 'c', label: 'Gamma' },
     ]} /><C.Submit /></C>;
   }
-  await mount(() => <ChoiceEditor />);
-  if (appearance !== 'vertical') fireEvent.click(screen.getByRole('button', { name: '분류' }));
-  fireEvent.click(await screen.findByRole('checkbox', { name: 'Gamma' }));
-  if (appearance !== 'vertical') fireEvent.click(screen.getByRole('button', { name: '분류' }));
+  const router = await mount(() => <ChoiceEditor />);
+  expect(current.form.state.values.ids).toEqual(['a', 'b', 'x']);
+  if (appearance === 'dropdown' || appearance === 'menu') expect(screen.getByRole('button', { name: '분류' }).textContent).toBe('Alpha, Beta');
+  fireEvent.click(screen.getByRole('link', { name: '다른 화면' }));
+  await screen.findByRole('heading', { name: '완료 화면' });
+  expect(screen.queryByRole('alertdialog')).toBeNull();
+  await act(async () => { await router.navigate({ to: '/' as never }); });
+  expect(current.isDirty).toBe(false);
+  expect(current.getState().isDirty).toBe(false);
   fireEvent.click(screen.getByText('저장'));
   await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
-  expect(save.mock.calls[0]?.[0]).toEqual({ ids: ['a', 'b', 'c', 'x'] });
+  expect(save.mock.calls[0]?.[0]).toEqual({ ids: ['a', 'b'] });
+  fireEvent.click(screen.getByRole('link', { name: '다른 화면' }));
+  await screen.findByRole('heading', { name: '완료 화면' });
+  expect(screen.queryByRole('alertdialog')).toBeNull();
+});
+
+it(title('form-choice-status', '선택지 로딩·실패는 원본·제출을 유지하고 재시도 성공 때만 정리한다'), async () => {
+  const schema = z.object({ ids: z.array(z.string()), note: z.string() });
+  const C = Form.of<z.input<typeof schema>>();
+  const save = vi.fn(async (_input: z.output<typeof schema>) => undefined);
+  let current!: ReturnType<typeof useSaveForm<z.input<typeof schema>, z.output<typeof schema>>>;
+  let state!: (value: 'loading' | 'ready' | { failure: unknown }) => void;
+  /** 같은 칸에서 지연·실패·재시도·성공을 관찰한다. */
+  function Editor() {
+    const [status, setStatus] = useState<'loading' | 'ready' | { failure: unknown }>('loading');
+    state = setStatus;
+    current = useSaveForm({ schema, source: { id: 'status', values: { ids: ['a', 'x'], note: '' } }, save });
+    return <C editor={current}><C.Text name="note" label="메모" /><C.Choice name="ids" label="분류" multiple status={status} onRetry={() => setStatus('ready')} nodes={status === 'ready' ? [{ value: 'a', label: 'Alpha' }] : []} /><C.Submit /></C>;
+  }
+  await mount(() => <Editor />);
+  expect(screen.getByRole('status').textContent).toBe('불러오는 중입니다.');
+  expect(current.form.state.values.ids).toEqual(['a', 'x']);
+  await act(async () => current.submit());
+  expect(save.mock.lastCall?.[0]).toMatchObject({ ids: ['a', 'x'] });
+  act(() => state({ failure: new Error('options') }));
+  expect(screen.getByRole('alert').textContent).toContain('선택지를 불러오지 못했습니다.');
+  await act(async () => current.submit());
+  expect(save.mock.lastCall?.[0]).toMatchObject({ ids: ['a', 'x'] });
+  fireEvent.click(screen.getByRole('button', { name: '다시 시도' }));
+  expect(current.form.state.values.ids).toEqual(['a', 'x']);
+  expect(current.getState().isDirty).toBe(false);
+  fireEvent.change(screen.getByRole('textbox', { name: '메모' }), { target: { value: 'edit' } });
+  expect(current.getState().isDirty).toBe(true);
+  await act(async () => current.submit());
+  expect(save.mock.lastCall?.[0]).toEqual({ ids: ['a'], note: 'edit' });
+});
+it(title('form-choice-search', '서버 검색 결과 밖의 기존 선택은 표시·제출에서 유지한다'), async () => {
+  const schema = z.object({ ids: z.array(z.string()) });
+  const C = Form.of<z.input<typeof schema>>();
+  const save = vi.fn(async (_input: z.output<typeof schema>) => undefined);
+  /** 현재 결과에 없는 x도 저장된 선택으로 보여 준다. */
+  function Editor() {
+    const editor = useSaveForm({ schema, source: { id: 'search', values: { ids: ['a', 'x'] } }, save });
+    return <C editor={editor}><C.Choice name="ids" label="분류" multiple appearance="search" nodes={[{ value: 'a', label: 'Alpha' }]} search={async () => [{ value: 'b', label: 'Beta' }]} debounceMs={0} /><C.Submit /></C>;
+  }
+  await mount(() => <Editor />);
+  expect(screen.getByText('Alpha, x')).toBeTruthy();
+  fireEvent.click(screen.getByText('저장'));
+  await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+  expect(save.mock.lastCall?.[0]).toEqual({ ids: ['a', 'x'] });
+});
+
+it.each(['vertical', 'horizontal', 'dropdown', 'menu', 'search'] as const)(title('form-choice-single', '단일 %s의 없는 저장값은 빈 선택으로 제출한다'), async (appearance) => {
+  const schema = z.object({ id: z.string().optional() });
+  const C = Form.of<z.input<typeof schema>>();
+  const save = vi.fn(async (_input: z.output<typeof schema>) => undefined);
+  /** 단일 저장값이 전체 선택지 밖인 화면이다. */
+  function Editor() {
+    const editor = useSaveForm({ schema, source: { id: 'single', values: { id: 'x' } }, save });
+    return <C editor={editor}><C.Choice name="id" label="분류" appearance={appearance} nodes={[{ value: 'a', label: 'Alpha' }]} /><C.Submit /></C>;
+  }
+  await mount(() => <Editor />);
+  if (appearance === 'dropdown' || appearance === 'menu') expect(screen.getByRole('button', { name: '분류' }).textContent).toBe('분류');
+  fireEvent.click(screen.getByText('저장'));
+  await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+  expect(save.mock.lastCall?.[0]).toEqual({ id: undefined });
+});
+it(title('form-choice-empty', '성공한 빈 전체 선택지는 기존 다중 저장값을 빈 배열로 제출한다'), async () => {
+  const schema = z.object({ ids: z.array(z.string()) });
+  const C = Form.of<z.input<typeof schema>>();
+  const save = vi.fn(async (_input: z.output<typeof schema>) => undefined);
+  /** ready의 빈 목록은 로딩 중 빈 목록과 구별한다. */
+  function Editor() {
+    const editor = useSaveForm({ schema, source: { id: 'empty', values: { ids: ['a', 'x'] } }, save });
+    return <C editor={editor}><C.Choice name="ids" label="분류" multiple nodes={[]} status="ready" /><C.Submit /></C>;
+  }
+  await mount(() => <Editor />);
+  fireEvent.click(screen.getByText('저장'));
+  await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+  expect(save.mock.lastCall?.[0]).toEqual({ ids: [] });
 });
 
 }

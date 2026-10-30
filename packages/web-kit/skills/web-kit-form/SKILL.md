@@ -159,7 +159,7 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 
 실제 조립 예: [apps/starter/src/features/products/screens/ProductForm.tsx](../../references/apps/starter/src/features/products/screens/ProductForm.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-`Form.Choice`는 같은 필드 검증·별표·오류 초점에 registry `choice`의 `Choice`를 연결한다. 공통 선택·검색 수명은 `/choice`의 `useChoiceBinding`이 맡는다. 값은 단일 leaf ID 또는 다중 leaf ID 배열이며 가지는 값이 아니다. 다중 트리·드롭다운·메뉴에서 다른 항목을 체크·해제해도 현재 `nodes` 밖 저장값은 제출까지 보존한다. 트리 안 값은 트리 순서, 트리 밖 값은 기존 값의 상대 순서대로 그 뒤에 둔다. `nodes`에 트리, `appearance`에 vertical/horizontal/dropdown/menu/search를 준다. 단일 menu에서 가지는 탐색만, 다중 트리에서 가지는 전체·일부·없음을 구분한다. `search(text, signal)`을 주면 기본 250ms 입력 정지 후 서버를 조회하며 늦은 이전 결과는 버린다. 서버 코드·선택지 내용·표시 문구는 프로젝트가 제공한다.
+`Form.Choice`는 같은 필드 검증·별표·오류 초점에 registry `choice`의 `Choice`를 연결한다. 공통 선택·검색 수명은 `/choice`의 `useChoiceBinding`이 맡는다. 값은 단일 leaf ID 또는 다중 leaf ID 배열이며 가지는 값이 아니다. 전체 선택지를 `nodes`로 받는 칸은 준비된 선택지 밖 값을 표시·검증·제출에서 뺀다. 폼 원본 값은 유지하고 표시·제출 값을 계산하므로 이 정리만으로 사용자 변경이나 이탈 보호가 생기지 않는다. `Form.Select`와 같은 `status`(`ready`·`loading`·`{ failure }`)·`onRetry`로 선택지 상태를 연결한다. 생략 시 `ready`인 고정 선택지로 간주하므로 서버 선택지는 상태를 반드시 넘긴다. 로딩·실패 중에는 저장값을 유지하며 칸 자리에 불러오는 중·실패·재시도를 보인다. `search` 함수로 일부 결과만 받는 서버 검색 모양은 결과 밖 기존 선택을 유지한다. 다른 칸의 편집과 명시적 폼 참조 검증은 그대로 지킨다. `nodes`에 트리, `appearance`에 vertical/horizontal/dropdown/menu/search를 준다. 단일 menu에서 가지는 탐색만, 다중 트리에서 가지는 전체·일부·없음을 구분한다. `search(text, signal)`을 주면 기본 250ms 입력 정지 후 서버를 조회하며 늦은 이전 결과는 버린다. 서버 코드·선택지 내용·표시 문구는 프로젝트가 제공한다.
 
 저장 요청 변환과 후속 처리는 `saveProduct`처럼 책임을 드러내는 이름 있는 함수로 연결한다. 한 줄 값 선택·인자 전달까지 별도 함수로 만들지는 않는다. 화면 배치, 업무 연결, 반복 UI는 책임에 따라 분리하고 파일 개수를 강제하지 않는다.
 

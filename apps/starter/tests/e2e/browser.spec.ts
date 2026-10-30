@@ -318,3 +318,37 @@ test('same-condition search clears selection and locks actions until its respons
   await header.check();
   await expect(page.getByRole('button', { name: /선택 판매 중지/ })).toBeEnabled();
 });
+
+// 기본 복사본의 키 연결을 브라우저 기본 제출까지 포함해 확인한다.
+test('keyword Search keeps unadded text and Enter adds split chips then searches once', async ({ page }) => {
+  await signIn(page);
+  await page.goto('/members');
+  const input = page.getByRole('textbox', { name: '검색어', exact: true });
+  await expect(input).toBeVisible();
+  const requests: string[] = [];
+  page.on('request', (request) => { if (new URL(request.url()).pathname === '/api/members') requests.push(decodeURIComponent(new URL(request.url()).search)); });
+  await input.fill('kim');
+  await page.getByRole('button', { name: '검색', exact: true }).click();
+  await expect.poll(() => requests.length).toBe(1);
+  expect(requests[0]).not.toContain('keyword=');
+  await expect(page.locator('[inert]')).toHaveCount(0);
+  await expect(input).toHaveValue('kim');
+  await input.dispatchEvent('keydown', { key: 'Enter', isComposing: true });
+  await expect(page.getByRole('button', { name: 'kim 제거', exact: true })).toHaveCount(0);
+  expect(requests).toHaveLength(1);
+  await input.press('Enter');
+  await expect(page.getByRole('button', { name: 'kim 제거', exact: true })).toBeVisible();
+  await expect(input).toHaveValue('');
+  await expect.poll(() => requests.length).toBe(2);
+  expect(requests[1]).toContain(':kim');
+  await expect(page.locator('[inert]')).toHaveCount(0);
+  await input.fill('홍길동; 김철수;;홍길동');
+  await page.getByRole('button', { name: '추가', exact: true }).click();
+  await expect(page.getByRole('button', { name: '홍길동 제거', exact: true })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: '김철수 제거', exact: true })).toHaveCount(1);
+  expect(requests).toHaveLength(2);
+  await input.press('Enter');
+  await expect.poll(() => requests.length).toBe(3);
+  expect(requests[2]).toContain(':홍길동');
+  expect(requests[2]).toContain(':김철수');
+});

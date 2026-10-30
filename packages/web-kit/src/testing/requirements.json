@@ -153,7 +153,11 @@
       "G088",
       "G089",
       "G090",
-      "form-choice-preserve",
+      "form-choice-prune",
+      "form-choice-status",
+      "form-choice-search",
+      "form-choice-single",
+      "form-choice-empty",
       "B-enter",
       "B-enter-add",
       "B-enter-inner",
@@ -195,7 +199,10 @@
       "G104",
       "G105",
       "list-search-lock",
-      "list-choice-preserve"
+      "list-choice-prune",
+      "list-choice-status",
+      "list-choice-search",
+      "keyword-separators"
     ],
     "connections": [
       "list-ui.test.tsx"

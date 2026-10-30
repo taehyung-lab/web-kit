@@ -9,7 +9,7 @@ import * as auth from '../src/auth';
 const entries = { core, form, list, dialog, choice, auth };
 const expected = {
   "auth": ["getAuthTiming", "isAuthCode", "remainingAuthSeconds", "useAuthChallenge"],
-  "choice": ["useChoiceBinding"],
+  "choice": ["normalizeChoiceValue", "useChoiceBinding"],
   "core": [
     "RequestFailure",
     "checkboxTreeSelection",
@@ -43,6 +43,7 @@ const expected = {
     "sectionErrorCount",
     "useFormBinding",
     "useFormCancel",
+    "useFormChoiceBinding",
     "useFormConfirmBinding",
     "useFormDialogScope",
     "useFormEditor",
@@ -68,6 +69,7 @@ const expected = {
     "useBulkConfirmation",
     "useList",
     "useListChoiceBinding",
+    "useListChoiceNormalization",
     "useListDetailsBinding",
     "useListDownload",
     "useListDownloadBinding",

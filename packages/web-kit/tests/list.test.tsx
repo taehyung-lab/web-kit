@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // 파일 책임: useList의 검색 확정·조회·이전 결과·조회 보류·선택지 확인·선택·일괄 작업을 관찰 결과로 검사한다.
-import { act, cleanup, render, screen, fireEvent } from '@testing-library/react';
+import { act, cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, queryOptions, useQuery } from '@tanstack/react-query';
 import { StrictMode, useState, type ReactNode } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
@@ -733,13 +733,17 @@ it('L34 늦게 도착한 이전 조건 응답은 현재 결과·선택·상태�
 });
 
 /** 키워드·기간 필드를 가진 목록. 입력 중 키워드와 기간 선언을 검사한다. */
-function KeywordHarness(props: { onSearch: (search: unknown) => void }) {
+function KeywordHarness(props: { onSearch: (search: unknown) => void; delayed?: boolean }) {
   const definition = keywordDefinition;
   const [search, setSearch] = useState(() => definition.validateSearch({}));
   keywordLatest = useList({
     definition,
     search,
-    navigate: (next) => setSearch(definition.validateSearch(next as Record<string, unknown>)),
+    navigate: (next) => {
+      const apply = () => setSearch(definition.validateSearch(next as Record<string, unknown>));
+      if (props.delayed) setTimeout(apply, 0);
+      else apply();
+    },
     query: (full) => ({
       queryKey: ['kw', full],
       queryFn: async () => {
@@ -763,18 +767,18 @@ const keywordDefinition = defineSearch({
   },
 });
 let keywordLatest!: ReturnType<typeof useList<(typeof keywordDefinition)['fields'], Row>>;
-function mountKeywords() {
+function mountKeywords(delayed = false) {
   const searches: unknown[] = [];
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
-      <KeywordHarness onSearch={(search) => searches.push(search)} />
+      <KeywordHarness delayed={delayed} onSearch={(search) => searches.push(search)} />
     </QueryClientProvider>,
   );
   return searches;
 }
 
-it('L35 입력 중 키워드는 페이지 이동에는 남고 필터 교체에는 지워지며, 추가하지 않아도 검색이 합친다', async () => {
+it('L35 입력 중 키워드는 페이지 이동에는 남고 필터 교체에는 지워지며, 추가하지 않은 글자는 검색에서 제외한다', async () => {
   const searches = mountKeywords();
   await act(async () => {});
   act(() => keywordLatest.keywordInput('words', ['name', 'phone']).setChoice('phone'));
@@ -784,8 +788,8 @@ it('L35 입력 중 키워드는 페이지 이동에는 남고 필터 교체에�
   act(() => keywordLatest.patchDraft({ q: 'x' }));
   act(() => keywordLatest.submit());
   await act(async () => {});
-  expect(searches.at(-1)).toMatchObject({ words: [{ field: 'phone', value: '010' }], q: 'x', page: 1 });
-  expect(keywordLatest.keywordInput('words', ['name', 'phone']).text).toBe('');
+  expect(searches.at(-1)).toMatchObject({ words: [], q: 'x', page: 1 });
+  expect(keywordLatest.keywordInput('words', ['name', 'phone']).text).toBe(' 010 ');
   act(() => keywordLatest.keywordInput('words', ['name']).setText('typed'));
   act(() => keywordLatest.reset());
   expect(keywordLatest.keywordInput('words', ['name']).text).toBe('');
@@ -921,4 +925,34 @@ it('S1 선택지 확인이 검색 URL을 복구한 뒤에도 응답을 받으면
   expect(latest.search.code).toBe('');
   expect(fetchRows).toHaveBeenCalled();
   expect(latest.isCurrent).toBe(true);
+});
+
+it('K1 필수 검색어는 추가 전에는 막히며 같은 이벤트의 추가·검색은 최신 칩을 요청한다', async () => {
+  const definition = defineSearch({ fields: { ...keywordDefinition.fields, words: { ...keywordDefinition.fields.words, required: { message: '검색어 추가 필요' } } } });
+  let current!: ReturnType<typeof useList<typeof definition.fields, Row>>;
+  const fetch = vi.fn(async (_full: unknown) => page('1'));
+  /** 칩을 직접 추가하는 소비자의 이벤트 연결을 재현한다. */
+  function RequiredWords() {
+    const [url, setUrl] = useState({});
+    current = useList({ definition, search: url, navigate: setUrl, query: (full) => ({ queryKey: ['required-words', full], queryFn: () => fetch(full) }), rowId: (row) => row.id });
+    return null;
+  }
+  const client = new QueryClient();
+  render(<QueryClientProvider client={client}><RequiredWords /></QueryClientProvider>);
+  act(() => current.keywordInput('words', ['name']).setText('pending'));
+  expect(current.blockedReason).toBe('검색어 추가 필요');
+  act(() => current.submit());
+  expect(fetch).not.toHaveBeenCalled();
+  act(() => { current.keywordInput('words', ['name']).addMany(['a', 'b', 'a']); current.submit(); });
+  await act(async () => {});
+  expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ words: [{ field: 'name', value: 'a' }, { field: 'name', value: 'b' }] }));
+});
+
+it('K1 Router처럼 URL 반영이 늦어도 검색 뒤 입력 중 글자를 유지한다', async () => {
+  const searches = mountKeywords(true);
+  await act(async () => {});
+  act(() => keywordLatest.keywordInput('words', ['name']).setText('pending'));
+  act(() => { keywordLatest.patchDraft({ q: 'next' }); keywordLatest.submit(); });
+  await waitFor(() => expect(searches.at(-1)).toMatchObject({ q: 'next' }));
+  expect(keywordLatest.keywordInput('words', ['name']).text).toBe('pending');
 });

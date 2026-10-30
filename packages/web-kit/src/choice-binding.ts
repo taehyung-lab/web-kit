@@ -27,6 +27,12 @@ export interface ChoiceBindingOptions {
   readonly messages?: { readonly loading?: string; readonly failed?: string; readonly retry?: string; readonly empty?: string };
 }
 
+/** 전체 선택지에서 찾을 수 있는 값만 표시·제출에 사용한다. 서버 검색 결과에는 적용하지 않는다. */
+export function normalizeChoiceValue(value: ChoiceValue, nodes: readonly ChoiceNode[]): ChoiceValue {
+  const allowed = new Set(treeLeafNodes(nodes).map((node) => node.value));
+  return Array.isArray(value) ? value.filter((id) => allowed.has(id)) : typeof value === 'string' && (value === '' || allowed.has(value)) ? value : undefined;
+}
+
 /** 입력 정지 뒤 검색하고 취소를 무시하는 서버의 늦은 응답도 버린다. */
 function useChoiceSearch(props: ChoiceBindingOptions, text: string) {
   const [state, setState] = useState<{ nodes: readonly ChoiceNode[]; pending: boolean; failed: boolean }>({
@@ -74,7 +80,8 @@ export function useChoiceBinding(props: ChoiceBindingOptions) {
   const id = props.id ?? fallbackId;
   const [text, setText] = useState('');
   const result = useChoiceSearch(props, text);
-  const selected = Array.isArray(value) ? value : typeof value === 'string' ? [value] : [];
+  const effective = props.search === undefined ? normalizeChoiceValue(value, nodes) : value;
+  const selected = Array.isArray(effective) ? effective : typeof effective === 'string' ? [effective] : [];
   const names = useRef(new Map<string, string>());
   for (const item of [...treeLeafNodes(nodes), ...treeLeafNodes(result.nodes)]) names.current.set(item.value, item.label);
   const summary = selected.length === 0 ? (props.placeholder ?? label) : selected.map((id) => names.current.get(id) ?? id).join(', ');
@@ -93,7 +100,8 @@ export function useChoiceBinding(props: ChoiceBindingOptions) {
   function select(next: ChoiceValue) { if (!disabled) onValueChange(next); }
   /** 부모의 일부 선택은 전체 선택으로 바꾼다. */
   function toggle(targets: readonly string[]) {
-    select(selection.set(targets, !selection.checked(targets)));
+    const next = selection.set(targets, !selection.checked(targets));
+    select(props.search === undefined ? next : [...next, ...selected.filter((id) => !selection.all.includes(id))]);
   }
   return { id, text, setText, result, selected, names, summary, control, selection, toggle, select };
 }

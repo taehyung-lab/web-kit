@@ -1,6 +1,6 @@
 // 파일 책임: 목록 기본 UI의 묶음 부품(List.*). 각 부품은 같은 목록 상태(useList)를 context로 읽어서, 필터·표·페이지 이동을
 // 어디에 두어도 조회·정렬·선택 연결을 다시 쓰지 않는다. 검색 직전 보장(기간 검증·입력 중 키워드)은 상태가 맡고 부품은 표시만 한다.
-import { ListProvider as ModelProvider, useListModel, useListField, useListFilterBinding, useListDetailsBinding, useBulkConfirmation, useListChoiceBinding, useListMultiChoiceBinding, useListPeriodBinding, listPaginationBinding, useListDownloadBinding, useListKeywordBinding, listViewBinding, listRowBinding, useListVirtualRows, type PeriodShortcut, type DownloadControl, type ListModel } from '@boosterlab/web-kit/list';
+import { ListProvider as ModelProvider, useListModel, useListField, useListFilterBinding, useListDetailsBinding, useBulkConfirmation, useListChoiceBinding, useListChoiceNormalization, useListMultiChoiceBinding, useListPeriodBinding, listPaginationBinding, useListDownloadBinding, useListKeywordBinding, listViewBinding, listRowBinding, useListVirtualRows, type PeriodShortcut, type DownloadControl, type ListModel } from '@boosterlab/web-kit/list';
 import { Choice as ChoiceInput, type ChoiceProps } from './ui/choice';
 import { Checkbox } from '@base-ui/react/checkbox';
 import { createContext, useContext, useId, useRef, type ReactNode, type RefObject } from 'react';
@@ -144,6 +144,7 @@ function Choice({ model: explicitModel, name, searchName = name, nodes, ...props
   const { model, copy } = useListContext(explicitModel);
   const id = useId();
   const { check, options, choices } = useListChoiceBinding(model, searchName, nodes);
+  useListChoiceNormalization(model, name, props.search === undefined && (check === undefined ? nodes !== undefined : options.isSuccess && !options.isFetching && !options.isError) ? choices : undefined);
   const message = field.issues[0]?.message;
   return <div className="wk-field">
     <label className="wk-label" htmlFor={id}>{props.label}{field.required && <span aria-hidden="true"> *</span>}</label>
@@ -394,7 +395,7 @@ function Period({
   );
 }
 
-/** 키워드: 대상 선택·입력·추가·칩. 입력 중 글자는 상태(keywordInput)에 있어 추가를 누르지 않아도 검색에 들어간다. */
+/** 키워드: 대상 선택·입력·추가·칩. Enter는 추가 후 검색하고 버튼은 각각 추가·검색만 한다. */
 function Keywords({
   model: explicitModel,
   name,
@@ -413,7 +414,9 @@ function Keywords({
   readonly removeLabel?: (item: Keyword, choiceLabel: string) => string;
 } & { readonly model?: ListModel }) {
   const { model, copy } = useListContext(explicitModel);
-  const { input, items, onKeyDown, remove } = useListKeywordBinding(model, name, choices.map((choice) => choice.value));
+  const { input, items, submit, remove } = useListKeywordBinding(model, name, choices.map((choice) => choice.value));
+  /** 기본 복사본의 구분 규칙으로 여러 칩을 한 번에 추가한다. */
+  const add = () => input.addMany(input.text.split(';'));
   return (
     <fieldset className="wk-field">
       <legend className="wk-label">{label}</legend>
@@ -432,9 +435,14 @@ function Keywords({
           className="wk-input"
           value={input.text}
           onChange={(event) => input.setText(event.target.value)}
-          onKeyDown={onKeyDown}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter' || event.nativeEvent.isComposing) return;
+            event.preventDefault();
+            add();
+            submit();
+          }}
         />
-        <button type="button" className="wk-button" onClick={input.add}>
+        <button type="button" className="wk-button" onClick={add}>
           {copy.keywordAdd}
         </button>
       </div>

@@ -116,27 +116,57 @@ function topLayout() {
 
 const checked = (element: HTMLElement) => element.getAttribute('aria-checked') === 'true';
 
-it(title('G091', '입력 중인 키워드를 검색에 포함하고 같은 칩은 중복하지 않으며 초기화는 지운다'), async () => {
+it(title('G091', '검색은 추가된 칩만 사용하고 Enter는 추가 후 검색하며 IME는 기다린다'), async () => {
   const { fetch } = mount(topLayout);
   await screen.findByText('a');
-  fireEvent.change(screen.getByRole('textbox', { name: '키워드' }), { target: { value: '  hello  ' } });
-  fireEvent.click(screen.getByRole('button', { name: '검색' }));
-  await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ keywords: [{ field: 'name', value: 'hello' }] })));
-  expect((screen.getByRole('textbox', { name: '키워드' }) as HTMLInputElement).value).toBe('');
-  fireEvent.change(screen.getByRole('textbox', { name: '키워드' }), { target: { value: 'hello' } });
-  // 검색어 칸의 Enter는 [추가]다(1.5 search-field-input과 같다). 브라우저처럼 막히지 않은 Enter는 검색 영역 폼을 제출하므로 그것까지 흉내 낸다.
-  const searches = fetch.mock.calls.length;
   const keyword = screen.getByRole('textbox', { name: '키워드' }) as HTMLInputElement;
-  await act(async () => {
-    if (fireEvent.keyDown(keyword, { key: 'Enter' })) keyword.form?.requestSubmit();
-  });
+  fireEvent.change(keyword, { target: { value: '  hello  ' } });
+  const before = fetch.mock.calls.length;
+  fireEvent.click(screen.getByRole('button', { name: '검색' }));
+  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(before + 1));
+  expect(fetch.mock.lastCall?.[0]).toMatchObject({ keywords: [] });
+  expect(keyword.value).toBe('  hello  ');
+  fireEvent.keyDown(keyword, { key: 'Enter', isComposing: true });
+  expect(screen.queryByRole('button', { name: 'hello 제거' })).toBeNull();
+  expect(fetch.mock.calls.length).toBe(before + 1);
+  fireEvent.keyDown(keyword, { key: 'Enter' });
+  await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ keywords: [{ field: 'name', value: 'hello' }] })));
   expect(screen.getAllByRole('button', { name: 'hello 제거' })).toHaveLength(1);
-  expect(fetch.mock.calls.length).toBe(searches);
+  expect(keyword.value).toBe('');
+  for (const text of ['hello', '']) {
+    const count = fetch.mock.calls.length;
+    fireEvent.change(keyword, { target: { value: text } });
+    fireEvent.keyDown(keyword, { key: 'Enter' });
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(count + 1));
+    expect(screen.getAllByRole('button', { name: 'hello 제거' })).toHaveLength(1);
+  }
+  const count = fetch.mock.calls.length;
+  fireEvent.change(keyword, { target: { value: 'button' } });
+  fireEvent.click(screen.getByRole('button', { name: '추가' }));
+  expect(screen.getByRole('button', { name: 'button 제거' })).toBeTruthy();
+  expect(fetch.mock.calls.length).toBe(count);
   fireEvent.click(screen.getByRole('button', { name: '초기화' }));
   await waitFor(() => expect(screen.queryByRole('button', { name: 'hello 제거' })).toBeNull());
 });
 
-it(title('G092', '반례: 키워드 UI를 숨겨도 이미 입력한 글자는 검색에 들어간다'), async () => {
+it(title('keyword-separators', '추가와 Enter는 세미콜론 조각을 trim·빈값 제거·중복 제거한 칩으로 만든다'), async () => {
+  const { fetch } = mount(topLayout);
+  await screen.findByText('a');
+  const input = screen.getByRole('textbox', { name: '키워드' });
+  const before = fetch.mock.calls.length;
+  fireEvent.change(input, { target: { value: '홍길동; 김철수;;홍길동' } });
+  fireEvent.click(screen.getByRole('button', { name: '추가' }));
+  expect(screen.getAllByRole('button', { name: '홍길동 제거' })).toHaveLength(1);
+  expect(screen.getAllByRole('button', { name: '김철수 제거' })).toHaveLength(1);
+  expect(fetch.mock.calls.length).toBe(before);
+  fireEvent.change(input, { target: { value: '; 김철수; 이영희; ;' } });
+  fireEvent.keyDown(input, { key: 'Enter' });
+  await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ keywords: [
+    { field: 'name', value: '홍길동' }, { field: 'name', value: '김철수' }, { field: 'name', value: '이영희' },
+  ] })));
+});
+
+it(title('G092', '반례: 키워드 UI를 숨겨도 추가하지 않은 글자는 검색에서 제외한다'), async () => {
   let show = true;
   let rerender!: () => void;
   function Toggle({ children }: { children: ReactNode }) {
@@ -157,7 +187,7 @@ it(title('G092', '반례: 키워드 UI를 숨겨도 이미 입력한 글자는 �
   act(() => rerender());
   expect(screen.queryByRole('textbox', { name: '키워드' })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: '검색' }));
-  await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ keywords: [{ field: 'name', value: 'kept' }] })));
+  await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ keywords: [] })));
 });
 
 it(title('G093', '반례: 기간 입력칸을 프로젝트 부품으로 바꿔도 맞지 않는 기간은 그 칸만 기본값으로 돌리고 검색한다'), async () => {
@@ -194,6 +224,7 @@ it(title('G094', '역순 기간은 기간만 비우고 나머지 조건으로 �
   const { fetch } = mount(topLayout);
   await screen.findByText('a');
   fireEvent.change(screen.getByRole('textbox', { name: '키워드' }), { target: { value: 'kept' } });
+  fireEvent.click(screen.getByRole('button', { name: '추가' }));
   fireEvent.change(screen.getByLabelText('기간 시작'), { target: { value: '2026-03-31' } });
   fireEvent.change(screen.getByLabelText('기간 종료'), { target: { value: '2026-03-01' } });
   fireEvent.click(screen.getByRole('button', { name: '검색' }));
@@ -319,6 +350,7 @@ it(title('G099', '키워드 대상이 늦게 도착해도 현재 선택지로 �
   ));
   act(() => setChoices([{ value: 'name', label: '이름' }]));
   fireEvent.change(screen.getByRole('textbox', { name: '늦은 대상' }), { target: { value: 'hello' } });
+  fireEvent.click(screen.getByRole('button', { name: '추가' }));
   fireEvent.click(screen.getByRole('button', { name: '검색' }));
   await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ keywords: [{ field: 'name', value: 'hello' }] })));
 });
@@ -387,6 +419,7 @@ it(title('G101', '반례: 필터를 왼쪽으로 옮기는 배치만 바꿔도 �
     const { fetch } = mount(layout);
     await screen.findByText('a');
     fireEvent.change(screen.getByRole('textbox', { name: '키워드' }), { target: { value: 'k' } });
+  fireEvent.click(screen.getByRole('button', { name: '추가' }));
     fireEvent.click(screen.getByRole('button', { name: '검색' }));
     await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ keywords: [{ field: 'name', value: 'k' }] })));
     await screen.findByText('a');
@@ -578,18 +611,53 @@ it(title('list-search-lock', '같은 조건 검색은 체크·확인·작업·�
   await waitFor(() => expect(run).toHaveBeenCalledWith(['a']));
 });
 
-it.each(['vertical', 'dropdown', 'menu'] as const)(title('list-choice-preserve', 'List.Choice %s는 트리 밖 저장값을 검색에 보존한다'), async (appearance) => {
+it.each(['vertical', 'horizontal', 'dropdown', 'menu'] as const)(title('list-choice-prune', 'List.Choice %s는 트리 밖 저장값을 검색에서 뺀다'), async (appearance) => {
   const { fetch } = mount(() => <List.Filter>
     <List.Choice name="tags" label="분류" multiple appearance={appearance} nodes={[
       { value: 'a', label: 'Alpha' }, { value: 'b', label: 'Beta' }, { value: 'c', label: 'Gamma' },
     ]} /><List.FilterActions />
   </List.Filter>, { initial: { tags: ['a', 'b', 'x'] } });
   await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
-  if (appearance !== 'vertical') fireEvent.click(screen.getByRole('button', { name: '분류' }));
-  fireEvent.click(await screen.findByRole('checkbox', { name: 'Gamma' }));
-  if (appearance !== 'vertical') fireEvent.click(screen.getByRole('button', { name: '분류' }));
   fireEvent.click(screen.getByRole('button', { name: '검색' }));
-  await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ tags: ['a', 'b', 'c', 'x'] })));
+  await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ tags: ['a', 'b'] })));
+  if (appearance !== 'vertical' && appearance !== 'horizontal') fireEvent.click(screen.getByRole('button', { name: '분류' }));
+  fireEvent.click(await screen.findByRole('checkbox', { name: 'Gamma' }));
+  if (appearance !== 'vertical' && appearance !== 'horizontal') fireEvent.click(screen.getByRole('button', { name: '분류' }));
+  fireEvent.click(screen.getByRole('button', { name: '검색' }));
+  await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ tags: ['a', 'b', 'c'] })));
+});
+
+it(title('list-choice-status', '선택지 지연·실패에는 URL·초안을 보존하고 재시도 성공 뒤 검색에서 정리한다'), async () => {
+  let resolve!: (values: string[]) => void;
+  let reject!: (reason: Error) => void;
+  const options = vi.fn(() => new Promise<string[]>((ok, fail) => { resolve = ok; reject = fail; }));
+  const def = defineSearch({ fields: { ...definition.fields, tags: { ...definition.fields.tags, check: {
+    options: () => ({ queryKey: ['delayed-tags'], queryFn: options, retry: false }),
+    allowed: (values: string[]) => values,
+    tree: (values: string[]) => values.map((value) => ({ value, label: value })),
+  } } } });
+  const { fetch } = mount(() => <List.Filter><List.Choice name="tags" label="분류" multiple /><List.FilterActions /></List.Filter>, { def, initial: { tags: ['a', 'x'] } });
+  expect(model.draft.tags).toEqual(['a', 'x']);
+  expect(fetch).not.toHaveBeenCalled();
+  await waitFor(() => expect(options).toHaveBeenCalledTimes(1));
+  await act(async () => reject(new Error('options')));
+  await screen.findByRole('alert');
+  expect(model.draft.tags).toEqual(['a', 'x']);
+  expect(fetch).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: '다시 시도' }));
+  await waitFor(() => expect(options).toHaveBeenCalledTimes(2));
+  await act(async () => resolve(['a', 'b']));
+  await waitFor(() => expect(model.draft.tags).toEqual(['a']));
+  fireEvent.click(screen.getByRole('button', { name: '검색' }));
+  await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ tags: ['a'] })));
+});
+it(title('list-choice-search', '서버 검색은 현재 결과에 없는 기존 선택을 검색 값에 유지한다'), async () => {
+  const { fetch } = mount(() => <List.Filter><List.Choice name="tags" label="분류" multiple appearance="search" nodes={[{ value: 'a', label: 'Alpha' }]} search={async () => [{ value: 'b', label: 'Beta' }]} debounceMs={0} /><List.FilterActions /></List.Filter>, { initial: { tags: ['a', 'x'] } });
+  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+  expect(screen.getByText('Alpha, x')).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: '검색' }));
+  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+  expect(fetch.mock.lastCall?.[0]).toMatchObject({ tags: ['a', 'x'] });
 });
 
 }

@@ -1,4 +1,5 @@
 // 파일 책임: 폼 이탈 보호·제출·입력 적용·대화창 범위의 공통 순서를 연결한다.
+import type { ChoiceNode } from '../choice-binding';
 import { flushSync } from 'react-dom';
 import { getBy, setBy, useSelector } from '@tanstack/react-form';
 import { useBlocker, useRouter, type NavigateOptions } from '@tanstack/react-router';
@@ -242,4 +243,10 @@ export function FormDialogScopeProvider({ binding, children }: {
   readonly children: ReactNode;
 }) {
   return createElement(ScopeContext.Provider, { value: binding.scope }, children);
+}
+
+/** 준비된 전체 선택지만 폼의 값 투영에 등록한다. 미준비·서버 검색은 원본을 보존한다. */
+export function useFormChoiceBinding(editor: AnyEditor, name: string, nodes: readonly ChoiceNode[] | undefined) {
+  const signature = JSON.stringify(nodes);
+  useLayoutEffect(() => nodes === undefined ? undefined : editor.registerChoice(name, nodes), [editor.form, name, signature]);
 }

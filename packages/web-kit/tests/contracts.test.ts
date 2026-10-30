@@ -60,9 +60,9 @@ it.each(['@form-error:', '@form-validation:'])('오류 참조 %s는 번역 시�
   expect(codec.resolve({}, () => 'unexpected')).toBeUndefined();
 });
 
-it('S3 트리 밖 저장값은 순서를 보존해 트리 안 값 뒤에 남긴다', () => {
+it('K5 트리 밖 저장값은 다음 전체 선택값에서 뺀다', () => {
   const nodes = [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }, { value: 'c', label: 'C' }];
   const selection = checkboxTreeSelection(nodes, ['x', 'b', 'y', 'a']);
-  expect(selection.set(['c'], true)).toEqual(['a', 'b', 'c', 'x', 'y']);
-  expect(selection.set(['a', 'b'], false)).toEqual(['x', 'y']);
+  expect(selection.set(['c'], true)).toEqual(['a', 'b', 'c']);
+  expect(selection.set(['a', 'b'], false)).toEqual([]);
 });
