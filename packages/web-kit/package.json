@@ -31,7 +31,15 @@
     "./testing/unit/choice": "./src/testing/unit/choice.tsx",
     "./testing/unit/primitives": "./src/testing/unit/primitives.tsx",
     "./testing/unit/styles": "./src/testing/unit/styles.ts",
-    "./testing/fixtures/auth": "./src/testing/auth-fixture.tsx"
+    "./testing/fixtures/auth": "./src/testing/auth-fixture.tsx",
+    "./testing/unit/list": "./src/testing/unit/list-ui.tsx",
+    "./testing/unit/record": "./src/testing/unit/record-ui.tsx",
+    "./testing/unit/blocking-progress": "./src/testing/unit/progress.tsx",
+    "./testing/unit/checkbox-tree": "./src/testing/unit/checkbox-tree.tsx",
+    "./testing/unit/combinations": "./src/testing/combinations.ts",
+    "./testing/fixtures/dialog": "./src/testing/dialog-fixture.tsx",
+    "./testing/fixtures/progress": "./src/testing/progress-fixture.tsx",
+    "./testing/fixtures/combinations": "./src/testing/combination-fixtures.tsx"
   },
   "files": [
     "src",

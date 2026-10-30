@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
+import { checkRegistryDependencies } from './registry-dependencies.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const temporary = mkdtempSync(join(tmpdir(), 'web-kit-registry-'));
@@ -16,6 +17,7 @@ try {
   for (const file of expected)
     assert.deepEqual(JSON.parse(readFileSync(join(committed, file), 'utf8')), JSON.parse(readFileSync(join(temporary, file), 'utf8')), file + ': registry 산출물이 원본과 다릅니다');
   const registry = JSON.parse(readFileSync(resolve(root, 'registry.json'), 'utf8'));
+  checkRegistryDependencies(root, registry);
   const names = new Set(registry.items.map((item) => '@web-kit/' + item.name));
   for (const item of registry.items)
     for (const dependency of item.registryDependencies ?? [])

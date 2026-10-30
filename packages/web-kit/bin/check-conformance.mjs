@@ -56,6 +56,10 @@ try {
       }
     }
   }
+  const combinations = json(resolve(packageRoot, 'src/testing/combinations.json'));
+  for (const combination of Object.values(combinations))
+    if (combination.items.every((name) => installed.has(name)))
+      for (const id of combination.ids) required.add(id);
   const matched = new Map();
   for (const result of results) {
     const match = /\[web-kit:([^\]]+)\]/.exec(result.title);

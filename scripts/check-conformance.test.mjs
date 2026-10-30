@@ -51,3 +51,29 @@ for (const names of [['inputs'], ['auth'], ['record', 'retry']]) {
     }
   }));
 }
+
+// 조합의 양쪽을 설치했을 때만 기존 조합 ID를 필수로 요구한다.
+for (const pair of [['form', 'blocking-progress'], ['list', 'blocking-progress'], ['record', 'blocking-progress'], ['form', 'checkbox-tree']]) {
+  test('조합: ' + pair.join('+') + '는 조합 검사 누락을 거절한다', () => fixture(({ installation, unit, audit, dir }) => {
+    const contracts = JSON.parse(readFileSync(fileURLToPath(new URL('../packages/web-kit/src/testing/requirements.json', import.meta.url)), 'utf8'));
+    const combinations = Object.values(JSON.parse(readFileSync(fileURLToPath(new URL('../packages/web-kit/src/testing/combinations.json', import.meta.url)), 'utf8')));
+    const names = new Set();
+    /** 설치하는 두 기능의 실제 내부 의존도 기록한다. */
+    function select(name) { if (names.has(name)) return; names.add(name); for (const dep of contracts[name].dependencies) select(dep); }
+    pair.forEach(select);
+    const content = '// connection\n';
+    installation.items = [...names].map((name) => ({ name, files: contracts[name].connections.map((connection) => {
+      writeFileSync(join(dir, connection), content);
+      return { source: 'checks/' + connection, installed: connection, installedHash: createHash('sha256').update(content).digest('hex') };
+    }) }));
+    const baseIds = [...names].flatMap((name) => contracts[name].ids);
+    const comboIds = combinations.filter((combo) => combo.items.every((name) => names.has(name))).flatMap((combo) => combo.ids);
+    /** 실제 러너와 같은 보고서 형식으로 선택한 결과를 기록한다. */
+    function results(ids) { unit.testResults[0].assertionResults = ids.map((id) => ({ fullName: `[web-kit:${id}|${installation.version}|${installation.sourceRef}|${installation.sourceCommit}] contract`, status: 'passed' })); }
+    results(baseIds);
+    assert.equal(audit(false).status, 1);
+    assert.match(audit(false).stderr, /필수 검사 누락/);
+    results([...baseIds, ...comboIds]);
+    assert.equal(audit(false).status, 0);
+  }));
+}

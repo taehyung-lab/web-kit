@@ -1,7 +1,7 @@
 // 파일 책임: 작은 표현 항목의 속성·포커스·오류 연결 적합성을 실제 복사본에서 검사한다.
 import { afterEach, it, expect } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
-import { checkConfirmDialogAdapter, checkRetryFocusAdapter, type RetryAdapterProps } from '../../testing';
+import { checkConfirmDialogAdapter, checkRetryFocusAdapter, type RetryAdapterProps } from '../adapters';
 import { conformanceTitle, type ConformanceTarget } from '../target.mjs';
 import type * as Inputs from '../contracts/ui/inputs';
 import type * as Dialog from '../contracts/ui/dialog';

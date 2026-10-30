@@ -20,7 +20,7 @@
     },
     {
       "path": "packages/ui-registry/checks/inputs.test.tsx",
-      "content": "// @vitest-environment jsdom\n// 파일 책임: 설치한 inputs 복사본을 키트 공통 단위 검사에 연결한다.\nimport { Button, Input, Checkbox } from '../ui/inputs';\nimport { checkInputsConformance } from '@boosterlab/web-kit/testing/unit';\nimport installation from '../../../../../registry-installation.json';\ncheckInputsConformance({ Button, Input, Checkbox }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });\n",
+      "content": "// @vitest-environment jsdom\n// 파일 책임: 설치한 inputs 복사본을 키트 공통 단위 검사에 연결한다.\nimport { Button, Input, Checkbox } from '../ui/inputs';\nimport { checkInputsConformance } from '@boosterlab/web-kit/testing/unit/primitives';\nimport installation from '../../../../../registry-installation.json';\ncheckInputsConformance({ Button, Input, Checkbox }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });\n",
       "type": "registry:file",
       "target": "~/src/shared/ui/web-kit/checks/inputs.test.tsx"
     }
