@@ -11,6 +11,8 @@ docs/              결정 기록(decisions/)과 변경·발행 기준(maintainin
 scripts/           starter 맞추기, registry 일치·문서 링크 검사, 검증 기록
 ```
 
+응답 해석은 소비 프로젝트의 필수 입력이다. Spring 봉투 서버는 `/http`의 `springEnvelope(results)`를 선택한다. 자세한 이전 연결은 [소비 안내](packages/web-kit/docs/consuming.md#41--500-rc2)를 따른다.
+
 starter는 기본 연결과 조립 예이며 모든 프로젝트의 고정 페이지가 아니다. 프로젝트는 기능별로 선택해 쓰고 자기 업무·서버 계약·화면을 소유한다. [페이지 일부만 다른 경우](docs/decisions/0003-web-kit-3-redesign.md#페이지-일부만-다른-경우)의 책임 구분을 따른다. 공용 수정은 패키지 업데이트로 받되, UI 복사본 교정이 필요한 변경은 프로젝트 수정과 대조해 적용한다.
 
 최신 발행: web-kit `4.1.0`(tag `v4.1.0`, 패키지 tgz·registry `public/r`가 같은 commit). 함께 쓰는 agent-workflow-kit(AWK)은 tag `v1.0.0`(= commit `c55ccc2`)이다. 4.0.0은 따로 발행하지 않았다.

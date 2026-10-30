@@ -22,7 +22,7 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
 
 실제 조립 예: [apps/starter/src/app/session.test.tsx](../../references/apps/starter/src/app/session.test.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-- **실패:** status 기본 분류는 결과 코드 표 `(status, code)` 행보다 뒤다. HTTP 200 안의 다른 resultCode는 business, 봉투가 아니면 contract다. 파일로 받는 요청(`responseType: 'blob'`)도 응답이 JSON이면 본문을 JSON으로 읽어 같은 규칙으로 해석한다(다운로드 실패 문구가 resultCode를 따른다). 취소는 `cancelled`이고 화면 상태·알림에 들어가지 않는다.
+- **실패:** 필수 `ResponseContract`가 서버 응답의 성공 데이터·실패 종류·문구 키·세션 종료를 정한다. 파일로 받는 요청(`responseType: 'blob'`)도 응답이 JSON이면 본문을 JSON으로 읽어 계약에 넘긴다. 취소는 `cancelled`이고 화면 상태·알림에 들어가지 않는다.
 - **세션 수명** 한 곳이 세대를 판정한다.
   - 로그인·계정 교체(`start`)와 로그아웃·종료(`end`)는 세대를 올린다. `end`는 세대마다 한 번만 알린다.
   - 종료 사유 `by`: 이 탭의 로그아웃(`local`), 유휴 마감(`idle`), 다른 탭(`other-tab`), 서버 인증 계약(`server`).
@@ -106,9 +106,11 @@ E1(401이 업무 실행 전인가), E2(일반·재발급 요청의 status·resul
 
 실제 조립 예: [apps/starter/src/app/web-kit.ts](../../references/apps/starter/src/app/web-kit.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-`createHttp({ response: { read(body, status, requestId) } })`로 서버 형식·성공 판정·코드 의미를 프로젝트가 해석한다. 결과는 `{ ok: true, data }` 또는 `{ ok: false, failure: RequestFailure }`다. HTTP 거절은 성공으로 바꿀 수 없다. 네트워크·취소·타임아웃과 세션 회복은 키트가 맡는다. 같은 코드의 메시지 키도 프로젝트마다 다를 수 있으며 번역 문구는 키트에 넣지 않는다.
+`createHttp`의 `response`는 필수다. `response: { read(body, status, requestId) }`로 서버 형식·성공 판정·코드 의미를 프로젝트가 해석한다. 결과는 `{ ok: true, data }` 또는 `{ ok: false, failure: RequestFailure }`다. HTTP 거절은 성공으로 바꿀 수 없다. 네트워크·취소·타임아웃과 세션 회복은 키트가 맡는다. 같은 코드의 메시지 키도 프로젝트마다 다를 수 있으며 번역 문구는 키트에 넣지 않는다.
 
-기존 응답 봉투를 쓰는 소비자는 `readEnvelope`·`toRequestFailure`를 자기 계약 함수 안에서 사용할 수 있다. `response` 생략 시 기존 동작을 유지한다. 실제 데이터 타입을 넘기면 `http.requestData<T>`를 쓴다. 기존 생성 봉투 타입을 푸는 `http.request<T>`는 호환용으로 유지한다.
+Spring 봉투 서버는 `/http`의 `springEnvelope(results)`를 `response`에 전달한다. 이 선택 부품은 2xx에서 `header.resultCode` 200만 성공으로 보고 `data`를 풀며, 봉투가 아니면 contract로 거절한다. 다른 resultCode는 business로 분류하고, 2xx 밖 응답도 `(status, code)` 결과 코드 표의 종류·messageKey·endsSession을 적용한다. 표에 없는 실패는 HTTP 상태로 분류한다. `readEnvelope`·`toRequestFailure`는 이 부품의 낮은 수준 해석 도우미다.
+
+요청은 실제 데이터 타입을 넘기는 `http.requestData<T>` 또는 메타도 받는 `requestWithResponse<T>`를 쓴다. 생성된 Spring 봉투 타입을 받는 orval mutator는 같은 `/http` 입구의 `SpringEnvelopeData<T>`로 타입을 고른 뒤 `http.requestData<SpringEnvelopeData<T>>(config, options)`로 연결한다. `Http.request`와 `Unwrapped`는 제거됐다. 일반 데이터의 `data` 속성은 `requestData`가 그대로 보존한다.
 
 사용자 정의 `response.read`는 성공 값 또는 `RequestFailure`를 반환한다. 응답 형식이 잘못되어도 실패 값을 반환하며 예외를 던지지 않는다. 키트는 반환된 실패의 상태 코드와 요청 식별자를 실제 HTTP 응답 값으로 맞추므로 응답 본문이 재발급 여부를 바꿀 수 없다.
 

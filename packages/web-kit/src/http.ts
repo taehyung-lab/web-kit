@@ -1,4 +1,4 @@
-// 파일 책임: axios 요청 처리(헤더·토큰·봉투 해제·실패 12종 변환·401 재발급 뒤 한 번 재전송·반영 여부·요청별 응답 메타)를 소유한다.
+// 파일 책임: 필수 응답 계약으로 요청을 해석하고 토큰·전송 관찰·세션 회복을 공통 처리한다.
 // 세션 판정(세대·종료·재발급)은 session이 하고, 여기서는 그 결과만 따른다.
 import axios, {
   AxiosHeaders,
@@ -22,9 +22,6 @@ import type { Credentials, Session } from './session';
  */
 const AUTH_REJECTS_BEFORE_EXECUTION = false;
 
-/** 생성 endpoint가 봉투 타입을 넘겨도 호출부는 data를 받는다. */
-export type Unwrapped<T> = T extends { readonly data?: infer D } ? Exclude<D, undefined> : T;
-
 /** 전송 시도 하나의 관찰. response가 없으면 서버에 닿지 못했다(network·timeout). */
 export interface TransportEvent {
   readonly url: string | undefined;
@@ -44,8 +41,6 @@ export interface Http {
   readonly requestWithResponse: <T>(config: AxiosRequestConfig, options?: AxiosRequestConfig) => Promise<HttpResponse<T>>;
   /** 프로젝트 해석 뒤 실제 데이터 타입을 그대로 받는다. data라는 속성도 일반 데이터로 유지한다. */
   readonly requestData: <T>(config: AxiosRequestConfig, options?: AxiosRequestConfig) => Promise<T>;
-  /** 요청 하나. 성공은 봉투를 푼 data(JSON이 아니면 원본), 실패는 RequestFailure다. orval mutator로 쓴다. */
-  readonly request: <T>(config: AxiosRequestConfig, options?: AxiosRequestConfig) => Promise<Unwrapped<T>>;
 }
 
 function isRead(config: AxiosRequestConfig): boolean {
@@ -109,6 +104,18 @@ export interface ResponseContract {
     { readonly ok: true; readonly data: unknown } | { readonly ok: false; readonly failure: RequestFailure };
 }
 
+/** Spring 생성 endpoint의 봉투 타입에서 실제 data 타입을 고른다. 요청 자체의 타입 규칙과 분리한다. */
+export type SpringEnvelopeData<T> = T extends { readonly data?: infer D } ? Exclude<D, undefined> : T;
+
+/** Spring 봉투와 결과 코드 표를 쓰는 서버가 명시적으로 선택하는 응답 계약이다. */
+export function springEnvelope(results: ResultCodeTable): ResponseContract {
+  return {
+    read: (body, status, requestId) => status >= 200 && status < 300
+      ? readEnvelope(body, results, requestId)
+      : { ok: false, failure: toRequestFailure({ type: 'response', body, status, requestId }, results) },
+  };
+}
+
 /**
  * 요청 처리를 만든다. isPublic은 세션에 속하지 않는 요청(로그인 전·재발급·로그아웃)을 가린다:
  * 토큰을 자동으로 싣지 않고, 그 실패는 세션을 건드리지 않고 그대로 돌려준다.
@@ -116,7 +123,6 @@ export interface ResponseContract {
  */
 export function createHttp<C extends Credentials>({
   session,
-  results = { lookup: () => undefined },
   response: contract,
   isPublic,
   prepare,
@@ -124,9 +130,8 @@ export function createHttp<C extends Credentials>({
   defaults,
 }: {
   readonly session: Session<C>;
-  readonly results?: ResultCodeTable;
-  /** 서버 응답 형식·성공 코드·업무 실패는 프로젝트가 해석한다. 생략하면 기존 봉투 규약을 사용한다. */
-  readonly response?: ResponseContract;
+  /** 서버 응답 형식·성공 코드·업무 실패를 해석할 계약을 반드시 선택한다. */
+  readonly response: ResponseContract;
   readonly isPublic: (config: AxiosRequestConfig) => boolean;
   readonly prepare?: (headers: AxiosHeaders, config: AxiosRequestConfig) => void;
   /** 전송 시도마다(재전송·공개 요청 포함, 취소 제외) 한 번. 연결 상태·서버 시각 같은 프로젝트 관찰용이다. */
@@ -169,7 +174,6 @@ export function createHttp<C extends Credentials>({
 
   /** 프로젝트는 코드 의미를 정하고 실제 HTTP 상태와 요청 식별자는 전송 관찰을 보존한다. */
   function readResponse(body: unknown, status: number, requestId: string | undefined) {
-    if (contract === undefined) return readEnvelope(body, results, requestId);
     const result = contract.read(body, status, requestId);
     if (result.ok) return result;
     const failure = result.failure;
@@ -184,12 +188,12 @@ export function createHttp<C extends Credentials>({
   function failureOf(error: unknown): RequestFailure {
     const outcome = outcomeOf(error);
     if (outcome === undefined) return new RequestFailure({ kind: 'contract' });
-    if (outcome.type === 'response' && contract !== undefined) {
+    if (outcome.type === 'response') {
       const result = readResponse(outcome.body, outcome.status, outcome.requestId);
       // HTTP 자체가 거절한 요청을 프로젝트의 성공 코드만으로 성공 처리하지 않는다.
       return result.ok ? new RequestFailure({ kind: 'contract', status: outcome.status, requestId: outcome.requestId }) : result.failure;
     }
-    return toRequestFailure(outcome, results);
+    return new RequestFailure({ kind: outcome.type, requestId: outcome.requestId });
   }
 
   /**
@@ -268,7 +272,6 @@ export function createHttp<C extends Credentials>({
   return {
     requestWithResponse,
     requestData,
-    request: <T>(config: AxiosRequestConfig, options?: AxiosRequestConfig) => requestData<Unwrapped<T>>(config, options),
   };
 
   /** 세션 밖 요청. 실패는 해석만 하고 세션에 영향을 주지 않는다. */

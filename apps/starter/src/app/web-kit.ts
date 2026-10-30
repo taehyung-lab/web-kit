@@ -1,7 +1,7 @@
 // 파일 책임: web-kit 초기 연결의 유일한 진입점. 세션 수명·요청 처리·QueryClient를 이 앱의 저장 위치·공개 경로·헤더·재발급 계약에 연결한다.
-// 생성 endpoint(orval)는 여기의 apiRequest(= http.request) 하나로 호출된다. adapter 구현(저장소·재발급)은 짧아서 이 파일에 함께 둔다.
-import { createResultCodeTable, isRequestFailure, RequestFailure, readEnvelope, toRequestFailure } from '@boosterlab/web-kit';
-import { createHttp, type Http, type Unwrapped, type ResponseContract } from '@boosterlab/web-kit/http';
+// 생성 endpoint(orval)는 여기의 apiRequest(= http.requestData) 하나로 호출된다. adapter 구현(저장소·재발급)은 짧아서 이 파일에 함께 둔다.
+import { createResultCodeTable, isRequestFailure, RequestFailure } from '@boosterlab/web-kit';
+import { createHttp, springEnvelope, type Http, type SpringEnvelopeData } from '@boosterlab/web-kit/http';
 import { createQueryClient } from '@boosterlab/web-kit/query';
 import { createSession, type Credentials } from '@boosterlab/web-kit/session';
 import { createBrowserSessionStore } from '@boosterlab/web-kit/session/browser';
@@ -47,20 +47,14 @@ function readAccessToken(data: unknown): string {
 export const session = createSession<Credentials>({
   store,
   // refresh 토큰은 httpOnly 쿠키(서버 계약)라 본문이 없다. 공개 요청으로 보낸다.
-  reissue: async () => ({ accessToken: readAccessToken(await http.request<unknown>({ url: REISSUE_PATH, method: 'POST' })) }),
+  reissue: async () => ({ accessToken: readAccessToken(await http.requestData<unknown>({ url: REISSUE_PATH, method: 'POST' })) }),
   // 로그아웃·유휴 종료 뒤 키트가 잡아 둔 토큰으로 한 번 보낸다. 실패해도 로컬 종료는 그대로다.
   signOut: (credentials) => signOut(credentials.accessToken),
 });
 
-/** 이 프로젝트의 응답 봉투와 코드 의미를 공통 성공·실패로 바꾼다. */
-const readAppResponse: ResponseContract['read'] = (body, status, requestId) =>
-  status >= 200 && status < 300
-    ? readEnvelope(body, resultCodes, requestId)
-    : { ok: false, failure: toRequestFailure({ type: 'response', body, status, requestId }, resultCodes) };
-
 export const http: Http = createHttp({
   session,
-  response: { read: readAppResponse },
+  response: springEnvelope(resultCodes),
   isPublic: (config) => PUBLIC_PATHS.some((path) => config.url === path),
   // 운영 헤더: 화면 언어.
   prepare: (headers) => {
@@ -73,9 +67,9 @@ export const http: Http = createHttp({
   },
 });
 
-/** orval mutator. 생성된 endpoint 함수는 모두 이 함수(= http.request)로 나간다. */
-export const apiRequest = <T>(config: AxiosRequestConfig, options?: AxiosRequestConfig): Promise<Unwrapped<T>> =>
-  http.request<T>(config, options);
+/** orval mutator. 생성된 endpoint 함수는 모두 이 함수(= http.requestData)로 나간다. */
+export const apiRequest = <T>(config: AxiosRequestConfig, options?: AxiosRequestConfig): Promise<SpringEnvelopeData<T>> =>
+  http.requestData<SpringEnvelopeData<T>>(config, options);
 
 export const queryClient = createQueryClient({
   session,
