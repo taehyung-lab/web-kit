@@ -221,7 +221,7 @@ it.each([500, 50_000])('S4/S5: 유예 %i보다 짧거나 긴 새 서버 마감�
   expect(t.idle.state()).toMatchObject({ deadline: 110_000, deadlineSource: 'server' });
 });
 
-it('S6: 실패·미채택·경고 채택·경고 해소를 각각 돌려준다(동일 마감 응답 포함)', async () => {
+it('S6: 실패·무마감·경고 채택·같은 마감 확인·경고 해소를 각각 돌려준다', async () => {
   const t = tab(); login(t);
   const failure = new RequestFailure({ kind: 'network' }); t.request.mockRejectedValueOnce(failure);
   await expect(t.idle.extend()).resolves.toEqual({ kind: 'failed', failure });
@@ -229,9 +229,31 @@ it('S6: 실패·미채택·경고 채택·경고 해소를 각각 돌려준다(�
   t.request.mockResolvedValueOnce({ sentAt: Date.now(), deadline: Date.now() + 500 });
   await expect(t.idle.extend()).resolves.toEqual({ kind: 'adopted-warning' });
   t.request.mockResolvedValueOnce({ sentAt: Date.now(), deadline: Date.now() + 500 });
-  await expect(t.idle.extend()).resolves.toEqual({ kind: 'no-deadline' });
+  await expect(t.idle.extend()).resolves.toEqual({ kind: 'adopted-warning' });
   t.request.mockResolvedValueOnce({ sentAt: Date.now() - 1, deadline: Date.now() + 5000 });
   await expect(t.idle.extend()).resolves.toEqual({ kind: 'adopted-active' });
+});
+
+// 연장과 재개가 같은 서버 응답 사실을 돌려주고 비감소 마감을 지키는지 확인한다.
+it.each(['extend', 'resume'] as const)('소비자 교정: %s는 같은·늦은·이른·없는 마감을 구별한다', async (method) => {
+  const t = tab(); login(t, 500);
+  const run = () => {
+    if (method === 'resume') t.idle.pause();
+    return t.idle[method]();
+  };
+  for (const [deadline, kind, retained] of [
+    [100_500, 'adopted-warning', 100_500],
+    [105_000, 'adopted-active', 105_000],
+    [105_000, 'adopted-active', 105_000],
+    [100_200, 'earlier-deadline', 105_000],
+    [undefined, 'no-deadline', 105_000],
+  ] as const) {
+    t.request.mockResolvedValueOnce({ sentAt: Date.now(), deadline });
+    await expect(run()).resolves.toEqual({ kind });
+    expect(t.idle.state()).toMatchObject({ deadline: retained, deadlineSource: 'server', paused: false });
+    expect(t.idle.remaining()).toBe(retained - Date.now());
+    expect(t.session.current()).not.toBeNull();
+  }
 });
 
 it('S7: 로그인 전·양음 보정·표본 역순·다른 탭 보정·마감 동시 전달을 같은 시계로 판단한다', () => {

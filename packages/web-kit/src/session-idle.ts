@@ -32,6 +32,7 @@ export interface IdleState {
 export type ExtendResult =
   | { readonly kind: 'failed'; readonly failure: unknown }
   | { readonly kind: 'no-deadline' }
+  | { readonly kind: 'earlier-deadline' }
   | { readonly kind: 'adopted-warning' }
   | { readonly kind: 'adopted-active' };
 export interface IdleTimer {
@@ -421,8 +422,10 @@ export function createIdleTimer<C extends Credentials>({ session, key, policy, e
       try {
         const sample = await requestServer();
         if (!isCurrent()) return { kind: 'failed', failure: new RequestFailure({ kind: 'cancelled' }) };
-        const adopted = sample !== null && applySample(sample, id);
-        if (!adopted) return { kind: 'no-deadline' };
+        const serverBefore = merged(id).server;
+        if (sample !== null) applySample(sample, id);
+        if (sample?.deadline === undefined || !Number.isFinite(sample.deadline)) return { kind: 'no-deadline' };
+        if (serverBefore !== null && sample.deadline < serverBefore) return { kind: 'earlier-deadline' };
         return { kind: state.deadline !== null && state.deadline - now() > policy.warningMs ? 'adopted-active' : 'adopted-warning' };
       } catch (failure) {
         return { kind: 'failed', failure: isCurrent() ? failure : new RequestFailure({ kind: 'cancelled' }) };
