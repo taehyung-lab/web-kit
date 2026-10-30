@@ -1,0 +1,485 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "web-kit",
+  "homepage": "https://github.com/taehyung-lab/web-kit",
+  "items": [
+    {
+      "name": "inputs",
+      "type": "registry:block",
+      "title": "web-kit inputs",
+      "description": "web-kit inputs 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
+      "dependencies": [
+        "@base-ui/react@1.7.0"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "packages/ui-registry/src/ui/inputs.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/ui/inputs.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/inputs.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/inputs.test.tsx"
+        }
+      ],
+      "devDependencies": [
+        "vitest@4.1.11",
+        "@testing-library/react@16.3.2"
+      ]
+    },
+    {
+      "name": "pending",
+      "type": "registry:block",
+      "title": "web-kit pending",
+      "description": "web-kit pending 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "packages/ui-registry/src/ui/pending.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/ui/pending.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/pending.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/pending.test.tsx"
+        }
+      ],
+      "devDependencies": [
+        "vitest@4.1.11",
+        "@testing-library/react@16.3.2"
+      ]
+    },
+    {
+      "name": "dialog",
+      "type": "registry:block",
+      "title": "web-kit dialog",
+      "description": "web-kit dialog 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
+      "dependencies": [
+        "@base-ui/react@1.7.0"
+      ],
+      "registryDependencies": [
+        "@web-kit/pending",
+        "@web-kit/styles"
+      ],
+      "files": [
+        {
+          "path": "packages/ui-registry/src/ui/dialog.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/ui/dialog.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/dialog.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/dialog.test.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/dialog.page.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/dialog.page.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/dialog.spec.ts",
+          "type": "registry:file",
+          "target": "~/tests/e2e/web-kit/dialog.spec.ts"
+        },
+        {
+          "path": "packages/ui-registry/checks/dialog.html",
+          "type": "registry:file",
+          "target": "~/web-kit-checks/dialog.html"
+        }
+      ],
+      "devDependencies": [
+        "vitest@4.1.11",
+        "@testing-library/react@16.3.2",
+        "@playwright/test@1.62.1"
+      ]
+    },
+    {
+      "name": "blocking-progress",
+      "type": "registry:block",
+      "title": "web-kit blocking-progress",
+      "description": "web-kit blocking-progress 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
+      "dependencies": [],
+      "registryDependencies": [
+        "@web-kit/pending",
+        "@web-kit/form",
+        "@web-kit/styles"
+      ],
+      "files": [
+        {
+          "path": "packages/ui-registry/src/ui/blocking-progress.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/ui/blocking-progress.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/blocking-progress.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/blocking-progress.test.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/blocking-progress.page.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/blocking-progress.page.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/blocking-progress.spec.ts",
+          "type": "registry:file",
+          "target": "~/tests/e2e/web-kit/blocking-progress.spec.ts"
+        },
+        {
+          "path": "packages/ui-registry/checks/blocking-progress.html",
+          "type": "registry:file",
+          "target": "~/web-kit-checks/blocking-progress.html"
+        }
+      ],
+      "devDependencies": [
+        "vitest@4.1.11",
+        "@testing-library/react@16.3.2",
+        "@playwright/test@1.62.1"
+      ]
+    },
+    {
+      "name": "choice",
+      "type": "registry:block",
+      "title": "web-kit choice",
+      "description": "web-kit choice 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
+      "dependencies": [
+        "@base-ui/react@1.7.0"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "packages/ui-registry/src/ui/choice.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/ui/choice.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/choice.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/choice.test.tsx"
+        }
+      ],
+      "devDependencies": [
+        "vitest@4.1.11",
+        "@testing-library/react@16.3.2"
+      ]
+    },
+    {
+      "name": "retry",
+      "type": "registry:block",
+      "title": "web-kit retry",
+      "description": "web-kit retry 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "packages/ui-registry/src/ui/retry.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/ui/retry.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/retry.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/retry.test.tsx"
+        }
+      ],
+      "devDependencies": [
+        "vitest@4.1.11",
+        "@testing-library/react@16.3.2"
+      ]
+    },
+    {
+      "name": "ui",
+      "type": "registry:block",
+      "title": "web-kit ui",
+      "description": "web-kit ui 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
+      "dependencies": [],
+      "registryDependencies": [
+        "@web-kit/inputs",
+        "@web-kit/pending",
+        "@web-kit/dialog",
+        "@web-kit/blocking-progress",
+        "@web-kit/choice"
+      ],
+      "files": [
+        {
+          "path": "packages/ui-registry/src/ui/index.ts",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/ui/index.ts"
+        }
+      ]
+    },
+    {
+      "name": "form",
+      "type": "registry:block",
+      "title": "web-kit form",
+      "description": "web-kit form 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
+      "dependencies": [
+        "@tanstack/react-form@1.33.5",
+        "@tanstack/react-router@1.170.32"
+      ],
+      "registryDependencies": [
+        "@web-kit/choice",
+        "@web-kit/dialog",
+        "@web-kit/pending",
+        "@web-kit/styles"
+      ],
+      "files": [
+        {
+          "path": "packages/ui-registry/src/form/ui.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/form/ui.tsx"
+        },
+        {
+          "path": "packages/ui-registry/src/form/field.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/form/field.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/form-complex.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/form-complex.test.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/form-enter.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/form-enter.test.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/form-sections.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/form-sections.test.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/form-ui.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/form-ui.test.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/form-workflows.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/form-workflows.test.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/form.page.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/form.page.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/form.spec.ts",
+          "type": "registry:file",
+          "target": "~/tests/e2e/web-kit/form.spec.ts"
+        },
+        {
+          "path": "packages/ui-registry/checks/form.html",
+          "type": "registry:file",
+          "target": "~/web-kit-checks/form.html"
+        }
+      ],
+      "devDependencies": [
+        "vitest@4.1.11",
+        "@testing-library/react@16.3.2",
+        "@playwright/test@1.62.1"
+      ]
+    },
+    {
+      "name": "list",
+      "type": "registry:block",
+      "title": "web-kit list",
+      "description": "web-kit list 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
+      "dependencies": [
+        "@base-ui/react@1.7.0"
+      ],
+      "registryDependencies": [
+        "@web-kit/choice",
+        "@web-kit/dialog",
+        "@web-kit/pending"
+      ],
+      "files": [
+        {
+          "path": "packages/ui-registry/src/list-ui.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/list-ui.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/list-ui.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/list-ui.test.tsx"
+        }
+      ],
+      "devDependencies": [
+        "vitest@4.1.11",
+        "@testing-library/react@16.3.2"
+      ]
+    },
+    {
+      "name": "record",
+      "type": "registry:block",
+      "title": "web-kit record",
+      "description": "web-kit record 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
+      "dependencies": [],
+      "registryDependencies": [
+        "@web-kit/retry"
+      ],
+      "files": [
+        {
+          "path": "packages/ui-registry/src/detail-ui.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/detail-ui.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/record-ui.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/record-ui.test.tsx"
+        }
+      ],
+      "devDependencies": [
+        "vitest@4.1.11",
+        "@testing-library/react@16.3.2"
+      ]
+    },
+    {
+      "name": "checkbox-tree",
+      "type": "registry:block",
+      "title": "web-kit checkbox-tree",
+      "description": "web-kit checkbox-tree 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "packages/ui-registry/src/CheckboxTree.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/CheckboxTree.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/checkbox-tree-focus.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/checkbox-tree-focus.test.tsx"
+        }
+      ],
+      "devDependencies": [
+        "vitest@4.1.11",
+        "@testing-library/react@16.3.2"
+      ]
+    },
+    {
+      "name": "filter-error",
+      "type": "registry:block",
+      "title": "web-kit filter-error",
+      "description": "web-kit filter-error 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "packages/ui-registry/src/search/filter-error.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/search/filter-error.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/filter-error.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/filter-error.test.tsx"
+        }
+      ],
+      "devDependencies": [
+        "vitest@4.1.11",
+        "@testing-library/react@16.3.2"
+      ]
+    },
+    {
+      "name": "styles",
+      "type": "registry:block",
+      "title": "web-kit styles",
+      "description": "web-kit styles 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "packages/ui-registry/src/ui/styles.css",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/ui/styles.css"
+        },
+        {
+          "path": "packages/ui-registry/checks/styles.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/styles.test.tsx"
+        }
+      ],
+      "devDependencies": [
+        "vitest@4.1.11",
+        "@testing-library/react@16.3.2"
+      ]
+    },
+    {
+      "name": "auth",
+      "type": "registry:block",
+      "title": "web-kit 인증 코드",
+      "description": "로그인 전 인증 코드·기한·재전송 표현과 검사 연결",
+      "dependencies": [],
+      "registryDependencies": [],
+      "devDependencies": [
+        "vitest@4.1.11",
+        "@testing-library/react@16.3.2",
+        "@playwright/test@1.62.1"
+      ],
+      "files": [
+        {
+          "path": "packages/ui-registry/src/auth.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/auth.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/auth-six.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/auth-six.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/auth.test.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/auth.test.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/auth.page.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/checks/auth.page.tsx"
+        },
+        {
+          "path": "packages/ui-registry/checks/auth.spec.ts",
+          "type": "registry:file",
+          "target": "~/tests/e2e/web-kit/auth.spec.ts"
+        },
+        {
+          "path": "packages/ui-registry/checks/auth.html",
+          "type": "registry:file",
+          "target": "~/web-kit-checks/auth.html"
+        }
+      ]
+    },
+    {
+      "name": "all",
+      "type": "registry:block",
+      "title": "web-kit 전체 표현",
+      "registryDependencies": [
+        "@web-kit/inputs",
+        "@web-kit/pending",
+        "@web-kit/dialog",
+        "@web-kit/blocking-progress",
+        "@web-kit/choice",
+        "@web-kit/retry",
+        "@web-kit/ui",
+        "@web-kit/form",
+        "@web-kit/list",
+        "@web-kit/record",
+        "@web-kit/checkbox-tree",
+        "@web-kit/filter-error",
+        "@web-kit/styles",
+        "@web-kit/auth"
+      ],
+      "files": []
+    }
+  ]
+}

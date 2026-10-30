@@ -9,7 +9,8 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: process.env.CI ? 1 : 0,
-  reporter: 'list',
+  forbidOnly: true,
+  reporter: [['list'], ['json', { outputFile: '.web-kit-results/browser.json' }]],
   use: { baseURL, trace: 'retain-on-failure', locale: 'ko-KR' },
   webServer: {
     command: `pnpm dev:mock --host 127.0.0.1 --port ${port} --strictPort`,

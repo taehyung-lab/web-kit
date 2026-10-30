@@ -18,6 +18,7 @@ jobs:
           node-version: 24.19.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
+      # check는 고정 shadcn 재빌드와 커밋된 public/r 산출물 일치도 확인한다.
       - run: pnpm check
   # 발행할 산출물 그대로 같은 commit의 apps/starter에 설치해 소비 쪽 검사(check·브라우저)를 돌린다.
   # starter lockfile의 키트 지문이 이 산출물과 다르면 실패한다: 키트를 바꾼 PR은 starter도 함께 맞춘다.
@@ -33,11 +34,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24.19.0
-      - run: pnpm starter:check
+      - run: node scripts/sync-starter.mjs --frozen
       - run: pnpm exec playwright install --with-deps chromium
         working-directory: apps/starter
-      - run: pnpm test:e2e
-        working-directory: apps/starter
+      # starter:check는 단위·브라우저 적합성 결과와 복사본 지문 점검을 필수 실행한다.
+      - run: pnpm starter:check
       - name: 검증한 commit과 산출물 기록
         run: node scripts/write-verification.mjs packages/web-kit dist
       - uses: actions/upload-artifact@v4

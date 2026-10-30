@@ -1,0 +1,27 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "pending",
+  "title": "web-kit pending",
+  "description": "web-kit pending 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
+  "dependencies": [],
+  "devDependencies": [
+    "vitest@4.1.11",
+    "@testing-library/react@16.3.2"
+  ],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "packages/ui-registry/src/ui/pending.tsx",
+      "content": "// 파일 책임: 진행 중 표시(회전 표시) 마크업의 유일한 자리. 버튼 옆 표시(Pending)와 화면 전체 덮개의 큰 회전 표시가 이 파일을 쓴다.\n\n/** 회전 표시 하나. 문구는 부르는 쪽이 둔다(낭독기에는 숨김). */\nexport function Spinner({ large = false }: { readonly large?: boolean }) {\n  return <span aria-hidden=\"true\" className={large ? 'wk-spinner wk-spinner-large' : 'wk-spinner'} />;\n}\n\n/** 진행 중 표시: 버튼 바로 뒤에 둔다. label은 화면 낭독기에만 읽히는 문구다. */\nexport function Pending({ label }: { readonly label: string }) {\n  return (\n    <span role=\"status\" className=\"wk-spinner\">\n      <span className=\"wk-visually-hidden\">{label}</span>\n    </span>\n  );\n}\n",
+      "type": "registry:file",
+      "target": "~/src/shared/ui/web-kit/ui/pending.tsx"
+    },
+    {
+      "path": "packages/ui-registry/checks/pending.test.tsx",
+      "content": "// @vitest-environment jsdom\n// 파일 책임: 설치한 pending 복사본을 키트 공통 단위 검사에 연결한다.\nimport { Pending } from '../ui/pending';\nimport { checkPendingConformance } from '@boosterlab/web-kit/testing/unit';\nimport installation from '../../../../../registry-installation.json';\ncheckPendingConformance({ Pending }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });\n",
+      "type": "registry:file",
+      "target": "~/src/shared/ui/web-kit/checks/pending.test.tsx"
+    }
+  ],
+  "type": "registry:block"
+}

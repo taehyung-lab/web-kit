@@ -1,5 +1,5 @@
 // 파일 책임: 회원 목록의 열과 표시 형식을 선언한다.
-import type { ListColumn } from '@boosterlab/web-kit/list/ui';
+import type { ListColumn } from '@/shared/ui/web-kit/list-ui';
 import { useTranslation } from 'react-i18next';
 import type { MemberSummary } from '../model/member';
 

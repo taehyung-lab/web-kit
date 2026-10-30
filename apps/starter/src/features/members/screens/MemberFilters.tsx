@@ -1,5 +1,5 @@
 // 파일 책임: 회원 목록의 기간·검색어·선택 필터를 배치한다.
-import { FilterPanel, FilterActions, PeriodFilter, KeywordFilter, MultiChoiceFilter } from '@boosterlab/web-kit/list/ui';
+import { FilterPanel, FilterActions, PeriodFilter, KeywordFilter, MultiChoiceFilter } from '@/shared/ui/web-kit/list-ui';
 import { useTranslation } from 'react-i18next';
 import { MEMBER_ACCOUNT_STATUSES, MEMBER_KEYWORD_FIELDS, MEMBER_PERIOD_TYPES, MEMBER_SIGNUP_METHODS } from '../model/member';
 

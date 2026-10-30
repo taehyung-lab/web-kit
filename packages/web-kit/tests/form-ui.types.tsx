@@ -1,5 +1,5 @@
 /** 기본 필드의 이름·값 종류를 컴파일 단계에서 검사한다. */
-import { Form } from '../src/form/ui';
+import { Form } from '../../ui-registry/src/form/ui';
 /** 타입 검사 전용 소비 예이며 런타임에서 호출하지 않는다. */
 export function checkFields() {
   const F = Form.of<{ title: string; enabled: boolean; count: number }>();

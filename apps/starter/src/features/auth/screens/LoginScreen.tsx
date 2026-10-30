@@ -3,7 +3,7 @@ import { failureCopyKey } from '@/shared/lib/failure-copy';
 import { formMessages, useFieldMessage } from '@/shared/lib/form-messages';
 import { isRequestFailure } from '@boosterlab/web-kit/failure';
 import { useSaveForm } from '@boosterlab/web-kit/form';
-import { Form } from '@boosterlab/web-kit/form/ui';
+import { Form } from '@/shared/ui/web-kit/form/ui';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import { signIn } from '../api/auth';

@@ -1,0 +1,298 @@
+{
+  "inputs": {
+    "ids": [
+      "inputs-unit"
+    ],
+    "connections": [
+      "inputs.test.tsx"
+    ],
+    "dependencies": []
+  },
+  "pending": {
+    "ids": [
+      "pending-unit"
+    ],
+    "connections": [
+      "pending.test.tsx"
+    ],
+    "dependencies": []
+  },
+  "dialog": {
+    "ids": [
+      "dialog-unit",
+      "B-dialog"
+    ],
+    "connections": [
+      "dialog.test.tsx",
+      "dialog.spec.ts",
+      "dialog.page.tsx",
+      "dialog.html"
+    ],
+    "dependencies": [
+      "pending",
+      "styles"
+    ]
+  },
+  "blocking-progress": {
+    "ids": [
+      "G001",
+      "G002",
+      "G003",
+      "G004",
+      "G005",
+      "G006",
+      "G007",
+      "G008",
+      "G009",
+      "G010",
+      "G011",
+      "G012",
+      "G013",
+      "G014",
+      "G015",
+      "G016",
+      "G017",
+      "G018",
+      "G019",
+      "G020",
+      "G021",
+      "G022",
+      "G023",
+      "G024",
+      "G025",
+      "B-progress-restore",
+      "B-progress-removed",
+      "B-progress-root",
+      "B-progress-saved",
+      "B-progress-error",
+      "B-progress-portal",
+      "B-progress-initial",
+      "B-progress-from-dialog"
+    ],
+    "connections": [
+      "blocking-progress.test.tsx",
+      "blocking-progress.spec.ts",
+      "blocking-progress.page.tsx",
+      "blocking-progress.html"
+    ],
+    "dependencies": [
+      "pending",
+      "form",
+      "styles"
+    ]
+  },
+  "choice": {
+    "ids": [
+      "G026",
+      "G027",
+      "G028",
+      "G029",
+      "G030",
+      "G031",
+      "G032"
+    ],
+    "connections": [
+      "choice.test.tsx"
+    ],
+    "dependencies": []
+  },
+  "retry": {
+    "ids": [
+      "retry-unit"
+    ],
+    "connections": [
+      "retry.test.tsx"
+    ],
+    "dependencies": []
+  },
+  "ui": {
+    "ids": [],
+    "connections": [],
+    "dependencies": [
+      "inputs",
+      "pending",
+      "dialog",
+      "blocking-progress",
+      "choice"
+    ]
+  },
+  "form": {
+    "ids": [
+      "G041",
+      "G042",
+      "G043",
+      "G044",
+      "G045",
+      "G046",
+      "G047",
+      "G048",
+      "G049",
+      "G050",
+      "G051",
+      "G052",
+      "G053",
+      "G054",
+      "G055",
+      "G056",
+      "G057",
+      "G058",
+      "G059",
+      "G060",
+      "G061",
+      "G062",
+      "G063",
+      "G064",
+      "G065",
+      "G066",
+      "G067",
+      "G068",
+      "G069",
+      "G070",
+      "G071",
+      "G072",
+      "G073",
+      "G074",
+      "G075",
+      "G076",
+      "G077",
+      "G078",
+      "G079",
+      "G080",
+      "G081",
+      "G082",
+      "G083",
+      "G084",
+      "G085",
+      "G086",
+      "G087",
+      "G088",
+      "G089",
+      "G090",
+      "B-enter",
+      "B-enter-add",
+      "B-enter-inner"
+    ],
+    "connections": [
+      "form-complex.test.tsx",
+      "form-enter.test.tsx",
+      "form-sections.test.tsx",
+      "form-ui.test.tsx",
+      "form-workflows.test.tsx",
+      "form.spec.ts",
+      "form.page.tsx",
+      "form.html"
+    ],
+    "dependencies": [
+      "choice",
+      "dialog",
+      "pending",
+      "styles"
+    ]
+  },
+  "list": {
+    "ids": [
+      "G091",
+      "G092",
+      "G093",
+      "G094",
+      "G095",
+      "G096",
+      "G097",
+      "G098",
+      "G099",
+      "G100",
+      "G101",
+      "G102",
+      "G103",
+      "G104",
+      "G105"
+    ],
+    "connections": [
+      "list-ui.test.tsx"
+    ],
+    "dependencies": [
+      "choice",
+      "dialog",
+      "pending"
+    ]
+  },
+  "record": {
+    "ids": [
+      "G106",
+      "G107",
+      "G108",
+      "G109"
+    ],
+    "connections": [
+      "record-ui.test.tsx"
+    ],
+    "dependencies": [
+      "retry"
+    ]
+  },
+  "checkbox-tree": {
+    "ids": [
+      "tree-focus"
+    ],
+    "connections": [
+      "checkbox-tree-focus.test.tsx"
+    ],
+    "dependencies": []
+  },
+  "filter-error": {
+    "ids": [
+      "filter-error-unit"
+    ],
+    "connections": [
+      "filter-error.test.tsx"
+    ],
+    "dependencies": []
+  },
+  "styles": {
+    "ids": [
+      "G110"
+    ],
+    "connections": [
+      "styles.test.tsx"
+    ],
+    "dependencies": []
+  },
+  "all": {
+    "ids": [],
+    "connections": [],
+    "dependencies": [
+      "inputs",
+      "pending",
+      "dialog",
+      "blocking-progress",
+      "choice",
+      "retry",
+      "ui",
+      "form",
+      "list",
+      "record",
+      "checkbox-tree",
+      "filter-error",
+      "styles",
+      "auth"
+    ]
+  },
+  "auth": {
+    "ids": [
+      "auth-unit",
+      "B-auth",
+      "auth-concurrency",
+      "B-auth-concurrency",
+      "auth-failures",
+      "B-auth-failures"
+    ],
+    "connections": [
+      "auth.test.tsx",
+      "auth.spec.ts",
+      "auth.page.tsx",
+      "auth.html",
+      "auth-six.tsx"
+    ],
+    "dependencies": []
+  }
+}

@@ -5,7 +5,7 @@ import { useQueries, useQuery, type QueryKey, type UseQueryOptions } from '@tans
 import { useEffect, useRef, useState } from 'react';
 import { isRequestFailure } from './failure';
 import { useBlockingProgress } from './progress';
-import { validateDateRange } from './search/date-range';
+import { validateDateRange } from './date-range';
 import { sameSearchValue, type FullSearch, type SearchDefinition, type SearchField, type UrlSearch } from './search/fields';
 import { addKeyword, nextSort, type Keyword } from './search/interactions';
 

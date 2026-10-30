@@ -8,9 +8,13 @@ export type CheckboxTreeNode<T extends string = string> =
     };
 /** 트리 순서로 leaf 값을 얻는다. */
 export function treeLeaves<T extends string>(nodes: readonly CheckboxTreeNode<T>[]): T[] {
-  return nodes.flatMap((node) => (node.children ? treeLeaves(node.children) : [node.value]));
+  return treeLeafNodes(nodes).map((node) => node.value);
 }
-/** 일부 선택도 부모 체크로 표시하고 해당 부모를 누르면 후손만 모두 해제한다. */
+/** 표시 이름을 보존하면서 트리의 leaf를 한 순서로 펼친다. */
+export function treeLeafNodes<T extends string>(nodes: readonly CheckboxTreeNode<T>[]): { readonly value: T; readonly label: string }[] {
+  return nodes.flatMap((node) => node.children ? treeLeafNodes(node.children) : [{ value: node.value, label: node.label }]);
+}
+/** 모두 선택은 체크, 일부 선택은 mixed이며 일부 선택을 누르면 후손 모두 선택한다. */
 export function checkboxTreeSelection<T extends string>(
   nodes: readonly CheckboxTreeNode<T>[],
   values: readonly T[]
@@ -19,9 +23,13 @@ export function checkboxTreeSelection<T extends string>(
   const selected = new Set(values);
   return {
     all,
-    checked: (targets: readonly T[], requireAll = false) => {
+    checked: (targets: readonly T[], _requireAll = false) => {
       const count = targets.filter((value) => selected.has(value)).length;
-      return requireAll ? count > 0 && count === targets.length : count > 0;
+      return count > 0 && count === targets.length;
+    },
+    mixed: (targets: readonly T[]) => {
+      const count = targets.filter((value) => selected.has(value)).length;
+      return count > 0 && count < targets.length;
     },
     set: (targets: readonly T[], checked: boolean): T[] => {
       const next = new Set(selected);

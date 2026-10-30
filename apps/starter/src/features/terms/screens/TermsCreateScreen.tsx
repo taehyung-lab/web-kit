@@ -2,7 +2,7 @@
 // 흐름(확인·완료 확인·이탈 보호·오류 위치)은 키트 값(confirm·acknowledge)으로만 켠다.
 import type { z } from 'zod';
 import { useSaveForm } from '@boosterlab/web-kit/form';
-import { Form } from '@boosterlab/web-kit/form/ui';
+import { Form } from '@/shared/ui/web-kit/form/ui';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useFormCopy } from '@/shared/lib/form-messages';

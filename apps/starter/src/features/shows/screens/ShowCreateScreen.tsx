@@ -3,7 +3,7 @@
 // 회차·판매처 키는 접을 수 있는 구역(Form.Section fields)이라 닫힌 구역의 오류는 제출 뒤 펼쳐지고 그 칸에 포커스한다.
 // 저장: 좌석도 업로드 → 등록. 저장 완료 확인 뒤 상품 목록으로 간다. 공연 폼 전체를 옮긴 것은 아니다.
 import { useSaveForm, type FormFileValue } from '@boosterlab/web-kit/form';
-import { Form } from '@boosterlab/web-kit/form/ui';
+import { Form } from '@/shared/ui/web-kit/form/ui';
 import { useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';

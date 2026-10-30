@@ -2,7 +2,7 @@
 // 파일 책임: /testing 검사가 올바른 adapter는 통과시키고 깨진 adapter는 실제로 거절하는지 확인한다.
 import { useEffect, useState, type ReactElement } from 'react';
 import { afterEach, expect, it } from 'vitest';
-import { FieldFrame } from '../src/form/field';
+import { FieldFrame } from '../../ui-registry/src/form/field';
 import {
   checkConfirmDialogAdapter,
   checkFieldAdapter,

@@ -1,14 +1,16 @@
 # 0005. 목록·필터·표·다운로드·권한 틀: 검색 직전 보장은 상태가, 배치는 부품 묶음이 맡는다
 
 - 상태: 채택 (2026-10-27, 3.0 4단계 구현)
-- 관련 결정: [0003](0003-web-kit-3-redesign.md) §3 list·search·filter·permission 행, §4 구조 규칙, §5 목록 표준. 보장 내용의 정본은 `packages/web-kit/skills/web-kit-list`·`web-kit-permission`이며 여기에는 결정·이유·출처만 둔다.
+- 관련 결정: [0003](0003-web-kit-3-redesign.md) §3 공용 책임, §4 구조 규칙, §5 목록 표준. 보장 내용의 정본은 `packages/web-kit/skills/web-kit-list`·`web-kit-permission`이며 여기에는 결정·이유·출처만 둔다.
 - 근거 자료: DT v2 공연 목록(`apps/admin/src/features/performances/screens/performance-list`)과 DT 공용(`shared/ui/list/*`·`shared/ui/filter/*`·`shared/lib/list/use-app-list.ts`·`app/permissions/*`), 레퍼런스 회원 목록(`src/features/members/screens/member-list`)과 공용(`src/shared/lib/search-fields.ts`·`use-period-draft.ts`·`use-page-row-selection.ts`·`src/shared/ui/list/*`), web-kit 2.0 `list-ui.tsx`.
+
+이 표는 3.0 당시 비교·선택의 근거다. `/list/ui` 등 당시 UI 입구는 현재 사용법이 아니며 4.0의 [0011](0011-web-kit-4-ui-distribution.md)이 배포 방식을 대체했다. 현재 적용은 배포 스킬·공개 타입을 따른다.
 
 ## 결정
 
 | 항목 | DT v2 | 레퍼런스 | web-kit 2.0 | 고른 것과 이유 |
 |---|---|---|---|---|
-| 기간 검증·입력 중 키워드 | 화면(`Filters.tsx`)이 검색 직전 `withPendingKeyword`로 합침. 기간 검증은 URL 묶음 규칙과 `PeriodField` | `use-period-draft` 훅이 화면마다 초안 보유 | UI 부품 안의 binding(`prepare`)이 검증·합침 | **상태(`useList`)가 소유**: `periods` 선언과 `keywordInput` 상태. 맞지 않는 기간은 검색을 막지 않고 그 쌍만 기본값으로 돌린다(0003 §5, 2026-10-28 사용자 확인). 세 방식 모두 입력칸을 바꾸거나 숨기면 보장이 사라졌다(0003 반례 2개). 상태에 두면 부품 교체와 무관하다 |
+| 기간 검증·입력 중 키워드 | 화면(`Filters.tsx`)이 검색 직전 `withPendingKeyword`로 합침. 기간 검증은 URL 묶음 규칙과 `PeriodField` | `use-period-draft` 훅이 화면마다 초안 보유 | UI 부품 안의 binding(`prepare`)이 검증·합침 | **상태(`useList`)가 소유**: `periods` 선언과 `keywordInput` 상태. 맞지 않는 기간은 검색을 막지 않고 그 쌍만 기본값으로 돌린다(2026-10-28 사용자 확인; 현재 보장은 web-kit-list). 세 방식 모두 입력칸을 바꾸거나 숨기면 보장이 사라졌다(0003 반례 2개). 상태에 두면 부품 교체와 무관하다 |
 | 정렬 첫 방향 | `header-sort`의 `toggleSort`가 새 열은 desc | 화면마다 다름 | `nextSort`가 현재 방향 유지로 고정 | **`defineSearch({ sortFirst })` 값**. 0003 §5가 화면 값으로 정했다. 생략 시 2.0 동작이라 기존 소비자가 바뀌지 않는다 |
 | 목록 UI 조립 | `ListResult`(상태·액션 잠금)+`DataTable`(TanStack Table)+필터 부품 9종, 화면이 props로 연결 | `PagedListResult`·`DataTable`·`primitives` adapter, 1개 목록이 8~13 파일 | `ListView` render prop 하나에 typed parts | **`<List model>` + `List.*` 부품(context)**. 위치를 바꿔도 연결을 다시 쓰지 않는다(0003 반례 "배치·CSS만 바꿨는데 조립을 다시 쓴다"). render prop은 배치가 한 함수 안에 갇혔고, props 연결은 화면마다 같은 배선을 반복했다 |
 | 표 | TanStack Table v9 + 50행부터 가상화 | 높이 제한만 | 단순 table | **키트 단순 table + `@tanstack/react-virtual`(optional peer) 가상화**. 컬럼 정의는 `key·header·cell·sort`면 충분했고 TanStack Table을 peer로 늘릴 이유가 없었다. 가상화는 DT 기존 보장이라 유지 |

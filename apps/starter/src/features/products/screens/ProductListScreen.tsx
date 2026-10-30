@@ -1,5 +1,5 @@
 // 파일 책임: 상품 목록의 제목·필터·작업·결과를 배치하고 경로 이동을 연결한다.
-import { ListProvider, ListResult, ResultTable, Pagination } from '@boosterlab/web-kit/list/ui';
+import { ListProvider, ListResult, ResultTable, Pagination } from '@/shared/ui/web-kit/list-ui';
 import { useList } from '@boosterlab/web-kit/list';
 import type { UrlSearch } from '@boosterlab/web-kit/search';
 import { useTranslation } from 'react-i18next';

@@ -1,6 +1,6 @@
 // 파일 책임: 상품 등록의 원본·검증·서버 요청과 완료 목적지를 선언한다.
 import { useSaveForm } from '@boosterlab/web-kit/form';
-import { Form } from '@boosterlab/web-kit/form/ui';
+import { Form } from '@/shared/ui/web-kit/form/ui';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useFormCopy } from '@/shared/lib/form-messages';

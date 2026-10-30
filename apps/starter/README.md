@@ -1,8 +1,8 @@
 # admin-web-starter
 
-web-kit 저장소의 `apps/starter`. 새 관리자 웹의 틀이자, 키트를 바꿀 때 함께 고치는 소비 검사 앱이다. 새 프로젝트를 시작하는 순서는 [저장소 README](../../README.md#새-프로젝트-시작)를 따른다.
+web-kit 저장소의 `apps/starter`. 새 관리자 웹의 틀이자, 키트를 바꿀 때 함께 고치는 소비 검사 앱이다. 새 프로젝트는 루트의 `pnpm starter:create`로 만든다. [저장소 README](../../README.md#새-프로젝트-시작)에 고정 AWK 입력과 실행 순서가 있다.
 
-관리자 웹을 새로 만들 때 쓰는 기본 앱이다. 키트 연결(세션·요청·QueryClient), 키트 기본 UI, 예시 기능 하나(상품 목록·상세·등록·수정·로그인), mock API, 화면 테스트, CI까지 갖춰 두었다. 예시 기능의 값(검색 기본값·문구·업무 규칙)은 스타터가 정한 예시이며 제품 결정이 아니다.
+관리자 웹을 새로 만들 때 쓰는 기본 앱이다. 키트 연결(세션·요청·QueryClient), registry로 설치한 UI 복사본, 예시 기능 하나(상품 목록·상세·등록·수정·로그인), mock API, 화면 테스트, CI까지 갖춰 두었다. 예시 기능의 값(검색 기본값·문구·업무 규칙)은 스타터가 정한 예시이며 제품 결정이 아니다.
 
 ## 스택
 
@@ -17,7 +17,7 @@ web-kit 저장소의 `apps/starter`. 새 관리자 웹의 틀이자, 키트를 �
 | 실행 | Node 24, pnpm 10.33 |
 
 - **web-kit**: `package.json`의 `file:vendor/boosterlab-web-kit.tgz` 의존과 `.agents/skills/web-kit-*` 링크로 쓴다. `vendor/`의 검사 대상 tarball과 lockfile은 함께 커밋한다. 키트 변경 시 저장소 루트의 `pnpm starter:sync`로 다시 포장하고 설치한다.
-- **agent-workflow-kit**: 이 앱에는 설치하지 않는다. web-kit 저장소 루트의 것을 쓰고, 복사한 새 프로젝트에서 새로 설치한다.
+- **agent-workflow-kit**: 이 앱에는 설치하지 않는다. web-kit 저장소 루트의 것을 쓰고, `starter:create`가 새 프로젝트에 고정 버전을 설치한다.
 
 ## 빠른 시작
 
@@ -33,7 +33,7 @@ pnpm dev:mock      # msw mock API로 실행. 계정 admin / password
 | `pnpm build` | 프로덕션 빌드 |
 | `pnpm typecheck` · `pnpm lint` · `pnpm test` | 타입·lint·테스트 |
 | `pnpm api:generate` | `openapi/sample.json` → `src/api/generated` |
-| `pnpm check` | typecheck + lint + test + build. 저장소 CI(`../../.github/workflows/check.yml`)가 키트 tarball을 설치한 뒤 이것을 돌린다 |
+| `pnpm check` | 타입·lint·단위·빌드·브라우저 검사와 strict 적합성 점검. 새 프로젝트는 일반 소비 점검을 쓴다 |
 | `pnpm test:e2e` | 실제 브라우저(chromium, mock 모드) 검사. 처음 한 번 `pnpm exec playwright install chromium`. CI는 `check` 뒤에 돌린다 |
 
 mock 모드에서는 access 토큰이 2분 뒤 만료된다. 그래서 2분 뒤 조회에서 401 → 재발급 → 재전송 흐름을 볼 수 있다(쓰기는 다시 보내지 않고 "저장 결과를 확인할 수 없습니다"로 끝난다 — 키트 결정 0001 E1).
@@ -111,6 +111,32 @@ mock 통과나 HTTP 200만으로 서버 계약을 확인했다고 보지 않는�
 
 ## 키트 갱신
 
-현재 대상은 3.1.0이다. 정식 발행에는 main CI에서 검증한 tarball과 `verification.json`을 그대로 사용한다. `selection.run`의 결과는 실제 성공 ID인 `{ completedIds }`로 반환한다. 예시 API가 개수만 주는 부분 성공에서는 ID를 추측하지 않고 선택을 보존한다.
+현재 대상 버전은 설치한 패키지와 `registry-installation.json`에서 확인한다. 정식 발행에는 main CI에서 검증한 tarball과 `verification.json`을 그대로 사용한다. `selection.run`의 결과는 실제 성공 ID인 `{ completedIds }`로 반환한다. 예시 API가 개수만 주는 부분 성공에서는 ID를 추측하지 않고 선택을 보존한다.
 
 새 버전을 받는 방법은 각 키트 README의 업데이트·업그레이드를 따른다. 받은 뒤 이 저장소의 `pnpm check`와 `pnpm test:e2e`를 통과시킨다.
+
+### UI 복사본 설치
+
+화면은 `src/shared/ui/web-kit`의 소비 프로젝트 소스다. Form은 `@/shared/ui/web-kit/form/ui`, List는 `@/shared/ui/web-kit/list-ui`, 기본 입력과 대화창은 `@/shared/ui/web-kit/ui`에서 import한다. 공통 상태 hook은 계속 `@boosterlab/web-kit/form`, `/list`, `/dialog`, `/choice`에서 가져온다.
+
+`components.json`의 `@web-kit`은 설치 기록과 같은 버전 tag에 고정한다. 아직 원격 발행 전인 후보는 저장소 루트에서 `pnpm registry:build` 후 `node scripts/install-starter-registry.mjs`로 설치한다. 이 명령은 설치 동안만 같은 checkout의 로컬 JSON을 가리키고, 실제 shadcn 4.19.1 CLI가 복사본을 만든 뒤 tag 설정을 복원한다. **재실행하면 현재 복사본을 덮어쓰므로 프로젝트 변경을 먼저 비교한다.**
+
+`registry-installation.json`은 설치 항목·원본 버전·기준 commit·원본과 설치 파일 SHA-256·components 설정 지문을 보관한다. 갱신 시 이 기록으로 이전 원본을 찾고 새 원본과 프로젝트 복사본을 비교한다. 키트 tarball의 `starter:sync`는 UI 복사본을 갱신하지 않는다.
+
+
+### 복사본 적합성 검사와 점검
+
+registry는 UI와 함께 `src/shared/ui/web-kit/checks/*.test.tsx`, `tests/e2e/web-kit/*.spec.ts`, 검사 화면 연결 파일을 설치한다. 이 파일은 실제 복사본을 `@boosterlab/web-kit/testing/unit`, `/testing/browser`, `/testing/fixtures`의 공통 검사에 넘기며 단언은 패키지가 소유한다. 검사 화면은 `web-kit-checks/*.html`이며 제품 route에 추가하지 않는다.
+
+`pnpm check`는 타입·lint·단위·빌드·브라우저 검사를 실행한 뒤 아래 점검을 필수로 실행한다. 처음에는 `pnpm exec playwright install chromium`이 필요하다. JSON 결과는 `.web-kit-results/`에 생성되며 git에는 넣지 않는다.
+
+```sh
+pnpm conformance:check
+# 풀어 쓰면:
+pnpm exec web-kit-check --installation registry-installation.json --unit .web-kit-results/unit.json --browser .web-kit-results/browser.json --strict-fingerprints
+```
+
+점검은 설치 항목별 연결 파일과 필수 검사, 누락·skip·실패, 결과의 패키지 버전·registry ref·원본 commit을 확인한다. Vitest의 `allowOnly: false`와 Playwright의 `forbidOnly: true`로 집중 실행을 CI에서 거절한다. starter는 설치 복사본을 그대로 검증하므로 지문 변경도 실패다. 일반 소비 프로젝트는 `--strict-fingerprints`를 빼면 수정된 복사본을 알림으로만 보고하고 실제 적합성 결과로 판정한다.
+
+출력 예: `web-kit 적합성 통과: 14항목, 120개 식별자, package <version>, registry v<version>@<sourceCommit>`.
+실제 제품이 이 검사 대상 복사본을 사용하는지는 이 명령이 자동 판정하지 않는다. 사용 경로와 검사 연결의 일치는 별도 검토한다. 개별 브라우저 적합성을 실행할 때는 등록 함수 위치가 패키지로 기록되므로 파일 경로 대신 `pnpm exec playwright test --grep 'B-dialog'`처럼 식별자로 선택한다.

@@ -2,7 +2,7 @@
 // 파일 책임: 회원 목록 화면. 필터를 왼쪽에 두는 배치 예시이며, 상태 조립(useList)은 상품 목록과 같고 배치만 다르다.
 import { failureCopyKey } from '@/shared/lib/failure-copy';
 import { useList } from '@boosterlab/web-kit/list';
-import { ListProvider, ResultTotal, SortSelect, PageSize, ListResult, ResultTable, Pagination } from '@boosterlab/web-kit/list/ui';
+import { ListProvider, ResultTotal, SortSelect, PageSize, ListResult, ResultTable, Pagination } from '@/shared/ui/web-kit/list-ui';
 import type { UrlSearch } from '@boosterlab/web-kit/search';
 import { useTranslation } from 'react-i18next';
 import { memberListQuery } from '../api/members';

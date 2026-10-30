@@ -50,7 +50,7 @@ export const productListSearch = defineSearch({
 
 export type ProductListSearch = FullSearch<typeof productListSearch.fields>;
 
-/** 직접 입력하는 기간 쌍. 반쯤 비었거나 역순이면 검색을 확정하지 않는다(useList periods). */
+/** 상품 목록은 직접 입력한 기간이 반쯤 비었거나 역순이면 그 쌍만 기본값으로 돌리고 나머지 조건으로 검색한다(useList periods). */
 export const PRODUCT_LIST_PERIODS = [['from', 'to']] as const;
 
 /** 확정 검색 → 서버 요청. 서버 page는 0부터, 정렬은 Spring "필드,방향" 형식이다. */

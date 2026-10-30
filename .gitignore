@@ -5,3 +5,5 @@ coverage/
 dist/
 
 /work/
+
+/packages/web-kit/references/

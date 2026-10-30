@@ -1,6 +1,6 @@
 // 파일 책임: 상품 목록의 검색 조건 입력 영역을 구성한다.
 // 파일 책임: 상품 필터의 배치와 표시 문구를 선언한다. 검색 초안과 검증은 키트가 소유한다.
-import { FilterPanel, FilterActions, TextFilter, ChoiceFilter, PeriodFilter } from '@boosterlab/web-kit/list/ui';
+import { FilterPanel, FilterActions, TextFilter, ChoiceFilter, PeriodFilter } from '@/shared/ui/web-kit/list-ui';
 import { useTranslation } from 'react-i18next';
 import { PRODUCT_STATUSES } from '../model/product';
 /** 상품의 검색 칸을 같은 목록 상태에 연결한다. */

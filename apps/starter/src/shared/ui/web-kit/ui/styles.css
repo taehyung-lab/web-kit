@@ -1,0 +1,505 @@
+/* 기본 UI 토큰. 소비자는 --wk-* 변수로 표현을 조정하며 동작은 키트가 유지한다. */
+:root {
+  --wk-bg: #fff;
+  --wk-fg: #18263a;
+  --wk-border: #d2dae5;
+  --wk-accent: #245bc4;
+  --wk-danger: #b42318;
+  --wk-radius: 8px;
+  --wk-space: 12px;
+}
+.wk-form,
+.wk-filter,
+.wk-results {
+  color: var(--wk-fg);
+  background: var(--wk-bg);
+}
+.wk-form,
+.wk-filter {
+  display: grid;
+  gap: var(--wk-space);
+}
+.wk-field {
+  display: grid;
+  gap: 6px;
+}
+/*
+ * 프로젝트가 배치하는 블록(칸·구역·폼 한 줄)의 기본 여백 초기화는 :where()로 0 우선순위에 둔다.
+ * 클래스 우선순위로 margin을 0으로 두면 프로젝트의 간격 유틸리티(Tailwind v4 space-y 등은 :where 선택자)가 지워져
+ * 오류 문구 바로 아래에 다음 칸 라벨이 붙는다(DT 운영자 등록, 2026-10-28 관찰).
+ */
+:where(fieldset.wk-field, .wk-section, .wk-form-failure) {
+  margin: 0;
+}
+fieldset.wk-field {
+  border: 0;
+  padding: 0;
+}
+.wk-label {
+  font-weight: 600;
+}
+.wk-required,
+.wk-error {
+  color: var(--wk-danger);
+}
+.wk-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.wk-spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid var(--wk-border);
+  border-top-color: var(--wk-fg);
+  border-radius: 50%;
+  animation: wk-spin 0.8s linear infinite;
+}
+/* 화면 전체 진행 덮개(BlockingProgress). 모양은 DT Figma 0.2.1·0.2.2(회색 반투명 전체 + 가운데 회전 표시와 두 줄 문구, 카드 없음).
+   층은 --wk-blocking-layer(기본은 키트 대화창 1000 아래라 대화창이 위에 뜬다), 배경은 --wk-blocking-backdrop. */
+.wk-blocking {
+  position: fixed;
+  inset: 0;
+  z-index: var(--wk-blocking-layer, 999);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--wk-blocking-backdrop, rgb(174 174 178 / 80%));
+}
+.wk-blocking-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 25px;
+  color: var(--wk-blocking-fg, #000);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+}
+.wk-spinner-large {
+  width: 30px;
+  height: 30px;
+  border-width: 3px;
+}
+.wk-blocking-text {
+  display: grid;
+}
+:where(.wk-blocking-text p) {
+  margin: 0;
+}
+@keyframes wk-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wk-spinner {
+    animation-duration: 2.4s;
+  }
+}
+.wk-description {
+  font-size: 0.875rem;
+  color: color-mix(in srgb, var(--wk-fg) 65%, transparent);
+}
+.wk-input {
+  border: 1px solid var(--wk-border);
+  border-radius: var(--wk-radius);
+  padding: 8px 10px;
+  background: var(--wk-bg);
+  color: var(--wk-fg);
+  font: inherit;
+  max-width: 100%;
+}
+.wk-input:focus-visible,
+.wk-button:focus-visible,
+.wk-table tr:focus-visible {
+  outline: 2px solid var(--wk-accent);
+  outline-offset: 2px;
+}
+.wk-input[aria-invalid='true'] {
+  border-color: var(--wk-danger);
+}
+.wk-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.wk-button {
+  border: 1px solid var(--wk-border);
+  border-radius: var(--wk-radius);
+  padding: 8px 14px;
+  background: var(--wk-bg);
+  color: var(--wk-fg);
+  font: inherit;
+  cursor: pointer;
+}
+.wk-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.wk-backdrop {
+  position: fixed;
+  inset: 0;
+  background: #0007;
+  z-index: 1000;
+}
+.wk-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1001;
+  background: var(--wk-bg);
+  color: var(--wk-fg);
+  padding: 24px;
+  border-radius: var(--wk-radius);
+  box-shadow: 0 12px 48px #0004;
+  width: min(90vw, 560px);
+  max-height: 85vh;
+  overflow: auto;
+  display: grid;
+  gap: 16px;
+}
+.wk-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.wk-table th,
+.wk-table td {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid var(--wk-border);
+}
+.wk-table th {
+  font-weight: 600;
+}
+.wk-table button {
+  font: inherit;
+  color: inherit;
+}
+.wk-history {
+  display: grid;
+  gap: var(--wk-space);
+}
+/* 목록 부품(List.*). 배치는 소비자가 정하고 여기서는 부품 안쪽 모양만 둔다. */
+.wk-button-primary {
+  background: var(--wk-accent);
+  border-color: var(--wk-accent);
+  color: var(--wk-accent-fg, #fff);
+}
+.wk-button[aria-pressed='true'],
+.wk-button[aria-current='page'] {
+  border-color: var(--wk-accent);
+  font-weight: 600;
+}
+.wk-options,
+.wk-period,
+.wk-keywords,
+.wk-inline {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.wk-check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.wk-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid var(--wk-border);
+  border-radius: 4px;
+  background: var(--wk-bg);
+  cursor: pointer;
+}
+.wk-check[data-checked],
+.wk-check[data-indeterminate] {
+  background: var(--wk-accent);
+  border-color: var(--wk-accent);
+}
+.wk-check[data-disabled] {
+  opacity: 0.5;
+  cursor: default;
+}
+.wk-check-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--wk-accent-fg, #fff);
+}
+.wk-check-indicator[data-unchecked] {
+  display: none;
+}
+.wk-check:focus-visible {
+  outline: 2px solid var(--wk-accent);
+  outline-offset: 2px;
+}
+.wk-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--wk-border);
+  border-radius: 999px;
+}
+.wk-chip-remove {
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.wk-state {
+  display: flex;
+  min-height: 8rem;
+  align-items: center;
+  justify-content: center;
+  gap: var(--wk-space);
+  color: color-mix(in srgb, var(--wk-fg) 65%, transparent);
+}
+.wk-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--wk-space);
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--wk-danger) 30%, transparent);
+  border-radius: var(--wk-radius);
+  background: color-mix(in srgb, var(--wk-danger) 5%, transparent);
+}
+.wk-table-viewport {
+  overflow: auto;
+  border: 1px solid var(--wk-border);
+  border-radius: var(--wk-radius);
+}
+.wk-table-viewport[data-virtual] {
+  max-height: 576px;
+}
+.wk-table-viewport[data-virtual] thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--wk-bg);
+}
+.wk-table tr[data-selected] {
+  background: color-mix(in srgb, var(--wk-accent) 10%, transparent);
+}
+.wk-row-link {
+  cursor: pointer;
+}
+.wk-row-link:hover {
+  background: color-mix(in srgb, var(--wk-fg) 4%, transparent);
+}
+.wk-cell-select {
+  width: 1%;
+}
+.wk-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+.wk-sort-glyph {
+  font-size: 0.75em;
+  opacity: 0.3;
+}
+.wk-sort-glyph[data-active] {
+  opacity: 1;
+}
+.wk-total {
+  margin: 0;
+}
+.wk-pagination {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+}
+.wk-fieldset {
+  margin: 0;
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+/* 대화창·폼·상세 묶음 부품(5단계). */
+.wk-dialog-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+.wk-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.wk-button-secondary,
+.wk-button-ghost {
+  background: var(--wk-bg);
+}
+.wk-button-ghost {
+  border-color: transparent;
+  text-decoration: underline;
+}
+.wk-button-danger {
+  color: var(--wk-danger);
+}
+.wk-button[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: default;
+}
+.wk-textarea {
+  min-height: 6rem;
+  resize: vertical;
+}
+.wk-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--wk-accent);
+}
+.wk-count {
+  margin: 0;
+  text-align: right;
+  font-size: 0.75rem;
+  color: color-mix(in srgb, var(--wk-fg) 65%, transparent);
+}
+.wk-form-failure {
+  border: 1px solid color-mix(in srgb, var(--wk-danger) 40%, transparent);
+  border-radius: var(--wk-radius);
+  padding: 8px 12px;
+  color: var(--wk-danger);
+}
+.wk-section {
+  display: grid;
+  gap: var(--wk-space);
+  border: 1px solid var(--wk-border);
+  border-radius: var(--wk-radius);
+  padding: var(--wk-space);
+}
+.wk-section-title {
+  font-weight: 600;
+  padding: 0 4px;
+}
+.wk-options-state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 2.25rem;
+  outline: none;
+}
+.wk-record-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 4px var(--wk-space);
+  margin: 0;
+}
+.wk-record-field {
+  min-width: 0;
+  padding: 8px 0;
+}
+.wk-record-label {
+  font-size: 0.75rem;
+  color: color-mix(in srgb, var(--wk-fg) 65%, transparent);
+}
+.wk-record-value {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+.wk-record-missing,
+.wk-record-loading {
+  display: grid;
+  justify-items: center;
+  gap: var(--wk-space);
+  padding: 32px 0;
+}
+.wk-record-refresh-failed {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--wk-danger);
+}
+.wk-record-changes {
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+/* 접을 수 있는 구역(Form.Section fields·FormSection). 0 우선순위라 프로젝트 유틸리티로 덮을 수 있다. */
+:where(.wk-section-collapsible) {
+  border: 1px solid var(--wk-border);
+  border-radius: var(--wk-radius);
+  padding: 0;
+  min-width: 0;
+}
+:where(.wk-section-heading) {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+:where(.wk-section-toggle) {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.wk-section-toggle:focus-visible {
+  outline: 2px solid var(--wk-accent);
+  outline-offset: 2px;
+}
+:where(.wk-section-badge) {
+  border-radius: 999px;
+  padding: 0 8px;
+  font-size: 0.75rem;
+  background: var(--wk-danger);
+  color: #fff;
+}
+:where(.wk-section-content) {
+  padding: 0 16px 16px;
+}
+
+/* 선택 칸 팝업은 대화창 안에서도 같은 토큰과 키보드 강조를 쓴다. */
+/* 포털의 배치 요소가 만든 쌓임 맥락도 대화창 위에 둔다. */
+.wk-choice-positioner { z-index: 1002; }
+.wk-choice-popup {
+  z-index: 1002;
+  background: var(--wk-bg);
+  color: var(--wk-fg);
+  border: 1px solid var(--wk-border);
+  border-radius: var(--wk-radius);
+  padding: var(--wk-space);
+  max-height: min(60vh, 24rem);
+  overflow: auto;
+  min-width: var(--anchor-width, 12rem);
+}
+.wk-choice-popup [role='option'], .wk-choice-popup [role='menuitem'] { padding: 6px 10px; cursor: pointer; }
+.wk-choice-popup [data-highlighted] { background: var(--wk-accent); color: var(--wk-accent-fg, #fff); }
+.wk-check[data-checked], .wk-check[data-indeterminate] { color: var(--wk-accent-fg, #fff); }

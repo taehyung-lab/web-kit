@@ -1,0 +1,27 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "checkbox-tree",
+  "title": "web-kit checkbox-tree",
+  "description": "web-kit checkbox-tree 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
+  "dependencies": [],
+  "devDependencies": [
+    "vitest@4.1.11",
+    "@testing-library/react@16.3.2"
+  ],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "packages/ui-registry/src/CheckboxTree.tsx",
+      "content": "// 파일 책임: 부모/자식 선택을 표시하는 공통 트리. checkbox 표현·번역·스타일은 프로젝트 adapter에서 받는다.\nimport type { ReactNode } from 'react';\nimport { checkboxTreeSelection, treeLeaves, type CheckboxTreeNode } from '@boosterlab/web-kit';\nexport interface TreeStyles {\n  readonly root?: string;\n  readonly list?: string;\n  readonly item?: string;\n  readonly children?: string;\n  readonly label?: string;\n  readonly separator?: string;\n}\nexport interface TreeControl {\n  readonly label: string;\n  readonly checked: boolean;\n  readonly mixed?: boolean;\n  readonly toggle: () => void;\n}\n/** 명시적인 leaf 선택을 렌더한다. 부모·전체는 모든 leaf 선택 시 체크, 일부 선택 시 mixed다. */\nexport function CheckboxTree<T extends string>({\n  nodes,\n  values,\n  onValueChange,\n  selectAllLabel,\n  renderCheckbox,\n  styles = {},\n  id,\n  labelledBy,\n  describedBy,\n  invalid,\n  onBlur,\n}: {\n  readonly nodes: readonly CheckboxTreeNode<T>[];\n  readonly values: readonly T[];\n  readonly onValueChange: (values: T[]) => void;\n  readonly selectAllLabel?: string;\n  readonly renderCheckbox: (control: TreeControl) => ReactNode;\n  readonly styles?: TreeStyles;\n  readonly id?: string;\n  readonly labelledBy?: string;\n  readonly describedBy?: string;\n  readonly invalid?: boolean;\n  readonly onBlur?: () => void;\n}) {\n  const selection = checkboxTreeSelection(nodes, values);\n  /** 하나의 부모 또는 leaf를 체크박스와 라벨로 연결한다. */\n  const control = (label: string, descendants: readonly T[], requireAll = false) => {\n    const checked = selection.checked(descendants, requireAll);\n    return (\n      <label className={styles.label}>\n        {renderCheckbox({\n          label,\n          checked,\n          mixed: selection.mixed(descendants),\n          toggle: () => onValueChange(selection.set(descendants, !checked)),\n        })}\n        <span aria-hidden=\"true\">{label}</span>\n      </label>\n    );\n  };\n  /** 노드를 재귀적으로 표시한다. 동일 라벨도 경로별 위치로 구분한다. */\n  const branch = (node: CheckboxTreeNode<T>, index: number): ReactNode => (\n    <li key={node.value ?? index} className={styles.item}>\n      {control(node.label, node.children ? treeLeaves(node.children) : [node.value])}\n      {node.children ? <ul className={styles.children}>{node.children.map(branch)}</ul> : null}\n    </li>\n  );\n  return (\n    <div\n      role=\"group\"\n      id={id}\n      // 검증 오류 focus가 이 그룹으로 올 수 있게 한다(탭 순서에는 넣지 않는다).\n      tabIndex={-1}\n      aria-labelledby={labelledBy}\n      aria-describedby={describedBy}\n      aria-invalid={invalid}\n      onBlur={onBlur}\n      className={styles.root}\n    >\n      {selectAllLabel !== undefined ? control(selectAllLabel, selection.all, true) : null}\n      {selectAllLabel !== undefined && styles.separator ? (\n        <span aria-hidden=\"true\" className={styles.separator} />\n      ) : null}\n      <ul className={styles.list}>{nodes.map(branch)}</ul>\n    </div>\n  );\n}\n",
+      "type": "registry:file",
+      "target": "~/src/shared/ui/web-kit/CheckboxTree.tsx"
+    },
+    {
+      "path": "packages/ui-registry/checks/checkbox-tree-focus.test.tsx",
+      "content": "// @vitest-environment jsdom\n// 파일 책임: 설치한 UI 복사본을 키트의 공통 단위 검사에 연결한다.\nimport { CheckboxTree } from '../CheckboxTree';\nimport { checkCheckboxTreeFocusConformance } from '@boosterlab/web-kit/testing/unit';\nimport installation from '../../../../../registry-installation.json';\ncheckCheckboxTreeFocusConformance({ CheckboxTree }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });\n",
+      "type": "registry:file",
+      "target": "~/src/shared/ui/web-kit/checks/checkbox-tree-focus.test.tsx"
+    }
+  ],
+  "type": "registry:block"
+}

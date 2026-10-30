@@ -1,0 +1,27 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "retry",
+  "title": "web-kit retry",
+  "description": "web-kit retry 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
+  "dependencies": [],
+  "devDependencies": [
+    "vitest@4.1.11",
+    "@testing-library/react@16.3.2"
+  ],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "packages/ui-registry/src/ui/retry.tsx",
+      "content": "/** 실패 자리의 다시 시도 버튼이 사라질 때만 결과로 focus를 옮긴다. */\nimport type { ReactNode } from 'react';\nimport { useRetryFocus } from '@boosterlab/web-kit/record';\n/** 재시도 전에 다른 곳으로 이동한 focus는 빼앗지 않는다. */\nexport function RetryRegion({\n  failed,\n  message,\n  onRetry,\n  controlId,\n  children,\n  retryLabel = '다시 시도',\n}: {\n  readonly failed: boolean;\n  readonly message?: ReactNode;\n  readonly onRetry: () => void;\n  readonly controlId: string;\n  readonly children: ReactNode;\n  readonly retryLabel?: string;\n}) {\n  const { retryRef } = useRetryFocus(failed, controlId);\n  if (!failed) return children;\n  return (\n    <div role=\"alert\">\n      {message}\n      <button type=\"button\" ref={retryRef} className=\"wk-button\" onClick={onRetry}>\n        {retryLabel}\n      </button>\n    </div>\n  );\n}\n",
+      "type": "registry:file",
+      "target": "~/src/shared/ui/web-kit/ui/retry.tsx"
+    },
+    {
+      "path": "packages/ui-registry/checks/retry.test.tsx",
+      "content": "// @vitest-environment jsdom\n// 파일 책임: 설치한 retry 복사본을 키트 공통 단위 검사에 연결한다.\nimport { RetryRegion } from '../ui/retry';\nimport { checkRetryConformance } from '@boosterlab/web-kit/testing/unit';\nimport installation from '../../../../../registry-installation.json';\ncheckRetryConformance({ RetryRegion }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });\n",
+      "type": "registry:file",
+      "target": "~/src/shared/ui/web-kit/checks/retry.test.tsx"
+    }
+  ],
+  "type": "registry:block"
+}

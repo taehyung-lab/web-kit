@@ -7,8 +7,15 @@
     "node": ">=24.19.0"
   },
   "scripts": {
-    "check": "pnpm --filter @boosterlab/web-kit check && node --test scripts/*.test.mjs",
+    "check": "pnpm --filter @boosterlab/web-kit check && node scripts/build-package-references.mjs && node --test --test-concurrency=1 scripts/*.test.mjs && pnpm registry:check && pnpm registry:lint",
     "starter:sync": "node scripts/sync-starter.mjs",
-    "starter:check": "node scripts/sync-starter.mjs --frozen && pnpm --dir apps/starter check"
+    "starter:check": "node scripts/sync-starter.mjs --frozen && pnpm --dir apps/starter check",
+    "registry:build": "shadcn build registry.json --output public/r",
+    "registry:check": "node scripts/check-registry.mjs",
+    "registry:lint": "pnpm --filter @boosterlab/web-kit-registry lint",
+    "starter:create": "node scripts/create-starter.mjs"
+  },
+  "devDependencies": {
+    "shadcn": "4.19.1"
   }
 }

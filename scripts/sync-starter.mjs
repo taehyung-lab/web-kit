@@ -74,4 +74,5 @@ if (frozen) {
   copyFileSync(packed, vendored);
 }
 // starter는 workspace 구성원이 아니다. 외부 프로젝트처럼 자기 lockfile로만 설치한다.
-run('pnpm', ['install', '--ignore-workspace', frozen ? '--frozen-lockfile' : '--no-frozen-lockfile'], starter);
+if (!process.argv.includes('--verify-only'))
+  run('pnpm', ['install', '--ignore-workspace', frozen ? '--frozen-lockfile' : '--no-frozen-lockfile'], starter);

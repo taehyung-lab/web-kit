@@ -1,51 +1,53 @@
 {
   "name": "@boosterlab/web-kit",
-  "version": "3.1.0",
+  "version": "4.1.0",
   "private": true,
   "type": "module",
-  "sideEffects": [
-    "**/*.css"
-  ],
+  "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
     "./failure": "./src/failure.ts",
     "./session": "./src/session.ts",
     "./http": "./src/http.ts",
     "./query": "./src/query.ts",
-    "./ui": "./src/ui/index.ts",
     "./search": "./src/search/index.ts",
     "./list": "./src/list.ts",
-    "./filter": "./src/filter.ts",
     "./form": "./src/form/index.ts",
-    "./form/ui": "./src/form/ui.tsx",
-    "./dialog": "./src/form/confirmation.ts",
+    "./dialog": "./src/confirmation.ts",
     "./record": "./src/record.ts",
-    "./detail/ui": "./src/detail-ui.tsx",
     "./api": "./src/api.ts",
     "./testing": "./src/testing.tsx",
     "./testing/session": "./src/session-testing.ts",
-    "./list/ui": "./src/list-ui.tsx",
     "./permission": "./src/permission.tsx",
     "./session/browser": "./src/browser-session-store.ts",
     "./session/idle": "./src/session-idle.ts",
-    "./styles.css": "./src/ui/styles.css"
+    "./choice": "./src/choice-binding.ts",
+    "./testing/unit": "./src/testing/unit.ts",
+    "./testing/browser": "./src/testing/browser.mjs",
+    "./testing/fixtures": "./src/testing/fixtures.tsx",
+    "./auth": "./src/auth.ts"
   },
   "files": [
     "src",
     "skills",
     "docs",
     "GLOSSARY.md",
-    "README.md"
+    "README.md",
+    "bin",
+    "references"
   ],
   "peerDependencies": {
-    "@base-ui/react": "1.7.0",
     "@tanstack/react-form": "1.33.5",
     "@tanstack/react-query": "5.102.6",
     "@tanstack/react-router": "1.170.32",
     "@tanstack/react-virtual": "^3.14.9",
     "axios": "1.20.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "vitest": "4.1.11",
+    "@testing-library/react": "16.3.2",
+    "zod": "^4.0.0",
+    "@playwright/test": "1.62.1"
   },
   "devDependencies": {
     "@base-ui/react": "1.7.0",
@@ -62,7 +64,8 @@
     "react-dom": "19.2.8",
     "typescript": "5.9.3",
     "vitest": "4.1.11",
-    "zod": "4.4.3"
+    "zod": "4.4.3",
+    "@playwright/test": "1.62.1"
   },
   "packageManager": "pnpm@10.33.0",
   "repository": {
@@ -72,7 +75,8 @@
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "check": "pnpm typecheck && pnpm test"
+    "check": "pnpm typecheck && pnpm test",
+    "prepack": "node ../../scripts/build-package-references.mjs"
   },
   "peerDependenciesMeta": {
     "@tanstack/react-form": {
@@ -87,14 +91,26 @@
     "@tanstack/react-router": {
       "optional": true
     },
-    "@base-ui/react": {
+    "@tanstack/react-virtual": {
       "optional": true
     },
-    "@tanstack/react-virtual": {
+    "vitest": {
+      "optional": true
+    },
+    "@testing-library/react": {
+      "optional": true
+    },
+    "zod": {
+      "optional": true
+    },
+    "@playwright/test": {
       "optional": true
     }
   },
   "dependencies": {
     "tabbable": "6.3.0"
+  },
+  "bin": {
+    "web-kit-check": "./bin/check-conformance.mjs"
   }
 }

@@ -1,0 +1,24 @@
+{
+  "name": "@boosterlab/web-kit-registry",
+  "version": "4.1.0",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@base-ui/react": "1.7.0",
+    "@tanstack/react-form": "1.33.5",
+    "@tanstack/react-router": "1.170.32",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.5",
+    "@boosterlab/web-kit": "workspace:*",
+    "eslint": "10.9.1",
+    "@eslint/js": "10.0.1",
+    "typescript-eslint": "8.68.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.11.0"
+  },
+  "scripts": {
+    "lint": "eslint src checks"
+  }
+}
