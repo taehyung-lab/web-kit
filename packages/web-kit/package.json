@@ -21,6 +21,7 @@
     "./permission": "./src/permission.tsx",
     "./session/browser": "./src/browser-session-store.ts",
     "./session/idle": "./src/session-idle.ts",
+    "./session/activity": "./src/session-activity.ts",
     "./choice": "./src/choice-binding.ts",
     "./testing/unit": "./src/testing/unit.ts",
     "./testing/browser": "./src/testing/browser.mjs",

@@ -85,7 +85,7 @@ const exportsMap = JSON.parse(
 const entriesWithoutIdle = [
   ...new Set(
     Object.entries(exportsMap)
-      .filter(([name, path]) => name !== './session/idle' && /\.(?:tsx?|mjs)$/.test(path))
+      .filter(([name, path]) => !['./session/idle', './session/activity'].includes(name) && /\.(?:tsx?|mjs)$/.test(path))
       .map(([, path]) => `../${path.slice(2)}`),
   ),
 ];
@@ -112,7 +112,7 @@ it.each([...entriesWithoutIdle, '../src/use-list.ts'])(
       const file = queue.pop()!;
       if (visited.has(file)) continue;
       visited.add(file);
-      expect(file).not.toMatch(/session-idle/);
+      expect(file).not.toMatch(/session-idle|session-activity/);
       for (const [, specifier] of sources[file]!.matchAll(/(?:from|import)\s+['"]([^'"]+)['"]/g)) {
         if (!specifier!.startsWith('.') && !specifier!.startsWith('@boosterlab/web-kit')) continue;
         const target = resolve(file, specifier!);

@@ -1,101 +1,76 @@
-// 파일 책임: 세션 유휴 마감(로그인과 서버 연장만 마감을 바꿈 — 경고 구간 밖 활동은 서버 연장, 경고 구간 안은 연장 버튼만, 일반 응답·재발급은 늘리지 않음)·경고 구간·대표 탭·만료 종료·화면 단위 멈춤과 서버 연장 재개를 판정한다.
-// 세대·저장·종료 순서는 session이 맡고, 경고 화면(팝업·모달·알림)은 프로젝트가 이 상태를 보고 그린다.
+// 파일 책임: 세션별 마감·연장 시도·탭 수명을 공유하고 시간에 따른 단계와 종료를 판정한다.
 import { createServerClock, type ServerClock } from './server-clock';
 export { createServerClock, type ServerClock } from './server-clock';
 import { isRequestFailure, RequestFailure } from './failure';
 import type { Credentials, Session, SessionChange } from './session';
 
-/** 프로젝트 시간 정책. */
+/** 프로젝트가 정하는 경고 길이와 0초 처리. */
 export interface IdlePolicy {
-  /** 로그인 직후 마감까지의 길이. 서버 마감이 오기 전 임시 마감과 "N분" 문구의 기본값이다. */
-  readonly durationMs: number;
-  /** 남은 시간이 이 값 이하면 경고 구간이다. */
   readonly warningMs: number;
-  /** 경고 구간 밖의 사용자 조작이 서버 연장을 부르는 최소 간격(탭 사이 공유). */
-  readonly activityThrottleMs: number;
+  /** 자기 탭의 연장 결과를 기다리거나, 마감에 종료한다. 기본값은 없다. */
+  readonly pendingAtDeadline: 'wait' | 'expire';
 }
-
-/** 응답 하나에서 프로젝트가 읽은 서버 시각. 헤더 형식은 서버 계약이라 프로젝트가 숫자로 바꿔 넘긴다. */
+/** 프로젝트가 응답 하나에서 해석한 서버 시각(ms). */
 export interface ServerTimeSample {
-  /** 요청을 보낸 로컬 시각(ms). 표본 순서의 기준이다. */
   readonly sentAt: number;
-  /** 서버 시계 기준 세션 마감(ms). 없으면 마감 표본이 아니다. */
   readonly deadline?: number;
-  /** 서버 시각 − 로컬 시각(ms). 관측하지 못했으면 생략한다(0으로 채우지 않는다). */
   readonly clockOffsetMs?: number;
 }
-
 export type IdlePhase = 'inactive' | 'active' | 'warning';
-
 export interface IdleState {
   readonly phase: IdlePhase;
-  /** 서버 시계 기준 마감. 세션이 없으면 null. */
   readonly deadline: number | null;
-  /** 세션 길이(문구용). 서버가 더 긴 마감을 주면 그 길이다. */
-  readonly durationMs: number;
-  /** 이 탭이 경고·만료를 맡는 대표 탭인가. */
   readonly leader: boolean;
   readonly extending: boolean;
-  /** 경고 구간에서 사용자가 경고를 닫아 다시 띄우지 않는 대기 상태. */
-  readonly dismissed: boolean;
-  /** pause()로 이 탭의 경고·만료를 멈춘 상태. 멈춘 동안 단계는 warning이 되지 않는다. */
   readonly paused: boolean;
+  /** 화면이 닫음·재노출을 판단할 환경 사실. */
+  readonly visible: boolean;
+  readonly sessionId: string | null;
+  readonly deadlineSource: 'server' | 'provisional' | 'grace' | null;
 }
-
-/** 연장 결과. 성공은 서버 마감을 채택했고 경고 구간을 벗어났다는 뜻이다. */
-export type ExtendResult = { readonly ok: true } | { readonly ok: false; readonly failure?: unknown };
-
+/** 요청·채택·경고 해소를 구분한다. 화면의 성공 표시는 프로젝트가 정한다. */
+export type ExtendResult =
+  | { readonly kind: 'failed'; readonly failure: unknown }
+  | { readonly kind: 'no-deadline' }
+  | { readonly kind: 'adopted-warning' }
+  | { readonly kind: 'adopted-active' };
 export interface IdleTimer {
-  /** 앱이 연결한다. 이미 끝난 세션(이 세션의 마감이 없거나 지남)은 여기서 동기적으로 끝낸다. */
   readonly start: () => void;
-  /** 구독·타이머·대표 잠금을 해제한다. 세션을 끝내지 않는다. */
   readonly stop: () => void;
-  /** 모든 응답의 서버 시각. 시계만 보정하고, 로그인 직후 첫 표본만 마감을 확정한다. */
+  /** 일반 표본은 시계에만 반영한다. 로그인 전에도 관측 가능하다. */
   readonly observe: (sample: ServerTimeSample) => void;
-  /** 명시적 연장(연장 버튼). */
+  /** 받은 세션 ID와 서버 마감을 명시적으로 전달한다. start 전에도 저장한다. */
+  readonly acceptDeadline: (sessionId: string, sample: ServerTimeSample) => boolean;
+  /** 프로젝트가 보정 시계 기준으로 정한 임시 마감. 서버 마감이 있으면 사용하지 않는다. */
+  readonly setProvisionalDeadline: (sessionId: string, deadline: number) => void;
   readonly extend: () => Promise<ExtendResult>;
-  /** 경고 닫기. 연장하지 않고 대기 상태가 된다. */
-  readonly dismiss: () => void;
-  /**
-   * 이 탭의 경고·만료를 멈춘다(예: 유휴 마감을 적용하지 않는 화면). 대표 탭 자격을 내놓고 활동 연장도 하지 않는다.
-   * start() 전에 부르면 start()가 지난 마감으로 끝내지 않고 resume()의 서버 연장 결과에 맡긴다. 세션 종료·stop()이 풀어 준다.
-   */
   readonly pause: () => void;
-  /**
-   * 멈춤을 풀고 서버 연장을 한 번 보낸다. 결과는 extend()와 같다. 멈춰 있지 않으면 연장하지 않는다.
-   * 마감이 없거나 지났을 때 서버가 세션을 거절하면(401·세션 종료 응답) 이 탭이 그 자리에서 idle로 끝낸다.
-   * 그 밖의 실패(통신·시간초과·서버 오류·마감 없는 응답)는 로그인을 유지하고, 지금부터 경고 구간 길이의 시한을 저장해 평소 경고로 보인다.
-   * 그 시한 안에는 extend()(연장 버튼)만 연장하고, 누르지 않으면 시한에 끝난다. 키트가 스스로 다시 연장하지 않는다.
-   * 응답을 기다리는 중 다시 pause()가 오면 받은 마감만 저장하고 멈춘 채로 둔다(마지막 요청이 이긴다).
-   */
-  readonly resume: () => Promise<ExtendResult>;
-  /** 남은 시간(ms). 세션이 없거나 멈춘 동안은 null. 표시용이며 상태 구독과 따로 쓴다. */
+  readonly resume: (options?: { readonly graceMs?: number }) => Promise<ExtendResult>;
   readonly remaining: () => number | null;
+  /** 활동 부품이 저장 형식을 몰라도 마지막 시도 간격을 읽을 수 있다. */
+  readonly lastAttemptAt: () => number | null;
   readonly state: () => IdleState;
-  /** 상태가 바뀔 때만 알린다(매초 아님). useSyncExternalStore에 그대로 넘길 수 있다. */
   readonly subscribe: (listener: () => void) => () => void;
-  /** 매초 알린다. 카운트다운 표시용이다. */
   readonly subscribeTick: (listener: () => void) => () => void;
 }
-
-/** 테스트·격리 환경용 입력. 생략하면 브라우저 전역을 쓴다. */
 export interface IdleEnvironment {
-  /** null이면 Web Locks가 없는 환경으로 본다(모든 탭이 대표). */
   readonly locks?: LockManager | null;
   readonly storage?: () => Storage;
 }
-
-interface Grant {
-  readonly sessionId: string;
+interface LocalDeadline {
   readonly deadline: number;
-  readonly sentAt: number;
+  readonly baseServer: number | null;
+  readonly at: number;
+  readonly kind: 'provisional' | 'grace';
 }
-
+interface RecordValue {
+  readonly sessionId: string;
+  readonly server: number | null;
+  readonly local: LocalDeadline | null;
+  readonly attempt: number | null;
+}
 const TICK_MS = 1_000;
-/** 대표가 아닌 탭은 대표가 끝내지 못한 채 이만큼 지나면 스스로 끝낸다(대표 탭 정지 대비). */
 const FOLLOWER_GRACE_MS = 5_000;
-/** 세션 연장을 부르는 명시적 조작. mousemove·scroll은 프로그램이나 지나가는 움직임과 구별할 수 없어 뺀다. */
-const ACTIVITY_EVENTS = ['click', 'mousedown', 'keydown', 'wheel', 'touchstart', 'popstate'] as const;
 
 /** Worker 1초 tick. 백그라운드 탭의 타이머 지연을 줄인다. 만들 수 없으면 setInterval로 내려간다. */
 function startClock(onTick: () => void): () => void {
@@ -128,190 +103,146 @@ function startClock(onTick: () => void): () => void {
   };
 }
 
-/** 저장 접근 실패 때 이 탭의 메모리 값으로 계속한다. */
-function createSlot(storage: () => Storage, key: string) {
-  let memory: string | null = null;
-  return {
-    key,
-    read(): string | null {
-      try {
-        return storage().getItem(key);
-      } catch {
-        return memory;
-      }
-    },
-    write(value: string | null) {
-      memory = value;
-      try {
-        if (value === null) storage().removeItem(key);
-        else storage().setItem(key, value);
-      } catch {
-        // 메모리 값이 이 탭의 기준이다.
-      }
-    },
-  };
-}
-
-function parseGrant(raw: string | null): Grant | null {
-  if (raw === null) return null;
+/** 저장된 탭 기록을 검증한다. 손상된 값은 마감 근거로 쓰지 않는다. */
+function parseRecord(raw: string | null): RecordValue | null {
   try {
-    const value: unknown = JSON.parse(raw);
-    if (typeof value !== 'object' || value === null) return null;
-    const { sessionId, deadline, sentAt } = value as Record<string, unknown>;
-    if (typeof sessionId !== 'string' || typeof deadline !== 'number' || typeof sentAt !== 'number') return null;
-    if (!Number.isFinite(deadline) || !Number.isFinite(sentAt)) return null;
-    return { sessionId, deadline, sentAt };
-  } catch {
-    return null;
-  }
+    const v = JSON.parse(raw ?? 'null');
+    if (!v || typeof v.sessionId !== 'string') return null;
+    const finite = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
+    // 이전 저장 형식도 세션 ID가 일치하는 경우에만 읽는다.
+    if (finite(v.deadline) && finite(v.sentAt)) return { sessionId: v.sessionId, server: v.deadline, local: null, attempt: null };
+    if (v.server !== null && !finite(v.server)) return null;
+    if (v.attempt !== null && !finite(v.attempt)) return null;
+    if (v.local !== null && (!v.local || !finite(v.local.deadline) || !finite(v.local.at) ||
+      (v.local.baseServer !== null && !finite(v.local.baseServer)) || !['provisional', 'grace'].includes(v.local.kind))) return null;
+    return v as RecordValue;
+  } catch { return null; }
 }
-
-/** 서버가 세션을 명시적으로 거절했는가(401 또는 결과 코드 표의 세션 종료 행). 재발급 거절 판정과 같다. */
+/** 서버가 세션을 거절했는지 기존 재발급 기준으로 판정한다. */
 function rejectsSession(failure: unknown): boolean {
   return isRequestFailure(failure) && (failure.status === 401 || failure.endsSession);
 }
-
-/**
- * 유휴 타이머를 만든다. 만들기만 하면 아무것도 하지 않고, start()에서 세션에 연결된다.
- * extend는 프로젝트의 서버 연장 호출이며 그 응답의 서버 시각 표본(마감 포함)을 돌려준다. null은 연장 증거가 없다는 뜻이다.
- */
-export function createIdleTimer<C extends Credentials>({
-  session,
-  key,
-  policy,
-  extend: requestExtend,
-  environment = {},
-  clock: suppliedClock,
-}: {
+/** 타이머는 스스로 마감이나 연장 계기를 만들지 않는다. */
+export function createIdleTimer<C extends Credentials>({ session, key, policy, extend: requestExtend, environment = {}, clock: suppliedClock }: {
   readonly session: Session<C>;
-  /** 마감·시계 보정을 탭 사이에 공유하는 저장 key와 대표 잠금 이름의 접두. */
   readonly key: string;
   readonly policy: IdlePolicy;
   readonly extend: () => Promise<ServerTimeSample | null>;
   readonly environment?: IdleEnvironment;
-  /** 인증 단계와 같은 객체를 전달한다. 생략하면 기존 저장 key를 쓰는 시계를 만든다. */
   readonly clock?: ServerClock;
 }): IdleTimer {
+  if (!['wait', 'expire'].includes(policy.pendingAtDeadline)) throw new TypeError('pendingAtDeadline is required');
   const storage = environment.storage ?? (() => window.localStorage);
-  const grantSlot = createSlot(storage, key);
   const clock = suppliedClock ?? createServerClock({ key: `${key}:clock`, storage });
-  const locks =
-    environment.locks !== undefined ? environment.locks : typeof navigator === 'undefined' ? null : (navigator.locks ?? null);
-
-  let updatingClock = false;
+  const locks = environment.locks !== undefined ? environment.locks : typeof navigator === 'undefined' ? null : (navigator.locks ?? null);
+  const writer = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const prefix = `${key}:records:`;
+  const memory = new Map<string, RecordValue>();
   let started = false;
-  let unsubscribeSession: (() => void) | undefined;
+  let updatingClock = false;
   let detach: (() => void) | undefined;
-  let grant: Grant | null = null;
-  let seedOpenedAt: number | null = null;
-  let lastAttemptAt = Number.NEGATIVE_INFINITY;
-  let inFlight: Promise<ExtendResult> | undefined;
+  let unsubscribeSession: (() => void) | undefined;
   let releaseLeader: (() => void) | undefined;
-  let resuming: Promise<ExtendResult> | undefined;
-  /** 같은 세션이어도 stop 뒤 다시 연결한 타이머는 이전 요청을 소유하지 않는다. */
   let requestLifetime = 0;
-  /** 재개 응답을 기다리는 중 다시 pause()가 왔다. 마지막 요청(멈춤/재개)이 이긴다. */
+  let inFlight: Promise<ExtendResult> | undefined;
+  let resuming: Promise<ExtendResult> | undefined;
   let pauseRequested = false;
-  let state: IdleState = {
-    phase: 'inactive',
-    deadline: null,
-    durationMs: policy.durationMs,
-    leader: false,
-    extending: false,
-    dismissed: false,
-    paused: false,
-  };
+  let state: IdleState = { phase: 'inactive', deadline: null, leader: false, extending: false, paused: false,
+    deadlineSource: null, visible: typeof document !== 'undefined' && document.visibilityState === 'visible', sessionId: null };
   const listeners = new Set<() => void>();
   const tickListeners = new Set<() => void>();
-
   const now = clock.now;
-  const left = () => (state.phase === 'inactive' || state.deadline === null ? null : state.deadline - now());
-  const remaining = () => (state.paused ? null : left());
-
-  /** 상태를 바꾸고, 실제로 바뀌었을 때만 알린다. */
+  /** 실제 상태 변화만 구독자에게 알린다. */
   function update(patch: Partial<IdleState>) {
     const next = { ...state, ...patch };
     if ((Object.keys(next) as (keyof IdleState)[]).every((name) => next[name] === state[name])) return;
     state = next;
     for (const listener of [...listeners]) listener();
   }
-
-  function currentSessionId(): string | undefined {
-    return session.current()?.sessionId;
+  /** 세션별 독립 writer 기록을 병합한다. 서로 다른 탭은 같은 슬롯을 덮지 않는다. */
+  function records(id: string): RecordValue[] {
+    const found = new Map(memory);
+    try {
+      const s = storage();
+      for (let i = 0; i < s.length; i++) {
+        const k = s.key(i);
+        if (k === key || k?.startsWith(prefix)) {
+          const r = parseRecord(s.getItem(k));
+          if (r) found.set(k, r);
+        }
+      }
+    } catch { /* 저장 불가 환경은 이 탭의 메모리만 유지한다. */ }
+    return [...found.values()].filter((r) => r.sessionId === id);
   }
-
-  /** 이 세션의 마감 표본을 받는다. 다른 세션이거나 더 먼저 보낸 요청의 표본은 받지 않는다. */
-  function adopt(next: Grant, persist: boolean): boolean {
-    if (next.sessionId !== currentSessionId()) return false;
-    if (grant !== null && grant.sessionId === next.sessionId && next.sentAt < grant.sentAt) return false;
-    grant = next;
-    if (persist) grantSlot.write(JSON.stringify(next));
-    update({ deadline: next.deadline, durationMs: Math.max(policy.durationMs, next.deadline - now()) });
-    evaluate();
-    return true;
+  /** 서버 마감은 비감소, 로컬 시한은 자신이 본 서버 마감 이후의 유예만 유효하다. */
+  function merged(id: string) {
+    const all = records(id);
+    const server = all.reduce<number | null>((v, r) => r.server === null ? v : Math.max(v ?? -Infinity, r.server), null);
+    const local = all.map((r) => r.local).filter((l): l is LocalDeadline => l !== null &&
+      (l.kind === 'provisional' ? server === null : l.baseServer === server))
+      .sort((a, b) => b.at - a.at || b.deadline - a.deadline)[0];
+    const attempt = all.reduce<number | null>((v, r) => r.attempt === null ? v : Math.max(v ?? -Infinity, r.attempt), null);
+    return { server, deadline: local?.deadline ?? server, source: local?.kind ?? (server === null ? null : 'server' as const), attempt };
   }
-
-  /** 서버 표본은 공유 시계 소유자에게 전달한다. */
-  function applyOffset(value: number | undefined) {
-    updatingClock = true;
-    try { clock.observe(value); } finally { updatingClock = false; }
+  /** 이 타이머 전용 슬롯에만 쓴다. 최대값은 다른 탭이 닫혀도 남는다. */
+  function write(id: string, patch: Partial<RecordValue>) {
+    const slot = `${prefix}${encodeURIComponent(id)}:${writer}`;
+    const previous = memory.get(slot) ?? { sessionId: id, server: null, local: null, attempt: null };
+    const value = { ...previous, ...patch };
+    memory.set(slot, value);
+    try { storage().setItem(slot, JSON.stringify(value)); } catch { /* 메모리 유지 */ }
   }
-
-  /** 남은 시간으로 단계를 정하고, 대표 탭이면 만료로 끝낸다. */
+  /** 종료된 세션의 늦은 탭 쓰기를 차단한다. */
+  function ended(id: string): boolean {
+    try { return storage().getItem(`${prefix}${encodeURIComponent(id)}:ended`) !== null; } catch { return false; }
+  }
+  /** 지금 세션의 저장 마감과 환경 사실을 반영한다. */
+  function refresh() {
+    const id = session.current()?.sessionId;
+    if (!id || state.phase === 'inactive') return;
+    if (ended(id)) { session.expireIdle(); return; }
+    const value = merged(id);
+    update({ deadline: value.deadline, deadlineSource: value.source, sessionId: id });
+  }
+  /** 남은 시간과 자기 탭 요청 선택으로 종료를 판정한다. */
   function evaluate() {
-    if (state.phase === 'inactive' || state.deadline === null || state.paused) return;
+    if (state.phase === 'inactive' || state.paused || state.deadline === null) return;
     const left = state.deadline - now();
     if (left <= 0) {
-      if (state.extending) return; // 연장 결과를 본 뒤 다시 판단한다.
+      if (state.extending && policy.pendingAtDeadline === 'wait') return;
       if (state.leader || left <= -FOLLOWER_GRACE_MS) session.expireIdle();
       return;
     }
-    const warning = left <= policy.warningMs;
-    update({ phase: warning ? 'warning' : 'active', dismissed: warning && state.dismissed });
+    update({ phase: left <= policy.warningMs ? 'warning' : 'active' });
   }
-
+  /** 매초 표시 알림과 상태 판정을 분리한다. */
   function tick() {
     if (updatingClock) return;
+    refresh();
     evaluate();
     for (const listener of [...tickListeners]) listener();
   }
-
-  /** 경고 구간 밖의 명시적 조작은 간격마다 서버 연장을 부른다. */
-  function onActivity() {
-    if (state.phase !== 'active' || state.paused) return;
-    if (document.visibilityState !== 'visible' || !document.hasFocus()) return;
-    const localNow = Date.now();
-    if (localNow - lastAttemptAt < policy.activityThrottleMs) return;
-    if (grant !== null && localNow - grant.sentAt < policy.activityThrottleMs) return;
-    lastAttemptAt = localNow;
-    void extend();
-  }
-
-  /** 다시 보이게 되면 즉시 판단하고, 경고 대기 상태를 푼다. */
+  /** 문서 표시 사실만 공개하고 재노출은 화면이 맡는다. */
   function onVisible() {
-    if (document.visibilityState !== 'visible') return;
-    if (state.dismissed) update({ dismissed: false });
-    tick();
+    update({ visible: document.visibilityState === 'visible' });
+    if (state.visible) tick();
   }
-
-  /** 다른 탭이 쓴 마감·시계를 받는다. */
+  /** 저장 이벤트 순서와 관계없이 현재 기록을 병합한다. */
   function onStorage(event: StorageEvent) {
-    if (event.key === grantSlot.key || event.key === null) {
-      const stored = parseGrant(grantSlot.read());
-      if (stored !== null) adopt(stored, false);
-    }
+    if (event.key === null || event.key === key || event.key.startsWith(prefix)) tick();
   }
-
   /** 대표 잠금을 기다린다. 잠금이 없는 환경에서는 바로 대표다. 이미 쥐었거나 기다리는 중이면 그대로 둔다. */
   function takeLeader() {
     releaseLeader ??= claimLeader();
   }
 
+  /** 대표 잠금과 대기 요청을 반납한다. */
   function dropLeader() {
     releaseLeader?.();
     releaseLeader = undefined;
   }
 
+  /** Web Locks 수명 안에서만 대표 자격을 유지한다. */
   function claimLeader(): () => void {
     if (locks === null) {
       update({ leader: true });
@@ -336,218 +267,170 @@ export function createIdleTimer<C extends Credentials>({
     };
   }
 
-  /** 세션이 있는 동안의 리스너·시계·대표 잠금을 붙인다. */
+  /** 세션이 있는 동안 환경 구독과 대표 잠금을 연결한다. */
   function activate() {
-    if (detach !== undefined) return;
-    const unsubscribeClock = clock.subscribe(tick);
-    update({ phase: 'active' });
-    for (const name of ACTIVITY_EVENTS) window.addEventListener(name, onActivity, { passive: true });
+    if (detach) return;
+    update({ phase: 'active', sessionId: session.current()?.sessionId ?? null });
+    refresh();
+    if (state.phase === 'inactive' || session.current() === null) return;
+    const offClock = clock.subscribe(tick);
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('pageshow', onVisible);
     window.addEventListener('storage', onStorage);
     const stopClock = startClock(tick);
-    if (!state.paused) takeLeader();
+    // 대표 획득이 즉시 만료시킬 수 있으므로 먼저 정리 함수를 준비한다.
     detach = () => {
-      for (const name of ACTIVITY_EVENTS) window.removeEventListener(name, onActivity);
+      offClock(); stopClock(); dropLeader();
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('pageshow', onVisible);
       window.removeEventListener('storage', onStorage);
-      stopClock();
-      unsubscribeClock();
-      dropLeader();
     };
+    if (!state.paused) takeLeader();
   }
-
+  /** 연결을 해제하되 저장 마감은 새로고침을 위해 남긴다. */
   function deactivate() {
-    detach?.();
-    detach = undefined;
-    grant = null;
-    seedOpenedAt = null;
-    lastAttemptAt = Number.NEGATIVE_INFINITY;
-    update({ phase: 'inactive', deadline: null, durationMs: policy.durationMs, extending: false, dismissed: false });
+    detach?.(); detach = undefined;
+    update({ phase: 'inactive', deadline: null, deadlineSource: null, sessionId: null, extending: false });
   }
-
-  /** 로그인: 로컬 시계로 임시 마감을 저장하고, 로그인 뒤 첫 서버 표본으로 확정할 창을 연다. */
-  function seed() {
-    const sessionId = currentSessionId();
-    if (sessionId === undefined) return;
-    grant = null;
-    activate();
-    update({ dismissed: false });
-    adopt({ sessionId, deadline: now() + policy.durationMs, sentAt: 0 }, true);
-    seedOpenedAt = Date.now();
-  }
-
-  /** 이전 연결의 요청을 버린다. 늦은 완료는 새 연결의 상태를 바꾸지 못한다. */
+  /** 이전 요청 결과가 새 연결을 바꾸지 못하게 한다. */
   function invalidateRequests() {
-    requestLifetime += 1;
-    inFlight = undefined;
-    resuming = undefined;
-    pauseRequested = false;
+    requestLifetime += 1; inFlight = undefined; resuming = undefined; pauseRequested = false;
     update({ extending: false });
   }
-
+  /** 시작·교체는 저장된 값만 이어받고 마감을 생성하지 않는다. */
   function onSessionChange(change: SessionChange) {
+    const previous = state.sessionId;
     invalidateRequests();
-    if (change.kind === 'ended') {
-      grantSlot.write(null);
-      deactivate();
-      update({ paused: false });
-      return;
+    if (change.kind === 'ended' && previous) {
+      try { storage().setItem(`${prefix}${encodeURIComponent(previous)}:ended`, '1'); } catch { /* 저장 불가 */ }
     }
-    if (change.kind === 'started') {
-      seed();
-      return;
-    }
-    // replaced: 다른 탭의 다른 계정. 그 탭이 쓴 마감이 있으면 따르고, 아직 없으면 로그인처럼 시작한다.
     deactivate();
-    const stored = parseGrant(grantSlot.read());
-    if (stored === null || stored.sessionId !== currentSessionId()) seed();
-    else {
-      activate();
-      adopt(stored, false);
-    }
+    if (change.kind === 'ended') update({ paused: false });
+    else { activate(); evaluate(); }
   }
-
+  /** 시계와 마감이 함께 올 때 중간 보정만으로 종료하지 않는다. */
+  function applySample(sample: ServerTimeSample, id?: string): boolean {
+    updatingClock = true;
+    let adopted = false;
+    try {
+      clock.observe(sample.clockOffsetMs, sample.sentAt);
+      if (id && id === session.current()?.sessionId && !ended(id) && sample.deadline !== undefined && Number.isFinite(sample.deadline)) {
+        const before = merged(id).server;
+        if (before === null || sample.deadline > before) {
+          write(id, { server: sample.deadline }); adopted = true;
+        }
+      }
+      refresh();
+    } finally { updatingClock = false; }
+    evaluate();
+    return adopted;
+  }
+  /** 동기 예외도 비동기 실패로 돌려 요청 정리 순서를 지킨다. */
+  async function requestServer() { return requestExtend(); }
+  /** 같은 탭의 동시 연장은 한 요청을 공유한다. */
   function extend(): Promise<ExtendResult> {
-    if (state.phase === 'inactive') return Promise.resolve({ ok: false });
-    if (inFlight !== undefined) return inFlight;
+    if (inFlight) return inFlight;
+    const id = session.current()?.sessionId;
+    if (state.phase === 'inactive' || !id || ended(id)) return Promise.resolve({ kind: 'failed', failure: new RequestFailure({ kind: 'cancelled' }) });
     const generation = session.generation();
     const lifetime = requestLifetime;
-    const isCurrent = () => lifetime === requestLifetime && generation === session.generation();
+    const isCurrent = () => lifetime === requestLifetime && generation === session.generation() && !ended(id);
+    write(id, { attempt: Date.now() });
     update({ extending: true });
     const run = (async (): Promise<ExtendResult> => {
       try {
-        const sample = await requestExtend();
-        if (!isCurrent()) return { ok: false, failure: new RequestFailure({ kind: 'cancelled' }) };
-        const sessionId = currentSessionId();
-        let adopted = false;
-        if (sample !== null && sample.deadline !== undefined && sessionId !== undefined) {
-          applyOffset(sample.clockOffsetMs);
-          adopted = adopt({ sessionId, deadline: sample.deadline, sentAt: sample.sentAt }, true);
-        }
-        const rest = left();
-        return adopted && rest !== null && rest > policy.warningMs ? { ok: true } : { ok: false };
-      } catch (failure: unknown) {
-        return { ok: false, failure: isCurrent() ? failure : new RequestFailure({ kind: 'cancelled' }) };
+        const sample = await requestServer();
+        if (!isCurrent()) return { kind: 'failed', failure: new RequestFailure({ kind: 'cancelled' }) };
+        const adopted = sample !== null && applySample(sample, id);
+        if (!adopted) return { kind: 'no-deadline' };
+        return { kind: state.deadline !== null && state.deadline - now() > policy.warningMs ? 'adopted-active' : 'adopted-warning' };
+      } catch (failure) {
+        return { kind: 'failed', failure: isCurrent() ? failure : new RequestFailure({ kind: 'cancelled' }) };
       } finally {
-        if (isCurrent()) {
-          inFlight = undefined;
-          update({ extending: false });
-          evaluate();
+        if (lifetime === requestLifetime && generation === session.generation()) {
+          inFlight = undefined; update({ extending: false }); tick();
         }
       }
     })();
     inFlight = run;
     return run;
   }
-
   return {
+    /** 저장된 세션 수명에 연결하고 지난 마감을 동기 판정한다. */
     start() {
       if (started) return;
       started = true;
       unsubscribeSession = session.subscribe(onSessionChange, 'cleanup');
-      const sessionId = currentSessionId();
-      if (sessionId === undefined) return;
-      const stored = parseGrant(grantSlot.read());
-      const refreshClock = clock.subscribe(() => undefined);
-      refreshClock();
-      const usable = stored !== null && stored.sessionId === sessionId;
-      if (state.paused) {
-        // 멈춘 화면에서 시작: 지난 마감도 그대로 두고 resume()의 서버 연장이 판정한다.
-        activate();
-        if (usable) adopt(stored, false);
-        return;
+      const id = session.current()?.sessionId;
+      if (!id) return;
+      const off = clock.subscribe(() => undefined); off();
+      if (!state.paused && (ended(id) || (merged(id).deadline !== null && merged(id).deadline! <= now()))) {
+        update({ sessionId: id });
+        session.expireIdle(); return;
       }
-      if (!usable || stored.deadline - now() <= 0) {
-        session.expireIdle();
-        return;
-      }
-      activate();
-      adopt(stored, false);
+      activate(); evaluate();
     },
+    /** 앱 연결만 해제하고 이전 요청을 무효화한다. */
     stop() {
-      invalidateRequests();
-      update({ paused: false });
-      if (!started) return;
-      started = false;
-      unsubscribeSession?.();
-      unsubscribeSession = undefined;
-      deactivate();
+      invalidateRequests(); update({ paused: false }); started = false;
+      unsubscribeSession?.(); unsubscribeSession = undefined; deactivate();
     },
+    observe: (sample) => { applySample(sample); },
+    acceptDeadline: (id, sample) => applySample(sample, id),
+    /** 프로젝트가 준 임시 시각만 저장한다. */
+    setProvisionalDeadline(id, deadline) {
+      if (id !== session.current()?.sessionId || ended(id) || !Number.isFinite(deadline) || merged(id).server !== null) return;
+      write(id, { local: { deadline, kind: 'provisional', baseServer: null, at: now() } });
+      refresh(); evaluate();
+    },
+    extend,
+    /** 탭의 경고·만료를 멈추고 대표를 반납한다. */
     pause() {
-      if (resuming !== undefined) pauseRequested = true;
-      if (state.paused) return;
-      update({ paused: true, dismissed: false, ...(state.phase === 'warning' ? { phase: 'active' as const } : {}) });
+      if (resuming) pauseRequested = true;
+      update({ paused: true, phase: state.phase === 'warning' ? 'active' : state.phase });
       dropLeader();
     },
-    resume() {
+    /** 서버 확인 뒤 현재 수명에 유효한 실패에만 프로젝트 유예를 적용한다. */
+    resume(options = {}) {
       pauseRequested = false;
-      if (resuming !== undefined) return resuming;
-      if (!state.paused) return Promise.resolve<ExtendResult>({ ok: state.phase !== 'inactive' });
-      if (state.phase === 'inactive') {
-        update({ paused: false });
-        return Promise.resolve<ExtendResult>({ ok: false });
-      }
-      const generation = session.generation();
+      if (resuming) return resuming;
+      if (!state.paused) return Promise.resolve({ kind: 'no-deadline' });
+      if (state.phase === 'inactive') { update({ paused: false }); return Promise.resolve({ kind: 'no-deadline' }); }
       const lifetime = requestLifetime;
-      const sentAt = Date.now();
-      lastAttemptAt = sentAt;
-      const run = (async (): Promise<ExtendResult> => {
-        let result: ExtendResult = { ok: false };
-        try {
-          result = await extend();
-          return result;
-        } finally {
-          if (lifetime === requestLifetime && generation === session.generation()) {
-            resuming = undefined;
-            // 기다리는 중 다시 멈췄으면 받은 마감은 extend가 저장한 채로 두고 멈춤을 유지한다.
-            if (pauseRequested) pauseRequested = false;
-            else if (state.paused) {
-              update({ paused: false });
-              const rest = left();
-              if (state.phase !== 'inactive' && (rest === null || rest <= 0)) {
-                // 서버가 거절했으면 대표 여부와 관계없이 이 탭이 끝낸다.
-                // 일시 실패면 경고 구간 길이의 시한을 저장해 평소 경고(연장 버튼만)로 보인다. 저장하므로 새로고침·새 탭도 같은 시한을 받는다.
-                const sessionId = currentSessionId();
-                if ((!result.ok && rejectsSession(result.failure)) || sessionId === undefined) session.expireIdle();
-                else adopt({ sessionId, deadline: now() + policy.warningMs, sentAt }, true);
-              }
-              if (detach !== undefined && state.phase !== 'inactive') {
-                takeLeader();
-                evaluate();
-              }
-            }
+      const generation = session.generation();
+      const resumeId = session.current()!.sessionId;
+      const serverBefore = merged(resumeId).server;
+      const run = (async () => {
+        const result = await extend();
+        if (lifetime !== requestLifetime || generation !== session.generation()) return result;
+        resuming = undefined;
+        if (pauseRequested) { pauseRequested = false; return result; }
+        refresh();
+        if (state.phase === 'inactive') return result;
+        const rest = state.deadline === null ? null : state.deadline - now();
+        if (rest === null || rest <= 0) {
+          const cancelled = result.kind === 'failed' && isRequestFailure(result.failure) && result.failure.kind === 'cancelled';
+          if (result.kind === 'failed' && rejectsSession(result.failure)) { session.expireIdle(); return result; }
+          const id = session.current()?.sessionId;
+          const transient = result.kind === 'failed' || result.kind === 'no-deadline';
+          if (transient && !cancelled && id && !ended(id) && merged(id).server === serverBefore && options.graceMs !== undefined && options.graceMs > 0) {
+            write(id, { local: { kind: 'grace', deadline: now() + options.graceMs, baseServer: merged(id).server, at: now() } });
+            refresh();
           }
         }
+        update({ paused: false });
+        if (detach) { takeLeader(); evaluate(); }
+        return result;
       })();
       resuming = run;
       return run;
     },
-    observe(sample) {
-      if (state.phase === 'inactive') return;
-      applyOffset(sample.clockOffsetMs);
-      if (seedOpenedAt !== null && sample.deadline !== undefined && sample.sentAt >= seedOpenedAt) {
-        const sessionId = currentSessionId();
-        seedOpenedAt = null;
-        if (sessionId !== undefined) adopt({ sessionId, deadline: sample.deadline, sentAt: sample.sentAt }, true);
-        return;
-      }
-      evaluate();
-    },
-    extend,
-    dismiss() {
-      if (state.phase === 'warning') update({ dismissed: true });
-    },
-    remaining,
+    remaining: () => state.paused || state.phase === 'inactive' || state.deadline === null ? null : state.deadline - now(),
+    lastAttemptAt: () => { const id = session.current()?.sessionId; return id ? merged(id).attempt : null; },
     state: () => state,
-    subscribe(listener) {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
-    subscribeTick(listener) {
-      tickListeners.add(listener);
-      return () => tickListeners.delete(listener);
-    },
+    /** 상태 변화 구독을 연결한다. */
+    subscribe(listener) { listeners.add(listener); return () => { listeners.delete(listener); }; },
+    /** 매초 표시 구독을 연결한다. */
+    subscribeTick(listener) { tickListeners.add(listener); return () => { tickListeners.delete(listener); }; },
   };
 }

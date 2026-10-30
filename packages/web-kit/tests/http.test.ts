@@ -418,3 +418,37 @@ it('프로젝트의 다른 status로 실제 비401 응답을 재발급하지 않
   });
   expect(reissue).not.toHaveBeenCalled();
 });
+
+it('요청별 메타는 동시 응답이 역순으로 와도 자기 데이터·헤더와 묶인다', async () => {
+  const session = createSession({ store: store(), reissue: vi.fn() });
+  let release!: () => void;
+  const firstReady = new Promise<void>((resolve) => { release = resolve; });
+  const http = createHttp({ session, isPublic: () => true, defaults: { adapter: async (config) => {
+    if (config.url === '/first') await firstReady;
+    return { config, status: 200, statusText: '', data: config.url, headers: { 'content-type': 'text/plain', 'x-deadline': config.url === '/first' ? '140' : '120' } };
+  } } });
+  const first = http.requestWithResponse<string>({ url: '/first' });
+  const second = await http.requestWithResponse<string>({ url: '/second' });
+  release(); const result = await first;
+  expect(result.data).toBe('/first'); expect(result.response.header('x-deadline')).toBe('140');
+  expect(second.data).toBe('/second'); expect(second.response.header('x-deadline')).toBe('120');
+  expect(Number.isFinite(result.sentAt)).toBe(true);
+  session.dispose();
+});
+
+it('재전송된 요청의 메타는 401 응답 대신 최종 성공 응답을 가리킨다', async () => {
+  const session = createSession({ store: store(), reissue: async () => ({ accessToken: 'rotated-synthetic' }) });
+  session.start({ accessToken: 'synthetic' });
+  let calls = 0;
+  const http = createHttp({ session, isPublic: () => false, defaults: { adapter: async (config) => {
+    const attempt = ++calls;
+    const response = { config, status: attempt === 1 ? 401 : 200, statusText: '', data: attempt === 1 ? {} : 'accepted',
+      headers: { 'content-type': 'text/plain', 'x-deadline': attempt === 1 ? 'old' : 'new' } };
+    if (attempt === 1) throw new AxiosError('unauthorized', 'ERR_BAD_RESPONSE', config, undefined, response);
+    return response;
+  } } });
+  const result = await http.requestWithResponse<string>({ url: '/read', method: 'GET' });
+  expect(result.data).toBe('accepted'); expect(result.response.status).toBe(200);
+  expect(result.response.header('x-deadline')).toBe('new'); expect(calls).toBe(2);
+  session.dispose();
+});

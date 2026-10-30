@@ -1,4 +1,4 @@
-// 파일 책임: axios 요청 처리(헤더·토큰·봉투 해제·실패 12종 변환·401 재발급 뒤 한 번 재전송·반영 여부)를 소유한다.
+// 파일 책임: axios 요청 처리(헤더·토큰·봉투 해제·실패 12종 변환·401 재발급 뒤 한 번 재전송·반영 여부·요청별 응답 메타)를 소유한다.
 // 세션 판정(세대·종료·재발급)은 session이 하고, 여기서는 그 결과만 따른다.
 import axios, {
   AxiosHeaders,
@@ -34,7 +34,14 @@ export interface TransportEvent {
   readonly response: { readonly status: number; readonly header: (name: string) => string | undefined } | undefined;
 }
 
+/** 성공한 최종 전송의 데이터와 시각·헤더. 재전송 전 응답과 섞이지 않는다. */
+export interface HttpResponse<T> {
+  readonly data: T;
+  readonly sentAt: number;
+  readonly response: NonNullable<TransportEvent['response']>;
+}
 export interface Http {
+  readonly requestWithResponse: <T>(config: AxiosRequestConfig, options?: AxiosRequestConfig) => Promise<HttpResponse<T>>;
   /** 프로젝트 해석 뒤 실제 데이터 타입을 그대로 받는다. data라는 속성도 일반 데이터로 유지한다. */
   readonly requestData: <T>(config: AxiosRequestConfig, options?: AxiosRequestConfig) => Promise<T>;
   /** 요청 하나. 성공은 봉투를 푼 data(JSON이 아니면 원본), 실패는 RequestFailure다. orval mutator로 쓴다. */
@@ -127,6 +134,11 @@ export function createHttp<C extends Credentials>({
   readonly defaults?: CreateAxiosDefaults;
 }): Http {
   const instance = axios.create({ withCredentials: true, ...defaults });
+  const responseTimes = new WeakMap<AxiosResponse, number>();
+  /** 성공 데이터에 이 전송의 메타만 묶는다. */
+  function successful(response: AxiosResponse, data: unknown): HttpResponse<unknown> {
+    return { data, sentAt: responseTimes.get(response)!, response: { status: response.status, header: (name) => header(response, name) } };
+  }
 
   /** 전송 한 번과 그 관찰. 응답이 없으면 response가 없다. */
   async function attempt(config: AxiosRequestConfig): Promise<AxiosResponse> {
@@ -142,6 +154,7 @@ export function createHttp<C extends Credentials>({
       });
     try {
       const response = await instance.request({ ...config, headers });
+      responseTimes.set(response, sentAt);
       report(response);
       await readJsonBlob(response);
       return response;
@@ -235,19 +248,25 @@ export function createHttp<C extends Credentials>({
       return recover(failureOf(error), config, generation, token, resent);
     }
     if (generation !== session.generation()) throw cancelled();
-    if (!isJson(response)) return response.data;
+    if (!isJson(response)) return successful(response, response.data);
     const result = readResponse(response.data, response.status, header(response, 'x-request-id'));
-    if (result.ok) return result.data;
+    if (result.ok) return successful(response, result.data);
     return recover(result.failure, config, generation, token, resent);
   }
 
   /** 두 타입 입구가 같은 전송·세션·응답 해석 경로를 사용한다. */
   async function requestData<T>(config: AxiosRequestConfig, options?: AxiosRequestConfig): Promise<T> {
     const merged = { ...config, ...options };
-    return (!isPublic(merged) ? send(merged, session.generation(), false) : sendPublic(merged)) as Promise<T>;
+    return (await requestWithResponse<T>(merged)).data;
+  }
+  /** 호출마다 최종 성공 응답의 메타를 돌려준다. */
+  async function requestWithResponse<T>(config: AxiosRequestConfig, options?: AxiosRequestConfig): Promise<HttpResponse<T>> {
+    const merged = { ...config, ...options };
+    return (!isPublic(merged) ? send(merged, session.generation(), false) : sendPublic(merged)) as Promise<HttpResponse<T>>;
   }
 
   return {
+    requestWithResponse,
     requestData,
     request: <T>(config: AxiosRequestConfig, options?: AxiosRequestConfig) => requestData<Unwrapped<T>>(config, options),
   };
@@ -260,9 +279,9 @@ export function createHttp<C extends Credentials>({
     } catch (error: unknown) {
       throw failureOf(error);
     }
-    if (!isJson(response)) return response.data;
+    if (!isJson(response)) return successful(response, response.data);
     const result = readResponse(response.data, response.status, header(response, 'x-request-id'));
-    if (result.ok) return result.data;
+    if (result.ok) return successful(response, result.data);
     throw result.failure;
   }
 }

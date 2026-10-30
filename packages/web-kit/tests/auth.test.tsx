@@ -77,12 +77,12 @@ it('재전송 대기와 즉시 중복 잠금을 hook 직접 호출에서도 지�
 it('로그인 전후가 같은 보정 시계를 쓰고 인증만으로 세션이 시작되지 않는다', () => {
   const clock = createServerClock({ key: 'shared:clock' });
   const session = createSession({ store: { read: () => null, write: () => undefined, subscribe: () => () => undefined }, reissue: vi.fn() });
-  const idle = createIdleTimer({ session, key: 'shared', clock, policy: { durationMs: 10000, warningMs: 1000, activityThrottleMs: 1000 }, extend: async () => null, environment: { locks: null } });
+  const idle = createIdleTimer({ session, key: 'shared', clock, policy: { warningMs: 1000, pendingAtDeadline: 'wait' }, extend: async () => null, environment: { locks: null } });
   const { result } = renderHook(() => useAuthChallenge({ scope: 1, clock, codeLength: 6, codeExpiresAt: 110000, verify: vi.fn(), onVerified: vi.fn() }));
   expect(session.current()).toBeNull();
   clock.observe(2000);
   expect(getAuthTiming({ codeExpiresAt: 110000 }, clock.now()).remainingSeconds).toBe(8);
-  idle.start(); act(() => { session.start({ accessToken: 'test' }); });
+  idle.start(); act(() => { session.start({ accessToken: 'test' }); idle.setProvisionalDeadline(session.current()!.sessionId, clock.now() + 10000); });
   expect(idle.remaining()).toBe(10000);
   act(() => idle.observe({ sentAt: 100000, clockOffsetMs: 3000 }));
   expect(result.current.remainingSeconds).toBe(7);
@@ -119,8 +119,8 @@ it.each(['verify', 'resend'] as const)('종류별 관문은 %s 대기 중 다른
 it('다른 탭의 시계 보정이 유휴 단계·남은 시간과 인증 남은 초에 즉시 함께 반영된다', () => {
   const clock = createServerClock({ key: 'shared:clock' });
   const session = createSession({ store: { read: () => null, write: () => undefined, subscribe: () => () => undefined }, reissue: vi.fn() });
-  const idle = createIdleTimer({ session, key: 'shared', clock, policy: { durationMs: 10000, warningMs: 8000, activityThrottleMs: 1000 }, extend: async () => null, environment: { locks: null } });
-  idle.start(); session.start({ accessToken: 'test' });
+  const idle = createIdleTimer({ session, key: 'shared', clock, policy: { warningMs: 8000, pendingAtDeadline: 'wait' }, extend: async () => null, environment: { locks: null } });
+  idle.start(); session.start({ accessToken: 'test' }); idle.setProvisionalDeadline(session.current()!.sessionId, clock.now() + 10000);
   const { result } = renderHook(() => useAuthChallenge({ scope: 1, clock, codeLength: 6, codeExpiresAt: 110000, verify: vi.fn(), onVerified: vi.fn() }));
   expect(idle.remaining()).toBe(10000); expect(idle.state().phase).toBe('active');
   expect(result.current.remainingSeconds).toBe(10);
