@@ -278,3 +278,13 @@ test('choice filters keep selected values in the URL and restore their labels', 
   await expect(page.getByRole('button', { name: '분류', exact: true })).toHaveText('Stationery');
   await expect(page.getByRole('cell', { name: 'Notebook A5' })).toBeVisible();
 });
+
+test('the login form leaves without a dirty-input question', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByLabel('아이디').fill('작성 중인 아이디');
+  let questions = 0;
+  page.on('dialog', async (dialog) => { questions += 1; await dialog.accept(); });
+  await page.reload();
+  await expect(page.getByLabel('아이디')).toHaveValue('');
+  expect(questions).toBe(0);
+});
