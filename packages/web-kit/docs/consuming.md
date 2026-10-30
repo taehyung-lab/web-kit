@@ -11,7 +11,7 @@
 | 같은 목록인데 검색 시작 시점이 다름 | 같은 `/list`에 조회 조건을 전달 | [즉시 조회](../references/apps/starter/src/features/products/model/list-search.ts.txt), [검색 후 조회](../references/apps/starter/src/features/members/model/list-search.ts.txt) |
 | 같은 저장 폼인데 일부만 첨부·배열이 필요 | `/form` 상태를 유지하며 필요한 UI를 조합 | [복잡한 폼](../references/apps/starter/src/features/shows/screens/ShowCreateScreen.tsx.txt) |
 | 같은 인증 처리인데 입력 모양이 다름 | `/auth` 진행은 공유하고 프로젝트 UI를 바꿈 | [한 칸·여섯 칸 검사](../references/apps/starter/src/shared/ui/web-kit/checks/auth.page.tsx.txt) |
-| 저장 후 승인 등 업무의 성공 정의가 다름 | 프로젝트 요청 함수·완료 동작에서 연결 | [저장 연결 예](../references/apps/starter/src/features/products/screens/ProductCreateScreen.tsx.txt) |
+| 저장 후 승인 등 업무의 성공 정의가 다름 | 프로젝트 요청 함수·완료 동작에서 연결 | [저장 후 추가 조회](../references/apps/starter/src/features/form-workflows/screens/FormWorkflowScreen.tsx.txt) |
 
 예를 들어 A·B가 목록과 폼을 같이 쓰고, C는 즉시 조회와 첨부를 더하며, D는 목록 없이 폼을 승인 과정에 연결할 수 있다. web-kit에 A/B/C/D 분기를 만들지 않는다. 두 프로젝트만 같은 기능을 써도 공용화할 수 있지만, 특정 업무를 공유한다면 별도의 업무 책임인지 먼저 판단한다.
 
@@ -38,6 +38,10 @@ UI가 필요하면 registry의 해당 항목을 선택한다. `form`·`list`·`r
 ## 복사본 적합성 검사
 
 registry item은 함께 설치하는 파일 묶음이다. UI와 함께 설치된 짧은 연결 파일은 자기 복사본을 패키지의 공통 검사 함수에 넘긴다. 단언은 패키지가 소유하므로 프로젝트로 복제하지 않는다. `/testing/unit`은 jsdom(브라우저 DOM을 흉내 내는 단위 환경)에서 상태·속성·요청 수를, `/testing/browser`는 Playwright의 실제 브라우저에서 Tab·중첩 포털·배경 클릭 차단·Enter·포커스 복원을 검사한다. `/testing/fixtures`는 자기 복사본을 주입할 검사 화면을 제공한다.
+
+선택 소비는 기능별 작은 검사 입구를 사용한다. 폼은 `/testing/unit/form`, 인증은 `/testing/unit/auth`와 `/testing/fixtures/auth`, 폼의 UI 의존은 `/testing/unit/choice`·`/testing/unit/primitives`·`/testing/unit/styles`로 연결한다. 기존 `/testing/unit`·`/testing/fixtures`는 호환 입구로 남지만 전체 검사 의존을 불러올 수 있다. form의 zod는 검사 의존이며 사용하는 폼 schema 구현을 제한하지 않는다.
+
+4.2.0-rc.1은 **복사본 교정 필요(검사 연결)** 변경이다. 같은 후보의 패키지와 registry `auth`·`form`·`choice`·`dialog`·`pending`·`styles`를 대조해 검사 import를 갱신하고 설치 기록을 다시 만든다. 제품 UI·저장 상태 기계 변경은 없다. 기본 등록 보호·보호 제외·후속 확장 사용 조건은 [web-kit-form](../skills/web-kit-form/SKILL.md)이 정본이다.
 
 Vitest JSON과 Playwright JSON 보고서에는 검사 ID·패키지 버전·registry ref/원본 commit이 남는다. Vitest `allowOnly: false`, Playwright `forbidOnly: true`로 일부 검사만 실행하는 only를 CI에서 거절한다. 검사와 `web-kit-check`는 같은 CI 작업(job)에서 연달아 실행하고, 이전에 저장된 결과를 재사용하지 않는다. 점검 명령은 결과의 생성 시점을 확인하지 않으므로 오래된 통과 결과를 현재 복사본의 검증으로 판정할 수 없다. 설치한 모든 항목의 필수 검사를 실행한 뒤 프로젝트 루트에서 다음을 실행한다.
 

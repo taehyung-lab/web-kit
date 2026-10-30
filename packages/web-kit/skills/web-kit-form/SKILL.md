@@ -1,6 +1,6 @@
 ---
 name: web-kit-form
-description: 등록·수정·대화창 폼의 저장·저장 확인·저장 완료 확인·저장 중 표시(화면 전체 진행 덮개 포함)·이탈 보호·필드 오류·필수 표시·선택지 상태·원본 갱신·줄 추가/삭제/이동 입력·파일 칸, 폼 없는 삭제·상태 변경 확인, 기본 부품(버튼·입력·대화창)을 만들거나 바꿀 때 읽는다. 요청·실패 해석은 web-kit-http, 원본 단건 상태는 web-kit-record로 보낸다.
+description: 등록·수정·대화창 폼의 저장·저장 뒤 추가 작업·이탈 보호 제외·저장 확인·저장 완료 확인·저장 중 표시(화면 전체 진행 덮개 포함)·이탈 보호·필드 오류·필수 표시·선택지 상태·원본 갱신·줄 추가/삭제/이동 입력·파일 칸, 폼 없는 삭제·상태 변경 확인, 기본 부품(버튼·입력·대화창)을 만들거나 바꿀 때 읽는다. 요청·실패 해석은 web-kit-http, 원본 단건 상태는 web-kit-record로 보낸다.
 ---
 
 # web-kit form
@@ -32,7 +32,7 @@ registry `form`의 `FormGuard`를 앱(Router 안)에 한 번 둔다. 복사본�
 - `Form.Saved`: `useSaveForm({ acknowledge: true })`의 저장 완료 확인창. 확인이 `onSaved`(보통 이동)를 한 번 실행한다. Esc·바깥 클릭으로 닫히지 않는다.
 - Enter: 폼에서 Enter는 기본적으로 제출(저장 버튼 클릭)이다. 단, 입력한 값을 [추가] 버튼이 목록에 넣는 입력칸(검색어 칩, 제목 입력 + [추가]로 목록에 넣는 칸 등)에서는 Enter가 제출 대신 [추가] 클릭으로 동작한다. 줄마다 자기 칸이고 [추가]가 빈 줄만 더하는 배열 줄 입력(등급명·회차 날짜 등)은 일반 칸이라 Enter가 폼 제출이다. 모달 안 입력칸의 Enter는 그 모달의 확인(모달 폼 제출)이며 바깥 폼은 제출되지 않는다. 키트에서: 일반 칸은 `Form.Submit`이 있는 `<Form>`이 받으므로 칸에서 Enter를 막지 않는다. 값을 목록에 넣는 [추가] 칸은 `onKeyDown={rows.enterAdds(add)}`(목록 `List.Keywords`는 기본). 모달은 `Form.Dialog` 안에 자기 `<Form>`과 `Form.Submit`을 둔다.
 - `Form.Dialog`: 대화창 안 하위 폼(자기 `useSaveForm`). 안쪽 제출(버튼·Enter)은 안쪽만 검증·저장하고 바깥 폼의 저장·검증 오류·확인창을 건드리지 않는다. 바깥에 오류가 있어도 안쪽 제출은 막히지 않는다. 닫기·취소는 그 안의 폼만 보고 묻는다(바깥이 dirty여도 바깥 이탈 확인은 뜨지 않는다). 하위 결과를 바깥 값에 넣으면 바깥이 dirty가 되어 이후 이탈은 바깥 기준으로 묻는다. 입력이 있어도 묻지 않고 닫는 대화창은 안쪽을 `<Form protect={false}>`로 둔다.
-- 이탈: `FormGuard`가 등록된 폼 중 하나라도 입력이 기준선과 다르면 Router 이동·브라우저 이탈을 한 번 묻고, 저장 중이면 묻지 않고 막는다. 저장 성공 뒤 이동은 묻지 않는다. Router를 거치지 않는 이탈(같은 메뉴 다시 누르기)은 `useLeave()(run, reason)`로 같은 판정을 받는다. 확인 뒤 `run`이 이동하면 `ignoreBlocker: true`로 이동한다. 로그인 같은 제품 예외만 `<Form protect={false}>`.
+- 이탈: `FormGuard`가 등록된 폼 중 하나라도 입력이 기준선과 다르면 Router 이동·브라우저 이탈을 한 번 묻고, 저장 중이면 묻지 않고 막는다. 저장 성공 뒤 이동은 묻지 않는다. Router를 거치지 않는 이탈(같은 메뉴 다시 누르기)은 `useLeave()(run, reason)`로 같은 판정을 받는다. 확인 뒤 `run`이 이동하면 `ignoreBlocker: true`로 이동한다. 로그인 같은 제품 예외만 `<Form protect={false}>`. 이 값은 해당 폼의 보호 등록 자체를 제외하므로 변경 경고와 저장 중 Router·브라우저 이탈 차단이 함께 빠진다. 검증·중복 제출 잠금·기준선 처리는 남고 `Form.Cancel`의 진행 중 잠금도 유지된다. 기존 등록 화면의 보호 정책을 이 예시만으로 바꾸지 않는다.
 - 문구는 `FormGuard messages`(까닭별: navigate·cancel)·`Form messages`·`formatError`(칸 오류 값 → 문구)·`renderFailure(failure, place)`(place: save·completion·options, `null`이면 그 자리에 그리지 않음), 모양은 `--wk-*` 토큰으로 바꾼다. 새 화면마다 Field·이탈 확인·확인창을 다시 만들지 않는다.
 
 ## 화면 전체 진행 덮개
@@ -70,10 +70,18 @@ headless는 화면 배치 없이 상태와 연결 함수만 쓰는 방식이다.
   - `confirm`
   - `fieldError`: 서버 필드를 폼 경로와 문구로 바꾼다. 돌려준 경로는 제출 때 기준이고, 그 뒤 줄 작업은 키트가 따라간다.
   - `reveal(fields)`: 키트 구역(`Form.Section fields`·`FormSection`)이 아닌 프로젝트 고유의 접힌 영역(탭 등)을 오류 포커스 전에 연다. 거절마다(클라이언트 검증 실패·서버 필드 오류 도착(늦은 도착 포함)·`FormRejection`) 실패 칸 목록으로 한 번 불린다. 제출 횟수를 세어 열지 않는다. 키트 구역은 스스로 열린다.
-  - `onSaved(result)`: 이동·알림. 저장 함수가 돌려준 값을 그대로 받는다(등록 뒤 새 id 등).
+  - `onSaved(result)`: 이동·알림·추가 요청. 저장 함수가 돌려준 값을 그대로 받는다(등록 뒤 새 id 등). Promise를 반환해 후속 완료까지 잠금을 유지한다. 저장 성공 뒤 후속이 실패하면 `completionFailure`이며 `Form.Failure`의 재시도(또는 `complete()`)는 저장 없이 후속만 다시 실행한다. 이미 시작한 프로젝트 async 함수 안의 추가 부수효과 취소와 여러 후속 요청 중 일부 성공의 중복 방지는 프로젝트가 책임진다.
   - `acknowledge`: 저장 뒤 사용자 확인(`complete()`)을 기다린 다음 `onSaved`를 실행한다.
 - 입력 control의 id는 `fieldId(name)`을 쓰고, 같은 id를 `FieldFrame`에 넘긴다. 체크 트리(`CheckboxTree`)는 그 id를 `id`로 받으며, 검증 오류의 focus가 그 그룹으로 온다.
 - 줄을 추가·삭제하는 입력은 아래 「줄 추가·삭제 입력」을 따른다.
+
+## 선택과 추가 행동의 예제
+
+조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+
+보호 제외는 [로그인](../../references/apps/starter/src/features/auth/screens/LoginScreen.tsx.txt), 저장 후 추가 조회와 완료 실패 재시도는 [작성 예제](../../references/apps/starter/src/features/form-workflows/screens/FormWorkflowScreen.tsx.txt), 완료 확인 뒤 이동은 [약관 등록](../../references/apps/starter/src/features/terms/screens/TermsCreateScreen.tsx.txt)을 참고한다. schema·서버 요청·후속 업무는 프로젝트가 정하고 저장 상태 기계를 새로 만들지 않는다. primary와 secondary의 완료 선언은 각 동작에 따로 준다.
+
+폼만 채택한 소비 검사는 `/testing/unit/form`과 registry가 연결한 의존 검사 입구를 쓴다. 4.1에서 4.2 후보로 올릴 때는 패키지 갱신과 함께 registry `form`·`choice`·`dialog`·`pending`·`styles`의 검사 연결 import를 새 원본과 대조해 갱신한다. 제품 UI 배치·폼 동작은 그대로다. 작은 검사 입구와 실제 최소 소비의 기준은 [소비 안내](../../docs/consuming.md#복사본-적합성-검사)를 따른다.
 
 ## 줄 추가·삭제·이동 입력
 

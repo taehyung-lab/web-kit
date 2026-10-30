@@ -56,10 +56,10 @@ async function mount(node: () => ReactNode) {
 }
 
 /** 이 파일의 기본 화면: 이름·체크·연락처(조건부 필수)·저장·취소. */
-function Editor(props: Partial<SaveFormOptions<Values, z.output<typeof schema>>> & { readonly children?: ReactNode }) {
+function Editor(props: Partial<SaveFormOptions<Values, z.output<typeof schema>>> & { readonly children?: ReactNode; readonly protect?: boolean }) {
   const editor = useSaveForm({ schema, source: { id: 1, values }, save: async () => undefined, ...props });
   return (
-    <F editor={editor} renderFailure={(failure) => (failure instanceof RequestFailure && failure.kind === 'forbidden' ? null : undefined)}>
+    <F editor={editor} protect={props.protect} renderFailure={(failure) => (failure instanceof RequestFailure && failure.kind === 'forbidden' ? null : undefined)}>
       <F.Failure />
       <F.Text name="name" label="이름" />
       <F.Checkbox name="needed" label="필요" />
@@ -217,6 +217,40 @@ it(title('G068', 'F6 입력이 없으면 묻지 않고, 저장 중 이동은 묻
   expect(router.state.location.pathname).toBe('/');
   await act(async () => resolve());
   fireEvent.click(screen.getByText('다른 화면'));
+  await screen.findByText('완료 화면');
+  expect(screen.queryByRole('alertdialog')).toBeNull();
+});
+
+it(title('form-protection-optional', '보호를 제외해도 검증·중복 제출·취소 잠금은 남고, dirty·저장 중 Router 이탈은 등록하지 않는다'), async () => {
+  let finish!: () => void;
+  const save = vi.fn(() => new Promise<void>((resolve) => { finish = resolve; }));
+  const onSaved = vi.fn();
+  const router = await mount(() => <Editor protect={false} save={save} onSaved={onSaved} />);
+  const input = screen.getByRole('textbox', { name: '이름' });
+  fireEvent.change(input, { target: { value: '' } });
+  fireEvent.click(screen.getByText('저장'));
+  await waitFor(() => expect(document.activeElement).toBe(input));
+  expect(save).not.toHaveBeenCalled();
+  fireEvent.change(input, { target: { value: 'B' } });
+  const leave = new Event('beforeunload', { cancelable: true });
+  window.dispatchEvent(leave);
+  expect(leave.defaultPrevented).toBe(false);
+  await act(async () => { fireEvent.click(screen.getByText('저장')); fireEvent.click(screen.getByText('저장')); });
+  expect(save).toHaveBeenCalledTimes(1);
+  expect(screen.getByText('취소').getAttribute('aria-disabled')).toBe('true');
+  await act(async () => fireEvent.click(screen.getByText('취소')));
+  expect(router.state.location.pathname).toBe('/');
+  await act(async () => fireEvent.click(screen.getByText('다른 화면')));
+  await screen.findByText('완료 화면');
+  expect(screen.queryByRole('alertdialog')).toBeNull();
+  await act(async () => finish());
+  expect(onSaved).not.toHaveBeenCalled();
+});
+
+it(title('form-protection-optional', '보호를 제외한 dirty 폼의 취소는 확인 없이 이동한다'), async () => {
+  await mount(() => <Editor protect={false} />);
+  fireEvent.change(screen.getByRole('textbox', { name: '이름' }), { target: { value: 'B' } });
+  fireEvent.click(screen.getByText('취소'));
   await screen.findByText('완료 화면');
   expect(screen.queryByRole('alertdialog')).toBeNull();
 });

@@ -29,6 +29,8 @@ test('terms create confirms, saves once, acknowledges and opens the detail', asy
   await confirm.getByRole('button', { name: '저장' }).click();
   const saved = page.getByRole('alertdialog', { name: '저장되었습니다.' });
   await expect(saved).toBeVisible();
+  await expect(page).toHaveURL(/\/terms\/new$/);
+  expect(posts).toHaveLength(1);
   await page.keyboard.press('Escape');
   await expect(saved).toBeVisible();
   await saved.getByRole('button', { name: '확인' }).click();

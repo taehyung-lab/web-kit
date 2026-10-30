@@ -1,3 +1,4 @@
+// 파일 책임: 실제 브라우저에서 작성 예제의 선택·임시 저장과 저장 뒤 후속 조회를 확인한다.
 // 파일 책임: 공용 참조 정리·임시저장·저장 후 이탈 보호를 실제 브라우저에서 검사한다.
 import { expect, test } from '@playwright/test';
 
@@ -39,4 +40,33 @@ test('reference cleanup and draft save share the form lifecycle', async ({ page 
   await expect(page.getByRole('alertdialog')).toContainText('저장하지 않은 변경이 있습니다');
   await page.getByRole('button', { name: '계속 편집' }).click();
   await expect(page.getByLabel('제목')).toHaveValue('저장 뒤 새 입력');
+});
+
+test('publishing completes after the project follow-up request', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByLabel('아이디').fill('admin');
+  await page.getByLabel('비밀번호').fill('password');
+  await page.getByRole('button', { name: '로그인' }).click();
+  await expect(page).toHaveURL(/\/products$/);
+  await page.getByRole('link', { name: '작성 예제' }).click();
+  await page.evaluate(async () => {
+    const path = '/src/mocks/db.ts';
+    const { mockDb } = (await import(/* @vite-ignore */ path)) as { mockDb: { latencyMs: number } };
+    mockDb.latencyMs = 800;
+  });
+  const sent: string[] = [];
+  page.on('request', (request) => {
+    const path = new URL(request.url()).pathname;
+    if (path.startsWith('/api/form-workflows')) sent.push(`${request.method()} ${path}`);
+  });
+  await page.getByLabel('제목').fill('게시 후 조회');
+  const followUp = page.waitForRequest((request) => request.method() === 'GET' && request.url().includes('/api/form-workflows/'));
+  await page.getByRole('button', { name: '게시', exact: true }).click();
+  await followUp;
+  await expect(page.getByText('게시했습니다.', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '게시', exact: true })).toHaveAttribute('aria-disabled', 'true');
+  await expect(page.getByText('게시했습니다.', { exact: true })).toBeVisible();
+  expect(sent).toHaveLength(2);
+  expect(sent[0]).toBe('POST /api/form-workflows');
+  expect(sent[1]).toMatch(/^GET \/api\/form-workflows\/w-/);
 });

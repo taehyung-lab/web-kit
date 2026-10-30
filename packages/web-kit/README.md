@@ -2,7 +2,7 @@
 
 React 19 + TanStack(Router·Query·Form) + zod 4 + axios/orval을 쓰는 웹 프로젝트의 공용 키트다. 서버 응답 구조와 코드 의미는 프로젝트의 `ResponseContract`가 해석한다. 기존 Spring 응답 봉투 도우미도 선택해서 쓸 수 있다. 공통 동작은 패키지 hook·Provider가, 화면 배치는 registry로 설치한 프로젝트 소유 복사본이 맡는다. registry는 복사할 UI와 공통 검사 연결 파일의 묶음이다. 업무 정책·서버 연결 차이는 프로젝트가 정한다. 현재 제공 범위는 아래 표와 `package.json` exports다([4.0 배포 결정](references/docs/decisions/0011-web-kit-4-ui-distribution.md)).
 
-정본: https://github.com/taehyung-lab/web-kit · 패키지 `@boosterlab/web-kit` · 이 문서의 대상 버전 `4.1.0`(tag `v4.1.0`) · 결정 기록 [docs/decisions](references/docs/decisions). 이 패키지는 저장소의 `packages/web-kit`이고, 사용 예이자 소비 검사 앱은 같은 저장소의 [`apps/starter`](references/apps/starter)다.
+정본: https://github.com/taehyung-lab/web-kit · 패키지 `@boosterlab/web-kit` · 이 문서의 대상 버전 `4.2.0-rc.1`(로컬 후보, 미발행) · 결정 기록 [docs/decisions](references/docs/decisions). 이 패키지는 저장소의 `packages/web-kit`이고, 사용 예이자 소비 검사 앱은 같은 저장소의 [`apps/starter`](references/apps/starter)다.
 
 ## 구조
 
@@ -30,7 +30,7 @@ React 19 + TanStack(Router·Query·Form) + zod 4 + axios/orval을 쓰는 웹 프
 | `/record` + registry `record`·`retry` | 단건 상태·갱신 실패·재시도 focus·마스킹; 복사본 Record·항목·이력 | queryOptions·항목·노출 정책·실패 문구 |
 | `/choice` · `/dialog` + registry `inputs`·`choice`·`dialog`·`pending`·`blocking-progress` | 공통 선택·검색·대화창 포커스·진행 등록 hook과 기본 표현 | 값·문구·셸 배치·업무 행동 |
 | `/api` | Spring query 직렬화 | 적용 endpoint |
-| `/testing` · `/testing/unit` · `/testing/browser` · `/testing/fixtures` | adapter 검사, 복사본 단위·브라우저 적합성 기준·검사 화면 | 실제 복사본·연결 파일·실행 대상 버전 |
+| `/testing` · `/testing/unit`(기능별 하위 입구 포함) · `/testing/browser` · `/testing/fixtures` | adapter 검사, 복사본 단위·브라우저 적합성 기준·검사 화면 | 실제 복사본·연결 파일·실행 대상 버전 |
 | `/testing/session` | 저장 실패·다른 탭 변경·종료의 adapter 검사(React/Form import 없음) | 자기 저장 adapter와 격리된 검사 환경 |
 
 React·ReactDOM은 필수 peer(소비 앱이 설치하는 동료 라이브러리)이고 TanStack·axios와 검사 러너는 선택 설치다. 각 책임에서 쓰는 의존은 package.json을 따른다. Base UI는 패키지 peer가 아니라 registry 항목 의존이며 react-virtual은 `/list`의 가상 행 hook 때문에 남는다. 설치하지 않은 선택 기능은 "검사하지 않음"으로 기록한다. 루트가 React를 import하지 않는 것과 React 없는 독립 패키지는 다르다.
@@ -155,3 +155,7 @@ Node 24.19.0, 빈 NODE_OPTIONS, pnpm 10.33.0. `pnpm check`는 키트·링크·re
 기존 로그인 전 타이머와 제출 진행을 `/auth`로 옮긴다. 서버 요청·기한 값·문구·등록 흐름은 프로젝트가 제공한다. `/session/idle`의 `createServerClock` 객체를 인증 단계와 유휴 타이머에 함께 넘긴다. 기존 유휴 타이머 API는 clock을 생략해도 유지된다. starter 로그인은 코드 인증 단계가 없으므로 제품 흐름을 추가하지 않으며, 설치된 검사 화면에서 두 입력 모양을 확인한다.
 
 4.1.0은 유휴 타이머에 `pause()`·`resume()`·`state().paused`를 더한다(기존 API는 그대로). 유휴 마감을 적용하지 않는 화면(예: 비밀번호 변경)에서 `stop()`·`start()`를 조합하던 연결을 이 둘로 바꾼다. 재개는 서버 연장 결과로 마감을 다시 받는다. 직접 구현한 `IdleTimer` 대역(검사용 가짜 객체)은 `pause`·`resume`을 추가한다. 마감 없는 연장 응답은 경고 구간 밖에서도 `{ ok: false }`이다(이전 버전은 경고 구간 밖이면 성공으로 돌려줬다). 재개 중 일시 실패는 바로 로그아웃하지 않고 경고 구간 길이의 평소 경고를 보이며, 키트가 스스로 다시 연장하지 않는다. 기준은 [web-kit-http](skills/web-kit-http/SKILL.md)의 유휴 마감 절이다.
+
+## 4.2 후보의 선택 소비 검사
+
+`/testing/unit/form`·`auth`·`choice`·`primitives`·`styles`와 `/testing/fixtures/auth`를 추가했다. 기존 전체 검사 입구는 호환을 유지한다. registry의 해당 검사 import 교정과 form 검사 의존(zod) 설치가 필요하며 제품 실행 코드는 그대로다. [소비 안내](docs/consuming.md#복사본-적합성-검사)의 갱신 순서와 [폼 스킬](skills/web-kit-form/SKILL.md)의 기존 선택·확장 예제를 따른다. 이 후보는 정식 발행하지 않았다.

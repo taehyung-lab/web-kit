@@ -232,3 +232,12 @@ it.each(Object.entries(exportsMap).filter(([name]) => !name.startsWith('./testin
     expect(sources[file]).not.toMatch(/from\s+['"](?:vitest|@playwright\/test|@testing-library\/react)/);
   }
 });
+
+/** 선택한 검사 입구는 다른 기능의 실행 의존을 끌어오지 않는다. 실제 설치 부재는 최소 소비 검사로 확인한다. */
+it.each(['../src/testing/form-unit.ts', '../src/testing/unit/auth.tsx', '../src/testing/auth-fixture.tsx'])('%s는 선택하지 않은 목록 검사를 불러오지 않는다', (entry) => {
+  for (const file of reach(entry)) {
+    expect(file).not.toMatch(/use-list|list-ui|list-download|list-return/);
+    expect(sources[file]).not.toMatch(/from ['"]@tanstack\/react-query['"]/);
+    if (entry !== '../src/testing/form-unit.ts') expect(file).not.toMatch(/\/form\//);
+  }
+});

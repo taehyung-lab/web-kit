@@ -81,6 +81,19 @@ export function checkProgressBrowser({ url, target }) {
 }
 /** 일반·추가·하위 폼의 실제 Enter 결과와 선택 포털의 키보드를 검사한다. */
 export function checkFormBrowser({ url, target }) {
+    test(conformanceTitle('B-form-protection', target, '기본 보호는 브라우저 이탈을 묻고 보호 제외는 묻지 않는다'), async ({ page }) => {
+        for (const protect of [true, false]) {
+            await page.goto(url + '?protect=' + protect);
+            await page.getByRole('textbox', { name: '제목', exact: true }).fill('changed');
+            let dialogs = 0;
+            const accept = async (dialog) => { dialogs += 1; await dialog.accept(); };
+            page.on('dialog', accept);
+            await page.reload();
+            page.off('dialog', accept);
+            expect(dialogs).toBe(protect ? 1 : 0);
+            await expect(page.getByRole('textbox', { name: '제목', exact: true })).toHaveValue('outer');
+        }
+    });
     test(conformanceTitle('B-enter', target, '일반 입력 Enter는 한 번 저장한다'), async ({ page }) => {
         await page.goto(url);
         await page.getByRole('textbox', { name: '제목', exact: true }).press('Enter');

@@ -10,7 +10,8 @@
   "devDependencies": [
     "vitest@4.1.11",
     "@testing-library/react@16.3.2",
-    "@playwright/test@1.62.1"
+    "@playwright/test@1.62.1",
+    "zod@4.4.3"
   ],
   "registryDependencies": [
     "@web-kit/choice",
@@ -33,31 +34,31 @@
     },
     {
       "path": "packages/ui-registry/checks/form-complex.test.tsx",
-      "content": "// @vitest-environment jsdom\n// 파일 책임: 설치한 UI 복사본을 키트의 공통 단위 검사에 연결한다.\nimport { Form, FormGuard } from '../form/ui';\nimport { checkFormComplexConformance } from '@boosterlab/web-kit/testing/unit';\nimport installation from '../../../../../registry-installation.json';\ncheckFormComplexConformance({ Form, FormGuard }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });\n",
+      "content": "// @vitest-environment jsdom\n// 파일 책임: 설치한 UI 복사본을 키트의 공통 단위 검사에 연결한다.\nimport { Form, FormGuard } from '../form/ui';\nimport { checkFormComplexConformance } from '@boosterlab/web-kit/testing/unit/form';\nimport installation from '../../../../../registry-installation.json';\ncheckFormComplexConformance({ Form, FormGuard }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });\n",
       "type": "registry:file",
       "target": "~/src/shared/ui/web-kit/checks/form-complex.test.tsx"
     },
     {
       "path": "packages/ui-registry/checks/form-enter.test.tsx",
-      "content": "// @vitest-environment jsdom\n// 파일 책임: 설치한 UI 복사본을 키트의 공통 단위 검사에 연결한다.\nimport { Form, FormGuard } from '../form/ui';\nimport { checkFormEnterConformance } from '@boosterlab/web-kit/testing/unit';\nimport installation from '../../../../../registry-installation.json';\ncheckFormEnterConformance({ Form, FormGuard }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });\n",
+      "content": "// @vitest-environment jsdom\n// 파일 책임: 설치한 UI 복사본을 키트의 공통 단위 검사에 연결한다.\nimport { Form, FormGuard } from '../form/ui';\nimport { checkFormEnterConformance } from '@boosterlab/web-kit/testing/unit/form';\nimport installation from '../../../../../registry-installation.json';\ncheckFormEnterConformance({ Form, FormGuard }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });\n",
       "type": "registry:file",
       "target": "~/src/shared/ui/web-kit/checks/form-enter.test.tsx"
     },
     {
       "path": "packages/ui-registry/checks/form-sections.test.tsx",
-      "content": "// @vitest-environment jsdom\n// 파일 책임: 설치한 UI 복사본을 키트의 공통 단위 검사에 연결한다.\nimport { Form, FormGuard, FormSection } from '../form/ui';\nimport { checkFormSectionsConformance } from '@boosterlab/web-kit/testing/unit';\nimport installation from '../../../../../registry-installation.json';\ncheckFormSectionsConformance({ Form, FormGuard, FormSection }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });\n",
+      "content": "// @vitest-environment jsdom\n// 파일 책임: 설치한 UI 복사본을 키트의 공통 단위 검사에 연결한다.\nimport { Form, FormGuard, FormSection } from '../form/ui';\nimport { checkFormSectionsConformance } from '@boosterlab/web-kit/testing/unit/form';\nimport installation from '../../../../../registry-installation.json';\ncheckFormSectionsConformance({ Form, FormGuard, FormSection }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });\n",
       "type": "registry:file",
       "target": "~/src/shared/ui/web-kit/checks/form-sections.test.tsx"
     },
     {
       "path": "packages/ui-registry/checks/form-ui.test.tsx",
-      "content": "// @vitest-environment jsdom\n// 파일 책임: 설치한 UI 복사본을 키트의 공통 단위 검사에 연결한다.\nimport { Form, FormGuard, useLeave } from '../form/ui';\nimport { checkFormUiConformance } from '@boosterlab/web-kit/testing/unit';\nimport installation from '../../../../../registry-installation.json';\ncheckFormUiConformance({ Form, FormGuard, useLeave }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });\n",
+      "content": "// @vitest-environment jsdom\n// 파일 책임: 설치한 UI 복사본을 키트의 공통 단위 검사에 연결한다.\nimport { Form, FormGuard, useLeave } from '../form/ui';\nimport { checkFormUiConformance } from '@boosterlab/web-kit/testing/unit/form';\nimport installation from '../../../../../registry-installation.json';\ncheckFormUiConformance({ Form, FormGuard, useLeave }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });\n",
       "type": "registry:file",
       "target": "~/src/shared/ui/web-kit/checks/form-ui.test.tsx"
     },
     {
       "path": "packages/ui-registry/checks/form-workflows.test.tsx",
-      "content": "// @vitest-environment jsdom\n// 파일 책임: 설치한 UI 복사본을 키트의 공통 단위 검사에 연결한다.\nimport { Form } from '../form/ui';\nimport { checkFormWorkflowsConformance } from '@boosterlab/web-kit/testing/unit';\nimport installation from '../../../../../registry-installation.json';\ncheckFormWorkflowsConformance({ Form }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });\n",
+      "content": "// @vitest-environment jsdom\n// 파일 책임: 설치한 UI 복사본을 키트의 공통 단위 검사에 연결한다.\nimport { Form } from '../form/ui';\nimport { checkFormWorkflowsConformance } from '@boosterlab/web-kit/testing/unit/form';\nimport installation from '../../../../../registry-installation.json';\ncheckFormWorkflowsConformance({ Form }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });\n",
       "type": "registry:file",
       "target": "~/src/shared/ui/web-kit/checks/form-workflows.test.tsx"
     },

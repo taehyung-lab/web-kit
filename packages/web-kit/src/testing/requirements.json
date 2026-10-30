@@ -170,7 +170,9 @@
       "G090",
       "B-enter",
       "B-enter-add",
-      "B-enter-inner"
+      "B-enter-inner",
+      "form-protection-optional",
+      "B-form-protection"
     ],
     "connections": [
       "form-complex.test.tsx",

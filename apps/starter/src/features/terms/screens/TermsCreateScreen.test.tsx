@@ -34,6 +34,9 @@ describe('terms create (reference reproduction)', () => {
     await user.click(within(confirm).getByRole('button', { name: '저장' }));
     const saved = await screen.findByRole('alertdialog', { name: '저장되었습니다.' });
     expect(saved.textContent).toContain('약관을 등록했습니다.');
+    expect(router.state.location.pathname).toBe('/terms/new');
+    expect(requests.filter((request) => request.line === 'GET /api/terms/t-001')).toHaveLength(0);
+    expect(requests.filter((request) => request.line === 'POST /api/terms')).toHaveLength(1);
     await user.click(within(saved).getByRole('button', { name: '확인' }));
     expect(await screen.findByRole('heading', { name: '약관 상세' })).toBeTruthy();
     await waitFor(() => expect(router.state.location.pathname).toBe('/terms/t-001'));

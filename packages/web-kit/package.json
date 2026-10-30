@@ -1,6 +1,6 @@
 {
   "name": "@boosterlab/web-kit",
-  "version": "4.1.0",
+  "version": "4.2.0-rc.1",
   "private": true,
   "type": "module",
   "sideEffects": false,
@@ -25,7 +25,13 @@
     "./testing/unit": "./src/testing/unit.ts",
     "./testing/browser": "./src/testing/browser.mjs",
     "./testing/fixtures": "./src/testing/fixtures.tsx",
-    "./auth": "./src/auth.ts"
+    "./auth": "./src/auth.ts",
+    "./testing/unit/form": "./src/testing/form-unit.ts",
+    "./testing/unit/auth": "./src/testing/unit/auth.tsx",
+    "./testing/unit/choice": "./src/testing/unit/choice.tsx",
+    "./testing/unit/primitives": "./src/testing/unit/primitives.tsx",
+    "./testing/unit/styles": "./src/testing/unit/styles.ts",
+    "./testing/fixtures/auth": "./src/testing/auth-fixture.tsx"
   },
   "files": [
     "src",

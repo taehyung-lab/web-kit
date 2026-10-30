@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useSaveForm } from '../form';
 import { RequestFailure } from '../failure';
-import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from '@tanstack/react-router';
+import { createBrowserHistory, createRootRoute, createRoute, createRouter, Outlet, RouterProvider } from '@tanstack/react-router';
 import { useBlockingProgress } from '../progress';
 import type * as DialogContract from './contracts/ui/dialog';
 import type * as ProgressContract from './contracts/ui/blocking-progress';
@@ -80,7 +80,7 @@ export function createFormConformancePage({ Form, FormGuard, Choice }: { FormGua
     const [open, setOpen] = useState(false);
     const [draft, setDraft] = useState('tag');
     const editor = useSaveForm({ schema, source: { id: 1, values: { title: 'outer', tags: [] } }, save: async () => setCount((n) => n + 1) });
-    return <><output aria-label="바깥 저장">{count}</output><output aria-label="안쪽 저장">{innerCount}</output><F editor={editor} protect={false}><F.Text name="title" label="제목" />
+    return <><output aria-label="바깥 저장">{count}</output><output aria-label="안쪽 저장">{innerCount}</output><F editor={editor} protect={new URLSearchParams(location.search).get('protect') === 'true'}><F.Text name="title" label="제목" />
       <F.Array name="tags">{(rows) => {
         const add = () => { rows.append({ value: draft }); setDraft(''); };
         return <><input aria-label="추가 입력" value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={rows.enterAdds(add)} /><button type="button" onClick={add}>추가</button><output aria-label="줄 수">{rows.items.length}</output></>;
@@ -88,8 +88,9 @@ export function createFormConformancePage({ Form, FormGuard, Choice }: { FormGua
       {open && <F.Dialog title="하위 폼" onClose={() => setOpen(false)}><Inner saved={() => setInnerCount((n) => n + 1)} /></F.Dialog>}
     </F></>;
   }
-  const route = createRootRoute({ component: () => <FormGuard><FormConformancePage /></FormGuard> });
-  const router = createRouter({ routeTree: route, history: createMemoryHistory({ initialEntries: ['/'] }) });
+  const route = createRootRoute({ component: () => <FormGuard><Outlet /></FormGuard> });
+  const page = createRoute({ getParentRoute: () => route, path: '$', component: FormConformancePage });
+  const router = createRouter({ routeTree: route.addChildren([page]), history: createBrowserHistory() });
   /** 검사 전용 Router 안에서 실제 보호 범위를 제공한다. */
   return function GuardedFormConformancePage() { return <RouterProvider router={router} />; };
 }
