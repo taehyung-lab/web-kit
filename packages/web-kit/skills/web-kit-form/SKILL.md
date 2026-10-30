@@ -159,7 +159,7 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 
 실제 조립 예: [apps/starter/src/features/products/screens/ProductForm.tsx](../../references/apps/starter/src/features/products/screens/ProductForm.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-`Form.Choice`는 같은 필드 검증·별표·오류 초점에 registry `choice`의 `Choice`를 연결한다. 공통 선택·검색 수명은 `/choice`의 `useChoiceBinding`이 맡는다. 값은 단일 leaf ID 또는 다중 leaf ID 배열이며 가지는 값이 아니다. `nodes`에 트리, `appearance`에 vertical/horizontal/dropdown/menu/search를 준다. 단일 menu에서 가지는 탐색만, 다중 트리에서 가지는 전체·일부·없음을 구분한다. `search(text, signal)`을 주면 기본 250ms 입력 정지 후 서버를 조회하며 늦은 이전 결과는 버린다. 서버 코드·선택지 내용·표시 문구는 프로젝트가 제공한다.
+`Form.Choice`는 같은 필드 검증·별표·오류 초점에 registry `choice`의 `Choice`를 연결한다. 공통 선택·검색 수명은 `/choice`의 `useChoiceBinding`이 맡는다. 값은 단일 leaf ID 또는 다중 leaf ID 배열이며 가지는 값이 아니다. 다중 트리·드롭다운·메뉴에서 다른 항목을 체크·해제해도 현재 `nodes` 밖 저장값은 제출까지 보존한다. 트리 안 값은 트리 순서, 트리 밖 값은 기존 값의 상대 순서대로 그 뒤에 둔다. `nodes`에 트리, `appearance`에 vertical/horizontal/dropdown/menu/search를 준다. 단일 menu에서 가지는 탐색만, 다중 트리에서 가지는 전체·일부·없음을 구분한다. `search(text, signal)`을 주면 기본 250ms 입력 정지 후 서버를 조회하며 늦은 이전 결과는 버린다. 서버 코드·선택지 내용·표시 문구는 프로젝트가 제공한다.
 
 저장 요청 변환과 후속 처리는 `saveProduct`처럼 책임을 드러내는 이름 있는 함수로 연결한다. 한 줄 값 선택·인자 전달까지 별도 함수로 만들지는 않는다. 화면 배치, 업무 연결, 반복 UI는 책임에 따라 분리하고 파일 개수를 강제하지 않는다.
 

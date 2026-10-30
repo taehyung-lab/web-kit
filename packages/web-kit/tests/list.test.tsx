@@ -373,11 +373,11 @@ it('L13 검색 변경 뒤 같은 ID가 다시 나와도 선택을 비우고 일�
   fireEvent.click(screen.getByRole('button', { name: '전체 선택' }));
   expect(screen.getByLabelText('선택 수').textContent).toBe('2');
   expect((screen.getByLabelText('행 locked') as HTMLInputElement).checked).toBe(false);
-  // 같은 조건의 재조회에서는 남은 행의 선택이 유지된다.
+  // 사용자 검색은 같은 조건이어도 새 선택 수명을 시작한다.
   fireEvent.click(screen.getByRole('button', { name: '검색' }));
   await flush();
-  expect(screen.getByLabelText('선택 수').textContent).toBe('1');
-  expect((screen.getByLabelText('행 2') as HTMLInputElement).checked).toBe(true);
+  expect(screen.getByLabelText('선택 수').textContent).toBe('0');
+  expect((screen.getByLabelText('행 2') as HTMLInputElement).checked).toBe(false);
   fireEvent.change(screen.getByLabelText('검색어'), { target: { value: 'other' } });
   fireEvent.click(screen.getByRole('button', { name: '검색' }));
   await flush();
@@ -859,4 +859,66 @@ it('초안 키가 다른 codec에서도 하위만 정리하고 다른 입력은 
   render(<QueryClientProvider client={client}><Mapped /></QueryClientProvider>);
   act(() => mapped.patchDraft({ note: 'keep me', parent: 'B' }));
   expect(mapped.draft).toEqual({parent:'B', childValue:'', note:'keep me'});
+});
+
+// 사용자 실행과 자동 재조회를 같은 URL에서 구별한다.
+it('S1 같은 조건 검색은 응답까지 run·체크를 막고 실패 뒤 다시 허용한다', async () => {
+  const pending = deferred<ListPage<Row>>();
+  const fetchRows = vi.fn().mockResolvedValueOnce(page('1', '2')).mockReturnValueOnce(pending.promise);
+  mount({ definition: makeDefinition(), initial: {}, fetchRows });
+  await flush();
+  act(() => latest.selection.toggleRow('1', true));
+  act(() => latest.submit());
+  expect(latest.rows.map(row => row.id)).toEqual(['1', '2']);
+  expect(latest.isCurrent).toBe(false);
+  act(() => latest.selection.togglePage(true));
+  const run = vi.fn(async () => ({ completedIds: [] }));
+  await act(async () => { await latest.selection.run(run); });
+  expect(run).not.toHaveBeenCalled();
+  await act(async () => pending.reject(Error('search failed')));
+  await flush();
+  expect(latest.isCurrent).toBe(true);
+  expect(latest.failure).toEqual(Error('search failed'));
+  act(() => latest.selection.toggleRow('1', true));
+  await act(async () => { await latest.selection.run(run); });
+  expect(run).toHaveBeenCalledWith(['1']);
+});
+it('S2 배경 재조회는 남은 행 선택을 유지하고 사라진 행만 뺀다', async () => {
+  const pending = deferred<ListPage<Row>>();
+  mount({ definition: makeDefinition(), initial: {}, fetchRows: vi.fn().mockResolvedValueOnce(page('1', '2')).mockReturnValueOnce(pending.promise) });
+  await flush();
+  act(() => latest.selection.togglePage(true));
+  act(() => { void client.invalidateQueries(); });
+  await flush();
+  expect(latest.isCurrent).toBe(true);
+  expect(latest.selection.selectedIds).toEqual(['1', '2']);
+  await act(async () => pending.resolve(page('2')));
+  await flush();
+  expect(latest.selection.selectedIds).toEqual(['2']);
+});
+it('S2 같은 조건 검색 뒤 이전 run의 completedIds는 새 선택을 지우지 않는다', async () => {
+  mount({ definition: makeDefinition(), initial: {}, fetchRows: async () => page('1', '2') });
+  await flush();
+  act(() => latest.selection.toggleRow('1', true));
+  const pending = deferred<{ completedIds: string[] }>();
+  act(() => { void latest.selection.run(() => pending.promise); });
+  act(() => latest.submit());
+  await flush();
+  act(() => latest.selection.toggleRow('1', true));
+  expect(latest.selection.selectedIds).toEqual(['1']);
+  await act(async () => pending.resolve({ completedIds: ['1'] }));
+  expect(latest.selection.selectedIds).toEqual(['1']);
+});
+
+it('S1 선택지 확인이 검색 URL을 복구한 뒤에도 응답을 받으면 잠금을 푼다', async () => {
+  const fetchRows = vi.fn(async () => page('1'));
+  mount({ definition: makeDefinition({ check: optionsCheck(async () => ['A']) }), initial: {}, fetchRows });
+  await flush();
+  act(() => latest.patchDraft({ code: 'gone' }));
+  act(() => latest.submit());
+  await flush();
+  await flush();
+  expect(latest.search.code).toBe('');
+  expect(fetchRows).toHaveBeenCalled();
+  expect(latest.isCurrent).toBe(true);
 });

@@ -62,6 +62,7 @@ test('an entry URL with unknown values is replaced and the list waits for the op
 
 test('a failed background refresh keeps the rows and offers a retry', async ({ page }) => {
   await signIn(page);
+  await page.getByRole('checkbox', { name: '이 페이지 전체 선택' }).check();
   // mock 서버(이 페이지의 msw)를 내려 같은 조건 재조회를 실패시킨다.
   await page.evaluate(async () => {
     // 개발 서버가 앱과 같은 모듈 인스턴스로 내주는 경로다(브라우저 안에서만 존재).
@@ -79,6 +80,11 @@ test('a failed background refresh keeps the rows and offers a retry', async ({ p
   await expect(page.getByText('최신 내용을 불러오지 못했습니다.', { exact: false })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'Mouse Pad' })).toBeVisible();
   await expect(page.getByRole('button', { name: '다시 시도' })).toBeVisible();
+  const header = page.getByRole('checkbox', { name: '이 페이지 전체 선택' });
+  await expect(header).toBeEnabled();
+  await expect(header).not.toBeChecked();
+  await header.check();
+  await expect(page.getByRole('button', { name: /선택 판매 중지/ })).toBeEnabled();
 });
 
 /** 등록 폼을 유효한 값으로 채운다. */
@@ -287,4 +293,28 @@ test('the login form leaves without a dirty-input question', async ({ page }) =>
   await page.reload();
   await expect(page.getByLabel('아이디')).toHaveValue('');
   expect(questions).toBe(0);
+});
+
+// 같은 URL에서도 사용자 검색의 체크 수명과 실제 disabled 상태를 관찰한다.
+test('same-condition search clears selection and locks actions until its response', async ({ page }) => {
+  await signIn(page);
+  const events = recordApi(page);
+  const header = page.getByRole('checkbox', { name: '이 페이지 전체 선택' });
+  const row = page.getByRole('checkbox', { name: '행 선택' }).first();
+  await header.check();
+  await expect(page.getByRole('button', { name: /선택 판매 중지/ })).toBeEnabled();
+  await setLatency(page, 1800);
+  const request = page.waitForRequest(request => new URL(request.url()).pathname === '/api/products');
+  await page.getByRole('button', { name: '검색', exact: true }).click();
+  await request;
+  await expect(page.getByRole('cell', { name: 'Mouse Pad' })).toBeVisible();
+  await expect(header).toBeDisabled();
+  await expect(row).toBeDisabled();
+  await expect(header).not.toBeChecked();
+  await expect(page.getByRole('button', { name: /선택 판매 중지/ })).toBeDisabled();
+  expect(events.some(event => event.startsWith('→ POST /api/products/deactivate'))).toBe(false);
+  await expect(header).toBeEnabled();
+  await expect(header).not.toBeChecked();
+  await header.check();
+  await expect(page.getByRole('button', { name: /선택 판매 중지/ })).toBeEnabled();
 });

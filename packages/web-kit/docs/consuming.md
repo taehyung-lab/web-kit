@@ -41,9 +41,11 @@ registry item은 함께 설치하는 파일 묶음이다. UI와 함께 설치된
 
 선택 소비는 기능별 작은 검사 입구를 사용한다. 폼은 `/testing/unit/form`, 인증은 `/testing/unit/auth`와 `/testing/fixtures/auth`, 폼의 UI 의존은 `/testing/unit/choice`·`/testing/unit/primitives`·`/testing/unit/styles`로 연결한다. 기존 `/testing/unit`·`/testing/fixtures`는 호환 입구로 남지만 전체 검사 의존을 불러올 수 있다. form의 zod는 검사 의존이며 사용하는 폼 schema 구현을 제한하지 않는다.
 
-## 4.1 → 5.0.0-rc.2
+## 4.1 → 5.0.0-rc.3
 
 5.0은 **사용 계약이 깨지는 변경**(major)이다. 다음 연결을 함께 이전한다.
+
+- **목록 검색(rc.3):** 같은 조건으로 다시 검색해도 행 체크가 모두 해제된다. 검색 응답이 성공·실패로 도착하기 전에는 이전 행을 보이면서 체크·일괄 변경·확인창 실행·다운로드를 잠근다. 배경 재조회는 선택을 유지하고 사라진 행만 정리한다. 이전 검색의 체크를 유지한다고 가정한 화면·검사를 갱신한다. 공용 `isCurrent`를 읽는 연결에는 별도 잠금 조건을 추가할 필요가 없다. 보장은 [web-kit-list](../skills/web-kit-list/SKILL.md), 결정 이유는 [0015](../references/docs/decisions/0015-list-selection-lifetime.md)에 있다.
 
 - **검사 연결(복사본 교정 필요):** 배포 검사 파일이 기능별 작은 입구와 조합 입구(`/testing/unit/combinations`·`/testing/fixtures/combinations`)를 쓴다. 같은 후보의 registry 검사 연결 파일을 새 원본과 대조해 갱신하고 설치 기록을 다시 만든다. 두 기능을 함께 설치한 경우에만 그 조합 검사가 필수다. 제품 UI 배치·폼 저장 상태 기계 변경은 없다. 기본 등록 보호·보호 제외·후속 확장 사용 조건은 [web-kit-form](../skills/web-kit-form/SKILL.md)이 정본이다.
 - **유휴 세션(`/session/idle`):** 연장·마감·만료의 제품 정책을 키트에서 빼고 프로젝트 입력으로 옮겼다. 키트는 더 이상 스스로 활동 연장·로그인 임시 마감·첫 응답 마감 채택·재개 유예·경고 닫음을 하지 않는다. 기존 동작을 유지하려면 프로젝트가 활동 부품(`/session/activity`), 0초 처리 필수 선택, 임시 마감, 채택할 응답의 명시 전달, 재개 유예 길이, 경고 닫음 UI를 직접 연결한다. 저장 형식이 바뀌었으므로 기존 브라우저 저장값의 유지·삭제는 프로젝트가 정한다. 입력·보장·이전 대응표는 [web-kit-http](../skills/web-kit-http/SKILL.md), 결정 이유는 [0013](../references/docs/decisions/0013-session-policy-split.md)이 정본이다.

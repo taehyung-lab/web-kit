@@ -484,4 +484,24 @@ it(title('G076', 'Form.Choice는 필수 오류에 초점을 주고 고른 leaf �
   await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
   expect(save.mock.calls[0]?.[0]).toMatchObject({ kind: 'x' });
 });
+it.each(['vertical', 'dropdown', 'menu'] as const)(title('form-choice-preserve', 'Form.Choice %s는 트리 밖 저장값을 제출까지 보존한다'), async (appearance) => {
+  const choiceSchema = z.object({ ids: z.array(z.string()) });
+  const C = Form.of<z.input<typeof choiceSchema>>();
+  const save = vi.fn(async (_value: z.output<typeof choiceSchema>) => undefined);
+  /** 저장된 값에 현재 선택지 밖 ID를 포함한 실제 편집 화면이다. */
+  function ChoiceEditor() {
+    const editor = useSaveForm({ schema: choiceSchema, source: { id: 'preserve', values: { ids: ['a', 'b', 'x'] } }, save });
+    return <C editor={editor}><C.Choice name="ids" label="분류" multiple appearance={appearance} nodes={[
+      { value: 'a', label: 'Alpha' }, { value: 'b', label: 'Beta' }, { value: 'c', label: 'Gamma' },
+    ]} /><C.Submit /></C>;
+  }
+  await mount(() => <ChoiceEditor />);
+  if (appearance !== 'vertical') fireEvent.click(screen.getByRole('button', { name: '분류' }));
+  fireEvent.click(await screen.findByRole('checkbox', { name: 'Gamma' }));
+  if (appearance !== 'vertical') fireEvent.click(screen.getByRole('button', { name: '분류' }));
+  fireEvent.click(screen.getByText('저장'));
+  await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+  expect(save.mock.calls[0]?.[0]).toEqual({ ids: ['a', 'b', 'c', 'x'] });
+});
+
 }

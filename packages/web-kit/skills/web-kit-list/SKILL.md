@@ -38,7 +38,7 @@ description: 목록 필터·기간 프리셋·키워드 칩·표·페이지 이�
   - `submit`은 입력 중 키워드를 합치고 초안을 검증한 뒤 page 1로 확정한다. 정렬·페이지 크기는 지금 값을 유지한다. 초안은 필터 조건이 바뀔 때만 새로 만들어지고, 페이지·크기·정렬만 바뀌면 고치던 초안이 남는다.
   - `periods`로 선언한 기간은 한쪽만·없는 날짜·역순이면 검색할 때 그 쌍만 기본값으로 돌리고 나머지 조건으로 확정한다(주소의 잘못된 값과 같은 규칙). 검색을 막거나 문구를 띄우지 않는다. 입력 UI가 키트 `List.Period`가 아니거나 숨겨져도 지킨다. 검색을 막는 검증은 제품 규칙(`validateDraft`)만 쓴다.
   - 키워드 입력 중 글자는 `keywordInput(name, choices)` 상태에 있고 초안과 수명이 같다(페이지·정렬 이동에는 남고 필터 교체·초기화에는 지워진다). 추가를 누르지 않아도 `submit`이 trim·중복 제거해 합친다.
-  - 같은 조건이면 재조회하고(진행 중인 요청이 있으면 합류한다), 다르면 URL을 바꾼다. `refresh()`도 같다.
+  - 같은 조건이면 재조회하고(진행 중인 요청이 있으면 합류한다), 다르면 URL을 바꾼다. `refresh()`는 선택 수명을 유지한 채 현재 조건을 다시 읽는다.
   - `validateDraft`가 실패하면 입력·URL·결과를 유지하고 새 조회를 하지 않는다.
 - **선택지 확인:**
   - 선택지가 올 때까지 조회하지 않는다. 판정은 받은 선택지로 하므로 값만 바뀌면 선택지를 다시 요청하지 않는다.
@@ -48,11 +48,11 @@ description: 목록 필터·기간 프리셋·키워드 칩·표·페이지 이�
   - 기본값도 무효이거나 같은 복구가 반복되면 자동 복구를 멈춘다(`check-stuck`).
 - **조회 상태:** `idle`(조회 안 함: 첫 진입 보류·확인 보류, `resume` 있음), `pending`, `failed`, `empty`, `rows`.
 - **응답 전체:** 목록 응답에 다른 필드(집계 등)가 함께 있으면 그 타입 그대로 `query`에 주고 `page`로 읽는다. 같은 조회를 따로 다시 읽지 않는다.
-- **결과 출처:** `isCurrent`가 false인 행은 이전 조건의 결과다. 읽기용으로만 보이고 선택·쓰기 대상으로 내보내지 않는다. 늦게 도착한 이전 조건 응답은 현재 결과·선택·상태를 덮지 않는다.
+- **결과 출처:** `isCurrent`가 false인 행은 이전 조건이거나 사용자 검색 응답 대기 중인 결과다. 읽기용으로 계속 보이고 행·머리글 체크, 일괄 작업과 확인창 실행, 다운로드, `selection.run`을 막는다. 같은 조건의 `submit`도 응답 성공·실패까지 잠그며, 응답 뒤 잠금을 풀고 실패는 기존 실패 안내로 보인다. 창 포커스 등 배경 재조회는 잠그지 않는다. 늦게 도착한 이전 조건 응답은 현재 결과·선택·상태를 덮지 않는다.
 - **선택:**
-  - 검색·페이지·크기·정렬이 바뀌면 선택을 비운다. 같은 조건 재조회에서 사라진 행은 선택에서 뺀다. `selectedIds`는 화면 행 순서다.
+  - 검색을 실행하면 같은 조건이어도 선택을 모두 비운다. 페이지·크기·정렬 변경도 비운다. 배경 재조회에서는 남은 행의 선택을 유지하고 사라진 행만 뺀다. `selectedIds`는 화면 행 순서다.
   - `selection.run`은 시작하는 순간의 ID 집합으로 실행한다. 실행 중 다시 부르면 두 번째 작업은 실행하지 않는다.
-  - `run`의 결과는 `{ completedIds }`다. 같은 선택 수명에서 실제 성공 ID만 선택에서 뺀다. 거절은 throw하고 0건 성공은 빈 배열로 돌려준다. Promise resolve만으로 전체 성공을 추측하지 않는다.
+  - `run`의 결과는 `{ completedIds }`다. 같은 선택 수명에서 실제 성공 ID만 선택에서 뺀다. 실행 중 같은 조건 검색을 해도 새 수명의 선택에는 이전 실행의 `completedIds`를 적용하지 않는다. 거절은 throw하고 0건 성공은 빈 배열로 돌려준다. Promise resolve만으로 전체 성공을 추측하지 않는다.
 
 - **다운로드:** `useListDownload(list, { run })`은 누른 순간 대상(`{ kind: 'all', search }` 또는 `{ kind: 'selected', ids, search }`)을 고정해 `run`에 넘긴다. `search`는 마지막으로 확정한 URL 조건이며 입력만 하고 검색하지 않은 초안은 들어가지 않는다. 진행 중 재실행, 이전 조건 결과를 보이는 동안(`isCurrent` 거짓), 선택 0건의 선택 다운로드는 시작하지 않는다(`blockOf`). 실패는 `state`에 남는다. 서버 요청 변환·파일 이름·저장·완료 안내는 `run` 안에서 소비자가 한다.
 
@@ -98,7 +98,7 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 
 새 화면은 `/list`의 `ListProvider`·`useListModel`·`useListField`와 registry `list`의 `FilterPanel`, `FilterActions`, `TextFilter`, `ChoiceFilter`, `PeriodFilter`, `ListResult`, `ResultTable`, `PageSize`, `Pagination`으로 조립할 수 있다. 복사본의 기존 `List.*` 표기와 같은 상태·구현을 쓴다. `useListFilterBinding`·`useListPeriodBinding`·`useBulkConfirmation` 등 패키지 연결 hook의 반환값을 표현에 연결하며 순서를 다시 구현하지 않는다. 화면은 제목·필터·업무 작업·결과로 읽히도록 나누고 열 선언과 요청 변환은 해당 책임에 둔다.
 
-registry `choice`는 `/choice`의 `useChoiceBinding`을 쓴다. 이를 쓰는 `ChoiceFilter`(`List.Choice`)는 단일/다중을 같은 트리로 표현한다. 다중 값은 leaf ID 배열이며 부모는 삼상태다. `appearance`를 바꿔도 값·검색 수명은 같다. 선택지 조회는 검색 필드 `check.options`와 표시 트리 `check.tree`에 선언한다. 칸은 그 선언을 구독하며 URL 확인과 요청을 공유한다. 상위 `check.parents` 값이 바뀌면 하위 초안을 기본값으로 정리한다.
+registry `choice`는 `/choice`의 `useChoiceBinding`을 쓴다. 이를 쓰는 `ChoiceFilter`(`List.Choice`)는 단일/다중을 같은 트리로 표현한다. 다중 값은 leaf ID 배열이며 부모는 삼상태다. 다른 항목을 체크·해제해도 현재 `nodes` 밖 기존 값은 보존한다. 트리 안 값은 트리 순서, 트리 밖 값은 기존 값의 상대 순서대로 그 뒤에 둔다. URL의 `check.allowed` 확인·복구 규칙은 그대로 적용한다. `appearance`를 바꿔도 값·검색 수명은 같다. 선택지 조회는 검색 필드 `check.options`와 표시 트리 `check.tree`에 선언한다. 칸은 그 선언을 구독하며 URL 확인과 요청을 공유한다. 상위 `check.parents` 값이 바뀌면 하위 초안을 기본값으로 정리한다.
 
 검색 필드 `required: { message, when? }`는 필수 별표와 실행 차단의 같은 근거다. `when`은 현재 조건을 받아 조건부 필수를 정하며 `message`는 프로젝트 문구다. 비어 있으면 검색 버튼은 `aria-disabled`와 안내를 보여 키보드로 닿을 수 있고, Enter·직접 submit·URL 진입도 빈 조건으로 요청하지 않는다. 상세 필터 오류가 생기면 상세 구역을 펼친다. 직접 그리는 칸도 `useListField`의 required/value/set/issues를 쓴다.
 

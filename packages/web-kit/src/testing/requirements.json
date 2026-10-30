@@ -153,6 +153,7 @@
       "G088",
       "G089",
       "G090",
+      "form-choice-preserve",
       "B-enter",
       "B-enter-add",
       "B-enter-inner",
@@ -192,7 +193,9 @@
       "G102",
       "G103",
       "G104",
-      "G105"
+      "G105",
+      "list-search-lock",
+      "list-choice-preserve"
     ],
     "connections": [
       "list-ui.test.tsx"

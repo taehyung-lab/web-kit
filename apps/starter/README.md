@@ -141,6 +141,6 @@ pnpm exec web-kit-check --installation registry-installation.json --unit .web-ki
 출력 예: `web-kit 적합성 통과: 14항목, 120개 식별자, package <version>, registry v<version>@<sourceCommit>`.
 실제 제품이 이 검사 대상 복사본을 사용하는지는 이 명령이 자동 판정하지 않는다. 사용 경로와 검사 연결의 일치는 별도 검토한다. 개별 브라우저 적합성을 실행할 때는 등록 함수 위치가 패키지로 기록되므로 파일 경로 대신 `pnpm exec playwright test --grep 'B-dialog'`처럼 식별자로 선택한다.
 
-## 5.0.0-rc.2 로컬 후보
+## 5.0.0-rc.3 로컬 후보
 
 현재 components.json은 이 저장소의 `../../public/r/{name}.json`을 가리킨다. 원격 후보 tag는 아직 발행하지 않았다. `starter:create`로 만든 독립 프로젝트는 후보 tag URL과 미발행 안내를 받으며, 로컬에 복사된 UI·vendor tarball은 쓸 수 있지만 tag 발행 전 원격 registry 추가 설치는 미확인이다. 패키지·registry 연결 검사는 같은 로컬 후보로 실행한다.

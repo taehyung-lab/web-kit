@@ -218,7 +218,10 @@ export function useList<
       const members = def.groups.find((group) => group.fields.includes(item.field))?.fields ?? [item.field];
       for (const name of members) next[name] = def.fields[name]!.default;
     }
-    latest.current.navigate(def.canonical(next as FullSearch<F>), { replace: true });
+    const repaired = def.canonical(next as FullSearch<F>);
+    // 선택지 복구로 주소가 정리돼도 같은 사용자 검색의 응답을 기다린다.
+    setSearchExecution((execution) => execution && { ...execution, url: JSON.stringify(repaired) });
+    latest.current.navigate(repaired, { replace: true });
   });
 
   /** 실패한 선택지를 다시 받고, 멈춘 복구를 다시 허용한다. */
@@ -246,9 +249,26 @@ export function useList<
     ...screenQuery,
     enabled: typeof screenEnabled === 'function' ? (current) => own && screenEnabled(current) : enabled,
   });
+  const [searchExecution, setSearchExecution] = useState<{ id: number; url: string }>();
+  const executionId = useRef(0);
+  const executionLock = useRef(false);
+  const startedExecution = useRef(0);
+  const [selectionVersion, setSelectionVersion] = useState(0);
+  const selectionLifetime = JSON.stringify([urlKey, selectionVersion]);
+  // 사용자 검색만 잠근다. 자동 재조회는 이 수명에 들어오지 않는다.
+  useEffect(() => {
+    if (!searchExecution || searchExecution.url !== urlKey || !enabled || startedExecution.current === searchExecution.id) return;
+    startedExecution.current = searchExecution.id;
+    void query.refetch({ cancelRefetch: false }).finally(() => {
+      if (executionId.current !== searchExecution.id || !mounted.current) return;
+      executionLock.current = false;
+      setSearchExecution(undefined);
+    });
+  }, [searchExecution, urlKey, enabled]);
   const previous = useRef<TPage | undefined>(undefined);
-  const isCurrent = enabled && query.data !== undefined && !query.isPlaceholderData;
-  if (isCurrent) previous.current = query.data;
+  const resultCurrent = enabled && query.data !== undefined && !query.isPlaceholderData;
+  const isCurrent = resultCurrent && searchExecution === undefined;
+  if (resultCurrent) previous.current = query.data;
   const page = isCurrent ? query.data : previous.current;
   const rows = page?.rows ?? [];
   const cancelled = isRequestFailure(query.error) && query.error.kind === 'cancelled';
@@ -276,7 +296,7 @@ export function useList<
     lastRecovery.current = undefined;
     const sparse = definition.canonical(next);
     if (sameSearchValue(sparse, current)) {
-      if (enabled) refetch();
+      if (enabled && !executionLock.current) refetch();
       else retryChecks();
       return;
     }
@@ -318,7 +338,11 @@ export function useList<
     const issues = [...requiredIssues({ ...full, ...codec.to(draft) }), ...(latest.current.validateDraft?.(draft) ?? [])];
     setDraft({ ...merged, draft, issues });
     if (issues.length > 0) return;
-    commit({ ...full, ...codec.to(draft), ...firstPage(), searched: true });
+    const next = { ...full, ...codec.to(draft), ...firstPage(), searched: true };
+    executionLock.current = true;
+    setSelectionVersion((version) => version + 1);
+    setSearchExecution({ id: ++executionId.current, url: JSON.stringify(definition.canonical(next)) });
+    commit(next);
   }
 
   /** 키워드 필드 하나의 입력 중 상태. choices는 고를 수 있는 검색 대상이고 첫 항목이 기본이다. */
@@ -347,11 +371,11 @@ export function useList<
   const selectable = options.selectable ?? (() => true);
   const allowed = isCurrent ? rows.filter(selectable).map(options.rowId) : [];
   const sourceKey = JSON.stringify(allowed);
-  const [selection, setSelection] = useState(() => ({ lifetime: urlKey, sourceKey, selected: new Set<string>() }));
+  const [selection, setSelection] = useState(() => ({ lifetime: selectionLifetime, sourceKey, selected: new Set<string>() }));
   let selectionCurrent = selection;
-  if (selection.lifetime !== urlKey) selectionCurrent = { lifetime: urlKey, sourceKey, selected: new Set() };
+  if (selection.lifetime !== selectionLifetime) selectionCurrent = { lifetime: selectionLifetime, sourceKey, selected: new Set() };
   else if (isCurrent && selection.sourceKey !== sourceKey)
-    selectionCurrent = { lifetime: urlKey, sourceKey, selected: new Set([...selection.selected].filter((id) => allowed.includes(id))) };
+    selectionCurrent = { lifetime: selectionLifetime, sourceKey, selected: new Set([...selection.selected].filter((id) => allowed.includes(id))) };
   if (selectionCurrent !== selection) setSelection(selectionCurrent);
   // 화면에 보이는 행 순서로 낸다(다운로드·일괄 작업 대상 순서).
   const selectedIds = isCurrent ? rows.map(options.rowId).filter((id) => selectionCurrent.selected.has(id)) : [];
@@ -361,9 +385,10 @@ export function useList<
 
   /** 현재 조건의 선택 가능한 행에만 반영한다. */
   function toggle(ids: readonly string[], on: boolean) {
-    if (actionLock.current && actionLifetime.current === urlKey) return;
+    if (executionLock.current || !isCurrent) return;
+    if (actionLock.current && actionLifetime.current === selectionLifetime) return;
     setSelection((prev) => {
-      if (prev.lifetime !== urlKey) return prev;
+      if (prev.lifetime !== selectionLifetime) return prev;
       const next = new Set(prev.selected);
       for (const id of ids) {
         if (!allowed.includes(id)) continue;
@@ -378,12 +403,12 @@ export function useList<
   async function run<T extends { readonly completedIds: readonly string[] }>(
     action: (ids: readonly string[]) => Promise<T>,
   ): Promise<T | undefined> {
-    if (actionLock.current || !isCurrent || selectedIds.length === 0) return undefined;
+    if (actionLock.current || executionLock.current || !isCurrent || selectedIds.length === 0) return undefined;
     actionLock.current = true;
-    actionLifetime.current = urlKey;
+    actionLifetime.current = selectionLifetime;
     setRunningAction(true);
     const ids = selectedIds;
-    const lifetime = urlKey;
+    const lifetime = selectionLifetime;
     try {
       const result = await action(ids);
       // completedIds는 업무 결과이고, 선택 수명 적용은 이 module이 맡는다.
@@ -430,16 +455,16 @@ export function useList<
     view: definition.view,
     checks: Object.fromEntries(Object.entries(definition.fields).map(([name, field]) => [name, field.check])),
     status,
-    /** 보여 줄 행. isCurrent가 false면 이전 조건의 결과이며 읽기용이다. */
+    /** 보여 줄 행. isCurrent가 false면 이전 조건이거나 사용자 검색 응답 대기 중인 읽기용 결과다. */
     rows,
     total: page?.total ?? 0,
-    /** 보여 주는 행이 속한 응답 전체(목록 외 필드 포함). isCurrent가 false면 이전 조건의 응답이다. */
+    /** 보여 주는 행이 속한 응답 전체(목록 외 필드 포함). isCurrent가 false면 실행에 쓸 수 없는 읽기용 응답이다. */
     page,
     isCurrent,
     /** 현재 조건 결과를 다시 읽는 중. */
     isFetching: query.isFetching,
     /** 현재 결과가 있는 상태의 재조회 실패(취소 제외). */
-    failure: isCurrent && query.isError && !cancelled ? query.error : undefined,
+    failure: resultCurrent && query.isError && !cancelled ? query.error : undefined,
     resetVersion,
     submitVersion,
     draft: draftCurrent.draft,

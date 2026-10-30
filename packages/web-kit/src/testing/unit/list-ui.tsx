@@ -531,4 +531,65 @@ it(title('G105', '필수 필터는 별표·aria와 안내를 연결하며 검색
   expect(screen.getByRole('button', { name: '상세 검색' }).getAttribute('aria-expanded')).toBe('false');
   expect(fetch).not.toHaveBeenCalled();
 });
+it(title('list-search-lock', '같은 조건 검색은 체크·확인·작업·선택 다운로드를 응답까지 잠근다'), async () => {
+  let release!: () => void;
+  let count = 0;
+  const run = vi.fn(async (_ids: readonly string[]) => ({ completedIds: [] }));
+  const download = vi.fn(async () => undefined);
+  /** 다운로드도 화면에 쓰는 동일 목록 모델을 읽는다. */
+  function Downloads({ model }: { model: Model }) {
+    const control = useListDownload(model, { run: download });
+    return <button onClick={() => void control.start('selected')}>선택 받기</button>;
+  }
+  const { fetch } = mount(model => <>
+    <List.Filter><List.FilterActions /></List.Filter>
+    <List.Actions><List.BulkAction label="변경" run={run} /><button>쓰기</button></List.Actions>
+    <Downloads model={model} />
+    <output aria-label="선택 수">{model.selection.selectedIds.length}</output>
+    <List.Result><List.Table columns={columns} rowId={row => row.id} selectable /></List.Result>
+  </>, { fetch: async () => ++count === 1 ? { rows: [{ id: 'a' }], total: 1 } : new Promise(resolve => { release = () => resolve({ rows: [{ id: 'a' }], total: 1 }); }) });
+  await screen.findByText('a');
+  const searchButton = screen.getByRole('button', { name: '검색' });
+  fireEvent.click(screen.getByRole('checkbox', { name: '행 선택' }));
+  fireEvent.click(screen.getByRole('button', { name: '변경', hidden: true }));
+  const confirm = within(screen.getByRole('alertdialog')).getByRole('button', { name: '확인' });
+  fireEvent.click(searchButton);
+  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+  expect(screen.getByText('a')).toBeTruthy();
+  expect((screen.getByRole('button', { name: '쓰기', hidden: true }).closest('fieldset') as HTMLFieldSetElement).disabled).toBe(true);
+  for (const name of ['행 선택', '이 페이지 전체 선택']) {
+    const checkbox = screen.getByRole('checkbox', { name, hidden: true });
+    expect(checkbox.getAttribute('aria-disabled') ?? checkbox.hasAttribute('data-disabled')).toBeTruthy();
+    fireEvent.click(checkbox);
+  }
+  fireEvent.click(confirm);
+  fireEvent.click(screen.getByRole('button', { name: '변경', hidden: true }));
+  fireEvent.click(screen.getByRole('button', { name: '선택 받기', hidden: true }));
+  await act(async () => { await model.selection.run(run); });
+  expect(run).not.toHaveBeenCalled();
+  expect(download).not.toHaveBeenCalled();
+  expect(screen.queryByRole('alertdialog')).toBeNull();
+  expect(screen.getByLabelText('선택 수').textContent).toBe('0');
+  await act(async () => release());
+  await waitFor(() => expect((screen.getByRole('button', { name: '쓰기', hidden: true }).closest('fieldset') as HTMLFieldSetElement).disabled).toBe(false));
+  fireEvent.click(screen.getByRole('checkbox', { name: '행 선택' }));
+  fireEvent.click(screen.getByRole('button', { name: '변경', hidden: true }));
+  fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: '확인' }));
+  await waitFor(() => expect(run).toHaveBeenCalledWith(['a']));
+});
+
+it.each(['vertical', 'dropdown', 'menu'] as const)(title('list-choice-preserve', 'List.Choice %s는 트리 밖 저장값을 검색에 보존한다'), async (appearance) => {
+  const { fetch } = mount(() => <List.Filter>
+    <List.Choice name="tags" label="분류" multiple appearance={appearance} nodes={[
+      { value: 'a', label: 'Alpha' }, { value: 'b', label: 'Beta' }, { value: 'c', label: 'Gamma' },
+    ]} /><List.FilterActions />
+  </List.Filter>, { initial: { tags: ['a', 'b', 'x'] } });
+  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+  if (appearance !== 'vertical') fireEvent.click(screen.getByRole('button', { name: '분류' }));
+  fireEvent.click(await screen.findByRole('checkbox', { name: 'Gamma' }));
+  if (appearance !== 'vertical') fireEvent.click(screen.getByRole('button', { name: '분류' }));
+  fireEvent.click(screen.getByRole('button', { name: '검색' }));
+  await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ tags: ['a', 'b', 'c', 'x'] })));
+});
+
 }
