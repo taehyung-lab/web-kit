@@ -1,4 +1,4 @@
-// 파일 책임: 공연 예시 폼(DT 공연 폼의 복잡한 부분 재현)의 값 모양·검증과 요청 변환, 서버 필드 오류 대응.
+// 파일 책임: 공연 예시 폼의 값 모양·검증과 요청 변환, 서버 필드 오류 대응.
 // 회차 줄(추가·삭제·이동), 좌석도 파일, 대화창에서 받는 판매처 키. 필수 표시는 이 schema가 정한다.
 import { formMessages } from '@/shared/lib/form-messages';
 import type { FieldError } from '@boosterlab/web-kit/failure';

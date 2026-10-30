@@ -1,4 +1,4 @@
-// 파일 책임: 공연 예시(DT 공연 폼의 복잡한 부분 재현) 화면 검사 — 회차 서버 오류 위치와 이동 뒤 위치, 대화창 하위 폼 제출 격리, 좌석도 파일 보존.
+// 파일 책임: 공연 예시 화면 검사 — 회차 서버 오류 위치와 이동 뒤 위치, 대화창 하위 폼 제출 격리, 좌석도 파일 보존.
 import { renderApp } from '@/test/app';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';

@@ -2,7 +2,7 @@
   "version": "5.0.0-rc.4",
   "sourceRef": "v5.0.0-rc.4",
   "shadcn": "4.19.1",
-  "sourceCommit": "33f5c8eccbe2601e10974345a25b7aaa410d9c59",
+  "sourceCommit": "f926d6a7b92497646eb01320893b18fae3fdb05c",
   "sourceWorkingTree": "Source fingerprints identify the installed candidate, including uncommitted changes.",
   "method": "pnpm exec shadcn add ./public/r/all.json --cwd apps/starter --yes --overwrite; local absolute namespace during installation",
   "componentsHash": "9251ff1954ca2e2cdf440bbf02e6b5835dacee282c03442ef68ff7ee1443ddc1",
@@ -166,13 +166,13 @@
     },
     {
       "name": "form",
-      "artifactHash": "4802b1bdf65d496511300748cf00a8f940982e8484d7584be429da0d9f6c96b9",
+      "artifactHash": "a41817d7c3fd44df6309cb98fea9364889dbf5fd944041d303ef689550de7a9f",
       "files": [
         {
           "source": "packages/ui-registry/src/form/ui.tsx",
           "installed": "apps/starter/src/shared/ui/web-kit/form/ui.tsx",
-          "sourceHash": "93e8baa87391218ca62be04793280157fafbfb6cad983fcf55b515ae7b6fa22f",
-          "installedHash": "93e8baa87391218ca62be04793280157fafbfb6cad983fcf55b515ae7b6fa22f"
+          "sourceHash": "abe67b357998065a4b1b1497b6395f02072382405c55dd797a0bbf33ac70359f",
+          "installedHash": "abe67b357998065a4b1b1497b6395f02072382405c55dd797a0bbf33ac70359f"
         },
         {
           "source": "packages/ui-registry/src/form/field.tsx",
@@ -304,13 +304,13 @@
     },
     {
       "name": "styles",
-      "artifactHash": "7521282a55f4d214680083bf027f19c86b0615112aa8bebe0a1f0e9e4b0e62af",
+      "artifactHash": "49499224ca524f927e5fca4d292780c190bda3010c8ca32cc88e47ee71c3f981",
       "files": [
         {
           "source": "packages/ui-registry/src/ui/styles.css",
           "installed": "apps/starter/src/shared/ui/web-kit/ui/styles.css",
-          "sourceHash": "17a40e9530263a15f1b2c5f870070552aaaac13c6f467c76998362aeabaf5c6e",
-          "installedHash": "17a40e9530263a15f1b2c5f870070552aaaac13c6f467c76998362aeabaf5c6e"
+          "sourceHash": "1678c88250d87e0f20d5273dbe17e23f92f10663312a9554048cfbdd7a5beeaf",
+          "installedHash": "1678c88250d87e0f20d5273dbe17e23f92f10663312a9554048cfbdd7a5beeaf"
         },
         {
           "source": "packages/ui-registry/checks/styles.test.tsx",

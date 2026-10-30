@@ -36,7 +36,7 @@ pnpm dev:mock      # msw mock API로 실행. 계정 admin / password
 | `pnpm check` | 타입·lint·단위·빌드·브라우저 검사와 strict 적합성 점검. 새 프로젝트는 일반 소비 점검을 쓴다 |
 | `pnpm test:e2e` | 실제 브라우저(chromium, mock 모드) 검사. 처음 한 번 `pnpm exec playwright install chromium`. CI는 `check` 뒤에 돌린다 |
 
-mock 모드에서는 access 토큰이 2분 뒤 만료된다. 그래서 2분 뒤 조회에서 401 → 재발급 → 재전송 흐름을 볼 수 있다(쓰기는 다시 보내지 않고 "저장 결과를 확인할 수 없습니다"로 끝난다 — 키트 결정 0001 E1).
+mock 모드에서는 access 토큰이 2분 뒤 만료된다. 그래서 2분 뒤 조회에서 401 → 재발급 → 재전송 흐름을 볼 수 있다(쓰기는 다시 보내지 않고 "저장 결과를 확인할 수 없습니다"로 끝난다 — 키트 결정 0003 E1).
 mock 서버 상태(토큰·데이터)는 실제 서버처럼 새로고침해도 남는다(localStorage `starter.mock-server`). 처음 상태로 돌리려면 그 값을 지운다.
 
 ## 구조
@@ -79,8 +79,8 @@ vendor/                      검사·배포에 사용하는 web-kit tarball(커�
 | 상품 목록 | `defineSearch`(쉼표 목록 `encode`, 기간 묶음 `valid`, `view` key, 고정 목록은 `z.enum`·서버 선택지(분류)는 `check` — 없는 값은 그 필드만 기본값), route `validateSearch` + `beforeLoad`, `useList` + `ListView` 필터·표·페이지 이동·일괄 확인, `/api` 반복 키 직렬화 |
 | 상품 상세 | `useRecord(options, id)`, loader는 미리 받기만, `Record`·`Record.Fields`·`Record.Field` |
 | 등록·수정 | `useSaveForm` + `<Form editor>`와 `Form.of<Values>()` 부품으로 오류·선택지 상태·배열 입력을 선언(필수 표시는 schema에서 나온다). 수정은 `confirm` + `Form.Confirm`, 완료 후 이동은 `onSaved`. 루트의 `FormGuard` 한 곳에서 이탈을 보호 |
-| 약관 등록(레퍼런스 재현) | 레퍼런스 약관 등록(검증 → 저장 확인 → 저장 → 저장 완료 확인 → 상세)을 키트 값(`confirm`·`acknowledge`)과 부품 배치만으로 재현. `/terms/new` → `/terms/$termsId` |
-| 공연 예시(복잡한 폼 재현) | DT 공연 폼의 복잡한 부분을 키트 값만으로 재현: 회차 줄 추가·삭제·이동(`Form.Array`, 서버 오류가 줄을 따라감), 좌석도 `Form.File`(저장 실패 뒤 보존·다시 업로드), 판매처 키 `Form.Dialog` 하위 폼(Enter가 바깥 폼을 제출하지 않음), 저장 중 진행 표시. `/shows/new` |
+| 약관 등록 예시 | 약관 등록 흐름(검증 → 저장 확인 → 저장 → 저장 완료 확인 → 상세)을 키트 값(`confirm`·`acknowledge`)과 부품 배치만으로 재현. `/terms/new` → `/terms/$termsId` |
+| 공연 예시(복잡한 폼 재현) | 배열·파일·하위 폼의 복잡한 동작을 키트 값만으로 재현: 회차 줄 추가·삭제·이동(`Form.Array`, 서버 오류가 줄을 따라감), 좌석도 `Form.File`(저장 실패 뒤 보존·다시 업로드), 판매처 키 `Form.Dialog` 하위 폼(Enter가 바깥 폼을 제출하지 않음), 저장 중 진행 표시. `/shows/new` |
 | 로그인 | `<Form protect={false}>`로 제품 예외를 명시. 공개 요청·토큰으로 세션 시작·자격증명 거절 문구는 제품이 연결 |
 | 작성 예제 | `references`로 항목 ID와 선택 칸을 연결하고 삭제 시 정리 확인·취소를 소비한다. `secondary`와 `<Form.Submit mode="secondary">`로 필수 제목 없이 임시 저장하며, 게시와 저장 기준선·이탈 보호를 공유한다. `/form-workflows` |
 | `shared/ui/adapters.test.tsx` | 설치한 Field·ConfirmDialog·RetryRegion을 공개 계약 검사로 확인 |
@@ -102,7 +102,7 @@ vendor/                      검사·배포에 사용하는 web-kit tarball(커�
 ## 실제 API 연결하기
 
 1. `openapi/sample.json`을 실제 서버 명세로 바꾸고(파일 이름을 바꾸면 `orval.config.ts`의 `input`도) `pnpm api:generate`를 돌린다. 생성물은 commit한다.
-2. `src/app/web-kit.ts`의 결과 코드 표를 **서버 enum에 있는 행으로만** 다시 적는다. 예시 두 행(세션 종료 4012, 대상 없음 4040)은 지운다. 세션 종료 행은 서버 계약이 확정된 것만 둔다(web-kit 결정 기록 0001의 E1–E3).
+2. `src/app/web-kit.ts`의 결과 코드 표를 **서버 enum에 있는 행으로만** 다시 적는다. 예시 두 행(세션 종료 4012, 대상 없음 4040)은 지운다. 세션 종료 행은 서버 계약이 확정된 것만 둔다(web-kit 결정 기록 0003의 E1–E3).
 3. `PUBLIC_PATHS`·`REISSUE_PATH`·재발급 본문, 브라우저 저장 key·자격증명 schema·읽기 불가 정책를 서버 인증 계약에 맞춘다.
 4. `.env.example`을 `.env.local`로 복사해 `VITE_API_BASE_URL`·`VITE_API_TIMEOUT_MS`를 채운다. 비밀값은 commit하지 않는다.
 5. 예시 기능(`features/products`, `routes/_app/products`, `mocks`의 상품 handler)을 자기 도메인으로 바꾸거나 지운다.

@@ -1,4 +1,4 @@
-// 파일 책임: 약관 등록 폼의 값 모양·검증(레퍼런스 terms-form-schema의 규칙: 다섯 항목 필수, 버전은 숫자·점 10자 이하)과
+// 파일 책임: 약관 등록 폼의 값 모양·검증(예시 규칙: 다섯 항목 필수, 버전은 숫자·점 10자 이하)과
 // 폼 결과 → 저장 요청, 서버 필드 오류 대응, 약관 단건 모양.
 import { formMessages } from '@/shared/lib/form-messages';
 import type { FieldError } from '@boosterlab/web-kit/failure';
@@ -19,7 +19,7 @@ export const termsFormSchema = z.object({
 export type TermsFormInput = z.input<typeof termsFormSchema>;
 export type TermsFormValues = z.output<typeof termsFormSchema>;
 
-/** 등록 화면 첫 값: 게시 상태는 '게시', 나머지는 빈 값(레퍼런스 termsCreateDefaults). */
+/** 등록 화면 첫 값: 게시 상태는 '게시', 나머지는 빈 값(예시 첫 값). */
 export const EMPTY_TERMS_FORM: TermsFormInput = { version: '', effectiveAt: '', status: 'PUBLISHED', publishedAt: '', body: '' };
 
 export interface Terms extends TermsFormValues {

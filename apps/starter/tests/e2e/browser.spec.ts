@@ -119,7 +119,7 @@ function focusInBody(page: Page) {
   return page.evaluate(() => document.activeElement?.closest('.wk-blocking-root') != null);
 }
 
-// 저장 중에는 화면 전체 덮개가 입력을 막는다(2026-10-28 사용자 결정, 0008). 이전의 "저장 중 입력 → 이동 때 묻기"는 덮개가 대신한다.
+// 저장 중에는 화면 전체 덮개가 입력을 막는다(2026-10-28 사용자 결정, 결정 0007 진행 덮개). 이전의 "저장 중 입력 → 이동 때 묻기"는 덮개가 대신한다.
 test('saving a new product covers the page with the create message and blocks clicks and Tab', async ({ page }) => {
   await signIn(page);
   await fillNewProduct(page);
@@ -157,7 +157,7 @@ test('an edit closes the confirmation, covers the page with the edit message, th
   await expect(page.locator('.wk-blocking')).toHaveCount(0);
 });
 
-// 확인창을 거친 저장이 칸 없는 오류(500)로 끝나면, 확인창 버튼은 사라졌으므로 포커스는 본문에서 확인창을 연 저장 버튼으로 돌아온다(0008 포커스).
+// 확인창을 거친 저장이 칸 없는 오류(500)로 끝나면, 확인창 버튼은 사라졌으므로 포커스는 본문에서 확인창을 연 저장 버튼으로 돌아온다(결정 0007 진행 덮개 포커스).
 test('an edit that fails after the confirmation returns focus to the save button, not the document body', async ({ page }) => {
   await signIn(page);
   await page.getByRole('cell', { name: 'Mouse Pad' }).click();

@@ -59,7 +59,7 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
 
 ## 프로젝트 연결
 
-소비 검사 연결은 [starter의 세션 연결](../../references/apps/starter/src/app/session-idle.ts.txt), [경고 UI](../../references/apps/starter/src/app/SessionWarning.tsx.txt), [소비 검사](../../references/apps/starter/src/app/session-idle.test.tsx.txt)에 있다. 실제 운영 서버의 경로·헤더 정책을 정하지 않는 격리 fixture이며 starter 기본 화면에는 유휴 정책을 켜지 않는다. [시간·탭 순서 검사](../../references/packages/web-kit/tests/session-policy.test.ts.txt)와 [기존 수명 검사](../../references/packages/web-kit/tests/session-idle.test.ts.txt)는 DT·REF 실제 연결 검사를 대신하지 않는다.
+소비 검사 연결은 [starter의 세션 연결](../../references/apps/starter/src/app/session-idle.ts.txt), [경고 UI](../../references/apps/starter/src/app/SessionWarning.tsx.txt), [소비 검사](../../references/apps/starter/src/app/session-idle.test.tsx.txt)에 있다. 실제 운영 서버의 경로·헤더 정책을 정하지 않는 격리 fixture이며 starter 기본 화면에는 유휴 정책을 켜지 않는다. [시간·탭 순서 검사](../../references/packages/web-kit/tests/session-policy.test.ts.txt)와 [기존 수명 검사](../../references/packages/web-kit/tests/session-idle.test.ts.txt)는 실제 소비 프로젝트의 연결 검사를 대신하지 않는다.
 
 실제 조립 예: [apps/starter/src/app/web-kit.ts](../../references/apps/starter/src/app/web-kit.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
@@ -100,7 +100,7 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 
 실제 조립 예: [apps/starter/src/features/auth/api/auth.ts](../../references/apps/starter/src/features/auth/api/auth.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-E1(401이 업무 실행 전인가), E2(일반·재발급 요청의 status·resultCode 의미), E3(동시 재발급, 이전 refresh 토큰 재사용, 늦은 응답의 쿠키 변경)는 설치된 web-kit 패키지의 결정 기록 0001(web-kit 1.0 구조와 수명 계약)이 기준이다. 확인되기 전까지 해당 부분은 보류한다.
+E1(401이 업무 실행 전인가), E2(일반·재발급 요청의 status·resultCode 의미), E3(동시 재발급, 이전 refresh 토큰 재사용, 늦은 응답의 쿠키 변경)는 설치된 web-kit 패키지의 [결정 기록 0003의 미확인 외부 계약](../../references/docs/decisions/0003-request-response-failure.md#미확인-외부-계약)이 기준이다. 확인되기 전까지 해당 부분은 보류한다.
 
 ## 프로젝트별 응답 계약
 
@@ -118,6 +118,4 @@ Spring 봉투 서버는 `/http`의 `springEnvelope(results)`를 `response`에 �
 
 요청과 마감 전달 연결은 [starter 세션 예제](../../references/apps/starter/src/app/session-idle.ts.txt)를 참고한다. 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다. 예제는 격리 소비 검사다.
 
-DT 이전 시 프로젝트가 넘길 입력: 활동 부품과 1분 간격, `pendingAtDeadline: 'wait'`, 로그인 완료 후 보정 시계 기준 30분 임시 마감, 로그인 확정·연장 응답의 명시 전달, `resume({ graceMs: 60_000 })`, 경고 닫음과 재노출을 소유하는 UI다. 이는 DT 사용자 결정에 근거한 이전 안내이며 키트 기본값이 아니다. 전역 최신 표본 변수는 `requestWithResponse`로 교체한다. 탭 전체 동시 요청 수의 엄격한 제한과 다른 탭이 끝내는 동안의 연장 대기는 기존 한계이며 DT 실제 이전에서 확인한다.
-
-REF는 헤더 없는 로그인·복원, 수동 ping 실패 처리, 경고 길이·문구·재노출과 비대표 5초 복구 호환성을 실제 이전 때 확인해야 한다. 이 문서는 그 미확인 값을 정하지 않는다. 저장 불가·Web Locks/Worker 부재 환경의 보장은 확대하지 않는다.
+프로젝트의 기존 정책 값은 그 프로젝트 문서에서 확인해 연결한다. 전역 최신 표본 변수를 쓰던 연결은 `requestWithResponse`로 교체한다. 탭 전체 동시 요청 수의 엄격한 제한과 다른 탭 종료 동안의 연장 대기는 보장을 확대하지 않는다. 저장 불가·Web Locks/Worker 부재 환경도 실제 적용 환경에서 확인한다.

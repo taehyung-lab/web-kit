@@ -37,7 +37,7 @@ describe('기간 입력 검증', () => {
   ])('기간 %s ~ %s', (start, end, expected) => { expect(validateDateRange(start, end)).toBe(expected); });
 });
 
-// 0010 1-2·0011 합의 11: 일부 선택은 −, 클릭하면 전부 선택한다.
+// 결정 0006 선택 칸과 검색어: 일부 선택은 −, 클릭하면 전부 선택한다.
 it('자식 하나 선택은 부모 mixed이며 클릭은 모두 선택하고 명시 해제는 다른 가지를 보존한다', () => {
   const nodes = [{ label: 'A', children: [{ label: 'A1', value: 'a1' }, { label: 'A2', value: 'a2' }] }, { label: 'B', value: 'b' }];
   const selection = checkboxTreeSelection(nodes, ['a1', 'b']);

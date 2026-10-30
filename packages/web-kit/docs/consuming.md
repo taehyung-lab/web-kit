@@ -41,18 +41,20 @@ registry item은 함께 설치하는 파일 묶음이다. UI와 함께 설치된
 
 선택 소비는 기능별 작은 검사 입구를 사용한다. 폼은 `/testing/unit/form`, 인증은 `/testing/unit/auth`와 `/testing/fixtures/auth`, 폼의 UI 의존은 `/testing/unit/choice`·`/testing/unit/primitives`·`/testing/unit/styles`로 연결한다. 기존 `/testing/unit`·`/testing/fixtures`는 호환 입구로 남지만 전체 검사 의존을 불러올 수 있다. form의 zod는 검사 의존이며 사용하는 폼 schema 구현을 제한하지 않는다.
 
-## 4.1 → 5.0.0-rc.4
+## 시험판에서 옮겨 오기
 
-5.0은 **사용 계약이 깨지는 변경**(major)이다. 다음 연결을 함께 이전한다.
+5.0.0 첫 정식 기준으로 옮길 때는 사용하던 시험판에 따라 다음 연결을 함께 이전한다. 현재 검사용 후보는 5.0.0-rc.4다.
 
-- **검색어·선택 칸(rc.4):** 입력만 하고 [검색]을 누르면 입력 중 글자는 검색에 포함되지 않고 칸에 남는다. Enter 연결은 패키지 바인딩에서 복사본으로 이동했으므로 registry `list` 복사본을 함께 갱신한다. 기본 Enter는 추가 후 검색이며, [추가]와 Enter는 `;`로 여러 검색어를 나눈다. 전체 선택지 밖 값은 표시·검색·저장에서 빠진다. 서버 검색의 일부 결과 밖 선택은 유지한다. `Form.Choice`의 서버 선택지는 `Form.Select`와 같은 `status`·`onRetry`를 연결한다(생략은 고정 선택지 `ready`). 정리만으로 폼 원본이나 이탈 보호는 바뀌지 않는다. 보장은 [web-kit-list](../skills/web-kit-list/SKILL.md)·[web-kit-form](../skills/web-kit-form/SKILL.md), 결정 이유는 [0016](../references/docs/decisions/0016-keywords-and-choice-values.md)에 있다.
+- **검색어·선택 칸:** 입력만 하고 [검색]을 누르면 입력 중 글자는 검색에 포함되지 않고 칸에 남는다. Enter 연결은 패키지 바인딩에서 복사본으로 이동했으므로 registry `list` 복사본을 함께 갱신한다. 기본 Enter는 추가 후 검색이며, [추가]와 Enter는 `;`로 여러 검색어를 나눈다. 전체 선택지 밖 값은 표시·검색·저장에서 빠진다. 서버 검색의 일부 결과 밖 선택은 유지한다. `Form.Choice`의 서버 선택지는 `Form.Select`와 같은 `status`·`onRetry`를 연결한다(생략은 고정 선택지 `ready`). 정리만으로 폼 원본이나 이탈 보호는 바뀌지 않는다. 보장은 [web-kit-list](../skills/web-kit-list/SKILL.md)·[web-kit-form](../skills/web-kit-form/SKILL.md), 결정 이유는 [목록·선택 결정](../references/docs/decisions/0006-list-choice-permission.md)에 있다.
 
-- **목록 검색(rc.3):** 같은 조건으로 다시 검색해도 행 체크가 모두 해제된다. 검색 응답이 성공·실패로 도착하기 전에는 이전 행을 보이면서 체크·일괄 변경·확인창 실행·다운로드를 잠근다. 배경 재조회는 선택을 유지하고 사라진 행만 정리한다. 이전 검색의 체크를 유지한다고 가정한 화면·검사를 갱신한다. 공용 `isCurrent`를 읽는 연결에는 별도 잠금 조건을 추가할 필요가 없다. 보장은 [web-kit-list](../skills/web-kit-list/SKILL.md), 결정 이유는 [0015](../references/docs/decisions/0015-list-selection-lifetime.md)에 있다.
+- **목록 검색:** 같은 조건으로 다시 검색해도 행 체크가 모두 해제된다. 검색 응답이 성공·실패로 도착하기 전에는 이전 행을 보이면서 체크·일괄 변경·확인창 실행·다운로드를 잠근다. 배경 재조회는 선택을 유지하고 사라진 행만 정리한다. 이전 검색의 체크를 유지한다고 가정한 화면·검사를 갱신한다. 공용 `isCurrent`를 읽는 연결에는 별도 잠금 조건을 추가할 필요가 없다. 보장은 [web-kit-list](../skills/web-kit-list/SKILL.md), 결정 이유는 [목록·선택 결정](../references/docs/decisions/0006-list-choice-permission.md)에 있다.
 
 - **검사 연결(복사본 교정 필요):** 배포 검사 파일이 기능별 작은 입구와 조합 입구(`/testing/unit/combinations`·`/testing/fixtures/combinations`)를 쓴다. 같은 후보의 registry 검사 연결 파일을 새 원본과 대조해 갱신하고 설치 기록을 다시 만든다. 두 기능을 함께 설치한 경우에만 그 조합 검사가 필수다. 제품 UI 배치·폼 저장 상태 기계 변경은 없다. 기본 등록 보호·보호 제외·후속 확장 사용 조건은 [web-kit-form](../skills/web-kit-form/SKILL.md)이 정본이다.
-- **유휴 세션(`/session/idle`):** 연장·마감·만료의 제품 정책을 키트에서 빼고 프로젝트 입력으로 옮겼다. 키트는 더 이상 스스로 활동 연장·로그인 임시 마감·첫 응답 마감 채택·재개 유예·경고 닫음을 하지 않는다. 기존 동작을 유지하려면 프로젝트가 활동 부품(`/session/activity`), 0초 처리 필수 선택, 임시 마감, 채택할 응답의 명시 전달, 재개 유예 길이, 경고 닫음 UI를 직접 연결한다. 저장 형식이 바뀌었으므로 기존 브라우저 저장값의 유지·삭제는 프로젝트가 정한다. 입력·보장·이전 대응표는 [web-kit-http](../skills/web-kit-http/SKILL.md), 결정 이유는 [0013](../references/docs/decisions/0013-session-policy-split.md)이 정본이다.
+- **유휴 세션(`/session/idle`):** 연장·마감·만료의 제품 정책을 키트에서 빼고 프로젝트 입력으로 옮겼다. 키트는 더 이상 스스로 활동 연장·로그인 임시 마감·첫 응답 마감 채택·재개 유예·경고 닫음을 하지 않는다. 기존 동작을 유지하려면 프로젝트가 활동 부품(`/session/activity`), 0초 처리 필수 선택, 임시 마감, 채택할 응답의 명시 전달, 재개 유예 길이, 경고 닫음 UI를 직접 연결한다. 저장 형식이 바뀌었으므로 기존 브라우저 저장값의 유지·삭제는 프로젝트가 정한다. 입력·보장·이전 대응표는 [web-kit-http](../skills/web-kit-http/SKILL.md), 결정 이유는 [세션 결정](../references/docs/decisions/0004-session-lifetime.md)이 정본이다.
 
-- **응답 해석(`/http`):** `createHttp`의 `response`가 필수가 됐고 `results` 입력과 `Http.request<T>`·`Unwrapped<T>`는 제거됐다. DT처럼 `results`만 넘기던 Spring 소비자는 `results: resultCodes`를 `response: springEnvelope(resultCodes)`로 바꾼다. starter처럼 손으로 `readEnvelope`·`toRequestFailure`를 합친 계약도 같은 부품으로 바꾼다. 생성 봉투 타입을 받던 mutator는 `/http`의 `SpringEnvelopeData<T>`를 가져와 `http.requestData<SpringEnvelopeData<T>>(config, options)`로 연결한다. 실제 데이터 타입을 이미 쓰는 호출은 `requestData<T>`를 유지한다. 다른 서버 형식은 자기 `ResponseContract`를 명시한다. 보장은 [web-kit-http](../skills/web-kit-http/SKILL.md), 결정 이유는 [0014](../references/docs/decisions/0014-response-contract-required.md)에 있다.
+- **응답 해석(`/http`):** `createHttp`의 `response`가 필수가 됐고 `results` 입력과 `Http.request<T>`·`Unwrapped<T>`는 제거됐다. `results`만 넘기던 Spring 소비자는 `results: resultCodes`를 `response: springEnvelope(resultCodes)`로 바꾼다. starter처럼 손으로 `readEnvelope`·`toRequestFailure`를 합친 계약도 같은 부품으로 바꾼다. 생성 봉투 타입을 받던 mutator는 `/http`의 `SpringEnvelopeData<T>`를 가져와 `http.requestData<SpringEnvelopeData<T>>(config, options)`로 연결한다. 실제 데이터 타입을 이미 쓰는 호출은 `requestData<T>`를 유지한다. 다른 서버 형식은 자기 `ResponseContract`를 명시한다. 보장은 [web-kit-http](../skills/web-kit-http/SKILL.md), 결정 이유는 [응답 결정](../references/docs/decisions/0003-request-response-failure.md)에 있다.
+
+- **UI 입구와 복사본:** [이전 표](../README.md#시험판-ui-입구-이전)로 제거된 UI 입구를 설치한 복사본 import로 바꾼다. 일부 체크 트리의 표시/클릭 변경, 기간 timeZone·now 선택화, /choice 입구도 확인한다. 이전 원본 A·새 원본 B·현재 복사본 C를 비교하는 [갱신 절차](../README.md#복사본-갱신)를 따라 프로젝트 수정을 보존한다. --overwrite를 기본으로 쓰지 않고 적용 뒤 동일 검사를 재실행한다.
 
 Vitest JSON과 Playwright JSON 보고서에는 검사 ID·패키지 버전·registry ref/원본 commit이 남는다. Vitest `allowOnly: false`, Playwright `forbidOnly: true`로 일부 검사만 실행하는 only를 CI에서 거절한다. 검사와 `web-kit-check`는 같은 CI 작업(job)에서 연달아 실행하고, 이전에 저장된 결과를 재사용하지 않는다. 점검 명령은 결과의 생성 시점을 확인하지 않으므로 오래된 통과 결과를 현재 복사본의 검증으로 판정할 수 없다. 설치한 모든 항목의 필수 검사를 실행한 뒤 프로젝트 루트에서 다음을 실행한다.
 
@@ -64,9 +66,6 @@ pnpm exec web-kit-check --installation registry-installation.json --unit .web-ki
 
 실제 제품이 검사한 UI를 사용하는지는 점검 명령이 자동 판정하지 않는다. 사용 import와 검사 연결의 일치를 독립 검토한다. [실제 CI 연결](../references/apps/starter/package.json)과 [검사 연결 예](../references/apps/starter/src/shared/ui/web-kit/checks/form-ui.test.tsx.txt)는 조립 방식만 참고하며 제품 값은 프로젝트가 정한다.
 
-## 3.1 → 4.0과 갱신
-
-[이전 표](../README.md#31--40-이전)로 제거된 UI 입구를 설치한 복사본 import로 바꾼다. 일부 체크 트리의 표시/클릭 변경, 기간 timeZone·now 선택화, /choice 입구도 확인한다. 이전 원본 A·새 원본 B·현재 복사본 C를 비교하는 [갱신 절차](../README.md#복사본-갱신)를 따라 프로젝트 수정을 보존한다. --overwrite를 기본으로 쓰지 않고 적용 뒤 동일 검사를 재실행한다.
 
 ## 저장 adapter 검사
 

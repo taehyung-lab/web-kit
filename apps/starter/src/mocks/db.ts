@@ -40,7 +40,7 @@ function seed(): Product[] {
   });
 }
 
-/** 약관 한 건(레퍼런스 약관 등록 재현용 mock). */
+/** 약관 한 건(약관 등록 예시용 mock). */
 export interface MockTerms {
   readonly termsId: string;
   readonly version: string;

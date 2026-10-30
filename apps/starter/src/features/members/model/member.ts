@@ -1,4 +1,4 @@
-// 파일 책임: 회원 목록 예시의 앱 모델과 고정 선택지. 레퍼런스 회원 목록(검색을 눌러야 조회)을 키트 값 설정만으로 재현하는 예다.
+// 파일 책임: 회원 목록 예시의 앱 모델과 고정 선택지. 검색을 눌러야 조회하는 목록을 키트 값 설정만으로 재현하는 예다.
 export const MEMBER_KEYWORD_FIELDS = ['name', 'email', 'phone'] as const;
 export const MEMBER_PERIOD_TYPES = ['joinedAt', 'lastLoginAt'] as const;
 export const MEMBER_SIGNUP_METHODS = ['EMAIL', 'KAKAO', 'NAVER'] as const;

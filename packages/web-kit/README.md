@@ -1,6 +1,6 @@
 # web-kit
 
-React 19 + TanStack(Router·Query·Form) + zod 4 + axios/orval을 쓰는 웹 프로젝트의 공용 키트다. 서버 응답 구조와 코드 의미는 프로젝트의 `ResponseContract`가 해석한다. 응답 계약은 필수 입력이며 Spring 봉투 서버는 `/http`의 `springEnvelope(results)`를 선택한다. 공통 동작은 패키지 hook·Provider가, 화면 배치는 registry로 설치한 프로젝트 소유 복사본이 맡는다. registry는 복사할 UI와 공통 검사 연결 파일의 묶음이다. 업무 정책·서버 연결 차이는 프로젝트가 정한다. 현재 제공 범위는 아래 표와 `package.json` exports다([4.0 배포 결정](references/docs/decisions/0011-web-kit-4-ui-distribution.md)).
+React 19 + TanStack(Router·Query·Form) + zod 4 + axios/orval을 쓰는 웹 프로젝트의 공용 키트다. 서버 응답 구조와 코드 의미는 프로젝트의 `ResponseContract`가 해석한다. 응답 계약은 필수 입력이며 Spring 봉투 서버는 `/http`의 `springEnvelope(results)`를 선택한다. 공통 동작은 패키지 hook·Provider가, 화면 배치는 registry로 설치한 프로젝트 소유 복사본이 맡는다. registry는 복사할 UI와 공통 검사 연결 파일의 묶음이다. 업무 정책·서버 연결 차이는 프로젝트가 정한다. 현재 제공 범위는 아래 표와 `package.json` exports다([배포 결정](references/docs/decisions/0002-distribution.md)).
 
 정본: https://github.com/taehyung-lab/web-kit · 패키지 `@boosterlab/web-kit` · 이 문서의 대상 버전 `5.0.0-rc.4`(로컬 후보, 미발행) · 결정 기록 [docs/decisions](references/docs/decisions). 이 패키지는 저장소의 `packages/web-kit`이고, 사용 예이자 소비 검사 앱은 같은 저장소의 [`apps/starter`](references/apps/starter)다.
 
@@ -9,7 +9,7 @@ React 19 + TanStack(Router·Query·Form) + zod 4 + axios/orval을 쓰는 웹 프
 목록의 결과 출처와 목록 복귀 문맥은 [용어](GLOSSARY.md)에서 구분한다.
 
 - **core**(루트 `.`): 외부 상태나 실행 없이 입력만으로 결과를 정하는 순수 규칙이다(실패 12종 해석, 기간 검증, 체크 트리 선택, query 직렬화). `tests/core-boundary.test.ts`는 루트에서 따라가는 파일에 라이브러리 의존이 없는지만 검사한다. 순수한지는 이 정의와 검토로 판단한다. `session`처럼 라이브러리에 의존하지 않아도 실행·부수효과가 있는 코드는 core가 아니며, 자기 subpath로 공개한다.
-- **책임별 입구(subpath)**: `/list`·`/form`처럼 책임별 상태·hook·Provider를 공개한다. 이름을 새로 만들 때는 [0011 판단표](references/docs/decisions/0011-web-kit-4-ui-distribution.md)를 따른다.
+- **책임별 입구(subpath)**: `/list`·`/form`처럼 책임별 상태·hook·Provider를 공개한다. 이름을 새로 만들 때는 [공개 입구 판단](references/docs/decisions/0002-distribution.md)를 따른다.
 - **registry 복사본**: 원본은 `packages/ui-registry/src`, 정의는 루트 `registry.json`, 빌드 결과는 `public/r`에 있다. 폼·필터·표·상세 등 표현을 소비 프로젝트에 설치한다. 공통 처리 순서는 패키지가 끝내고 복사본은 반환된 ref·속성·이벤트를 연결한다. 제품 실행 코드는 registry를 import하지 않는다.
 - **skills**: module별 사용 기준이다. 코드와 같은 버전으로 배포한다.
 
@@ -70,9 +70,9 @@ done
 
 ## 설치와 업그레이드
 
-4.0은 책임 단위로 필요한 부분만 채택한다. 한 책임 안에서는 키트의 상태 수명·이벤트 처리와 자체 구현을 섞지 않는다. 배치와 디자인은 설치한 복사본에서 바꾸고 공통 동작은 패키지 hook으로 연결한다.
+책임 단위로 필요한 부분만 채택한다. 한 책임 안에서는 키트의 상태 수명·이벤트 처리와 자체 구현을 섞지 않는다. 배치와 디자인은 설치한 복사본에서 바꾸고 공통 동작은 패키지 hook으로 연결한다.
 
-1. 검증된 같은 commit의 패키지 tarball(tgz 압축 파일)과 registry를 선택한다. `4.1.0`은 tag `v4.1.0`의 release 산출물을 쓴다. 발행 전 후보 검사는 저장소의 로컬 산출물을 사용한다.
+1. 검증된 같은 commit의 패키지 tarball(tgz 압축 파일)과 registry를 선택한다. 기존 시험판 `4.1.0`의 산출물은 tag `v4.1.0`에 있다. 발행 전 후보 검사는 저장소의 로컬 산출물을 사용한다.
 2. tgz를 `vendor/`에 보관하고 설치한다. 대부분 소스 TS/TSX이므로 Vite/TypeScript가 컴파일하며 Vite에는 `optimizeDeps: { extensions: ['.tsx'] }`를 둔다. Playwright 검사 입구는 Node가 실행할 수 있는 mjs다.
 
 ```sh
@@ -117,9 +117,9 @@ pnpm dlx shadcn@4.19.1 add @web-kit/form
 
 **복사본 교정 필요(문법만, 동작 변화 없음)**: registry의 타입 전용 import를 `import type { … }`로 교정했다. rc.1 복사본의 form/ui.tsx·list-ui.tsx·ui/dialog.tsx에 같은 변경을 적용하거나 A/B/C 비교로 rc.2 원본을 반영한다. 패키지만 올리면 이미 설치한 복사본의 문법은 바뀌지 않는다. 적용 뒤 소비처 lint와 같은 적합성 검사를 다시 실행한다. 원본은 이제 `pnpm registry:lint`로 TypeScript·React 및 엄격한 타입 import 규칙을 검사한다.
 
-## 3.1 → 4.0 이전
+## 시험판 UI 입구 이전
 
-| 3.1 import | 4.0 위치(기본 설치 target 기준) |
+| 이전 시험판 import | 현재 위치(기본 설치 target 기준) |
 |---|---|
 | `@boosterlab/web-kit/ui` | registry `ui`: `@/shared/ui/web-kit/ui` |
 | `@boosterlab/web-kit/list/ui` | registry `list`: `@/shared/ui/web-kit/list-ui` |
@@ -141,11 +141,11 @@ pnpm dlx shadcn@4.19.1 add @web-kit/form
 
 Node 24.19.0, 빈 NODE_OPTIONS, pnpm 10.33.0. `pnpm check`는 키트·링크·registry 일치를 확인한다. `pnpm starter:sync` 후 `pnpm starter:check`는 타입·lint·단위·빌드·브라우저·strict 지문 점검을 실행한다. 처음에는 starter의 Playwright chromium 설치가 필요하다.
 
-[즉시 조회](references/apps/starter/src/features/products/model/list-search.ts.txt)와 [검색 후 조회](references/apps/starter/src/features/members/model/list-search.ts.txt)는 같은 목록 구현의 gated 값 차이다(0003 완료 기준 6). 예제는 조립 방식만 참고하고 필드·기본값·문구·권한은 프로젝트가 정한다.
+[즉시 조회](references/apps/starter/src/features/products/model/list-search.ts.txt)와 [검색 후 조회](references/apps/starter/src/features/members/model/list-search.ts.txt)는 같은 목록 구현의 gated 값 차이다([유지보수 완료 기준 6](references/docs/maintaining.md#완료-기준)). 예제는 조립 방식만 참고하고 필드·기본값·문구·권한은 프로젝트가 정한다.
 
 발행 순서는 같은 commit 후보(패키지+registry) → starter → 실제 소비처 검증 → 교정·독립 검증 → 실서버 확인 → 정식 발행이다. [유지보수](references/docs/maintaining.md)가 기록·산출물 기준을 정한다. mock·starter 통과로 실제 소비처나 서버 계약 확인을 대신하지 않는다.
 
-## 4.1 인증 단계 추가
+## 인증 단계 연결
 
 | 입구 | 책임 | 연결 기준 |
 |---|---|---|
@@ -154,8 +154,8 @@ Node 24.19.0, 빈 NODE_OPTIONS, pnpm 10.33.0. `pnpm check`는 키트·링크·re
 
 기존 로그인 전 타이머와 제출 진행을 `/auth`로 옮긴다. 서버 요청·기한 값·문구·등록 흐름은 프로젝트가 제공한다. `/session/idle`의 `createServerClock` 객체를 인증 단계와 유휴 타이머에 함께 넘긴다. 기존 유휴 타이머 API는 clock을 생략해도 유지된다. starter 로그인은 코드 인증 단계가 없으므로 제품 흐름을 추가하지 않으며, 설치된 검사 화면에서 두 입력 모양을 확인한다.
 
-4.1.0은 유휴 타이머에 `pause()`·`resume()`·`state().paused`를 더한다(기존 API는 그대로). 유휴 마감을 적용하지 않는 화면(예: 비밀번호 변경)에서 `stop()`·`start()`를 조합하던 연결을 이 둘로 바꾼다. 재개는 서버 연장 결과로 마감을 다시 받는다. 직접 구현한 `IdleTimer` 대역(검사용 가짜 객체)은 `pause`·`resume`을 추가한다. 마감 없는 연장 응답은 경고 구간 밖에서도 `{ ok: false }`이다(이전 버전은 경고 구간 밖이면 성공으로 돌려줬다). 재개 중 일시 실패는 바로 로그아웃하지 않고 경고 구간 길이의 평소 경고를 보이며, 키트가 스스로 다시 연장하지 않는다. 기준은 [web-kit-http](skills/web-kit-http/SKILL.md)의 유휴 마감 절이다.
+유휴 타이머의 멈춤·재개 연결과 기존 저장값·정책 입력 이전은 [소비 안내](docs/consuming.md#시험판에서-옮겨-오기)와 [web-kit-http](skills/web-kit-http/SKILL.md)를 따른다.
 
-## 4.2 후보의 선택 소비 검사
+## 선택 소비 검사
 
 `/testing/unit/form`·`auth`·`choice`·`primitives`·`styles`와 `/testing/fixtures/auth`를 추가했다. 기존 전체 검사 입구는 호환을 유지한다. registry의 해당 검사 import 교정과 form 검사 의존(zod) 설치가 필요하며 제품 실행 코드는 그대로다. [소비 안내](docs/consuming.md#복사본-적합성-검사)의 갱신 순서와 [폼 스킬](skills/web-kit-form/SKILL.md)의 기존 선택·확장 예제를 따른다. 이 후보는 정식 발행하지 않았다.

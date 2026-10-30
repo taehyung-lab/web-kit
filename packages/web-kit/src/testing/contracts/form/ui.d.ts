@@ -208,7 +208,7 @@ declare function Failure({ className }: {
  * 저장 버튼. 저장 중·확인 대기·완료 처리 중에는 aria-disabled로 잠근다. disabled로 바꾸면 포커스가 본문으로 떨어져
  * 확인창을 닫은 뒤 돌아올 자리가 사라지고, 열린 직후 Tab이 창 밖에서 시작한다.
  * 저장 요청·완료 처리가 진행 중이면 버튼 바로 뒤에 진행 표시(문구는 화면 낭독기용 `messages.saving`)를 둔다.
- * 등록·수정 폼(`useSaveForm({ progress })`)은 화면 전체 진행 덮개가 대신하므로 그리지 않는다(사용자 결정 2026-10-28, 0008).
+ * 등록·수정 폼(`useSaveForm({ progress })`)은 화면 전체 진행 덮개가 대신하므로 그리지 않는다(사용자 결정 2026-10-28, 결정 0007 진행 덮개).
  */
 declare function Submit({ children, className, mode, }: {
     readonly children?: ReactNode;

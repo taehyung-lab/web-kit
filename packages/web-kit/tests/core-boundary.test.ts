@@ -69,7 +69,7 @@ it.each(['../src/form/index.ts', '../src/form/save-form.ts', '../src/form/naviga
 );
 
 /**
- * 공개 입구(package.json exports) 중 유휴 타이머 자신을 뺀 전부. 유휴 타이머는 그 입구를 직접 import한 앱에만 들어간다(0004 §1):
+ * 공개 입구(package.json exports) 중 유휴 타이머 자신을 뺀 전부. 유휴 타이머는 그 입구를 직접 import한 앱에만 들어간다(결정 0004 유휴 장치와 정책 경계):
  * 동작 입구(목록·폼·record)뿐 아니라 화면 부품 입구(list/ui·form/ui·detail/ui·ui·filter)도 끌어오면 쓰지 않는 앱(starter) 결과물에 들어간다.
  * 목록을 손으로 두지 않아 새 입구도 자동으로 검사된다.
  */
@@ -123,7 +123,7 @@ it.each([...entriesWithoutIdle, '../src/use-list.ts'])(
   },
 );
 
-/** 목록·폼·상세·기본 UI는 권한 판정과 결합하지 않는다(0005·0006). 권한 결과는 프로젝트가 연결한다. */
+/** 목록·폼·상세·기본 UI는 권한 판정과 결합하지 않는다(결정 0001 구조와 저장소·0006 필수와 권한). 권한 결과는 프로젝트가 연결한다. */
 it.each([
   '../src/form/index.ts',
   '../../ui-registry/src/form/ui.tsx',
