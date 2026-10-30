@@ -1,7 +1,7 @@
 // 파일 책임: http 요청 처리(헤더·봉투·실패 변환·401 재발급 뒤 한 번 재전송·세대·반영 여부)를 axios adapter로 검사한다.
 import { AxiosError, AxiosHeaders, type AxiosAdapter, type InternalAxiosRequestConfig } from 'axios';
 import { afterEach, beforeEach, expect, expectTypeOf, it, vi } from 'vitest';
-import { createResultCodeTable, RequestFailure } from '../src/failure';
+import { createResultCodeTable, readEnvelope, RequestFailure } from '../src/failure';
 import { createHttp, springEnvelope, type SpringEnvelopeData, type Http, type ResponseContract } from '../src/http';
 import { createSession, type SessionStore, type StoredSession } from '../src/session';
 
@@ -513,4 +513,25 @@ it('R4 다른 형식 서버의 데이터·실패 분류·401 회복·종료 행�
   expect(session.current()).toBeNull();
   expect(changes).toMatchObject([{ kind: 'ended', by: 'server' }]);
   expect(reissue).toHaveBeenCalledTimes(1);
+});
+
+
+it.each([201, 202])('R2 HTTP %i 봉투 실패는 옛 코드 의미를 유지하고 실제 HTTP 상태만 보존한다', async (status) => {
+  const { http } = setup();
+  for (const expected of [
+    { kind: 'business', code: '2100', messageKey: 'notExist', endsSession: false },
+    { kind: 'business', code: '4999', messageKey: 'forcedOut', endsSession: true },
+  ]) {
+    const body = { header: { resultCode: Number(expected.code) }, data: null };
+    // 옛 생략 경로는 readEnvelope의 status=200과 표의 의미를 그대로 반환했다.
+    const old = readEnvelope(body, table, 'rid');
+    expect(old.ok).toBe(false);
+    if (old.ok) throw new Error('봉투 실패가 성공으로 해석됨');
+    expect(old.failure).toMatchObject({ ...expected, status: 200, requestId: 'rid' });
+    replies = [{ status, data: body }];
+    // 공개 요청으로 실패 자체의 종료 표시를 관찰한다(세션 종료 처리로 취소되기 전).
+    await expect(http.requestData({ url: '/auth/envelope-failure' })).rejects.toMatchObject({
+      ...expected, status, requestId: 'rid',
+    });
+  }
 });
