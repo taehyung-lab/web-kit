@@ -1,0 +1,63 @@
+{
+  "form-progress": {
+    "items": [
+      "form",
+      "blocking-progress"
+    ],
+    "ids": [
+      "G001",
+      "G002",
+      "G003",
+      "G004",
+      "G005",
+      "G006",
+      "G007",
+      "G008",
+      "G009",
+      "B-progress-error"
+    ],
+    "sources": [
+      "packages/web-kit/src/testing/unit/progress-form.tsx",
+      "packages/web-kit/src/testing/combination-fixtures.tsx"
+    ]
+  },
+  "list-progress": {
+    "items": [
+      "list",
+      "blocking-progress"
+    ],
+    "ids": [
+      "G016",
+      "G017"
+    ],
+    "sources": [
+      "packages/web-kit/src/testing/unit/progress-list.tsx"
+    ]
+  },
+  "record-progress": {
+    "items": [
+      "record",
+      "blocking-progress"
+    ],
+    "ids": [
+      "G018",
+      "G019",
+      "G020"
+    ],
+    "sources": [
+      "packages/web-kit/src/testing/unit/progress-record.tsx"
+    ]
+  },
+  "form-checkbox-tree": {
+    "items": [
+      "form",
+      "checkbox-tree"
+    ],
+    "ids": [
+      "tree-focus"
+    ],
+    "sources": [
+      "packages/web-kit/src/testing/unit/checkbox-tree-focus.tsx"
+    ]
+  }
+}

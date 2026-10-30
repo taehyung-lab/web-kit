@@ -1,4 +1,6 @@
+// 파일 책임: 스타터 합성 서버의 상품·약관·작성 예제와 인증 시험 상태를 관리한다.
 // 파일 책임: mock 서버의 메모리 상태(분류·상품·토큰·refresh 쿠키 유효 여부). 브라우저 mock과 테스트가 같은 규칙을 쓴다.
+import type { WorkflowValues } from '@/features/form-workflows/model/form';
 import type { Category, Product, ProductStatus } from '@/api/generated/models';
 
 /** mock access 토큰 수명. 지나면 401 → 재발급 흐름이 일어난다. */
@@ -38,7 +40,7 @@ function seed(): Product[] {
   });
 }
 
-/** 약관 한 건(레퍼런스 약관 등록 재현용 mock). */
+/** 약관 한 건(약관 등록 예시용 mock). */
 export interface MockTerms {
   readonly termsId: string;
   readonly version: string;
@@ -51,17 +53,19 @@ export interface MockTerms {
 interface State {
   products: Product[];
   terms: MockTerms[];
+  workflows: { id: string; saved: WorkflowValues }[];
   tokens: Map<string, number>;
   refreshValid: boolean;
   issued: number;
 }
 
-const state: State = { products: seed(), terms: [], tokens: new Map(), refreshValid: true, issued: 0 };
+const state: State = { products: seed(), terms: [], workflows: [], tokens: new Map(), refreshValid: true, issued: 0 };
 
 /** 서버 상태를 JSON으로 옮길 수 있는 모양. 브라우저 mock이 새로 고침 뒤에도 같은 서버로 보이게 저장·복원한다. */
 export interface MockSnapshot {
   readonly products: Product[];
   readonly terms: MockTerms[];
+  readonly workflows: { id: string; saved: WorkflowValues }[];
   readonly tokens: [string, number][];
   readonly refreshValid: boolean;
   readonly issued: number;
@@ -77,6 +81,10 @@ export const mockDb = {
   get products() {
     return state.products;
   },
+  /** 저장한 작성 예제를 후속 조회에 돌려준다. */
+  get workflows() {
+    return state.workflows;
+  },
   get terms() {
     return state.terms;
   },
@@ -87,6 +95,7 @@ export const mockDb = {
   reset() {
     state.products = seed();
     state.terms = [];
+    state.workflows = [];
     state.tokens = new Map();
     state.refreshValid = true;
     state.issued = 0;

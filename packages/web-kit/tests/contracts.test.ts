@@ -37,7 +37,7 @@ describe('기간 입력 검증', () => {
   ])('기간 %s ~ %s', (start, end, expected) => { expect(validateDateRange(start, end)).toBe(expected); });
 });
 
-// 0010 1-2·0011 합의 11: 일부 선택은 −, 클릭하면 전부 선택한다.
+// 결정 0006 선택 칸과 검색어: 일부 선택은 −, 클릭하면 전부 선택한다.
 it('자식 하나 선택은 부모 mixed이며 클릭은 모두 선택하고 명시 해제는 다른 가지를 보존한다', () => {
   const nodes = [{ label: 'A', children: [{ label: 'A1', value: 'a1' }, { label: 'A2', value: 'a2' }] }, { label: 'B', value: 'b' }];
   const selection = checkboxTreeSelection(nodes, ['a1', 'b']);
@@ -58,4 +58,11 @@ it.each(['@form-error:', '@form-validation:'])('오류 참조 %s는 번역 시�
   expect(codec.resolve(value, key => `en:${key}`)).toBe('en:form:required');
   expect(codec.resolve('plain', () => 'unexpected')).toBe('plain');
   expect(codec.resolve({}, () => 'unexpected')).toBeUndefined();
+});
+
+it('K5 트리 밖 저장값은 다음 전체 선택값에서 뺀다', () => {
+  const nodes = [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }, { value: 'c', label: 'C' }];
+  const selection = checkboxTreeSelection(nodes, ['x', 'b', 'y', 'a']);
+  expect(selection.set(['c'], true)).toEqual(['a', 'b', 'c']);
+  expect(selection.set(['a', 'b'], false)).toEqual([]);
 });

@@ -2,7 +2,7 @@
 // 복사본 두 모양의 입력 행동을 공통 적합성 검사에 연결한다.
 import { describe } from 'vitest';
 import { fireEvent, screen } from '@testing-library/react';
-import { checkAuthConformance } from '@boosterlab/web-kit/testing/unit';
+import { checkAuthConformance } from '@boosterlab/web-kit/testing/unit/auth';
 import { AuthCodeForm } from '../auth';
 import { SixDigitAuthCodeForm } from './auth-six';
 import installation from '../../../../../registry-installation.json';

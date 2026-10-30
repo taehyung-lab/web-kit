@@ -1,6 +1,6 @@
 ---
 name: web-kit-form
-description: 등록·수정·대화창 폼의 저장·저장 확인·저장 완료 확인·저장 중 표시(화면 전체 진행 덮개 포함)·이탈 보호·필드 오류·필수 표시·선택지 상태·원본 갱신·줄 추가/삭제/이동 입력·파일 칸, 폼 없는 삭제·상태 변경 확인, 기본 부품(버튼·입력·대화창)을 만들거나 바꿀 때 읽는다. 요청·실패 해석은 web-kit-http, 원본 단건 상태는 web-kit-record로 보낸다.
+description: 등록·수정·대화창 폼의 저장·저장 뒤 추가 작업·이탈 보호 제외·저장 확인·저장 완료 확인·저장 중 표시(화면 전체 진행 덮개 포함)·이탈 보호·필드 오류·필수 표시·선택지 상태·원본 갱신·줄 추가/삭제/이동 입력·조건부 칸·파일 칸, 폼 없는 삭제·상태 변경 확인, 기본 부품(버튼·입력·대화창)을 만들거나 바꿀 때 읽는다. 요청·실패 해석은 web-kit-http, 원본 단건 상태는 web-kit-record로 보낸다.
 ---
 
 # web-kit form
@@ -30,9 +30,9 @@ registry `form`의 `FormGuard`를 앱(Router 안)에 한 번 둔다. 복사본�
 - `Form.Cancel to={...}`: 입력이 있으면 취소 문구로 한 번 묻고 이동한다. `Form.Dialog` 안이면 그 대화창을 닫는다. 저장 중이면 아무것도 하지 않는다.
 - `Form.Confirm`: `useSaveForm({ confirm: true })`의 저장 전 확인창. 제출한 값(snapshot)을 children에 주고 그 값으로 저장한다. 덮개를 선언한 폼은 확인하면 닫히고 덮개가 저장 중을 맡는다(확인창 → 덮개 → 완료 창). 선언하지 않은 폼은 저장 중에 닫히지 않고 확인 버튼 옆에 진행 표시를 둔다.
 - `Form.Saved`: `useSaveForm({ acknowledge: true })`의 저장 완료 확인창. 확인이 `onSaved`(보통 이동)를 한 번 실행한다. Esc·바깥 클릭으로 닫히지 않는다.
-- Enter: 폼에서 Enter는 기본적으로 제출(저장 버튼 클릭)이다. 단, 입력한 값을 [추가] 버튼이 목록에 넣는 입력칸(검색어 칩, 제목 입력 + [추가]로 목록에 넣는 칸 등)에서는 Enter가 제출 대신 [추가] 클릭으로 동작한다. 줄마다 자기 칸이고 [추가]가 빈 줄만 더하는 배열 줄 입력(등급명·회차 날짜 등)은 일반 칸이라 Enter가 폼 제출이다. 모달 안 입력칸의 Enter는 그 모달의 확인(모달 폼 제출)이며 바깥 폼은 제출되지 않는다. 키트에서: 일반 칸은 `Form.Submit`이 있는 `<Form>`이 받으므로 칸에서 Enter를 막지 않는다. 값을 목록에 넣는 [추가] 칸은 `onKeyDown={rows.enterAdds(add)}`(목록 `List.Keywords`는 기본). 모달은 `Form.Dialog` 안에 자기 `<Form>`과 `Form.Submit`을 둔다.
+- Enter: 폼에서 Enter는 기본적으로 제출(저장 버튼 클릭)이다. 단, 폼 안에서 입력한 값을 [추가] 버튼이 목록에 넣는 입력칸(제목 입력 + [추가]로 목록에 넣는 칸 등)에서는 Enter가 제출 대신 [추가] 클릭으로 동작한다. 줄마다 자기 칸이고 [추가]가 빈 줄만 더하는 배열 줄 입력(등급명·회차 날짜 등)은 일반 칸이라 Enter가 폼 제출이다. 모달 안 입력칸의 Enter는 그 모달의 확인(모달 폼 제출)이며 바깥 폼은 제출되지 않는다. 키트에서: 일반 칸은 `Form.Submit`이 있는 `<Form>`이 받으므로 칸에서 Enter를 막지 않는다. 값을 목록에 넣는 [추가] 칸은 `onKeyDown={rows.enterAdds(add)}`. 목록 검색어 칸의 키 연결은 [web-kit-list](../web-kit-list/SKILL.md)를 따른다(기본 복사본은 Enter = 추가 후 검색). 모달은 `Form.Dialog` 안에 자기 `<Form>`과 `Form.Submit`을 둔다.
 - `Form.Dialog`: 대화창 안 하위 폼(자기 `useSaveForm`). 안쪽 제출(버튼·Enter)은 안쪽만 검증·저장하고 바깥 폼의 저장·검증 오류·확인창을 건드리지 않는다. 바깥에 오류가 있어도 안쪽 제출은 막히지 않는다. 닫기·취소는 그 안의 폼만 보고 묻는다(바깥이 dirty여도 바깥 이탈 확인은 뜨지 않는다). 하위 결과를 바깥 값에 넣으면 바깥이 dirty가 되어 이후 이탈은 바깥 기준으로 묻는다. 입력이 있어도 묻지 않고 닫는 대화창은 안쪽을 `<Form protect={false}>`로 둔다.
-- 이탈: `FormGuard`가 등록된 폼 중 하나라도 입력이 기준선과 다르면 Router 이동·브라우저 이탈을 한 번 묻고, 저장 중이면 묻지 않고 막는다. 저장 성공 뒤 이동은 묻지 않는다. Router를 거치지 않는 이탈(같은 메뉴 다시 누르기)은 `useLeave()(run, reason)`로 같은 판정을 받는다. 확인 뒤 `run`이 이동하면 `ignoreBlocker: true`로 이동한다. 로그인 같은 제품 예외만 `<Form protect={false}>`.
+- 이탈: `FormGuard`가 등록된 폼 중 하나라도 입력이 기준선과 다르면 Router 이동·브라우저 이탈을 한 번 묻고, 저장 중이면 묻지 않고 막는다. 저장 성공 뒤 이동은 묻지 않는다. Router를 거치지 않는 이탈(같은 메뉴 다시 누르기)은 `useLeave()(run, reason)`로 같은 판정을 받는다. 확인 뒤 `run`이 이동하면 `ignoreBlocker: true`로 이동한다. 로그인 같은 제품 예외만 `<Form protect={false}>`. 이 값은 해당 폼의 보호 등록 자체를 제외하므로 변경 경고와 저장 중 Router·브라우저 이탈 차단이 함께 빠진다. 검증·중복 제출 잠금·기준선 처리는 남고 `Form.Cancel`의 진행 중 잠금도 유지된다. 기존 등록 화면의 보호 정책을 이 예시만으로 바꾸지 않는다.
 - 문구는 `FormGuard messages`(까닭별: navigate·cancel)·`Form messages`·`formatError`(칸 오류 값 → 문구)·`renderFailure(failure, place)`(place: save·completion·options, `null`이면 그 자리에 그리지 않음), 모양은 `--wk-*` 토큰으로 바꾼다. 새 화면마다 Field·이탈 확인·확인창을 다시 만들지 않는다.
 
 ## 화면 전체 진행 덮개
@@ -70,10 +70,20 @@ headless는 화면 배치 없이 상태와 연결 함수만 쓰는 방식이다.
   - `confirm`
   - `fieldError`: 서버 필드를 폼 경로와 문구로 바꾼다. 돌려준 경로는 제출 때 기준이고, 그 뒤 줄 작업은 키트가 따라간다.
   - `reveal(fields)`: 키트 구역(`Form.Section fields`·`FormSection`)이 아닌 프로젝트 고유의 접힌 영역(탭 등)을 오류 포커스 전에 연다. 거절마다(클라이언트 검증 실패·서버 필드 오류 도착(늦은 도착 포함)·`FormRejection`) 실패 칸 목록으로 한 번 불린다. 제출 횟수를 세어 열지 않는다. 키트 구역은 스스로 열린다.
-  - `onSaved(result)`: 이동·알림. 저장 함수가 돌려준 값을 그대로 받는다(등록 뒤 새 id 등).
+  - `onSaved(result)`: 이동·알림·추가 요청. 저장 함수가 돌려준 값을 그대로 받는다(등록 뒤 새 id 등). Promise를 반환해 후속 완료까지 잠금을 유지한다. 저장 성공 뒤 후속이 실패하면 `completionFailure`이며 `Form.Failure`의 재시도(또는 `complete()`)는 저장 없이 후속만 다시 실행한다. 이미 시작한 프로젝트 async 함수 안의 추가 부수효과 취소와 여러 후속 요청 중 일부 성공의 중복 방지는 프로젝트가 책임진다.
   - `acknowledge`: 저장 뒤 사용자 확인(`complete()`)을 기다린 다음 `onSaved`를 실행한다.
 - 입력 control의 id는 `fieldId(name)`을 쓰고, 같은 id를 `FieldFrame`에 넘긴다. 체크 트리(`CheckboxTree`)는 그 id를 `id`로 받으며, 검증 오류의 focus가 그 그룹으로 온다.
 - 줄을 추가·삭제하는 입력은 아래 「줄 추가·삭제 입력」을 따른다.
+
+## 선택과 추가 행동의 예제
+
+조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+
+보호 제외는 [로그인](../../references/apps/starter/src/features/auth/screens/LoginScreen.tsx.txt), 저장 후 추가 조회와 완료 실패 재시도는 [작성 예제](../../references/apps/starter/src/features/form-workflows/screens/FormWorkflowScreen.tsx.txt), 완료 확인 뒤 이동은 [약관 등록](../../references/apps/starter/src/features/terms/screens/TermsCreateScreen.tsx.txt)을 참고한다. schema·서버 요청·후속 업무는 프로젝트가 정하고 저장 상태 기계를 새로 만들지 않는다. primary와 secondary의 완료 선언은 각 동작에 따로 준다.
+
+폼과 `blocking-progress` 또는 `checkbox-tree`를 함께 설치하면 registry 검사 연결이 `/testing/unit/combinations`로 자기 UI 복사본의 조합 검사도 등록한다. 둘 중 하나만 설치한 프로젝트에는 그 조합을 요구하지 않는다. 덮개와 폼의 서버 오류 초점 브라우저 화면은 `/testing/fixtures/combinations`를 쓴다.
+
+폼만 채택한 소비 검사는 `/testing/unit/form`과 registry가 연결한 의존 검사 입구를 쓴다. 작은 검사 입구와 실제 최소 소비의 기준은 [소비 안내](../../docs/consuming.md#복사본-적합성-검사)를 따른다.
 
 ## 줄 추가·삭제·이동 입력
 
@@ -149,7 +159,7 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 
 실제 조립 예: [apps/starter/src/features/products/screens/ProductForm.tsx](../../references/apps/starter/src/features/products/screens/ProductForm.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-`Form.Choice`는 같은 필드 검증·별표·오류 초점에 registry `choice`의 `Choice`를 연결한다. 공통 선택·검색 수명은 `/choice`의 `useChoiceBinding`이 맡는다. 값은 단일 leaf ID 또는 다중 leaf ID 배열이며 가지는 값이 아니다. `nodes`에 트리, `appearance`에 vertical/horizontal/dropdown/menu/search를 준다. 단일 menu에서 가지는 탐색만, 다중 트리에서 가지는 전체·일부·없음을 구분한다. `search(text, signal)`을 주면 기본 250ms 입력 정지 후 서버를 조회하며 늦은 이전 결과는 버린다. 서버 코드·선택지 내용·표시 문구는 프로젝트가 제공한다.
+`Form.Choice`는 같은 필드 검증·별표·오류 초점에 registry `choice`의 `Choice`를 연결한다. 공통 선택·검색 수명은 `/choice`의 `useChoiceBinding`이 맡는다. 값은 단일 leaf ID 또는 다중 leaf ID 배열이며 가지는 값이 아니다. 전체 선택지를 `nodes`로 받는 칸은 준비된 선택지 밖 값을 표시·검증·제출에서 뺀다. 폼 원본 값은 유지하고 표시·제출 값을 계산하므로 이 정리만으로 사용자 변경이나 이탈 보호가 생기지 않는다. `Form.Select`와 같은 `status`(`ready`·`loading`·`{ failure }`)·`onRetry`로 선택지 상태를 연결한다. 생략 시 `ready`인 고정 선택지로 간주하므로 서버 선택지는 상태를 반드시 넘긴다. 로딩·실패 중에는 저장값을 유지하며 칸 자리에 불러오는 중·실패·재시도를 보인다. `search` 함수로 일부 결과만 받는 서버 검색 모양은 결과 밖 기존 선택을 유지한다. 다른 칸의 편집과 명시적 폼 참조 검증은 그대로 지킨다. `nodes`에 트리, `appearance`에 vertical/horizontal/dropdown/menu/search를 준다. 단일 menu에서 가지는 탐색만, 다중 트리에서 가지는 전체·일부·없음을 구분한다. `search(text, signal)`을 주면 기본 250ms 입력 정지 후 서버를 조회하며 늦은 이전 결과는 버린다. 서버 코드·선택지 내용·표시 문구는 프로젝트가 제공한다.
 
 저장 요청 변환과 후속 처리는 `saveProduct`처럼 책임을 드러내는 이름 있는 함수로 연결한다. 한 줄 값 선택·인자 전달까지 별도 함수로 만들지는 않는다. 화면 배치, 업무 연결, 반복 UI는 책임에 따라 분리하고 파일 개수를 강제하지 않는다.
 
@@ -174,3 +184,33 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 키트 `Form.Field`의 `change`, 입력 부품, `Form.Array`와 공개 줄 작업은 이 경로를 쓴다. 직접 값을 변경하는 자체 입력은 `requestFormChange(form, 변경후전체값, accepted => 값반영)`을 사용한다. `writeFormValues`는 허용된 전체 값 중 바뀐 루트 칸만 반영하는 도우미다. raw TanStack 값 변경은 확인 절차를 우회하지만 두 저장의 최종 참조 검사에서는 거절된다. 관계 선언을 바꾸는 것은 프로젝트 정책 변경이며 원본·관계 함수는 값을 수정하지 않는 순수 함수로 제공한다.
 
 확인 중 값이 한 번이라도 달라지거나 편집 대상이 바뀌거나 폼이 내려가면 이전 확인은 취소된다. 저장·저장 확인 중에는 참조 정리 확인이 필요한 새 변경을 시작하지 않는다. 관계가 없는 기존 입력 변경과 늦은 응답 보호는 유지한다. 확인 문구는 `Form`의 `messages.referenceTitle(count)`·`referenceConfirm`, 거절 문구는 관계의 `message`로 준다.
+
+
+## 조건부로 숨기는 칸
+
+실제 조립 예: [작성 예제의 폼 정의](../../references/apps/starter/src/features/form-workflows/model/form.ts.txt)와 [화면](../../references/apps/starter/src/features/form-workflows/screens/FormWorkflowScreen.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+
+`useSaveForm`의 `conditionalFields(values)`에 현재 칸마다 `{ field, visible, emptyValue }`를 돌려준다. 칸 경로와 빈 값은 입력 타입으로 검사한다. `visible`은 현재 값으로 계산하고, 숨긴 칸도 선언 목록에 유지한다. 배열 줄은 ``values.rows.map((row, index) => ({ field: `rows[${index}].detail`, visible: showDetail(row), emptyValue: '' }))``처럼 줄마다 선언한다. 폼 칸은 이 선언을 읽어 그리지 않으므로 화면에서 조건을 다시 쓰지 않는다. 직접 만든 표현은 `editor.isVisible(name)` 또는 `useFormFieldBinding`의 `visible`을 읽는다. `Form.Section` 접기는 칸·값·검증을 유지하는 별개 동작이다.
+
+키트는 원시 입력을 숨기는 순간 비우지 않는다. 검증·필수 판정·제출에는 숨긴 칸을 `emptyValue`로 바꾼 계산 값을 쓴다. 빈 값의 모양은 프로젝트 서버 계약으로 정한다. 숨긴 부모 아래 경로도 표시·필수 판정·오류 부착에서 제외한다. 숨긴 칸에 도착한 서버 오류는 기존 붙지 못한 오류로 폼 한 줄에 보인다.
+
+검증 규칙은 schema 하나가 정본이다. 조건부 필수는 **같은 조건 함수**를 표시 선언과 schema에서 참조해 표현한다. 키트는 schema를 재작성하거나 실패한 입력을 성공한 출력이라고 간주하지 않는다. 따라서 보이는 칸의 schema 변환 출력도 보존한다. 예:
+
+```ts
+const showDetail = (values: { enabled: boolean }) => values.enabled;
+const schema = z.object({ enabled: z.boolean(), detail: z.string() }).superRefine((values, context) => {
+  if (showDetail(values) && values.detail === '') {
+    context.addIssue({ code: 'custom', path: ['detail'], message: '내용을 입력해 주세요.' });
+  }
+});
+const editor = useSaveForm({
+  schema, source, save,
+  conditionalFields: values => [{ field: 'detail', visible: showDetail(values), emptyValue: '' }],
+});
+```
+
+숨긴 칸의 빈 값을 schema가 거절하면 저장하지 않고 폼 한 줄로 알린다. 오류를 조용히 지워 저장하지 않는다. 두 저장 모두 각자의 schema가 같은 조건 함수를 참조해 숨김의 빈 값을 받아야 한다. 다른 칸 오류가 있어도 조건부 규칙이 돌아야 하는 경우는 위 필수 표시 절을 따른다.
+
+숨김→보임 때는 마지막 기준선의 값으로 복원한다. 등록은 처음 기본값, 수정은 불러온 값, 저장 성공 뒤에는 저장된 값이다. 새 배열 줄은 `append`에 넘긴 최초 줄 값이 원래 값이며 저장 뒤에는 저장된 줄 값이다. 기존 줄은 키트 줄 작업 기록을 따라 원래 줄 값을 복원한다(값 안 key로 추측하지 않는다).
+
+이탈 보호는 **현재 제출에 쓰는 계산 값과 저장 기준선의 차이**를 본다. 숨김 때문에 원래 있던 값 대신 빈 값을 보내게 되면 변경이다. 다른 변경 없이 숨김→보임으로 원래 값으로 돌아오면 변경이 아니다. 준비된 선택지 밖 값 정리는 기존처럼 양쪽에 같은 선택지 투영을 적용하므로 그 정리만으로 변경이 되지 않는다.

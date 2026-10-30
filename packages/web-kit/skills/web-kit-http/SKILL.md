@@ -1,6 +1,6 @@
 ---
 name: web-kit-http
-description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동기화·토큰 재발급·로그인/로그아웃·세션 유휴 마감과 만료 경고·연장·QueryClient·조회 재시도·쓰기 뒤 무효화를 만들거나 바꿀 때 읽는다. 로그인 전 코드·기한·재전송은 web-kit-auth, 폼 저장 수명은 web-kit-form, 단건 상태는 web-kit-record로 보낸다.
+description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동기화·토큰 재발급·로그인/로그아웃·세션 유휴 마감과 만료 경고·활동 연장·재개 유예·QueryClient·조회 재시도·쓰기 뒤 무효화를 만들거나 바꿀 때 읽는다. 로그인 전 코드·기한·재전송은 web-kit-auth, 폼 저장 수명은 web-kit-form, 단건 상태는 web-kit-record로 보낸다.
 ---
 
 # web-kit http · session · failure · query
@@ -22,7 +22,7 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
 
 실제 조립 예: [apps/starter/src/app/session.test.tsx](../../references/apps/starter/src/app/session.test.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-- **실패:** status 기본 분류는 결과 코드 표 `(status, code)` 행보다 뒤다. HTTP 200 안의 다른 resultCode는 business, 봉투가 아니면 contract다. 파일로 받는 요청(`responseType: 'blob'`)도 응답이 JSON이면 본문을 JSON으로 읽어 같은 규칙으로 해석한다(다운로드 실패 문구가 resultCode를 따른다). 취소는 `cancelled`이고 화면 상태·알림에 들어가지 않는다.
+- **실패:** 필수 `ResponseContract`가 서버 응답의 성공 데이터·실패 종류·문구 키·세션 종료를 정한다. 파일로 받는 요청(`responseType: 'blob'`)도 응답이 JSON이면 본문을 JSON으로 읽어 계약에 넘긴다. 취소는 `cancelled`이고 화면 상태·알림에 들어가지 않는다.
 - **세션 수명** 한 곳이 세대를 판정한다.
   - 로그인·계정 교체(`start`)와 로그아웃·종료(`end`)는 세대를 올린다. `end`는 세대마다 한 번만 알린다.
   - 종료 사유 `by`: 이 탭의 로그아웃(`local`), 유휴 마감(`idle`), 다른 탭(`other-tab`), 서버 인증 계약(`server`).
@@ -39,25 +39,27 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
   - 세션 종료는 결과 코드 표의 세션 종료 행(HTTP 200 포함)으로만 판정하고, 그 요청은 화면에 `cancelled`로 끝난다.
   - 쓰기의 401은 다시 보내지 않는다(E1 확인 전 전제). 재발급만 하고 원래 실패를 `resultUnknown`으로 돌려준다.
   - `resultUnknown`은 http가 요청 경로로 판정한다. 쓰기 자체의 network·timeout, 그리고 쓰기의 401이 해당한다.
-- **유휴 마감(`/session/idle`):** `createIdleTimer`를 만들고 `start()`를 부른 앱에서만 동작한다.
-  - 마감은 로그인과 서버 연장(경고 구간 밖 활동의 연장과 경고 구간 안 `extend()`)만 바꾼다. 일반 응답·재발급 성공의 `observe`는 시계만 보정한다. 예외는 로그인 뒤에 보낸 첫 응답의 마감 표본 하나다(로그인 때 로컬 시계로 잡은 임시 마감을 서버 값으로 확정). 또 하나의 예외는 재개가 일시 실패하고 마감이 지난 경우의 경고 시한이다(연장 창 시간 `warningMs`, 연장 버튼으로만 연장 — 아래 멈춤·재개).
-  - 경고 구간 밖에서 문서가 보이고 포커스가 있을 때의 명시적 조작(click·mousedown·keydown·wheel·touchstart·popstate)은 활동 연장 간격마다 서버 연장을 부른다. 간격은 저장된 마지막 연장 시각으로 탭 사이에 공유한다. 경고 구간에서는 조작이 연장하지 않고 `extend()`만 연장한다. `dismiss()`는 연장하지 않고 대기 상태를 만들며, 경고 구간을 벗어나거나 문서가 다시 보이면 풀린다.
-  - 연장 성공은 서버 마감을 채택했고 남은 시간이 경고 구간을 벗어난 경우다. 경고 구간 밖이어도 연장 응답에 마감이 없거나(채택 안 된 표본 포함) 실패하면 `{ ok: false }`(실패가 있으면 `failure`)이고 기존 마감·경고는 유지된다.
-  - 마감 표본은 세션 ID와 함께 저장한다. 다른 세션 ID의 표본, 더 먼저 보낸 요청의 표본, 세대가 바뀐 뒤 도착한 연장 응답은 마감을 바꾸지 않는다.
-  - Web Locks를 쥔 탭 하나가 대표(`leader`)다. 대표 탭이 마감에 세션을 `idle`로 끝내고, 다른 탭은 그 결과를 다른 탭 종료로 받는다. 대표가 아닌 탭은 마감 뒤 5초가 지나도 끝나지 않았을 때만 스스로 끝낸다. 대표 탭이 닫히면 다음 탭이 대표가 된다. Web Locks가 없으면 모든 탭이 대표다.
-  - 연장 요청 중에는 마감이 지나도 그 결과를 본 뒤 판단한다. 경고 UI 열림은 만료를 막지 않는다.
-  - `start()`는 이 세션의 저장 마감이 없거나 지났으면 그 자리에서 `idle`로 끝낸다(라우터를 만들기 전에 부르면 끝난 세션이 화면에 들어가지 않는다).
-  - 상태(`state`·`subscribe`)는 단계가 바뀔 때만 알리고, 남은 시간(`remaining`·`subscribeTick`)은 따로 매초 읽는다.
-  - **멈춤·재개:** `pause()`는 이 탭의 경고·만료를 멈춘다(`state().paused`). 멈춘 동안 단계는 `warning`이 되지 않고, `remaining()`은 null이며, 조작은 연장하지 않고, 이 탭은 대표 자격을 내놓는다. 세션 구독·다른 탭의 마감 수신·`observe`의 시계 보정과 로그인 직후 첫 마감 확정은 계속된다. 경고 중에 멈추면 경고가 사라진다.
-  - `resume()`은 멈춤을 풀며 서버 연장을 한 번 보내고 `extend()`와 같은 결과를 돌려준다. 연장 마감을 채택하면 그 마감으로 이어 간다. 연장이 실패했는데 마감이 아직 남았으면 기존 마감으로 계속한다. 마감이 없거나 이미 지났으면 실패 종류로 나눈다: 서버가 세션을 거절(401 또는 결과 코드 표의 세션 종료 행)하면 이 탭이 그 자리에서 `idle`로 끝내고, 그 밖의 실패(network·timeout·server-error·마감 없는 응답 등)는 로그인을 유지하고, 지금부터 `warningMs` 길이의 시한을 저장 마감으로 두어 평소 `warning` 단계를 보인다. 그 시한 안에는 `extend()`(연장 버튼)만 연장하며, 누르지 않거나 버튼 연장도 실패하면 시한에 `idle`로 끝난다. 키트는 사용자 조작 없이 스스로 연장 요청을 보내지 않는다. 시한은 저장되므로 새로고침·새 탭·다른 탭도 같은 시한의 경고를 이어 받는다. 일반 응답의 마감 표본으로 재개하지 않는다(마감을 바꾸는 것은 로그인과 서버 연장뿐).
-  - 재개 응답을 기다리는 중 다시 `pause()`를 부르면 마지막 요청이 이긴다: 늦게 온 연장 마감은 저장(다른 탭과 공유)되고 이 탭은 멈춘 채로 남는다. 그 사이 다시 `resume()`을 부르면 진행 중인 연장 결과로 재개한다(요청을 더 보내지 않는다).
-  - `start()` 전에 `pause()`를 부르면 `start()`가 지난 저장 마감으로 끝내지 않고 `resume()`의 연장 결과가 판정한다. 세션 종료(`ended`)와 `stop()`은 멈춤을 풀며, 다른 계정 교체(`replaced`)는 멈춤을 유지한다.
-  - 멈춤은 그 탭에만 적용된다. 다른 탭은 평소대로 돌며, 대표가 된 다른 탭이 마감에 세션을 끝내면 멈춘 탭도 다른 탭 종료로 끝난다. 다른 탭의 연장 마감은 멈춘 탭도 받는다.
+- **유휴 마감(`/session/idle`):** `createIdleTimer`를 만들고 `start()`를 부른 앱에서만 동작한다. 타이머는 활동 연장 요청이나 임시 마감을 스스로 만들지 않는다.
+  - `policy`는 `warningMs`와 필수 `pendingAtDeadline: 'wait' | 'expire'`다. `durationMs`·`activityThrottleMs`는 타이머 입력에서 제거됐다. 문구용 세션 길이는 프로젝트가 소유한다.
+  - 로그인·복원·다른 탭 계정 교체에서 이 세션의 마감이 없으면 마감 미정(`deadline: null`, `remaining(): null`, 경고 없음)이다. `start()` 때 저장 마감이 이미 지났으면 그 자리에서 `idle`로 끝낸다. `start()` 전 `pause()`는 그 판정을 재개 결과에 맡긴다.
+  - 일반 응답의 `observe(sample)`는 로그인 전후 모두 시계만 보정한다. 로그인 뒤 첫 표본 자동 채택은 제거됐다. 프로젝트가 고른 응답만 `acceptDeadline(sessionId, sample)`로 넘긴다. 세션 시작 뒤라면 타이머 `start()` 전에도 전달할 수 있다. 로그인 응답을 먼저 받았다면 프로젝트가 세션을 시작한 다음 그 세션 ID로 넘긴다. 세션 ID 없는 마감을 다음 로그인에 예약하지 않는다.
+  - 같은 세션의 서버 마감은 더 늦은 값만 채택한다. 요청 전송 순서가 더 이르더라도 더 긴 마감이면 채택한다. 동일·짧은 서버 마감과 다른 세션 값은 채택하지 않는다. 직접 전달·저장 이벤트·복원에 같은 규칙을 적용한다. 불변 저장 기록을 병합하므로 같은 옛값을 본 탭들의 동시 쓰기에서도 긴 마감은 남고, 그 탭이 닫혀도 새 탭이 복원한다. 기록은 쓰기·시작·저장 변경/매초 확인 때 전체 병합값을 담은 불변 기록을 확보한 뒤 읽었던 키만 정리한다. 순차 실행에서는 현재 세션의 요약 하나로 유지하고, 동시 정리에서 잠시 남은 요약은 다음 확인에서 합친다. 이전 세션 기록·종료 표식은 제거하며 단일 현재 세션 경계로 늦은 옛 쓰기를 차단한다.
+  - 프로젝트가 임시 마감을 허용하면 `setProvisionalDeadline(sessionId, deadline)`로 보정 시계 기준 절대시각을 넣는다. `createServerClock`의 `now()`로 계산한다. 서버 마감이 있으면 임시 마감을 넣지 않으며, 처음 명시 전달한 서버 마감이 임시 마감보다 짧아도 그 서버 값으로 대체한다. 로컬 임시·유예는 서버 승인으로 취급하지 않는다(`deadlineSource`로 구분).
+  - 서버 시계는 같은 `ServerClock`을 인증 단계와 공유할 수 있다. 표본 `sentAt` 순서로 오래된 보정을 배제하며 다른 탭 보정도 읽는다. 시계는 세션 없이도 관측·구독·저장 이벤트 때 읽었던 과거 표본을 정리해, 순차 실행 뒤 최신 불변 표본 하나만 남긴다. 동시 쓰기의 새 표본은 읽었던 삭제 목록에 없으며 다음 관측에서 같은 최신 값으로 수렴한다. 페이지 재로드마다 writer 키를 누적 보유하지 않는다. 시계와 마감을 함께 전달하면 중간 보정만으로 종료하지 않는다.
+  - `extend()`는 탭 안에서 한 요청으로 합류한다. 결과는 `kind: 'failed'`(요청 실패, `failure` 포함), `'no-deadline'`(응답에 유효한 서버 마감 없음), `'earlier-deadline'`(현재 서버 마감보다 이른 응답이며 기존 마감 유지), `'adopted-warning'`(서버 마감을 채택·확인했지만 경고 해소 안 됨), `'adopted-active'`(서버 마감을 채택·확인하고 경고 해소)다. 동일 마감 재응답은 저장값을 바꾸지 않아도 채택·확인 결과이며, 더 늦은 마감과 마찬가지로 남은 시간에 따라 `adopted-warning` 또는 `adopted-active`다. `resume()`도 같은 서버 응답 분류를 돌려준다. 화면에서 무엇을 성공으로 보여 줄지는 프로젝트가 정한다.
+  - `pendingAtDeadline: 'wait'`는 **판정하는 탭 자신의** 진행 중 연장만 기다린다. 프로젝트는 연장 요청에 timeout을 설정해 기다림의 상한을 정해야 한다. `'expire'`는 자기 요청 진행 중이어도 정상 만료를 적용한다. 다른 탭의 정상 만료·비대표 5초 복구 종료가 먼저 일어날 수 있다. 종료·세대 교체·stop 뒤 늦은 성공은 세션이나 마감을 되살리지 않는다.
+  - Web Locks를 쥔 탭 하나가 대표(`leader`)다. 대표는 마감에 끝내고, **마감 뒤에도 세션이 유지되는 비대표 탭**은 5초 뒤 스스로 끝낸다(자기 요청을 기다리는 탭은 위 선택을 따른다). 대표가 닫히면 다음 대기 탭이 이어받는다. Web Locks가 없으면 모든 탭이 대표이며 탭 간 단일성을 확대 보장하지 않는다. Worker 1초 tick, 부재 때 setInterval 대체는 유지한다.
+  - `state`·`subscribe`는 상태 변화만, `remaining`·`subscribeTick`은 매초 표시를 따로 제공한다. `dismiss()`·`dismissed`와 재노출 규칙은 제거됐다. UI는 `phase`·`leader`·`visible`·`sessionId`를 보고 자기 닫음 상태를 관리한다. 경고를 대표에게만 띄울지도 화면이 정한다.
+  - **멈춤·재개:** `pause()`는 탭 단위 경고·만료를 멈추고 대표를 반납한다. `remaining()`은 null이며 단계는 warning이 되지 않는다. 세션·저장·시계 구독은 유지된다. `resume({ graceMs? })`는 서버 확인을 동반하는 선택 기능이며 한 번의 연장 결과를 돌려준다. 진행 중 다시 부르면 합류한다. 그 사이 `pause()`가 오면 받은 서버 마감은 저장하되 멈춤을 유지한다. 다시 resume하면 그 결과로 재개한다.
+  - 재개 완료 때 마감이 없거나 지났고 서버가 거절했다면(기존 재발급 기준: 401 또는 종료 행) 그 탭이 끝낸다. 일시 실패·마감 없는 응답에는 프로젝트가 `graceMs`를 준 경우만 **실패 확정 시점의 보정 시계부터** 한 번 적용한다. 미지정이면 지난 마감은 일반 만료로 처리하고 무마감은 미정으로 남는다. 취소·세대 변경·다시 pause·stop에는 유예를 적용하지 않는다. 다른 탭이 끝낸 세션을 살리거나 다른 탭의 새 유효 서버 마감을 덮지 않는다. 유예 뒤 더 늦은 서버 마감이 오면 그 서버 값으로 대체한다. 유예는 저장돼 새로고침·다른 탭도 같은 시한을 쓴다.
+  - 세션 종료와 stop은 멈춤을 풀고, 계정 교체는 멈춤을 유지한다. 멈춘 탭도 다른 탭의 세션 종료를 받는다.
+- **선택 활동 부품(`/session/activity`):** `attachSessionActivity({ idle, intervalMs, events? })`는 부착 즉시 이벤트를 듣고 해제 함수를 돌려준다. 기본 이벤트는 click·mousedown·keydown·wheel·touchstart·popstate다. 문서가 보이고 포커스가 있으며 경고 밖·멈춤 아님·마감 있음일 때만 연장한다. 로컬 재개 유예 중에는 활동 연장을 하지 않는다. 미부착이면 조작으로 요청하지 않는다.
+  - 간격은 **마지막 연장 시도 시각**(`idle.lastAttemptAt()`) 기준이다. 성공·실패·재개·직접 연장을 모두 포함하고 세션에 묶어 공유한다. 다른 탭이 이미 기록한 시도 뒤의 간격을 지킨다. 두 탭이 동시에 판단할 때 탭 전체 정확히 한 요청은 보장하지 않는다. 그 밖의 계기는 프로젝트가 `extend()`를 부른다.
 - **query:** 조회 자동 재시도는 network·timeout·server-error만 대상이고 횟수는 프로젝트가 정한다. 쓰기는 자동 재시도하지 않는다. 조회·쓰기의 최종 실패는 출처(`query`/`mutation`)와 함께 취소를 빼고 한 번 `notify`된다. 이전 세션의 쓰기는 알리지 않는다. 세션이 바뀌면 진행 중 조회를 중단하고 캐시 전체를 비운다. 이전 세션의 쓰기는 무효화를 일으키지 않는다. 서버에서 이미 실행된 쓰기를 취소한다고 보장하지는 않는다.
 
 ## 프로젝트 연결
 
-유휴 타이머는 starter 실제 예 없음(검사하지 않음). [session-idle.test.ts](../../references/packages/web-kit/tests/session-idle.test.ts.txt)가 키트의 시간·대표 탭·종료 보장 검사이며 소비처 연결 검사를 대신하지 않는다.
+소비 검사 연결은 [starter의 세션 연결](../../references/apps/starter/src/app/session-idle.ts.txt), [경고 UI](../../references/apps/starter/src/app/SessionWarning.tsx.txt), [소비 검사](../../references/apps/starter/src/app/session-idle.test.tsx.txt)에 있다. 실제 운영 서버의 경로·헤더 정책을 정하지 않는 격리 fixture이며 starter 기본 화면에는 유휴 정책을 켜지 않는다. [시간·탭 순서 검사](../../references/packages/web-kit/tests/session-policy.test.ts.txt)와 [기존 수명 검사](../../references/packages/web-kit/tests/session-idle.test.ts.txt)는 실제 소비 프로젝트의 연결 검사를 대신하지 않는다.
 
 실제 조립 예: [apps/starter/src/app/web-kit.ts](../../references/apps/starter/src/app/web-kit.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
@@ -72,7 +74,8 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
 - `prepare`: 언어·메뉴 같은 운영 헤더.
 - 서버 로그아웃은 `createSession({ signOut })`에 넘긴다. 받은 자격증명의 토큰을 헤더에 직접 실어 공개 요청으로 보낸다. 로그아웃 버튼은 `session.end()`만 부른다. 그 뒤 로그인 이동은 앱 안 이동(router navigate)으로 한다. `window.location`으로 문서를 다시 읽으면 브라우저가 진행 중인 `signOut` 요청을 끊어 서버 세션이 남는다.
 - `session.subscribe`의 `ended`에서 로그인 이동·안내를 한다. `by`로 이 탭의 로그아웃(local), 다른 탭(other-tab), 서버 인증 계약(server)을 구별한다. 토큰 저장 위치는 프로젝트 정책이다.
-- 유휴 마감을 쓰면 `createIdleTimer({ session, key, policy, extend })`를 같은 진입점에서 만들고, 앱 시작 때 라우터보다 먼저 `start()`를 부른다. 프로젝트가 정하는 것: 시간 정책(`durationMs`·`warningMs`·`activityThrottleMs`), 저장 key, 서버 연장 호출(그 응답의 서버 시각 표본을 돌려준다), `observe`에서 응답 헤더를 `ServerTimeSample`(보낸 시각·서버 마감·시계 차이)로 바꾸는 일, 경고 디자인(팝업·모달·알림·제목)과 `ended`의 `idle` 안내, 연장 실패 안내, 유휴 마감을 적용하지 않을 화면과 그 화면에 들어올 때 `pause()`·나갈 때 `resume()`을 부르는 위치. 대표 탭(`leader`)만 경고를 띄운다.
+- 유휴 마감은 프로젝트의 세션 시작과 명시 마감 전달을 같은 연결에서 조립한다. 어떤 응답의 마감을 받을지·임시 마감 계기·경고 길이·0초 선택·재개 유예 길이·활동 부품 부착과 화면 닫음 상태는 프로젝트가 정한다. 서버 형식은 `ServerTimeSample`로 해석해 넘긴다.
+- 자기 연장 응답 메타가 필요하면 `http.requestWithResponse<T>()`를 쓴다. `{ data, sentAt, response: { status, header } }`는 최종 성공 전송 하나에 묶인다(동시 요청·재전송에도 다른 응답과 섞이지 않음). `requestData`·`request`의 기존 반환값은 유지한다.
 - 연결 상태 표시·서버 시각 동기화 같은 관찰은 `observe`로 받는다. 재전송·재발급을 포함한 전송 시도마다 한 번 오고, 응답이 없으면 `response`가 없다.
 - orval mutator는 `http.request` 하나로 둔다.
 - 요청 query는 `/api`에서 서버 계약에 맞는 것을 고른다. `serializeSpringParams`는 재귀 객체용이고, `serializeFlatListParams`는 한 단계 깊이의 목록용이다(중첩은 TypeError). 둘 다 null·undefined는 빼고 빈 문자열·0·false는 보존한다.
@@ -97,14 +100,22 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 
 실제 조립 예: [apps/starter/src/features/auth/api/auth.ts](../../references/apps/starter/src/features/auth/api/auth.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-E1(401이 업무 실행 전인가), E2(일반·재발급 요청의 status·resultCode 의미), E3(동시 재발급, 이전 refresh 토큰 재사용, 늦은 응답의 쿠키 변경)는 설치된 web-kit 패키지의 결정 기록 0001(web-kit 1.0 구조와 수명 계약)이 기준이다. 확인되기 전까지 해당 부분은 보류한다.
+E1(401이 업무 실행 전인가), E2(일반·재발급 요청의 status·resultCode 의미), E3(동시 재발급, 이전 refresh 토큰 재사용, 늦은 응답의 쿠키 변경)는 설치된 web-kit 패키지의 [결정 기록 0003의 미확인 외부 계약](../../references/docs/decisions/0003-request-response-failure.md#미확인-외부-계약)이 기준이다. 확인되기 전까지 해당 부분은 보류한다.
 
 ## 프로젝트별 응답 계약
 
 실제 조립 예: [apps/starter/src/app/web-kit.ts](../../references/apps/starter/src/app/web-kit.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-`createHttp({ response: { read(body, status, requestId) } })`로 서버 형식·성공 판정·코드 의미를 프로젝트가 해석한다. 결과는 `{ ok: true, data }` 또는 `{ ok: false, failure: RequestFailure }`다. HTTP 거절은 성공으로 바꿀 수 없다. 네트워크·취소·타임아웃과 세션 회복은 키트가 맡는다. 같은 코드의 메시지 키도 프로젝트마다 다를 수 있으며 번역 문구는 키트에 넣지 않는다.
+`createHttp`의 `response`는 필수다. `response: { read(body, status, requestId) }`로 서버 형식·성공 판정·코드 의미를 프로젝트가 해석한다. 결과는 `{ ok: true, data }` 또는 `{ ok: false, failure: RequestFailure }`다. HTTP 거절은 성공으로 바꿀 수 없다. 네트워크·취소·타임아웃과 세션 회복은 키트가 맡는다. 같은 코드의 메시지 키도 프로젝트마다 다를 수 있으며 번역 문구는 키트에 넣지 않는다.
 
-기존 응답 봉투를 쓰는 소비자는 `readEnvelope`·`toRequestFailure`를 자기 계약 함수 안에서 사용할 수 있다. `response` 생략 시 기존 동작을 유지한다. 실제 데이터 타입을 넘기면 `http.requestData<T>`를 쓴다. 기존 생성 봉투 타입을 푸는 `http.request<T>`는 호환용으로 유지한다.
+Spring 봉투 서버는 `/http`의 `springEnvelope(results)`를 `response`에 전달한다. 이 선택 부품은 2xx에서 `header.resultCode` 200만 성공으로 보고 `data`를 풀며, 봉투가 아니면 contract로 거절한다. 다른 resultCode는 business로 분류하고, 2xx 밖 응답도 `(status, code)` 결과 코드 표의 종류·messageKey·endsSession을 적용한다. 표에 없는 실패는 HTTP 상태로 분류한다. `readEnvelope`·`toRequestFailure`는 이 부품의 낮은 수준 해석 도우미다.
+
+요청은 실제 데이터 타입을 넘기는 `http.requestData<T>` 또는 메타도 받는 `requestWithResponse<T>`를 쓴다. 생성된 Spring 봉투 타입을 받는 orval mutator는 같은 `/http` 입구의 `SpringEnvelopeData<T>`로 타입을 고른 뒤 `http.requestData<SpringEnvelopeData<T>>(config, options)`로 연결한다. `Http.request`와 `Unwrapped`는 제거됐다. 일반 데이터의 `data` 속성은 `requestData`가 그대로 보존한다.
 
 사용자 정의 `response.read`는 성공 값 또는 `RequestFailure`를 반환한다. 응답 형식이 잘못되어도 실패 값을 반환하며 예외를 던지지 않는다. 키트는 반환된 실패의 상태 코드와 요청 식별자를 실제 HTTP 응답 값으로 맞추므로 응답 본문이 재발급 여부를 바꿀 수 없다.
+
+## 기존 소비자 이전
+
+요청과 마감 전달 연결은 [starter 세션 예제](../../references/apps/starter/src/app/session-idle.ts.txt)를 참고한다. 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다. 예제는 격리 소비 검사다.
+
+프로젝트의 기존 정책 값은 그 프로젝트 문서에서 확인해 연결한다. 전역 최신 표본 변수를 쓰던 연결은 `requestWithResponse`로 교체한다. 탭 전체 동시 요청 수의 엄격한 제한과 다른 탭 종료 동안의 연장 대기는 보장을 확대하지 않는다. 저장 불가·Web Locks/Worker 부재 환경도 실제 적용 환경에서 확인한다.

@@ -1,7 +1,7 @@
 // 검사 전용 여섯 칸 복사본으로, 같은 인증 동작을 독립된 입력 모양에 연결한다.
 import { useId, useState } from 'react';
 import { isAuthCode } from '@boosterlab/web-kit/auth';
-import type { AuthConformanceFormProps as AuthCodeFormProps } from '@boosterlab/web-kit/testing/fixtures';
+import type { AuthConformanceFormProps as AuthCodeFormProps } from '@boosterlab/web-kit/testing/fixtures/auth';
 
 /** 기한 판정과 제출은 패키지 모델에 연결하고, 입력 모양·문구는 복사본이 맡는다. */
 export function SixDigitAuthCodeForm({ model, codeLength, labels }: AuthCodeFormProps) {

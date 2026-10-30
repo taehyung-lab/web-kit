@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // 파일 책임: useList의 검색 확정·조회·이전 결과·조회 보류·선택지 확인·선택·일괄 작업을 관찰 결과로 검사한다.
-import { act, cleanup, render, screen, fireEvent } from '@testing-library/react';
+import { act, cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, queryOptions, useQuery } from '@tanstack/react-query';
 import { StrictMode, useState, type ReactNode } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
@@ -373,11 +373,11 @@ it('L13 검색 변경 뒤 같은 ID가 다시 나와도 선택을 비우고 일�
   fireEvent.click(screen.getByRole('button', { name: '전체 선택' }));
   expect(screen.getByLabelText('선택 수').textContent).toBe('2');
   expect((screen.getByLabelText('행 locked') as HTMLInputElement).checked).toBe(false);
-  // 같은 조건의 재조회에서는 남은 행의 선택이 유지된다.
+  // 사용자 검색은 같은 조건이어도 새 선택 수명을 시작한다.
   fireEvent.click(screen.getByRole('button', { name: '검색' }));
   await flush();
-  expect(screen.getByLabelText('선택 수').textContent).toBe('1');
-  expect((screen.getByLabelText('행 2') as HTMLInputElement).checked).toBe(true);
+  expect(screen.getByLabelText('선택 수').textContent).toBe('0');
+  expect((screen.getByLabelText('행 2') as HTMLInputElement).checked).toBe(false);
   fireEvent.change(screen.getByLabelText('검색어'), { target: { value: 'other' } });
   fireEvent.click(screen.getByRole('button', { name: '검색' }));
   await flush();
@@ -733,13 +733,17 @@ it('L34 늦게 도착한 이전 조건 응답은 현재 결과·선택·상태�
 });
 
 /** 키워드·기간 필드를 가진 목록. 입력 중 키워드와 기간 선언을 검사한다. */
-function KeywordHarness(props: { onSearch: (search: unknown) => void }) {
+function KeywordHarness(props: { onSearch: (search: unknown) => void; delayed?: boolean }) {
   const definition = keywordDefinition;
   const [search, setSearch] = useState(() => definition.validateSearch({}));
   keywordLatest = useList({
     definition,
     search,
-    navigate: (next) => setSearch(definition.validateSearch(next as Record<string, unknown>)),
+    navigate: (next) => {
+      const apply = () => setSearch(definition.validateSearch(next as Record<string, unknown>));
+      if (props.delayed) setTimeout(apply, 0);
+      else apply();
+    },
     query: (full) => ({
       queryKey: ['kw', full],
       queryFn: async () => {
@@ -763,18 +767,18 @@ const keywordDefinition = defineSearch({
   },
 });
 let keywordLatest!: ReturnType<typeof useList<(typeof keywordDefinition)['fields'], Row>>;
-function mountKeywords() {
+function mountKeywords(delayed = false) {
   const searches: unknown[] = [];
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
-      <KeywordHarness onSearch={(search) => searches.push(search)} />
+      <KeywordHarness delayed={delayed} onSearch={(search) => searches.push(search)} />
     </QueryClientProvider>,
   );
   return searches;
 }
 
-it('L35 입력 중 키워드는 페이지 이동에는 남고 필터 교체에는 지워지며, 추가하지 않아도 검색이 합친다', async () => {
+it('L35 입력 중 키워드는 페이지 이동에는 남고 필터 교체에는 지워지며, 추가하지 않은 글자는 검색에서 제외한다', async () => {
   const searches = mountKeywords();
   await act(async () => {});
   act(() => keywordLatest.keywordInput('words', ['name', 'phone']).setChoice('phone'));
@@ -784,8 +788,8 @@ it('L35 입력 중 키워드는 페이지 이동에는 남고 필터 교체에�
   act(() => keywordLatest.patchDraft({ q: 'x' }));
   act(() => keywordLatest.submit());
   await act(async () => {});
-  expect(searches.at(-1)).toMatchObject({ words: [{ field: 'phone', value: '010' }], q: 'x', page: 1 });
-  expect(keywordLatest.keywordInput('words', ['name', 'phone']).text).toBe('');
+  expect(searches.at(-1)).toMatchObject({ words: [], q: 'x', page: 1 });
+  expect(keywordLatest.keywordInput('words', ['name', 'phone']).text).toBe(' 010 ');
   act(() => keywordLatest.keywordInput('words', ['name']).setText('typed'));
   act(() => keywordLatest.reset());
   expect(keywordLatest.keywordInput('words', ['name']).text).toBe('');
@@ -859,4 +863,96 @@ it('초안 키가 다른 codec에서도 하위만 정리하고 다른 입력은 
   render(<QueryClientProvider client={client}><Mapped /></QueryClientProvider>);
   act(() => mapped.patchDraft({ note: 'keep me', parent: 'B' }));
   expect(mapped.draft).toEqual({parent:'B', childValue:'', note:'keep me'});
+});
+
+// 사용자 실행과 자동 재조회를 같은 URL에서 구별한다.
+it('S1 같은 조건 검색은 응답까지 run·체크를 막고 실패 뒤 다시 허용한다', async () => {
+  const pending = deferred<ListPage<Row>>();
+  const fetchRows = vi.fn().mockResolvedValueOnce(page('1', '2')).mockReturnValueOnce(pending.promise);
+  mount({ definition: makeDefinition(), initial: {}, fetchRows });
+  await flush();
+  act(() => latest.selection.toggleRow('1', true));
+  act(() => latest.submit());
+  expect(latest.rows.map(row => row.id)).toEqual(['1', '2']);
+  expect(latest.isCurrent).toBe(false);
+  act(() => latest.selection.togglePage(true));
+  const run = vi.fn(async () => ({ completedIds: [] }));
+  await act(async () => { await latest.selection.run(run); });
+  expect(run).not.toHaveBeenCalled();
+  await act(async () => pending.reject(Error('search failed')));
+  await flush();
+  expect(latest.isCurrent).toBe(true);
+  expect(latest.failure).toEqual(Error('search failed'));
+  act(() => latest.selection.toggleRow('1', true));
+  await act(async () => { await latest.selection.run(run); });
+  expect(run).toHaveBeenCalledWith(['1']);
+});
+it('S2 배경 재조회는 남은 행 선택을 유지하고 사라진 행만 뺀다', async () => {
+  const pending = deferred<ListPage<Row>>();
+  mount({ definition: makeDefinition(), initial: {}, fetchRows: vi.fn().mockResolvedValueOnce(page('1', '2')).mockReturnValueOnce(pending.promise) });
+  await flush();
+  act(() => latest.selection.togglePage(true));
+  act(() => { void client.invalidateQueries(); });
+  await flush();
+  expect(latest.isCurrent).toBe(true);
+  expect(latest.selection.selectedIds).toEqual(['1', '2']);
+  await act(async () => pending.resolve(page('2')));
+  await flush();
+  expect(latest.selection.selectedIds).toEqual(['2']);
+});
+it('S2 같은 조건 검색 뒤 이전 run의 completedIds는 새 선택을 지우지 않는다', async () => {
+  mount({ definition: makeDefinition(), initial: {}, fetchRows: async () => page('1', '2') });
+  await flush();
+  act(() => latest.selection.toggleRow('1', true));
+  const pending = deferred<{ completedIds: string[] }>();
+  act(() => { void latest.selection.run(() => pending.promise); });
+  act(() => latest.submit());
+  await flush();
+  act(() => latest.selection.toggleRow('1', true));
+  expect(latest.selection.selectedIds).toEqual(['1']);
+  await act(async () => pending.resolve({ completedIds: ['1'] }));
+  expect(latest.selection.selectedIds).toEqual(['1']);
+});
+
+it('S1 선택지 확인이 검색 URL을 복구한 뒤에도 응답을 받으면 잠금을 푼다', async () => {
+  const fetchRows = vi.fn(async () => page('1'));
+  mount({ definition: makeDefinition({ check: optionsCheck(async () => ['A']) }), initial: {}, fetchRows });
+  await flush();
+  act(() => latest.patchDraft({ code: 'gone' }));
+  act(() => latest.submit());
+  await flush();
+  await flush();
+  expect(latest.search.code).toBe('');
+  expect(fetchRows).toHaveBeenCalled();
+  expect(latest.isCurrent).toBe(true);
+});
+
+it('K1 필수 검색어는 추가 전에는 막히며 같은 이벤트의 추가·검색은 최신 칩을 요청한다', async () => {
+  const definition = defineSearch({ fields: { ...keywordDefinition.fields, words: { ...keywordDefinition.fields.words, required: { message: '검색어 추가 필요' } } } });
+  let current!: ReturnType<typeof useList<typeof definition.fields, Row>>;
+  const fetch = vi.fn(async (_full: unknown) => page('1'));
+  /** 칩을 직접 추가하는 소비자의 이벤트 연결을 재현한다. */
+  function RequiredWords() {
+    const [url, setUrl] = useState({});
+    current = useList({ definition, search: url, navigate: setUrl, query: (full) => ({ queryKey: ['required-words', full], queryFn: () => fetch(full) }), rowId: (row) => row.id });
+    return null;
+  }
+  const client = new QueryClient();
+  render(<QueryClientProvider client={client}><RequiredWords /></QueryClientProvider>);
+  act(() => current.keywordInput('words', ['name']).setText('pending'));
+  expect(current.blockedReason).toBe('검색어 추가 필요');
+  act(() => current.submit());
+  expect(fetch).not.toHaveBeenCalled();
+  act(() => { current.keywordInput('words', ['name']).addMany(['a', 'b', 'a']); current.submit(); });
+  await act(async () => {});
+  expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ words: [{ field: 'name', value: 'a' }, { field: 'name', value: 'b' }] }));
+});
+
+it('K1 Router처럼 URL 반영이 늦어도 검색 뒤 입력 중 글자를 유지한다', async () => {
+  const searches = mountKeywords(true);
+  await act(async () => {});
+  act(() => keywordLatest.keywordInput('words', ['name']).setText('pending'));
+  act(() => { keywordLatest.patchDraft({ q: 'next' }); keywordLatest.submit(); });
+  await waitFor(() => expect(searches.at(-1)).toMatchObject({ q: 'next' }));
+  expect(keywordLatest.keywordInput('words', ['name']).text).toBe('pending');
 });

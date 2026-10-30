@@ -77,6 +77,8 @@ test('새 프로젝트는 고정 버전·스킬 링크·CI를 갖고 로컬 비�
   assert.doesNotMatch(readFileSync(join(destination, 'package.json'), 'utf8'), /strict-fingerprints/);
   assert.match(readFileSync(join(starter, 'package.json'), 'utf8'), /strict-fingerprints/);
   assert.match(readFileSync(join(destination, 'components.json'), 'utf8'), /v0.0.0-test/);
+  const record = JSON.parse(readFileSync(join(destination, 'registry-installation.json'), 'utf8'));
+  assert.equal(record.componentsHash, createHash('sha256').update(readFileSync(join(destination, 'components.json'))).digest('hex'));
   assert.match(result.stdout, /후보 버전/);
 }));
 

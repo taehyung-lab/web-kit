@@ -1,5 +1,6 @@
 /** 기본 필드의 이름·값 종류를 컴파일 단계에서 검사한다. */
 import { Form } from '../../ui-registry/src/form/ui';
+import type { ConditionalField } from '../src/form';
 /** 타입 검사 전용 소비 예이며 런타임에서 호출하지 않는다. */
 export function checkFields() {
   const F = Form.of<{ title: string; enabled: boolean; count: number }>();
@@ -29,3 +30,10 @@ const wrongSingleChoice = <ChoiceForm.Choice name="many" label="다중" nodes={c
 // @ts-expect-error 문자열 필드에 배열 값을 넣지 않는다.
 const wrongMultipleChoice = <ChoiceForm.Choice name="single" label="단일" nodes={choiceNodes} multiple />;
 void [singleChoice, multipleChoice, wrongSingleChoice, wrongMultipleChoice];
+
+const conditional: ConditionalField<{ detail: string; amount: number }> = { field: 'detail', visible: true, emptyValue: '' };
+// @ts-expect-error 빈 값은 선언한 칸의 값 타입을 따른다.
+const wrongEmpty: ConditionalField<{ detail: string; amount: number }> = { field: 'amount', visible: false, emptyValue: '' };
+// @ts-expect-error 존재하지 않는 칸은 선언할 수 없다.
+const wrongConditional: ConditionalField<{ detail: string }> = { field: 'missing', visible: false, emptyValue: '' };
+void [conditional, wrongEmpty, wrongConditional];

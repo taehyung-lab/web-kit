@@ -53,7 +53,17 @@ export const handlers = [
     if (!parsed.success) return envelope(400, 4000, 'Invalid values', null);
     if (parsed.data.selected !== '' && !parsed.data.items.some((item) => item.id === parsed.data.selected))
       return envelope(400, 4000, 'Invalid reference', null);
-    return ok({ saved: parsed.data });
+    const saved = { saved: parsed.data, id: `w-${mockDb.workflows.length + 1}` };
+    mockDb.workflows.push(saved);
+    return ok(saved);
+  }),
+  // 저장 수명과 분리한 후속 조회: 실패해도 앞선 저장은 그대로 남는다.
+  http.get(`${API}/form-workflows/:id`, async ({ request, params }) => {
+    const denied = unauthorized(request);
+    if (denied) return denied;
+    await latency();
+    const saved = mockDb.workflows.find((workflow) => workflow.id === params.id);
+    return saved === undefined ? envelope(404, 4040, 'Not found', null) : ok(saved);
   }),
   // 공연 예시: 파일 업로드(multipart) → 파일 id.
   http.post(`${API}/files`, async ({ request }) => {

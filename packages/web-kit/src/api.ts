@@ -4,7 +4,7 @@ type Primitive = string | number | boolean;
 function isPrimitive(value: unknown): value is Primitive {
   return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
 }
-/** 중첩 객체와 배열을 Spring 경로로 펼친다. 기존 DT의 미지원 값 생략을 보존한다. */
+/** 중첩 객체와 배열을 Spring 경로로 펼치며 지원하지 않는 값은 생략한다. */
 function append(query: URLSearchParams, key: string, value: unknown): void {
   if (value === undefined || value === null) return;
   if (isPrimitive(value)) { query.append(key, String(value)); return; }

@@ -34,11 +34,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24.19.0
+      - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: node scripts/sync-starter.mjs --frozen
       - run: pnpm exec playwright install --with-deps chromium
         working-directory: apps/starter
       # starter:check는 단위·브라우저 적합성 결과와 복사본 지문 점검을 필수 실행한다.
       - run: pnpm starter:check
+      # 전체 starter의 peer 설치가 가리지 않는 실제 선택 소비도 같은 후보로 실행한다.
+      - run: pnpm consumer:minimal --report-dir work/form-flexibility/minimal-consumption
       - name: 검증한 commit과 산출물 기록
         run: node scripts/write-verification.mjs packages/web-kit dist
       - uses: actions/upload-artifact@v4

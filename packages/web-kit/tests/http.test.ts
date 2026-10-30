@@ -1,8 +1,8 @@
 // 파일 책임: http 요청 처리(헤더·봉투·실패 변환·401 재발급 뒤 한 번 재전송·세대·반영 여부)를 axios adapter로 검사한다.
 import { AxiosError, AxiosHeaders, type AxiosAdapter, type InternalAxiosRequestConfig } from 'axios';
 import { afterEach, beforeEach, expect, expectTypeOf, it, vi } from 'vitest';
-import { createResultCodeTable, RequestFailure } from '../src/failure';
-import { createHttp, type ResponseContract } from '../src/http';
+import { createResultCodeTable, readEnvelope, RequestFailure } from '../src/failure';
+import { createHttp, springEnvelope, type SpringEnvelopeData, type Http, type ResponseContract } from '../src/http';
 import { createSession, type SessionStore, type StoredSession } from '../src/session';
 
 interface Credentials {
@@ -63,13 +63,12 @@ function fail(status: number, resultCode?: number) {
 }
 
 let reissue: ReturnType<typeof vi.fn<(credentials: Credentials) => Promise<Credentials>>>;
-function setup(response?: ResponseContract) {
+function setup(response: ResponseContract = springEnvelope(table)) {
   reissue = vi.fn(async (_credentials: Credentials) => ({ accessToken: 't2' }));
   const session = createSession<Credentials>({ store: store(), reissue: (c) => reissue(c) });
   session.start({ accessToken: 't1' });
   const http = createHttp({
     session,
-    results: table,
     response,
     isPublic: (config) => config.url?.startsWith('/auth/') === true,
     prepare: (headers) => headers.set('Accept-Language', 'ko'),
@@ -88,8 +87,8 @@ afterEach(() => vi.unstubAllGlobals());
 it('H1 봉투를 풀고 세션 토큰과 프로젝트 헤더를 싣는다. JSON이 아니면 그대로 돌려준다', async () => {
   const { http } = setup();
   replies = [ok({ id: 1 }), { status: 200, data: 'bytes', contentType: 'application/octet-stream' }];
-  await expect(http.request({ url: '/items' })).resolves.toEqual({ id: 1 });
-  await expect(http.request({ url: '/file' })).resolves.toBe('bytes');
+  await expect(http.requestData({ url: '/items' })).resolves.toEqual({ id: 1 });
+  await expect(http.requestData({ url: '/file' })).resolves.toBe('bytes');
   expect(sent[0]).toMatchObject({ authorization: 'Bearer t1', locale: 'ko' });
 });
 
@@ -101,26 +100,26 @@ it('H1b 파일로 받는 요청도 JSON 실패 응답은 resultCode로 해석한
     { status: 200, data: json({ header: { resultCode: 2100 } }) },
     { status: 200, data: new Blob(['xlsx']), contentType: 'application/octet-stream' },
   ];
-  await expect(http.request({ url: '/file', method: 'post', responseType: 'blob' })).rejects.toMatchObject({ status: 500, code: '2100' });
-  await expect(http.request({ url: '/file', method: 'post', responseType: 'blob' })).rejects.toMatchObject({
+  await expect(http.requestData({ url: '/file', method: 'post', responseType: 'blob' })).rejects.toMatchObject({ status: 500, code: '2100' });
+  await expect(http.requestData({ url: '/file', method: 'post', responseType: 'blob' })).rejects.toMatchObject({
     kind: 'business',
     messageKey: 'notExist',
   });
-  await expect(http.request({ url: '/file', method: 'post', responseType: 'blob' })).resolves.toBeInstanceOf(Blob);
+  await expect(http.requestData({ url: '/file', method: 'post', responseType: 'blob' })).resolves.toBeInstanceOf(Blob);
 });
 
 it('H2 HTTP 200 업무 실패는 business로 던지고, 세션 종료 행이면 세션을 끝내고 취소로 끝난다', async () => {
   const { http, session } = setup();
   replies = [ok(null, 2100), ok(null, 4999)];
-  await expect(http.request({ url: '/items' })).rejects.toMatchObject({ kind: 'business', messageKey: 'notExist' });
-  await expect(http.request({ url: '/items' })).rejects.toMatchObject({ kind: 'cancelled' });
+  await expect(http.requestData({ url: '/items' })).rejects.toMatchObject({ kind: 'business', messageKey: 'notExist' });
+  await expect(http.requestData({ url: '/items' })).rejects.toMatchObject({ kind: 'cancelled' });
   expect(session.current()).toBeNull();
 });
 
 it('H3 조회의 401은 재발급 뒤 새 토큰으로 한 번 재전송한다', async () => {
   const { http } = setup();
   replies = [fail(401, 4002), ok('done')];
-  await expect(http.request({ url: '/items' })).resolves.toBe('done');
+  await expect(http.requestData({ url: '/items' })).resolves.toBe('done');
   expect(reissue).toHaveBeenCalledTimes(1);
   expect(sent.map((request) => request.authorization)).toEqual(['Bearer t1', 'Bearer t2']);
 });
@@ -128,19 +127,19 @@ it('H3 조회의 401은 재발급 뒤 새 토큰으로 한 번 재전송한다',
 it('H4 재전송 뒤 401은 재발급하지 않고, 세션 종료는 결과 코드 표로만 판정한다', async () => {
   const { http, session } = setup();
   replies = [fail(401, 4002), fail(401, 4002)];
-  await expect(http.request({ url: '/items' })).rejects.toMatchObject({ kind: 'unauthorized', status: 401 });
+  await expect(http.requestData({ url: '/items' })).rejects.toMatchObject({ kind: 'unauthorized', status: 401 });
   expect(reissue).toHaveBeenCalledTimes(1);
   expect(session.current()).not.toBeNull();
 
   replies = [fail(401, 4002), fail(401, 4000)];
-  await expect(http.request({ url: '/items' })).rejects.toMatchObject({ kind: 'cancelled' });
+  await expect(http.requestData({ url: '/items' })).rejects.toMatchObject({ kind: 'cancelled' });
   expect(session.current()).toBeNull();
 });
 
 it('H5 세션 종료 행의 첫 401은 재발급 없이 세션을 끝내고 취소로 끝난다', async () => {
   const { http, session } = setup();
   replies = [fail(401, 4000)];
-  await expect(http.request({ url: '/items' })).rejects.toMatchObject({ kind: 'cancelled' });
+  await expect(http.requestData({ url: '/items' })).rejects.toMatchObject({ kind: 'cancelled' });
   expect(reissue).not.toHaveBeenCalled();
   expect(session.current()).toBeNull();
 });
@@ -148,7 +147,7 @@ it('H5 세션 종료 행의 첫 401은 재발급 없이 세션을 끝내고 취�
 it('H6 쓰기의 401은 재전송하지 않고(E1 확인 전) 원 실패를 반영 여부 미확정으로 돌려준다', async () => {
   const { http } = setup();
   replies = [fail(401, 4002)];
-  const error = await http.request({ url: '/items', method: 'POST' }).catch((reason: unknown) => reason);
+  const error = await http.requestData({ url: '/items', method: 'POST' }).catch((reason: unknown) => reason);
   expect(error).toMatchObject({ kind: 'unauthorized', resultUnknown: true });
   expect(reissue).toHaveBeenCalledTimes(1);
   expect(sent).toHaveLength(1);
@@ -158,7 +157,7 @@ it('H7 쓰기 401 뒤 재발급이 timeout이어도 실패 종류로 반영 여�
   const { http, session } = setup();
   reissue.mockRejectedValueOnce(new RequestFailure({ kind: 'timeout' }));
   replies = [fail(401, 4002)];
-  const error = await http.request({ url: '/items', method: 'PUT' }).catch((reason: unknown) => reason);
+  const error = await http.requestData({ url: '/items', method: 'PUT' }).catch((reason: unknown) => reason);
   expect(error).toMatchObject({ kind: 'unauthorized', status: 401 });
   expect(session.current()).not.toBeNull();
 });
@@ -166,10 +165,10 @@ it('H7 쓰기 401 뒤 재발급이 timeout이어도 실패 종류로 반영 여�
 it('H8 쓰기 자체의 timeout·network만 반영 여부 미확정이고, 조회와 4xx 쓰기는 아니다', async () => {
   const { http } = setup();
   replies = ['timeout', 'network', 'timeout', fail(400)];
-  await expect(http.request({ url: '/a', method: 'POST' })).rejects.toMatchObject({ kind: 'timeout', resultUnknown: true });
-  await expect(http.request({ url: '/a', method: 'DELETE' })).rejects.toMatchObject({ kind: 'network', resultUnknown: true });
-  await expect(http.request({ url: '/a' })).rejects.toMatchObject({ kind: 'timeout', resultUnknown: false });
-  await expect(http.request({ url: '/a', method: 'POST' })).rejects.toMatchObject({ kind: 'validation', resultUnknown: false });
+  await expect(http.requestData({ url: '/a', method: 'POST' })).rejects.toMatchObject({ kind: 'timeout', resultUnknown: true });
+  await expect(http.requestData({ url: '/a', method: 'DELETE' })).rejects.toMatchObject({ kind: 'network', resultUnknown: true });
+  await expect(http.requestData({ url: '/a' })).rejects.toMatchObject({ kind: 'timeout', resultUnknown: false });
+  await expect(http.requestData({ url: '/a', method: 'POST' })).rejects.toMatchObject({ kind: 'validation', resultUnknown: false });
 });
 
 it('H9 요청 중 세션이 바뀌면 성공 응답도 취소로 끝난다', async () => {
@@ -181,7 +180,7 @@ it('H9 요청 중 세션이 바뀌면 성공 응답도 취소로 끝난다', asy
   });
   const slow = createHttp({
     session,
-    results: table,
+    response: springEnvelope(table),
     isPublic: () => false,
     defaults: {
       adapter: async (config) => {
@@ -191,7 +190,7 @@ it('H9 요청 중 세션이 바뀌면 성공 응답도 취소로 끝난다', asy
     },
   });
   void http;
-  const pending = slow.request({ url: '/items' });
+  const pending = slow.requestData({ url: '/items' });
   session.start({ accessToken: 'other' });
   release();
   await expect(pending).rejects.toMatchObject({ kind: 'cancelled' });
@@ -200,7 +199,7 @@ it('H9 요청 중 세션이 바뀌면 성공 응답도 취소로 끝난다', asy
 it('H10 공개 요청은 토큰을 싣지 않고 401을 재발급하지 않는다', async () => {
   const { http, session } = setup();
   replies = [fail(401, 3001)];
-  await expect(http.request({ url: '/auth/sign-in', method: 'POST' })).rejects.toMatchObject({ kind: 'unauthorized' });
+  await expect(http.requestData({ url: '/auth/sign-in', method: 'POST' })).rejects.toMatchObject({ kind: 'unauthorized' });
   expect(sent[0]?.authorization).toBeUndefined();
   expect(reissue).not.toHaveBeenCalled();
   expect(session.current()).not.toBeNull();
@@ -217,8 +216,8 @@ it('H11 호출자가 취소하면 cancelled다. 재발급을 기다리던 요청
   );
   replies = [fail(401, 4002), fail(401, 4002), ok('second')];
   const controller = new AbortController();
-  const first = http.request({ url: '/a', signal: controller.signal });
-  const second = http.request({ url: '/b' });
+  const first = http.requestData({ url: '/a', signal: controller.signal });
+  const second = http.requestData({ url: '/b' });
   await vi.waitFor(() => expect(reissue).toHaveBeenCalledTimes(1));
   await vi.waitFor(() => expect(sent).toHaveLength(2));
   controller.abort();
@@ -246,7 +245,7 @@ function rotatingSetup(rotateAt: Record<number, string>) {
   session.start({ accessToken: 't1' });
   const http = createHttp({
     session,
-    results: table,
+    response: springEnvelope(table),
     isPublic: () => false,
     defaults: {
       adapter: async (config) => {
@@ -268,7 +267,7 @@ function rotatingSetup(rotateAt: Record<number, string>) {
 it('H12 회전된 옛 토큰에 온 401은 종료 행이어도 세션을 끝내지 않고 현재 토큰으로 다시 보낸다', async () => {
   const { http, session } = rotatingSetup({ 0: 't-other' });
   replies = [fail(401, 4000), ok('done')];
-  await expect(http.request({ url: '/items' })).resolves.toBe('done');
+  await expect(http.requestData({ url: '/items' })).resolves.toBe('done');
   expect(reissue).not.toHaveBeenCalled();
   expect(session.current()).not.toBeNull();
   expect(sent.map((request) => request.authorization)).toEqual(['Bearer t1', 'Bearer t-other']);
@@ -277,7 +276,7 @@ it('H12 회전된 옛 토큰에 온 401은 종료 행이어도 세션을 끝내�
 it('H12b 재전송의 401도 그 사이 토큰이 다시 회전됐으면 재발급 없이 현재 토큰으로 보낸다. 회전이 없으면 멈춘다', async () => {
   const { http } = rotatingSetup({ 1: 't3' });
   replies = [fail(401, 4002), fail(401, 4002), ok('done')];
-  await expect(http.request({ url: '/items' })).resolves.toBe('done');
+  await expect(http.requestData({ url: '/items' })).resolves.toBe('done');
   expect(reissue).toHaveBeenCalledTimes(1);
   expect(sent.map((request) => request.authorization)).toEqual(['Bearer t1', 'Bearer t2', 'Bearer t3']);
 
@@ -285,7 +284,7 @@ it('H12b 재전송의 401도 그 사이 토큰이 다시 회전됐으면 재발�
   const still = rotatingSetup({});
   replies = [fail(401, 4002), fail(401, 4002)];
   sent = [];
-  await expect(still.http.request({ url: '/items' })).rejects.toMatchObject({ kind: 'unauthorized' });
+  await expect(still.http.requestData({ url: '/items' })).rejects.toMatchObject({ kind: 'unauthorized' });
   expect(sent).toHaveLength(2);
 });
 
@@ -296,7 +295,7 @@ it('H13 모든 전송 시도(재전송 포함)를 응답 헤더·status·보낸 
   session.start({ accessToken: 't1' });
   const http = createHttp({
     session,
-    results: table,
+    response: springEnvelope(table),
     isPublic: () => false,
     observe: (event) =>
       events.push({
@@ -308,8 +307,8 @@ it('H13 모든 전송 시도(재전송 포함)를 응답 헤더·status·보낸 
     defaults: { adapter },
   });
   replies = [fail(401, 4002), ok('done'), 'network'];
-  await http.request({ url: '/a' });
-  await http.request({ url: '/b' }).catch(() => undefined);
+  await http.requestData({ url: '/a' });
+  await http.requestData({ url: '/b' }).catch(() => undefined);
   expect(events.map(({ url, status, expires }) => ({ url, status, expires }))).toEqual([
     { url: '/a', status: 401, expires: 'rid' },
     { url: '/a', status: 200, expires: 'rid' },
@@ -323,14 +322,14 @@ it('H14 결과 코드 표의 종료 행으로 끝난 세션은 서버가 끝낸 
   const changes: unknown[] = [];
   session.subscribe((change) => changes.push(change));
   replies = [fail(401, 4000)];
-  await http.request({ url: '/items' }).catch(() => undefined);
+  await http.requestData({ url: '/items' }).catch(() => undefined);
   expect(changes).toMatchObject([{ kind: 'ended', by: 'server' }]);
 });
 
 it('H15 쓰기의 인증 거절은 토큰이 회전돼 있어도 다시 보내지 않고 반영 여부 미확정으로 돌려준다(E1 전제)', async () => {
   const { http, session } = rotatingSetup({ 0: 't-other' });
   replies = [fail(401, 4002), ok('must-not-send')];
-  const error = await http.request({ url: '/items', method: 'POST' }).catch((reason: unknown) => reason);
+  const error = await http.requestData({ url: '/items', method: 'POST' }).catch((reason: unknown) => reason);
   expect(error).toMatchObject({ kind: 'unauthorized', resultUnknown: true });
   expect(sent).toHaveLength(1);
   expect(reissue).not.toHaveBeenCalled();
@@ -356,9 +355,9 @@ it('프로젝트가 성공 코드와 같은 코드의 문구를 각각 정한다
     { status: 200, data: { code: '1001' } },
     { status: 200, data: { code: '1001' } },
   ];
-  await expect(first.request({ url: '/items' })).resolves.toEqual({ id: 7 });
-  await expect(first.request({ url: '/items' })).rejects.toMatchObject({ kind: 'business', code: '1001', messageKey: 'first.rejected' });
-  await expect(second.request({ url: '/auth/sign-in' })).rejects.toMatchObject({
+  await expect(first.requestData({ url: '/items' })).resolves.toEqual({ id: 7 });
+  await expect(first.requestData({ url: '/items' })).rejects.toMatchObject({ kind: 'business', code: '1001', messageKey: 'first.rejected' });
+  await expect(second.requestData({ url: '/auth/sign-in' })).rejects.toMatchObject({
     kind: 'business',
     code: '1001',
     messageKey: 'second.rejected',
@@ -374,7 +373,7 @@ it('프로젝트 응답 해석 뒤에도 401 재발급과 재전송을 공통 �
     { status: 401, data: {} },
     { status: 200, data: { id: 9 } },
   ];
-  await expect(http.request({ url: '/items' })).resolves.toEqual({ id: 9 });
+  await expect(http.requestData({ url: '/items' })).resolves.toEqual({ id: 9 });
   expect(reissue).toHaveBeenCalledTimes(1);
   expect(sent.map((request) => request.authorization)).toEqual(['Bearer t1', 'Bearer t2']);
 });
@@ -417,4 +416,122 @@ it('프로젝트의 다른 status로 실제 비401 응답을 재발급하지 않
     requestId: 'rid',
   });
   expect(reissue).not.toHaveBeenCalled();
+});
+
+it('요청별 메타는 동시 응답이 역순으로 와도 자기 데이터·헤더와 묶인다', async () => {
+  const session = createSession({ store: store(), reissue: vi.fn() });
+  let release!: () => void;
+  const firstReady = new Promise<void>((resolve) => { release = resolve; });
+  const http = createHttp({ session, response: springEnvelope(table), isPublic: () => true, defaults: { adapter: async (config) => {
+    if (config.url === '/first') await firstReady;
+    return { config, status: 200, statusText: '', data: config.url, headers: { 'content-type': 'text/plain', 'x-deadline': config.url === '/first' ? '140' : '120' } };
+  } } });
+  const first = http.requestWithResponse<string>({ url: '/first' });
+  const second = await http.requestWithResponse<string>({ url: '/second' });
+  release(); const result = await first;
+  expect(result.data).toBe('/first'); expect(result.response.header('x-deadline')).toBe('140');
+  expect(second.data).toBe('/second'); expect(second.response.header('x-deadline')).toBe('120');
+  expect(Number.isFinite(result.sentAt)).toBe(true);
+  session.dispose();
+});
+
+it('재전송된 요청의 메타는 401 응답 대신 최종 성공 응답을 가리킨다', async () => {
+  const session = createSession({ store: store(), reissue: async () => ({ accessToken: 'rotated-synthetic' }) });
+  session.start({ accessToken: 'synthetic' });
+  let calls = 0;
+  const http = createHttp({ session, response: springEnvelope(table), isPublic: () => false, defaults: { adapter: async (config) => {
+    const attempt = ++calls;
+    const response = { config, status: attempt === 1 ? 401 : 200, statusText: '', data: attempt === 1 ? {} : 'accepted',
+      headers: { 'content-type': 'text/plain', 'x-deadline': attempt === 1 ? 'old' : 'new' } };
+    if (attempt === 1) throw new AxiosError('unauthorized', 'ERR_BAD_RESPONSE', config, undefined, response);
+    return response;
+  } } });
+  const result = await http.requestWithResponse<string>({ url: '/read', method: 'GET' });
+  expect(result.data).toBe('accepted'); expect(result.response.status).toBe(200);
+  expect(result.response.header('x-deadline')).toBe('new'); expect(calls).toBe(2);
+  session.dispose();
+});
+
+
+it('R1·R3 응답 계약은 필수이고 공통 요청 타입은 서버 봉투를 전제하지 않는다', () => {
+  type Input = Parameters<typeof createHttp>[0];
+  // @ts-expect-error 서버 응답 계약을 생략할 수 없다.
+  const missing: Input = { session: setup().session, isPublic: () => false };
+  void missing;
+  const input: Input = {
+    session: setup().session, isPublic: () => false, response: springEnvelope(table),
+    // @ts-expect-error 코드 표는 선택한 해석 부품의 입력이다.
+    results: table,
+  };
+  void input;
+  expectTypeOf<keyof Http>().toEqualTypeOf<'requestData' | 'requestWithResponse'>();
+  expectTypeOf<SpringEnvelopeData<{ data?: { id: number } }>>().toEqualTypeOf<{ id: number }>();
+  expectTypeOf<SpringEnvelopeData<string>>().toEqualTypeOf<string>();
+});
+
+it('R2 선택한 Spring 계약은 봉투가 아닌 JSON과 200 이외 결과 코드를 거절한다', async () => {
+  const { http } = setup();
+  replies = [{ status: 200, data: { items: [] } }, ok(null, 201)];
+  await expect(http.requestData({ url: '/items' })).rejects.toMatchObject({ kind: 'contract', status: 200 });
+  await expect(http.requestData({ url: '/items' })).rejects.toMatchObject({ kind: 'business', code: '201' });
+});
+
+it('R4 다른 형식 서버의 데이터·실패 분류·401 회복·종료 행이 관찰된다', async () => {
+  const rows = createResultCodeTable([
+    { status: 422, code: 'BAD_FILTER', kind: 'validation', messageKey: 'items.badFilter' },
+    { status: 401, code: 'REVOKED', messageKey: 'session.revoked', endsSession: true },
+  ]);
+  const { http, session } = setup({
+    // 이 합성 서버는 성공 본문 자체와 error.code를 계약으로 쓴다.
+    read(body, status, requestId) {
+      if (status >= 200 && status < 300) return { ok: true, data: body };
+      const code = (body as { error: { code: string } }).error.code;
+      const row = rows.lookup(status, code);
+      return { ok: false, failure: new RequestFailure({
+        kind: row?.kind ?? 'unauthorized', code, messageKey: row?.messageKey,
+        endsSession: row?.endsSession, requestId,
+      }) };
+    },
+  });
+  replies = [
+    { status: 200, data: { items: [{ id: 1 }] } },
+    { status: 422, data: { error: { code: 'BAD_FILTER' } } },
+    { status: 401, data: { error: { code: 'EXPIRED' } } },
+    { status: 200, data: { items: [{ id: 2 }] } },
+    { status: 401, data: { error: { code: 'REVOKED' } } },
+  ];
+  await expect(http.requestData({ url: '/items' })).resolves.toEqual({ items: [{ id: 1 }] });
+  await expect(http.requestData({ url: '/items' })).rejects.toMatchObject({
+    kind: 'validation', status: 422, code: 'BAD_FILTER', messageKey: 'items.badFilter', requestId: 'rid',
+  });
+  await expect(http.requestData({ url: '/items' })).resolves.toEqual({ items: [{ id: 2 }] });
+  expect(reissue).toHaveBeenCalledTimes(1);
+  expect(sent.slice(2, 4).map((request) => request.authorization)).toEqual(['Bearer t1', 'Bearer t2']);
+  const changes: unknown[] = [];
+  session.subscribe((change) => changes.push(change));
+  await expect(http.requestData({ url: '/items' })).rejects.toMatchObject({ kind: 'cancelled' });
+  expect(session.current()).toBeNull();
+  expect(changes).toMatchObject([{ kind: 'ended', by: 'server' }]);
+  expect(reissue).toHaveBeenCalledTimes(1);
+});
+
+
+it.each([201, 202])('R2 HTTP %i 봉투 실패는 옛 코드 의미를 유지하고 실제 HTTP 상태만 보존한다', async (status) => {
+  const { http } = setup();
+  for (const expected of [
+    { kind: 'business', code: '2100', messageKey: 'notExist', endsSession: false },
+    { kind: 'business', code: '4999', messageKey: 'forcedOut', endsSession: true },
+  ]) {
+    const body = { header: { resultCode: Number(expected.code) }, data: null };
+    // 옛 생략 경로는 readEnvelope의 status=200과 표의 의미를 그대로 반환했다.
+    const old = readEnvelope(body, table, 'rid');
+    expect(old.ok).toBe(false);
+    if (old.ok) throw new Error('봉투 실패가 성공으로 해석됨');
+    expect(old.failure).toMatchObject({ ...expected, status: 200, requestId: 'rid' });
+    replies = [{ status, data: body }];
+    // 공개 요청으로 실패 자체의 종료 표시를 관찰한다(세션 종료 처리로 취소되기 전).
+    await expect(http.requestData({ url: '/auth/envelope-failure' })).rejects.toMatchObject({
+      ...expected, status, requestId: 'rid',
+    });
+  }
 });

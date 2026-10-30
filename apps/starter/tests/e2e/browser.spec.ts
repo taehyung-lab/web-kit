@@ -62,6 +62,7 @@ test('an entry URL with unknown values is replaced and the list waits for the op
 
 test('a failed background refresh keeps the rows and offers a retry', async ({ page }) => {
   await signIn(page);
+  await page.getByRole('checkbox', { name: '이 페이지 전체 선택' }).check();
   // mock 서버(이 페이지의 msw)를 내려 같은 조건 재조회를 실패시킨다.
   await page.evaluate(async () => {
     // 개발 서버가 앱과 같은 모듈 인스턴스로 내주는 경로다(브라우저 안에서만 존재).
@@ -79,6 +80,11 @@ test('a failed background refresh keeps the rows and offers a retry', async ({ p
   await expect(page.getByText('최신 내용을 불러오지 못했습니다.', { exact: false })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'Mouse Pad' })).toBeVisible();
   await expect(page.getByRole('button', { name: '다시 시도' })).toBeVisible();
+  const header = page.getByRole('checkbox', { name: '이 페이지 전체 선택' });
+  await expect(header).toBeEnabled();
+  await expect(header).not.toBeChecked();
+  await header.check();
+  await expect(page.getByRole('button', { name: /선택 판매 중지/ })).toBeEnabled();
 });
 
 /** 등록 폼을 유효한 값으로 채운다. */
@@ -113,7 +119,7 @@ function focusInBody(page: Page) {
   return page.evaluate(() => document.activeElement?.closest('.wk-blocking-root') != null);
 }
 
-// 저장 중에는 화면 전체 덮개가 입력을 막는다(2026-10-28 사용자 결정, 0008). 이전의 "저장 중 입력 → 이동 때 묻기"는 덮개가 대신한다.
+// 저장 중에는 화면 전체 덮개가 입력을 막는다(2026-10-28 사용자 결정, 결정 0007 진행 덮개). 이전의 "저장 중 입력 → 이동 때 묻기"는 덮개가 대신한다.
 test('saving a new product covers the page with the create message and blocks clicks and Tab', async ({ page }) => {
   await signIn(page);
   await fillNewProduct(page);
@@ -151,7 +157,7 @@ test('an edit closes the confirmation, covers the page with the edit message, th
   await expect(page.locator('.wk-blocking')).toHaveCount(0);
 });
 
-// 확인창을 거친 저장이 칸 없는 오류(500)로 끝나면, 확인창 버튼은 사라졌으므로 포커스는 본문에서 확인창을 연 저장 버튼으로 돌아온다(0008 포커스).
+// 확인창을 거친 저장이 칸 없는 오류(500)로 끝나면, 확인창 버튼은 사라졌으므로 포커스는 본문에서 확인창을 연 저장 버튼으로 돌아온다(결정 0007 진행 덮개 포커스).
 test('an edit that fails after the confirmation returns focus to the save button, not the document body', async ({ page }) => {
   await signIn(page);
   await page.getByRole('cell', { name: 'Mouse Pad' }).click();
@@ -277,4 +283,72 @@ test('choice filters keep selected values in the URL and restore their labels', 
   await page.reload();
   await expect(page.getByRole('button', { name: '분류', exact: true })).toHaveText('Stationery');
   await expect(page.getByRole('cell', { name: 'Notebook A5' })).toBeVisible();
+});
+
+test('the login form leaves without a dirty-input question', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByLabel('아이디').fill('작성 중인 아이디');
+  let questions = 0;
+  page.on('dialog', async (dialog) => { questions += 1; await dialog.accept(); });
+  await page.reload();
+  await expect(page.getByLabel('아이디')).toHaveValue('');
+  expect(questions).toBe(0);
+});
+
+// 같은 URL에서도 사용자 검색의 체크 수명과 실제 disabled 상태를 관찰한다.
+test('same-condition search clears selection and locks actions until its response', async ({ page }) => {
+  await signIn(page);
+  const events = recordApi(page);
+  const header = page.getByRole('checkbox', { name: '이 페이지 전체 선택' });
+  const row = page.getByRole('checkbox', { name: '행 선택' }).first();
+  await header.check();
+  await expect(page.getByRole('button', { name: /선택 판매 중지/ })).toBeEnabled();
+  await setLatency(page, 1800);
+  const request = page.waitForRequest(request => new URL(request.url()).pathname === '/api/products');
+  await page.getByRole('button', { name: '검색', exact: true }).click();
+  await request;
+  await expect(page.getByRole('cell', { name: 'Mouse Pad' })).toBeVisible();
+  await expect(header).toBeDisabled();
+  await expect(row).toBeDisabled();
+  await expect(header).not.toBeChecked();
+  await expect(page.getByRole('button', { name: /선택 판매 중지/ })).toBeDisabled();
+  expect(events.some(event => event.startsWith('→ POST /api/products/deactivate'))).toBe(false);
+  await expect(header).toBeEnabled();
+  await expect(header).not.toBeChecked();
+  await header.check();
+  await expect(page.getByRole('button', { name: /선택 판매 중지/ })).toBeEnabled();
+});
+
+// 기본 복사본의 키 연결을 브라우저 기본 제출까지 포함해 확인한다.
+test('keyword Search keeps unadded text and Enter adds split chips then searches once', async ({ page }) => {
+  await signIn(page);
+  await page.goto('/members');
+  const input = page.getByRole('textbox', { name: '검색어', exact: true });
+  await expect(input).toBeVisible();
+  const requests: string[] = [];
+  page.on('request', (request) => { if (new URL(request.url()).pathname === '/api/members') requests.push(decodeURIComponent(new URL(request.url()).search)); });
+  await input.fill('kim');
+  await page.getByRole('button', { name: '검색', exact: true }).click();
+  await expect.poll(() => requests.length).toBe(1);
+  expect(requests[0]).not.toContain('keyword=');
+  await expect(page.locator('[inert]')).toHaveCount(0);
+  await expect(input).toHaveValue('kim');
+  await input.dispatchEvent('keydown', { key: 'Enter', isComposing: true });
+  await expect(page.getByRole('button', { name: 'kim 제거', exact: true })).toHaveCount(0);
+  expect(requests).toHaveLength(1);
+  await input.press('Enter');
+  await expect(page.getByRole('button', { name: 'kim 제거', exact: true })).toBeVisible();
+  await expect(input).toHaveValue('');
+  await expect.poll(() => requests.length).toBe(2);
+  expect(requests[1]).toContain(':kim');
+  await expect(page.locator('[inert]')).toHaveCount(0);
+  await input.fill('홍길동; 김철수;;홍길동');
+  await page.getByRole('button', { name: '추가', exact: true }).click();
+  await expect(page.getByRole('button', { name: '홍길동 제거', exact: true })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: '김철수 제거', exact: true })).toHaveCount(1);
+  expect(requests).toHaveLength(2);
+  await input.press('Enter');
+  await expect.poll(() => requests.length).toBe(3);
+  expect(requests[2]).toContain(':홍길동');
+  expect(requests[2]).toContain(':김철수');
 });

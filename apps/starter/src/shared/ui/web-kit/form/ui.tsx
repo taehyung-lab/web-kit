@@ -1,7 +1,7 @@
 // 파일 책임: 폼 기본 UI의 묶음 부품(Form.*)과 앱에 한 번 두는 이탈 보호(FormGuard).
 // 각 부품은 같은 편집 상태(useSaveForm 결과)를 context로 읽어서, 칸·버튼·오류 줄을 어디에 두어도 저장·검증·focus 연결을 다시 쓰지 않는다.
 // 저장 수명은 useSaveForm이, 이탈 판정은 createFormNavigation이 소유하고 여기는 표시와 사용자 입력 연결만 맡는다.
-import { FormGuardProvider, FormDialogScopeProvider, useFormGuardBinding, useFormRootBinding, useFormFieldBinding, formTextBinding, useOptionsRetryFocus, useFormCancel, useFormDialogScope, useFormConfirmBinding, useFormSavedBinding, FormBindingProvider, useFormBinding, useFormSubmitBinding, formFileBinding } from '@boosterlab/web-kit/form';
+import { FormGuardProvider, FormDialogScopeProvider, useFormGuardBinding, useFormRootBinding, useFormFieldBinding, useFormChoiceBinding, formTextBinding, useOptionsRetryFocus, useFormCancel, useFormDialogScope, useFormConfirmBinding, useFormSavedBinding, FormBindingProvider, useFormBinding, useFormSubmitBinding, formFileBinding } from '@boosterlab/web-kit/form';
 import { Choice as ChoiceInput, type ChoiceProps } from '../ui/choice';
 import type { NavigateOptions } from '@tanstack/react-router';
 import type { AnyFormApi, DeepKeys, DeepValue } from '@tanstack/react-form';
@@ -222,6 +222,7 @@ function Field<V = unknown>({
   const { editor, formatError } = useFormContext();
   const binding = useFormFieldBinding(editor, name, disabled);
   const isRequired = binding.required;
+  if (!binding.visible) return null;
   return (
     <editor.form.Field name={name}>
       {(field) => (
@@ -255,10 +256,22 @@ function Field<V = unknown>({
 }
 
 /** 폼 검증·필수 표시·오류 초점을 같은 선택 입력에 연결한다. */
-function Choice({ name, description, ...props }: FormFieldProps & Omit<ChoiceProps, 'value' | 'onValueChange'>) {
+function Choice({ name, description, status = 'ready', onRetry, ...props }: FormFieldProps & Omit<ChoiceProps, 'value' | 'onValueChange'> & { readonly status?: OptionsStatus; readonly onRetry?: () => void }) {
+  const { editor, copy, renderFailure } = useFormContext();
+  useFormChoiceBinding(editor, name, status === 'ready' && props.search === undefined ? props.nodes : undefined);
+  const retry = useOptionsRetryFocus(onRetry);
   return (
-    <Field<ChoiceProps['value']> name={name} label={props.label} description={description} disabled={props.disabled}>
-      {({ value, change, blur, ...control }) => <ChoiceInput {...props} {...control} value={value} onValueChange={change} onBlur={blur} />}
+    <Field<ChoiceProps['value']> name={name} label={props.label} description={description} disabled={props.disabled} labelTarget={status === 'ready' ? 'control' : 'group'}>
+      {({ value, change, blur, ...control }, labelId) => {
+        if (status === 'ready') return <ChoiceInput {...props} {...control} value={value} onValueChange={change} onBlur={blur} />;
+        const failureText = status === 'loading' ? undefined : renderFailure(status.failure, 'options');
+        return <div {...control} role="group" tabIndex={-1} aria-labelledby={labelId} className="wk-options-state">
+          {status === 'loading' ? <span role="status">{copy.loading}</span> : failureText === null ? null : <span role="alert">
+            {failureText ?? copy.optionsFailed}
+            {onRetry !== undefined && <button type="button" className="wk-button wk-button-ghost" onClick={retry.onRetry}>{copy.retry}</button>}
+          </span>}
+        </div>;
+      }}
     </Field>
   );
 }
@@ -455,6 +468,7 @@ function Checkbox({ onChange, ...field }: FormFieldProps & { readonly onChange?:
   const { editor, formatError } = useFormContext();
   const binding = useFormFieldBinding(editor, field.name, field.disabled === true);
   const id = editor.fieldId(field.name);
+  if (!binding.visible) return null;
   return (
     <editor.form.Field name={field.name}>
       {(state) => {
@@ -552,6 +566,8 @@ function ArrayField({
   readonly children: (rows: FormArrayRows<never>) => ReactNode;
 }) {
   const { editor } = useFormContext();
+  const binding = useFormFieldBinding(editor, name);
+  if (!binding.visible) return null;
   return (
     <FormArrayField form={editor.form} name={name as never} minItems={minItems} maxItems={maxItems}>
       {children as unknown as (rows: FormArrayRows<unknown>) => ReactNode}
@@ -604,7 +620,7 @@ function Section({
 /**
  * 접을 수 있는 구역(열림·오류 표시·제출 뒤 펼침). `Form.Section fields`가 이것을 쓰고, 키트 `Form` 밖의 폼(useSaveForm의 form만 있는 화면)도
  * 같은 부품을 직접 쓴다. 닫혀도 칸은 마운트된 채 숨긴다(값·검증 유지). 열림·오류 수·거절 때 펼침은 키트가, 머리글에 오류를 어떻게 보일지는 프로젝트가 정한다:
- * 기본은 1.5처럼 머리글의 「!」이고 화면 낭독기는 오류 수(`errorLabel`)를 읽는다. `errorMarker`를 주면 그 표시로 바꾼다(예: 보이는 "오류 2개" 배지).
+ * 기본 머리글 표시는 「!」이고 화면 낭독기는 오류 수(`errorLabel`)를 읽는다. `errorMarker`를 주면 그 표시로 바꾼다(예: 보이는 "오류 2개" 배지).
  */
 export function FormSection({
   form,
@@ -685,7 +701,7 @@ function Failure({ className }: { readonly className?: string }) {
  * 저장 버튼. 저장 중·확인 대기·완료 처리 중에는 aria-disabled로 잠근다. disabled로 바꾸면 포커스가 본문으로 떨어져
  * 확인창을 닫은 뒤 돌아올 자리가 사라지고, 열린 직후 Tab이 창 밖에서 시작한다.
  * 저장 요청·완료 처리가 진행 중이면 버튼 바로 뒤에 진행 표시(문구는 화면 낭독기용 `messages.saving`)를 둔다.
- * 등록·수정 폼(`useSaveForm({ progress })`)은 화면 전체 진행 덮개가 대신하므로 그리지 않는다(사용자 결정 2026-10-28, 0008).
+ * 등록·수정 폼(`useSaveForm({ progress })`)은 화면 전체 진행 덮개가 대신하므로 그리지 않는다(사용자 결정 2026-10-28, 결정 0007 진행 덮개).
  */
 function Submit({
   children,

@@ -38,8 +38,6 @@ description: 로그인 전 이메일·OTP 코드 확인, 남은 시간·만료, 
 
 브라우저 조립 예: [starter 브라우저 검사 연결](../../references/apps/starter/tests/e2e/web-kit/auth.spec.ts.txt).
 
-registry `auth`의 단위·브라우저 연결 파일을 실제 복사본과 함께 실행하고 `web-kit-check`를 필수 CI에 둔다. 입력을 바꾸면 `enterCode`·`readCode` 행동 어댑터만 그 모양에 맞춘다. 공통 검사는 입력 개수나 DOM 배치 대신 남은 시간·편집 값·Enter·요청 횟수·결과 적용을 관찰한다. 저장소의 한 칸/여섯 칸 검사는 모양 변경의 예이며 소비처 연결 증명을 대신하지 않는다.
+registry `auth`의 단위 연결은 `/testing/unit/auth`, 검사 화면은 `/testing/fixtures/auth`를 쓴다. 이 작은 입구는 Form·Router·Query·zod 설치를 요구하지 않는다. registry `auth`의 단위·브라우저 연결 파일을 실제 복사본과 함께 실행하고 `web-kit-check`를 필수 CI에 둔다. 입력을 바꾸면 `enterCode`·`readCode` 행동 어댑터만 그 모양에 맞춘다. 공통 검사는 입력 개수나 DOM 배치 대신 남은 시간·편집 값·Enter·요청 횟수·결과 적용을 관찰한다. 저장소의 한 칸/여섯 칸 검사는 모양 변경의 예이며 소비처 연결 증명을 대신하지 않는다.
 
-기존 인증 전용 interval·재전송 pending·늦은 응답 판정을 이 hook으로 교체하고, 기존 API 요청을 순수한 요청 함수로 만든 뒤 세션 적용을 성공 콜백으로 옮긴다. 기존 `/session/idle` 사용자는 clock 생략 시 이전 API가 유지된다. 인증 전 단계도 쓰는 앱은 위의 공유 객체 연결로 이전한다.
-
-4.1 후보 rc.2에서 rc.3으로 옮길 때는 `model.failure`를 확인용 `verifyFailure`와 재전송용 `resendFailure`로 나누고, 복사본 `labels.failure`도 `labels.verifyFailure`·`labels.resendFailure`로 바꾼다. 4.0 공개 API는 변경하지 않는다.
+API 요청은 순수한 요청 함수로 제공하고 세션 적용은 성공 콜백에서 연결한다. 인증 전 단계도 쓰는 앱은 위의 공유 시계 객체를 연결한다.

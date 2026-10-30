@@ -1,5 +1,4 @@
 // 파일 책임: 공유하는 선택 값과 트리를 여러 입력 모양 및 서버 검색에 연결한다.
-// 파일 책임: 목록·폼이 공유하는 선택 값과 트리·드롭다운·계층 메뉴·자동완성 표현을 연결한다.
 import { Checkbox } from '@base-ui/react/checkbox';
 import { Combobox } from '@base-ui/react/combobox';
 import { Menu } from '@base-ui/react/menu';

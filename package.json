@@ -13,7 +13,8 @@
     "registry:build": "shadcn build registry.json --output public/r",
     "registry:check": "node scripts/check-registry.mjs",
     "registry:lint": "pnpm --filter @boosterlab/web-kit-registry lint",
-    "starter:create": "node scripts/create-starter.mjs"
+    "starter:create": "node scripts/create-starter.mjs",
+    "consumer:minimal": "node scripts/check-minimal-consumers.mjs"
   },
   "devDependencies": {
     "shadcn": "4.19.1"

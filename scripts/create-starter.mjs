@@ -113,6 +113,7 @@ export function createStarter(destination, workflowKit) {
     const components = json(join(stage, 'components.json'));
     components.registries['@web-kit'] = `https://raw.githubusercontent.com/taehyung-lab/web-kit/v${version}/public/r/{name}.json`;
     writeJson(join(stage, 'components.json'), components);
+    installation.componentsHash = hash(join(stage, 'components.json'));
     // 원본·설치 지문은 그대로 두고 위치만 새 프로젝트 기준으로 옮긴다.
     for (const item of installation.items) for (const file of item.files) file.installed = file.installed.replace(/^apps\/starter\//, '');
     writeJson(join(stage, 'registry-installation.json'), installation);

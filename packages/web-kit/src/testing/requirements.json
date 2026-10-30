@@ -35,26 +35,12 @@
   },
   "blocking-progress": {
     "ids": [
-      "G001",
-      "G002",
-      "G003",
-      "G004",
-      "G005",
-      "G006",
-      "G007",
-      "G008",
-      "G009",
       "G010",
       "G011",
       "G012",
       "G013",
       "G014",
       "G015",
-      "G016",
-      "G017",
-      "G018",
-      "G019",
-      "G020",
       "G021",
       "G022",
       "G023",
@@ -64,7 +50,6 @@
       "B-progress-removed",
       "B-progress-root",
       "B-progress-saved",
-      "B-progress-error",
       "B-progress-portal",
       "B-progress-initial",
       "B-progress-from-dialog"
@@ -77,7 +62,7 @@
     ],
     "dependencies": [
       "pending",
-      "form",
+      "dialog",
       "styles"
     ]
   },
@@ -168,9 +153,25 @@
       "G088",
       "G089",
       "G090",
+      "form-choice-prune",
+      "form-choice-status",
+      "form-choice-search",
+      "form-choice-single",
+      "form-choice-empty",
       "B-enter",
       "B-enter-add",
-      "B-enter-inner"
+      "B-enter-inner",
+      "form-protection-optional",
+      "B-form-protection",
+      "form-conditional-1",
+      "form-conditional-2",
+      "form-conditional-3",
+      "form-conditional-4",
+      "form-conditional-5",
+      "form-conditional-6",
+      "form-conditional-7",
+      "form-conditional-8",
+      "form-conditional-9"
     ],
     "connections": [
       "form-complex.test.tsx",
@@ -205,7 +206,12 @@
       "G102",
       "G103",
       "G104",
-      "G105"
+      "G105",
+      "list-search-lock",
+      "list-choice-prune",
+      "list-choice-status",
+      "list-choice-search",
+      "keyword-separators"
     ],
     "connections": [
       "list-ui.test.tsx"
@@ -232,7 +238,7 @@
   },
   "checkbox-tree": {
     "ids": [
-      "tree-focus"
+      "tree-unit"
     ],
     "connections": [
       "checkbox-tree-focus.test.tsx"

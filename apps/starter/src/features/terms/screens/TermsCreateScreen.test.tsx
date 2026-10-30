@@ -1,4 +1,4 @@
-// 파일 책임: 약관 등록(레퍼런스 재현) 검사. 필수 검증 → 저장 확인 → 저장 한 번 → 저장 완료 확인 → 상세, 서버 필드 오류 위치를 관찰한다.
+// 파일 책임: 약관 등록 예시 검사. 필수 검증 → 저장 확인 → 저장 한 번 → 저장 완료 확인 → 상세, 서버 필드 오류 위치를 관찰한다.
 import { mockDb } from '@/mocks/db';
 import { renderApp } from '@/test/app';
 import { screen, waitFor, within } from '@testing-library/react';
@@ -34,6 +34,9 @@ describe('terms create (reference reproduction)', () => {
     await user.click(within(confirm).getByRole('button', { name: '저장' }));
     const saved = await screen.findByRole('alertdialog', { name: '저장되었습니다.' });
     expect(saved.textContent).toContain('약관을 등록했습니다.');
+    expect(router.state.location.pathname).toBe('/terms/new');
+    expect(requests.filter((request) => request.line === 'GET /api/terms/t-001')).toHaveLength(0);
+    expect(requests.filter((request) => request.line === 'POST /api/terms')).toHaveLength(1);
     await user.click(within(saved).getByRole('button', { name: '확인' }));
     expect(await screen.findByRole('heading', { name: '약관 상세' })).toBeTruthy();
     await waitFor(() => expect(router.state.location.pathname).toBe('/terms/t-001'));

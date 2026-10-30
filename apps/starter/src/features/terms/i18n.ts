@@ -1,4 +1,4 @@
-// 파일 책임: 약관 등록·상세(레퍼런스 약관 등록 재현) 문구의 ko/en 원문.
+// 파일 책임: 약관 등록·상세 예시 문구의 ko/en 원문.
 export const termsResources = {
   ko: {
     terms: {

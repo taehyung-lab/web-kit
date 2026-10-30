@@ -18,7 +18,7 @@ export { requestFormChange, writeFormValues, type FormReference, type ReferenceC
 
 export {
   FormBindingProvider, FormGuardProvider, FormDialogScopeProvider,
-  useFormBinding, useFormEditor, useLeave,
+  useFormBinding, useFormEditor, useLeave, useFormChoiceBinding,
   useFormGuardBinding, useFormRootBinding, useFormFieldBinding,
   useOptionsRetryFocus, useFormCancel, useFormDialogScope,
   useFormConfirmBinding, useFormSavedBinding, useFormSubmitBinding,
@@ -26,3 +26,5 @@ export {
 } from './binding';
 
 export type { LeaveReason } from './navigation';
+
+export type { ConditionalField } from './conditional';

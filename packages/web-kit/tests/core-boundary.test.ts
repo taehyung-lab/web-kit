@@ -69,7 +69,7 @@ it.each(['../src/form/index.ts', '../src/form/save-form.ts', '../src/form/naviga
 );
 
 /**
- * 공개 입구(package.json exports) 중 유휴 타이머 자신을 뺀 전부. 유휴 타이머는 그 입구를 직접 import한 앱에만 들어간다(0004 §1):
+ * 공개 입구(package.json exports) 중 유휴 타이머 자신을 뺀 전부. 유휴 타이머는 그 입구를 직접 import한 앱에만 들어간다(결정 0004 유휴 장치와 정책 경계):
  * 동작 입구(목록·폼·record)뿐 아니라 화면 부품 입구(list/ui·form/ui·detail/ui·ui·filter)도 끌어오면 쓰지 않는 앱(starter) 결과물에 들어간다.
  * 목록을 손으로 두지 않아 새 입구도 자동으로 검사된다.
  */
@@ -85,7 +85,7 @@ const exportsMap = JSON.parse(
 const entriesWithoutIdle = [
   ...new Set(
     Object.entries(exportsMap)
-      .filter(([name, path]) => name !== './session/idle' && /\.(?:tsx?|mjs)$/.test(path))
+      .filter(([name, path]) => !['./session/idle', './session/activity'].includes(name) && /\.(?:tsx?|mjs)$/.test(path))
       .map(([, path]) => `../${path.slice(2)}`),
   ),
 ];
@@ -112,7 +112,7 @@ it.each([...entriesWithoutIdle, '../src/use-list.ts'])(
       const file = queue.pop()!;
       if (visited.has(file)) continue;
       visited.add(file);
-      expect(file).not.toMatch(/session-idle/);
+      expect(file).not.toMatch(/session-idle|session-activity/);
       for (const [, specifier] of sources[file]!.matchAll(/(?:from|import)\s+['"]([^'"]+)['"]/g)) {
         if (!specifier!.startsWith('.') && !specifier!.startsWith('@boosterlab/web-kit')) continue;
         const target = resolve(file, specifier!);
@@ -123,7 +123,7 @@ it.each([...entriesWithoutIdle, '../src/use-list.ts'])(
   },
 );
 
-/** 목록·폼·상세·기본 UI는 권한 판정과 결합하지 않는다(0005·0006). 권한 결과는 프로젝트가 연결한다. */
+/** 목록·폼·상세·기본 UI는 권한 판정과 결합하지 않는다(결정 0001 구조와 저장소·0006 필수와 권한). 권한 결과는 프로젝트가 연결한다. */
 it.each([
   '../src/form/index.ts',
   '../../ui-registry/src/form/ui.tsx',
@@ -230,5 +230,14 @@ it.each(Object.entries(exportsMap).filter(([name]) => !name.startsWith('./testin
   for (const file of reach(entry)) {
     expect(file).not.toMatch(/\/testing(?:\/|\.)/);
     expect(sources[file]).not.toMatch(/from\s+['"](?:vitest|@playwright\/test|@testing-library\/react)/);
+  }
+});
+
+/** 선택한 검사 입구는 다른 기능의 실행 의존을 끌어오지 않는다. 실제 설치 부재는 최소 소비 검사로 확인한다. */
+it.each(['../src/testing/form-unit.ts', '../src/testing/unit/auth.tsx', '../src/testing/auth-fixture.tsx'])('%s는 선택하지 않은 목록 검사를 불러오지 않는다', (entry) => {
+  for (const file of reach(entry)) {
+    expect(file).not.toMatch(/use-list|list-ui|list-download|list-return/);
+    expect(sources[file]).not.toMatch(/from ['"]@tanstack\/react-query['"]/);
+    if (entry !== '../src/testing/form-unit.ts') expect(file).not.toMatch(/\/form\//);
   }
 });

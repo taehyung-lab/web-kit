@@ -1,7 +1,7 @@
 // 파일 책임: pnpm dev:mock 에서 브라우저 service worker로 mock API를 켠다.
 // 실제 서버는 새로 고침해도 발급한 토큰·저장한 데이터를 잊지 않는다. mock 상태는 페이지 메모리에 있어 새로 고침하면 사라지므로,
 // localStorage(앱 세션 저장소와 같은 범위)에 두고 다시 읽는다. 지우면 앱은 저장된 토큰으로 보낸 첫 쓰기가 401을 받아
-// 키트가 "저장 결과를 확인할 수 없습니다"(쓰기 401은 재전송하지 않음, 결정 0001 E1)로 끝낸다 — mock에만 있는 현상이다.
+// 키트가 "저장 결과를 확인할 수 없습니다"(쓰기 401은 재전송하지 않음, 결정 0003 E1)로 끝낸다 — mock에만 있는 현상이다.
 import { setupWorker } from 'msw/browser';
 import { mockDb, type MockSnapshot } from './db';
 import { handlers } from './handlers';

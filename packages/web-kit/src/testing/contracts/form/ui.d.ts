@@ -107,9 +107,9 @@ declare function Field<V = unknown>({ name, label, description, disabled, labelT
     /** 입력이 라벨 요소로 이름 지을 수 없는 묶음이면 'group'. */
     readonly labelTarget?: 'control' | 'group';
     readonly children: (control: FormControl<V>, labelId: string) => ReactNode;
-}): import("react").JSX.Element;
+}): import("react").JSX.Element | null;
 /** 폼 검증·필수 표시·오류 초점을 같은 선택 입력에 연결한다. */
-declare function Choice({ name, description, ...props }: FormFieldProps & Omit<ChoiceProps, 'value' | 'onValueChange'>): import("react").JSX.Element;
+declare function Choice({ name, description, status, onRetry, ...props }: FormFieldProps & Omit<ChoiceProps, 'value' | 'onValueChange'> & { readonly status?: OptionsStatus; readonly onRetry?: () => void }): import("react").JSX.Element;
 /**
  * 한 줄 문자열 입력. maxLength는 길어지는 편집만 거부한다(한글 조합 커밋이 maxLength를 넘겨도 꼬리를 자르지 않고 받지 않는다).
  * 서버가 준 초과 초기값은 줄이는 편집을 막지 않는다. showCount면 글자 수를 보인다.
@@ -152,7 +152,7 @@ declare function Select({ options, placeholder, status, onRetry, onChange, ...fi
 /** boolean 값 하나. 라벨이 체크박스 옆에 붙는다. onChange는 사용자가 바꾼 직후에만 부른다. */
 declare function Checkbox({ onChange, ...field }: FormFieldProps & {
     readonly onChange?: (checked: boolean) => void;
-}): import("react").JSX.Element;
+}): import("react").JSX.Element | null;
 /**
  * 파일 하나 고르기. 값은 FormFileValue이고 지금 파일 이름을 상태에서 그린다(네이티브 입력은 다시 그려지면 비므로 근거로 쓰지 않는다).
  * 선택 창을 열었다 취소해도 값은 그대로다. 지우는 길은 제거 버튼 하나다(실수로 연 창 때문에 이미 있는 파일을 잃지 않는다).
@@ -167,7 +167,7 @@ declare function ArrayField({ name, minItems, maxItems, children, }: {
     readonly minItems?: number;
     readonly maxItems?: number;
     readonly children: (rows: FormArrayRows<never>) => ReactNode;
-}): import("react").JSX.Element;
+}): import("react").JSX.Element | null;
 /**
  * 칸 묶음 하나(제목 있는 구역). `fields`(이 구역 칸의 정확한 경로나 접두)를 주면 접을 수 있는 구역이 된다:
  * 머리글 버튼이 열고 닫고, 구역 칸에 오류가 있으면 머리글에 표시하며, 제출 뒤 오류가 있으면 펼친 다음 첫 오류 칸에 포커스한다.
@@ -184,7 +184,7 @@ declare function Section({ title, fields, errorMarker, children, className, }: {
 /**
  * 접을 수 있는 구역(열림·오류 표시·제출 뒤 펼침). `Form.Section fields`가 이것을 쓰고, 키트 `Form` 밖의 폼(useSaveForm의 form만 있는 화면)도
  * 같은 부품을 직접 쓴다. 닫혀도 칸은 마운트된 채 숨긴다(값·검증 유지). 열림·오류 수·거절 때 펼침은 키트가, 머리글에 오류를 어떻게 보일지는 프로젝트가 정한다:
- * 기본은 1.5처럼 머리글의 「!」이고 화면 낭독기는 오류 수(`errorLabel`)를 읽는다. `errorMarker`를 주면 그 표시로 바꾼다(예: 보이는 "오류 2개" 배지).
+ * 기본 머리글 표시는 「!」이고 화면 낭독기는 오류 수(`errorLabel`)를 읽는다. `errorMarker`를 주면 그 표시로 바꾼다(예: 보이는 "오류 2개" 배지).
  */
 export declare function FormSection({ form, fields, title, errorLabel, errorMarker, className, children, }: {
     readonly form: AnyFormApi;
@@ -208,7 +208,7 @@ declare function Failure({ className }: {
  * 저장 버튼. 저장 중·확인 대기·완료 처리 중에는 aria-disabled로 잠근다. disabled로 바꾸면 포커스가 본문으로 떨어져
  * 확인창을 닫은 뒤 돌아올 자리가 사라지고, 열린 직후 Tab이 창 밖에서 시작한다.
  * 저장 요청·완료 처리가 진행 중이면 버튼 바로 뒤에 진행 표시(문구는 화면 낭독기용 `messages.saving`)를 둔다.
- * 등록·수정 폼(`useSaveForm({ progress })`)은 화면 전체 진행 덮개가 대신하므로 그리지 않는다(사용자 결정 2026-10-28, 0008).
+ * 등록·수정 폼(`useSaveForm({ progress })`)은 화면 전체 진행 덮개가 대신하므로 그리지 않는다(사용자 결정 2026-10-28, 결정 0007 진행 덮개).
  */
 declare function Submit({ children, className, mode, }: {
     readonly children?: ReactNode;

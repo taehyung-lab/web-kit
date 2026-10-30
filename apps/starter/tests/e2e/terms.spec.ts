@@ -1,4 +1,4 @@
-// 파일 책임: 레퍼런스 약관 등록 재현(키트 값만으로 조립한 폼)을 실제 브라우저에서 관찰한다 — 저장 확인 → 저장 → 저장 완료 확인 → 상세, 확인창 포커스.
+// 파일 책임: 약관 등록 예시(키트 값만으로 조립한 폼)을 실제 브라우저에서 관찰한다 — 저장 확인 → 저장 → 저장 완료 확인 → 상세, 확인창 포커스.
 import { expect, test } from '@playwright/test';
 
 test('terms create confirms, saves once, acknowledges and opens the detail', async ({ page }) => {
@@ -29,6 +29,8 @@ test('terms create confirms, saves once, acknowledges and opens the detail', asy
   await confirm.getByRole('button', { name: '저장' }).click();
   const saved = page.getByRole('alertdialog', { name: '저장되었습니다.' });
   await expect(saved).toBeVisible();
+  await expect(page).toHaveURL(/\/terms\/new$/);
+  expect(posts).toHaveLength(1);
   await page.keyboard.press('Escape');
   await expect(saved).toBeVisible();
   await saved.getByRole('button', { name: '확인' }).click();

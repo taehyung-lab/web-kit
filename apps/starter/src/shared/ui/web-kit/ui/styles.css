@@ -26,7 +26,7 @@
 /*
  * 프로젝트가 배치하는 블록(칸·구역·폼 한 줄)의 기본 여백 초기화는 :where()로 0 우선순위에 둔다.
  * 클래스 우선순위로 margin을 0으로 두면 프로젝트의 간격 유틸리티(Tailwind v4 space-y 등은 :where 선택자)가 지워져
- * 오류 문구 바로 아래에 다음 칸 라벨이 붙는다(DT 운영자 등록, 2026-10-28 관찰).
+ * 오류 문구 바로 아래에 다음 칸 라벨이 붙는다(2026-10-28 관찰).
  */
 :where(fieldset.wk-field, .wk-section, .wk-form-failure) {
   margin: 0;
@@ -59,7 +59,7 @@ fieldset.wk-field {
   border-radius: 50%;
   animation: wk-spin 0.8s linear infinite;
 }
-/* 화면 전체 진행 덮개(BlockingProgress). 모양은 DT Figma 0.2.1·0.2.2(회색 반투명 전체 + 가운데 회전 표시와 두 줄 문구, 카드 없음).
+/* 화면 전체 진행 덮개(BlockingProgress). 기본 표현은 반투명 배경과 가운데 진행 표시·문구이며 프로젝트가 디자인을 소유한다.
    층은 --wk-blocking-layer(기본은 키트 대화창 1000 아래라 대화창이 위에 뜬다), 배경은 --wk-blocking-backdrop. */
 .wk-blocking {
   position: fixed;

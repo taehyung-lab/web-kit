@@ -80,6 +80,7 @@ function applyRows(
   }
   // 값을 먼저 화면에 반영한다. 줄 key가 고정된 화면은 칸 부품이 새 이름으로 다시 마운트되며, 그때 TanStack이 이전 이름의 meta를
   // 처음 상태로 되돌린다. 그 정리가 끝난 뒤에 옮긴 meta를 써야 오류가 사라지지 않는다.
+  logOf(form).push(op);
   flushSync(() => writeFormValues(form, accepted));
   const moved = new Map<string, FieldMeta>();
   for (const [field, meta] of before) {
@@ -102,7 +103,6 @@ function applyRows(
       }));
   }
   for (const [field, meta] of moved) form.setFieldMeta(field, meta);
-  logOf(form).push(op);
   // 제출 전에는 검증 시점 규칙(revalidateLogic)에 따라 조용하고, 제출 뒤에는 줄이 바뀐 결과로 오류를 다시 계산한다.
   return Promise.resolve(form.validateField(path, 'change')).then(() => undefined);
 }

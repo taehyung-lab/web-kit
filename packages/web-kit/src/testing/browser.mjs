@@ -39,7 +39,17 @@ export function checkDialogBrowser({ url, target }) {
 }
 /** 덮개 중 실제 좌표 클릭·Tab 차단과 모든 복원 갈래를 검사한다. */
 export function checkProgressBrowser({ url, target }) {
-    for (const mode of ['restore', 'removed', 'root', 'saved', 'error', 'portal', 'initial', 'from-dialog']) {
+    registerProgressBrowser({ url, target }, ['restore', 'removed', 'root', 'saved', 'error', 'portal', 'initial', 'from-dialog']);
+}
+/** 폼을 설치하지 않아도 덮개 자체의 모든 브라우저 보장을 검사한다. */
+export function checkProgressFeatureBrowser(options) {
+    registerProgressBrowser(options, ['restore', 'removed', 'root', 'saved', 'portal', 'initial', 'from-dialog']);
+}
+/** 폼과 덮개가 함께 있을 때 서버 오류 초점을 검사한다. */
+export function checkFormProgressBrowser(options) { registerProgressBrowser(options, ['error']); }
+/** 같은 기존 단언을 설치한 조합에 필요한 모드에만 등록한다. */
+function registerProgressBrowser({ url, target }, modes) {
+    for (const mode of modes) {
         test(conformanceTitle('B-progress-' + mode, target, '덮개 배경 차단과 복원 ' + mode), async ({ page }) => {
             await page.goto(url + '?mode=' + mode);
             if (mode !== 'initial')
@@ -81,6 +91,19 @@ export function checkProgressBrowser({ url, target }) {
 }
 /** 일반·추가·하위 폼의 실제 Enter 결과와 선택 포털의 키보드를 검사한다. */
 export function checkFormBrowser({ url, target }) {
+    test(conformanceTitle('B-form-protection', target, '기본 보호는 브라우저 이탈을 묻고 보호 제외는 묻지 않는다'), async ({ page }) => {
+        for (const protect of [true, false]) {
+            await page.goto(url + '?protect=' + protect);
+            await page.getByRole('textbox', { name: '제목', exact: true }).fill('changed');
+            let dialogs = 0;
+            const accept = async (dialog) => { dialogs += 1; await dialog.accept(); };
+            page.on('dialog', accept);
+            await page.reload();
+            page.off('dialog', accept);
+            expect(dialogs).toBe(protect ? 1 : 0);
+            await expect(page.getByRole('textbox', { name: '제목', exact: true })).toHaveValue('outer');
+        }
+    });
     test(conformanceTitle('B-enter', target, '일반 입력 Enter는 한 번 저장한다'), async ({ page }) => {
         await page.goto(url);
         await page.getByRole('textbox', { name: '제목', exact: true }).press('Enter');
