@@ -5,7 +5,7 @@ import { useSaveForm } from '@boosterlab/web-kit/form';
 import { Form } from '@/shared/ui/web-kit/form/ui';
 import { useFormCopy } from '@/shared/lib/form-messages';
 import { readSavedWorkflow, saveWorkflow } from '../api/workflows';
-import { draftSchema, publishSchema, initialWorkflow, workflowReferences, type WorkflowValues } from '../model/form';
+import { draftSchema, publishSchema, initialWorkflow, workflowReferences, workflowConditionalFields, type WorkflowValues } from '../model/form';
 const F = Form.of<WorkflowValues>();
 const SOURCE = { id: 'example', values: initialWorkflow };
 /** 관계·검증·문구만 예제가 정하고 확인·정리·잠금·변경 감지는 키트가 처리한다. */
@@ -25,6 +25,7 @@ export function FormWorkflowScreen() {
     schema: publishSchema,
     source: SOURCE,
     references: workflowReferences,
+    conditionalFields: workflowConditionalFields,
     save: publish,
     onSaved: async (result) => {
       await readSavedWorkflow(result.id);
@@ -46,6 +47,8 @@ export function FormWorkflowScreen() {
         }}
       >
         <F.Text name="title" label={t('workflows.name')} />
+        <F.Checkbox name="hasNote" label={t('workflows.hasNote')} />
+        <F.Text name="note" label={t('workflows.note')} />
         <F.Array name="items">
           {(rows) => (
             <div className="flex flex-col gap-3">

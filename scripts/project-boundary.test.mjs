@@ -1,4 +1,4 @@
-// 파일 책임: 키트 문서와 소스 주석에 알려진 소비 프로젝트 표기가 다시 들어오는지 검사한다.
+// 파일 책임: 키트 문서와 패키지·starter 소스 주석에 알려진 소비 프로젝트 표기가 다시 들어오는지 검사한다.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -60,7 +60,7 @@ test('주석 검사는 실행 문자열·정규식·JSX와 실제 주석을 구�
   assert.equal(violations(comments('/* DT의 정책 */ .example {}', 'example.css')).length, 1);
 });
 
-test('관리하는 키트 문서와 패키지·registry 소스 주석에는 프로젝트 고유 표기가 없다', () => {
+test('관리하는 키트 문서와 패키지·registry·starter 소스 주석에는 프로젝트 고유 표기가 없다', () => {
   const documents = ['README.md', 'docs/maintaining.md', 'packages/web-kit/README.md', 'apps/starter/README.md'];
   for (const directory of ['docs/decisions', 'packages/web-kit/docs', 'packages/web-kit/skills']) {
     documents.push(...files(resolve(root, directory)).filter((path) => path.endsWith('.md')));
@@ -74,8 +74,9 @@ test('관리하는 키트 문서와 패키지·registry 소스 주석에는 프�
   const agents = readFileSync(resolve(root, 'AGENTS.md'), 'utf8').split('<!-- agent-workflow-kit:end -->')[1];
   assert.ok(agents, 'AGENTS 프로젝트 절 경계를 찾을 수 있어야 한다');
   findings.push(...violations(agents).map((finding) => ({ path: 'AGENTS.md (프로젝트 절)', ...finding })));
-  for (const directory of readdirSync(resolve(root, 'packages'))) {
-    const sourceRoot = resolve(root, 'packages', directory, 'src');
+  const sourceRoots = readdirSync(resolve(root, 'packages')).map((directory) => resolve(root, 'packages', directory, 'src'));
+  sourceRoots.push(resolve(root, 'apps/starter/src'), resolve(root, 'apps/starter/tests'));
+  for (const sourceRoot of sourceRoots) {
     for (const path of files(sourceRoot).filter((path) => /\.(?:[cm]?[jt]sx?|css)$/.test(path))) {
       findings.push(...violations(comments(readFileSync(path, 'utf8'), path)).map((finding) => ({ path: relative(root, path), ...finding })));
     }

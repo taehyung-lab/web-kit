@@ -18,7 +18,7 @@ async function fill(user: ReturnType<typeof userEvent.setup>, title: string) {
   await user.upload(screen.getByLabelText(/좌석배치도/), new File(['map'], 'seat-map.png', { type: 'image/png' }));
 }
 
-describe('show example (DT performance form fit)', () => {
+describe('show example (performance form fit)', () => {
   it('puts the server duplicate-round error on the second round and keeps it on that round after moving it up', async () => {
     const user = userEvent.setup();
     const { requests } = renderApp('/shows/new');

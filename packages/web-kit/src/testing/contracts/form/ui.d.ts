@@ -107,7 +107,7 @@ declare function Field<V = unknown>({ name, label, description, disabled, labelT
     /** 입력이 라벨 요소로 이름 지을 수 없는 묶음이면 'group'. */
     readonly labelTarget?: 'control' | 'group';
     readonly children: (control: FormControl<V>, labelId: string) => ReactNode;
-}): import("react").JSX.Element;
+}): import("react").JSX.Element | null;
 /** 폼 검증·필수 표시·오류 초점을 같은 선택 입력에 연결한다. */
 declare function Choice({ name, description, status, onRetry, ...props }: FormFieldProps & Omit<ChoiceProps, 'value' | 'onValueChange'> & { readonly status?: OptionsStatus; readonly onRetry?: () => void }): import("react").JSX.Element;
 /**
@@ -152,7 +152,7 @@ declare function Select({ options, placeholder, status, onRetry, onChange, ...fi
 /** boolean 값 하나. 라벨이 체크박스 옆에 붙는다. onChange는 사용자가 바꾼 직후에만 부른다. */
 declare function Checkbox({ onChange, ...field }: FormFieldProps & {
     readonly onChange?: (checked: boolean) => void;
-}): import("react").JSX.Element;
+}): import("react").JSX.Element | null;
 /**
  * 파일 하나 고르기. 값은 FormFileValue이고 지금 파일 이름을 상태에서 그린다(네이티브 입력은 다시 그려지면 비므로 근거로 쓰지 않는다).
  * 선택 창을 열었다 취소해도 값은 그대로다. 지우는 길은 제거 버튼 하나다(실수로 연 창 때문에 이미 있는 파일을 잃지 않는다).
@@ -167,7 +167,7 @@ declare function ArrayField({ name, minItems, maxItems, children, }: {
     readonly minItems?: number;
     readonly maxItems?: number;
     readonly children: (rows: FormArrayRows<never>) => ReactNode;
-}): import("react").JSX.Element;
+}): import("react").JSX.Element | null;
 /**
  * 칸 묶음 하나(제목 있는 구역). `fields`(이 구역 칸의 정확한 경로나 접두)를 주면 접을 수 있는 구역이 된다:
  * 머리글 버튼이 열고 닫고, 구역 칸에 오류가 있으면 머리글에 표시하며, 제출 뒤 오류가 있으면 펼친 다음 첫 오류 칸에 포커스한다.

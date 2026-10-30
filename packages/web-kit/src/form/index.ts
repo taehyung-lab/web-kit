@@ -26,3 +26,5 @@ export {
 } from './binding';
 
 export type { LeaveReason } from './navigation';
+
+export type { ConditionalField } from './conditional';

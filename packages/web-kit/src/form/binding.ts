@@ -92,7 +92,8 @@ export function useFormRootBinding(editor: AnyEditor, protect = true, formatErro
 export function useFormFieldBinding(editor: AnyEditor, name: string, disabled = false) {
   useLocked(editor, name, disabled);
   const required = useSelector(editor.form.store, () => editor.isRequired(name));
-  return { id: editor.fieldId(name), required,
+  const visible = useSelector(editor.form.store, () => editor.isVisible(name));
+  return { id: editor.fieldId(name), required, visible,
     change: (value: unknown, handleChange: (value: any) => void, onApplied?: () => void) => {
       void requestFormChange(editor.form, setBy(editor.form.state.values, name, value), (accepted) => {
         flushSync(() => {

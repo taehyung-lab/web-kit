@@ -43,7 +43,7 @@ registry item은 함께 설치하는 파일 묶음이다. UI와 함께 설치된
 
 ## 시험판에서 옮겨 오기
 
-5.0.0 첫 정식 기준으로 옮길 때는 사용하던 시험판에 따라 다음 연결을 함께 이전한다. 현재 검사용 후보는 5.0.0-rc.4다.
+5.0.0 첫 정식 기준으로 옮길 때는 사용하던 시험판에 따라 다음 연결을 함께 이전한다. 현재 검사용 후보는 5.0.0-rc.5다. 조건부 칸은 web-kit-form의 같은 조건 함수·schema·빈 값 선언을 함께 연결한다.
 
 - **검색어·선택 칸:** 입력만 하고 [검색]을 누르면 입력 중 글자는 검색에 포함되지 않고 칸에 남는다. Enter 연결은 패키지 바인딩에서 복사본으로 이동했으므로 registry `list` 복사본을 함께 갱신한다. 기본 Enter는 추가 후 검색이며, [추가]와 Enter는 `;`로 여러 검색어를 나눈다. 전체 선택지 밖 값은 표시·검색·저장에서 빠진다. 서버 검색의 일부 결과 밖 선택은 유지한다. `Form.Choice`의 서버 선택지는 `Form.Select`와 같은 `status`·`onRetry`를 연결한다(생략은 고정 선택지 `ready`). 정리만으로 폼 원본이나 이탈 보호는 바뀌지 않는다. 보장은 [web-kit-list](../skills/web-kit-list/SKILL.md)·[web-kit-form](../skills/web-kit-form/SKILL.md), 결정 이유는 [목록·선택 결정](../references/docs/decisions/0006-list-choice-permission.md)에 있다.
 

@@ -27,7 +27,7 @@ test('reference cleanup and draft save share the form lifecycle', async ({ page 
   await expect(page.getByText('제목을 입력해 주세요.')).toBeVisible();
   const request = page.waitForRequest((request) => request.method() === 'POST' && request.url().endsWith('/api/form-workflows'));
   await page.getByRole('button', { name: '임시 저장' }).click();
-  expect((await request).postDataJSON()).toEqual({ mode: 'draft', values: { title: '', items: [], selected: '' } });
+  expect((await request).postDataJSON()).toEqual({ mode: 'draft', values: { title: '', hasNote: false, note: '', items: [], selected: '' } });
   await expect(page.getByRole('status').filter({ hasText: '임시 저장했습니다.' })).toHaveText('임시 저장했습니다.');
   await page.getByRole('link', { name: '상품', exact: true }).click();
   await expect(page).toHaveURL(/\/products$/);
@@ -69,4 +69,42 @@ test('publishing completes after the project follow-up request', async ({ page }
   expect(sent).toHaveLength(2);
   expect(sent[0]).toBe('POST /api/form-workflows');
   expect(sent[1]).toMatch(/^GET \/api\/form-workflows\/w-/);
+});
+
+
+test('conditional description restores the baseline and hidden save sends the declared empty value', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByLabel('아이디').fill('admin');
+  await page.getByLabel('비밀번호').fill('password');
+  await page.getByRole('button', { name: '로그인' }).click();
+  await expect(page).toHaveURL(/\/products$/);
+  await page.getByRole('link', { name: '작성 예제' }).click();
+  const toggle = page.getByLabel('추가 설명 사용');
+  const note = page.getByRole('textbox', { name: '추가 설명', exact: true });
+  await expect(note).toHaveCount(0);
+  await toggle.check();
+  await note.fill('버릴 편집');
+  await toggle.uncheck();
+  await toggle.check();
+  await expect(note).toHaveValue('');
+  await toggle.uncheck();
+  await page.getByRole('link', { name: '상품', exact: true }).click();
+  await expect(page).toHaveURL(/\/products$/);
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
+  await page.getByRole('link', { name: '작성 예제' }).click();
+  await page.getByRole('textbox', { name: '제목', exact: true }).fill('조건부 저장');
+  await toggle.check();
+  await note.fill('저장할 값');
+  await page.getByRole('button', { name: '임시 저장' }).click();
+  await expect(page.getByText('임시 저장했습니다.', { exact: true })).toBeVisible();
+  await note.fill('저장 뒤 편집');
+  await toggle.uncheck();
+  await toggle.check();
+  await expect(note).toHaveValue('저장할 값');
+  await toggle.uncheck();
+  const request = page.waitForRequest((request) => request.method() === 'POST' && request.url().endsWith('/api/form-workflows'));
+  await page.getByRole('button', { name: '게시', exact: true }).click();
+  expect((await request).postDataJSON().values).toMatchObject({ hasNote: false, note: '' });
+  await expect(page.getByText('게시했습니다.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
 });

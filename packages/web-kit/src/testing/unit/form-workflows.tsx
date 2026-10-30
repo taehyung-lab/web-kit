@@ -3,7 +3,9 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, expect, it as baseIt, vi } from 'vitest';
 import { z } from 'zod';
 import type * as Contract0 from '../contracts/form/ui';
+import { RequestFailure } from '../../failure';
 import { useSaveForm, type SaveFormEditor } from '../../form/save-form';
+import { moveRow, appendRow } from '../../form/rows';
 import type { FormReference } from '../../form/references';
 import { conformanceTitle, type ConformanceTarget } from '../target.mjs';
 
@@ -413,4 +415,177 @@ it(title('G090', '다른 응답을 반환하는 두 저장의 완료 처리는 �
   await act(async () => editor.submit());
   expect(completed).toHaveBeenLastCalledWith('publish:42');
 });
+
+{
+const showDetail = (values: { enabled: boolean }) => values.enabled;
+const schema = z.object({ enabled: z.boolean(), detail: z.string() }).superRefine((values, context) => {
+  if (showDetail(values) && values.detail === '') context.addIssue({ code: 'custom', path: ['detail'], message: '내용 필요' });
+});
+type Values = z.input<typeof schema>;
+const F = Form.of<Values>();
+let editor: SaveFormEditor<Values>;
+const save = vi.fn(async (_values: Values): Promise<void> => undefined);
+afterEach(() => { cleanup(); save.mockClear(); });
+
+/** 조건은 폼 정의 한 곳에만 두고 칸은 같은 선언을 읽어 표시한다. */
+function Example({ detail = '10', visible }: { detail?: string; visible?: boolean }) {
+  editor = useSaveForm({
+    schema,
+    source: { id: 1, values: { enabled: true, detail } },
+    conditionalFields: (values: Values) => [{ field: 'detail', visible: visible ?? showDetail(values), emptyValue: '' }],
+    save,
+    fieldError: (error) => ({ field: error.field as 'detail', message: '서버 거절' }),
+  });
+  return <F editor={editor} protect={false}>
+    <F.Checkbox name="enabled" label="사용" />
+    <F.Text name="detail" label="내용" />
+    <F.Submit>저장</F.Submit>
+  </F>;
+}
+
+it(title('form-conditional-1', 'F2 숨긴 칸은 원시 입력을 보존하고 빈 값으로 저장한다'), async () => {
+  render(<Example />);
+  fireEvent.change(screen.getByLabelText(/^내용/), { target: { value: '20' } });
+  fireEvent.click(screen.getByLabelText('사용'));
+  expect(screen.queryByLabelText(/^내용/)).toBeNull();
+  expect(editor.form.state.values.detail).toBe('20');
+  await act(async () => { await editor.submit(); });
+  expect(save).toHaveBeenCalledWith({ enabled: false, detail: '' }, { enabled: false, detail: '' }, expect.anything());
+});
+
+it(title('form-conditional-2', 'F3 숨긴 필수 칸은 저장을 막지 않고 다시 보이면 검증한다'), async () => {
+  render(<Example detail="" />);
+  fireEvent.click(screen.getByLabelText('사용'));
+  expect(editor.isRequired('detail')).toBe(false);
+  await act(async () => { await editor.submit(); });
+  expect(save).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole('alert')).toBeNull();
+  fireEvent.click(screen.getByLabelText('사용'));
+  await act(async () => { await editor.submit(); });
+  expect(save).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole('alert').textContent).toBe('내용 필요');
+});
+
+it.each(['', '10'])(title('form-conditional-3', 'F4/F5 숨김→보임은 기준선 %j를 복원하고 변경이 사라진다'), async (detail) => {
+  render(<Example detail={detail} />);
+  fireEvent.change(screen.getByLabelText(/^내용/), { target: { value: '20' } });
+  expect(editor.getState().isDirty).toBe(true);
+  fireEvent.click(screen.getByLabelText('사용'));
+  fireEvent.click(screen.getByLabelText('사용'));
+  expect((screen.getByLabelText(/^내용/) as HTMLInputElement).value).toBe(detail);
+  expect(editor.getState().isDirty).toBe(false);
+});
+
+it(title('form-conditional-4', 'F5 원래 값이 있는 칸을 숨기면 제출 차이를 변경으로 센다'), () => {
+  const view = render(<Example />);
+  view.rerender(<Example visible={false} />);
+  expect(editor.getState().isDirty).toBe(true);
+});
+
+it(title('form-conditional-5', 'F4 저장 성공 뒤에는 저장된 기준선 값으로 복원한다'), async () => {
+  render(<Example />);
+  fireEvent.change(screen.getByLabelText(/^내용/), { target: { value: '30' } });
+  await act(async () => { await editor.submit(); });
+  fireEvent.change(screen.getByLabelText(/^내용/), { target: { value: '40' } });
+  fireEvent.click(screen.getByLabelText('사용'));
+  fireEvent.click(screen.getByLabelText('사용'));
+  expect((screen.getByLabelText(/^내용/) as HTMLInputElement).value).toBe('30');
+  expect(editor.getState().isDirty).toBe(false);
+});
+
+it(title('form-conditional-6', 'F3 계약을 어긴 schema의 숨긴 필수 오류는 폼 한 줄로 보이며 저장하지 않는다'), async () => {
+  /** 잘못 연결한 검증을 조용히 성공으로 바꾸지 않는다. */
+  function InvalidSchema() {
+    const current = useSaveForm({
+      schema: z.object({ detail: z.string().min(1, '빈 값 계약 확인') }),
+      source: { id: 1, values: { detail: '10' } },
+      conditionalFields: () => [{ field: 'detail', visible: false, emptyValue: '' }],
+      save: async () => { throw new Error('저장되면 안 됨'); },
+    });
+    return <Form editor={current} protect={false}><Form.Text name="detail" label="숨긴 내용" /><Form.Failure /><Form.Submit>잘못된 저장</Form.Submit></Form>;
+  }
+  render(<InvalidSchema />);
+  await act(async () => fireEvent.click(screen.getByText('잘못된 저장')));
+  expect(screen.queryByLabelText('숨긴 내용')).toBeNull();
+  expect(screen.getByRole('alert').textContent).toContain('빈 값 계약 확인');
+});
+
+it(title('form-conditional-7', 'F6 숨긴 칸으로 온 서버 오류는 칸 대신 폼 한 줄로 보인다'), async () => {
+  let reject: (reason: unknown) => void = () => undefined;
+  save.mockImplementationOnce(() => new Promise<void>((_resolve, fail) => { reject = fail; }));
+  render(<Example />);
+  let pending: Promise<void>;
+  await act(async () => { pending = editor.submit(); });
+  fireEvent.click(screen.getByLabelText('사용'));
+  await act(async () => { reject(new RequestFailure({ kind: 'validation', status: 400, fieldErrors: [{ field: 'detail', code: 'Bad' }] })); await pending; });
+  expect(editor.formFailure).toBeInstanceOf(RequestFailure);
+  expect(editor.unattachedFieldErrors).toEqual([{ field: 'detail', code: 'Bad' }]);
+  expect(screen.queryByLabelText(/^내용/)).toBeNull();
+});
+
+it(title('form-conditional-8', 'F6 줄 이동과 새 줄의 숨김→보임은 각 줄의 최초 값으로 복원한다'), async () => {
+  const rowSchema = z.object({ rows: z.array(z.object({ key: z.string(), enabled: z.boolean(), detail: z.string() })) });
+  type Rows = z.input<typeof rowSchema>;
+  const R = Form.of<Rows>();
+  const rowSave = vi.fn(async (_values: Rows) => undefined);
+  let rowsEditor: SaveFormEditor<Rows>;
+  /** 줄마다 같은 선언 한 곳에서 조건을 계산한다. */
+  function RowsExample() {
+    rowsEditor = useSaveForm({
+      schema: rowSchema,
+      source: { id: 1, values: { rows: [{ key: 'a', enabled: true, detail: 'A' }, { key: 'b', enabled: true, detail: 'B' }] } },
+      conditionalFields: (values) => values.rows.map((row, index) => ({ field: `rows[${index}].detail` as const, visible: row.enabled, emptyValue: '' })),
+      save: rowSave,
+    });
+    return <R editor={rowsEditor} protect={false}><R.Array name="rows">{(rows) => rows.items.map((row, index) => <div key={row.key}>
+      <R.Checkbox name={`rows[${index}].enabled`} label={`사용 ${row.key}`} />
+      <R.Text name={`rows[${index}].detail`} label={`내용 ${row.key}`} />
+    </div>)}</R.Array></R>;
+  }
+  render(<RowsExample />);
+  fireEvent.change(screen.getByLabelText(/^내용 a/), { target: { value: 'edited A' } });
+  fireEvent.click(screen.getByLabelText('사용 a'));
+  await act(async () => { await moveRow(rowsEditor.form, 'rows', 0, 1); });
+  fireEvent.click(screen.getByLabelText('사용 a'));
+  expect((screen.getByLabelText(/^내용 a/) as HTMLInputElement).value).toBe('A');
+  expect((screen.getByLabelText(/^내용 b/) as HTMLInputElement).value).toBe('B');
+  await act(async () => { await appendRow(rowsEditor.form, 'rows', { key: 'c', enabled: true, detail: 'C' }); });
+  fireEvent.change(screen.getByLabelText(/^내용 c/), { target: { value: 'edited C' } });
+  fireEvent.click(screen.getByLabelText('사용 c'));
+  fireEvent.click(screen.getByLabelText('사용 c'));
+  expect((screen.getByLabelText(/^내용 c/) as HTMLInputElement).value).toBe('C');
+  fireEvent.click(screen.getByLabelText('사용 b'));
+  await act(async () => { await rowsEditor.submit(); });
+  expect(rowSave.mock.calls[0]?.[0].rows.map((row) => row.detail)).toEqual(['', 'A', 'C']);
+  let finish: () => void = () => undefined;
+  rowSave.mockImplementationOnce(() => new Promise<undefined>((resolve) => { finish = () => resolve(undefined); }));
+  let pending: Promise<void>;
+  await act(async () => { pending = rowsEditor.submit(); });
+  await act(async () => { await appendRow(rowsEditor.form, 'rows', { key: 'd', enabled: true, detail: 'D' }); });
+  fireEvent.change(screen.getByLabelText(/^내용 d/), { target: { value: 'edited D' } });
+  await act(async () => { finish(); await pending; });
+  fireEvent.click(screen.getByLabelText('사용 d'));
+  fireEvent.click(screen.getByLabelText('사용 d'));
+  expect((screen.getByLabelText(/^내용 d/) as HTMLInputElement).value).toBe('D');
+});
+
+it(title('form-conditional-9', 'F3 숨긴 부모 아래 필수 칸을 제외하면서 보이는 값의 schema 변환은 보존한다'), async () => {
+  const transformSave = vi.fn(async (_values: { title: string; detail: { text: string } }) => undefined);
+  /** 숨김을 반영하는 검증과 출력 변환을 함께 쓰는 폼이다. */
+  function Transformed() {
+    const current = useSaveForm({
+      schema: z.object({ title: z.string().transform((value) => value.toUpperCase()), detail: z.object({ text: z.string() }) }),
+      source: { id: 1, values: { title: 'hello', detail: { text: 'secret' } } },
+      conditionalFields: () => [{ field: 'detail', visible: false, emptyValue: { text: '' } }],
+      save: transformSave,
+    });
+    return <Form editor={current} protect={false}><Form.Text name="detail.text" label="하위 내용" /><Form.Submit>변환 저장</Form.Submit></Form>;
+  }
+  render(<Transformed />);
+  expect(screen.queryByLabelText('하위 내용')).toBeNull();
+  await act(async () => fireEvent.click(screen.getByText('변환 저장')));
+  expect(transformSave).toHaveBeenCalledWith({ title: 'HELLO', detail: { text: '' } }, { title: 'hello', detail: { text: '' } }, expect.anything());
+});
+
+}
 }

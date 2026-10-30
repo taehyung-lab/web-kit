@@ -16,6 +16,7 @@ import { flushSync } from 'react-dom';
 import { normalizeChoiceValue, type ChoiceNode, type ChoiceValue } from '../choice-binding';
 import { isRequestFailure, type FieldError } from '../failure';
 import { useBlockingProgress } from '../progress';
+import { fieldIsHidden, projectConditionalFields, useConditionalFields, type ConditionalField } from './conditional';
 import { followRows, rowMark } from './rows';
 import { revealFormSections } from './sections';
 import { useFormReferences, referenceIssues, type FormReference, type ReferenceChange } from './references';
@@ -36,6 +37,8 @@ export interface SaveFormOptions<
   TSecondaryOutput = TInput,
   TSecondaryResult = TResult,
 > {
+  /** 현재 칸의 표시 조건과 서버가 받는 빈 값을 한 곳에서 선언한다. */
+  readonly conditionalFields?: (values: TInput) => readonly ConditionalField<TInput>[];
   readonly references?: readonly FormReference<TInput>[];
   /** 임시저장처럼 검증과 요청이 다른 동작. 완료 동작은 기본 저장에서 상속하지 않는다. */
   readonly secondary?: SecondarySave<TInput, TSecondaryOutput, TSecondaryResult>;
@@ -184,6 +187,7 @@ export function useSaveForm<
   const [defaults, setDefaults] = useState(source.values);
   const [baseline, setBaselineState] = useState(source.values);
   const baselineRef = useRef(source.values);
+  const baselineMark = useRef(0);
   const [completionFailure, setCompletionFailure] = useState<unknown>();
   const [stage, setStageState] = useState<SaveStage<TInput>>({ kind: 'idle' });
   /** 마지막 저장 실패와, 그중 필드에 붙이지 못한 서버 필드 오류. 둘은 함께 바뀐다. */
@@ -216,7 +220,7 @@ export function useSaveForm<
   const choices = useRef(new Map<string, { token: object; nodes: readonly ChoiceNode[] }>());
   const [, updateChoices] = useState(0);
   /** 원본 값은 그대로 두고 현재 전체 선택지에 맞춘 표시·검증·제출 값을 계산한다. */
-  function project(input: TInput): TInput {
+  function projectChoices(input: TInput): TInput {
     let next = input;
     for (const [name, { nodes }] of choices.current) {
       const before = getBy(next, name) as ChoiceValue;
@@ -224,6 +228,14 @@ export function useSaveForm<
       if (!evaluate(before, after)) next = setBy(next, name, after);
     }
     return next;
+  }
+  /** 현재 표시 조건을 읽어 검증·제출에 사용할 값을 계산한다. */
+  function project(input: TInput): TInput {
+    return projectConditionalFields(projectChoices(input), latest.current.conditionalFields?.(input) ?? []);
+  }
+  /** 숨긴 부모 아래 경로도 화면·필수·서버 오류 부착에서 제외한다. */
+  function isVisible(field: string): boolean {
+    return !fieldIsHidden(latest.current.conditionalFields?.(form.state.values) ?? [], field);
   }
   /** 마운트된 선택 칸의 전체 선택지만 등록하고 해제한다. */
   function registerChoice(name: string, nodes: readonly ChoiceNode[]) {
@@ -274,6 +286,7 @@ export function useSaveForm<
     () => submission.current === undefined && stageRef.current.kind === 'idle',
   );
   const values = useSelector(form.store, (state) => state.values);
+  const conditional = useConditionalFields(form, source.id, baseline, baselineMark.current, options.conditionalFields);
   /** 필수 판정 캐시. 값이 바뀌면 새로 판정한다. */
   const requiredCache = useRef<{ values: unknown; fields: Map<string, boolean> }>({ values: undefined, fields: new Map() });
 
@@ -282,6 +295,7 @@ export function useSaveForm<
    * 다른 칸 값에 따른 조건부 필수도 같은 검증으로 나온다(다른 칸 오류가 있어도 돌도록 쓴 규칙이어야 한다 — skill 「필수 표시」).
    */
   function isRequired(field: string): boolean {
+    if (!isVisible(field)) return false;
     const current = project(form.state.values);
     if (requiredCache.current.values !== current) requiredCache.current = { values: current, fields: new Map() };
     const known = requiredCache.current.fields.get(field);
@@ -294,7 +308,8 @@ export function useSaveForm<
   }
 
   /** 렌더 이전 이탈 판정도 최신 저장 기준선을 읽게 한다. */
-  function setBaseline(next: TInput) {
+  function setBaseline(next: TInput, mark = rowMark(form)) {
+    baselineMark.current = mark;
     baselineRef.current = next;
     setBaselineState(next);
   }
@@ -367,6 +382,7 @@ export function useSaveForm<
         target === undefined ||
         now === undefined ||
         form.getFieldMeta(now) === undefined ||
+        !isVisible(now) ||
         isLocked(form, now) ||
         !evaluate(getBy(form.state.values, now), getBy(submitted, target.field))
       ) {
@@ -435,7 +451,7 @@ export function useSaveForm<
     savedResult.current = { complete: () => onSaved?.(result), identity: identity.current };
     flushSync(() => {
       if (evaluate(project(form.state.values), submitted)) replace(saved);
-      else setBaseline(saved);
+      else setBaseline(saved, mark);
       setStage({ kind: 'saved', completing: false });
     });
     if (completion.current.acknowledge !== true) await complete();
@@ -479,7 +495,19 @@ export function useSaveForm<
     setRejection(undefined);
     setCompletionFailure(undefined);
     try {
-      if (rejectReferences(form.state.values, rowMark(form))) return;
+      conditional.reconcile();
+      if (rejectReferences(projectConditionalFields(form.state.values, latest.current.conditionalFields?.(form.state.values) ?? []), rowMark(form))) return;
+      // 숨긴 칸의 빈 값을 schema가 거절하면 설정 오류를 조용히 버리지 않고 폼 한 줄로 알린다.
+      const projected = project(form.state.values);
+      const checked = latest.current.conditionalFields === undefined ? undefined : await latest.current.schema['~standard'].validate(projected);
+      if (!isCurrent(token)) return;
+      if (checked?.issues?.some((issue) => !isVisible(issuePath(issue.path)))) {
+        const error = new FormRejection(checked.issues.map((issue) => ({ field: issuePath(issue.path), message: issue.message })), checked.issues[0]?.message);
+        const { attached, unattached, missed } = attachFieldErrors(error, projected, rowMark(form));
+        setRejection({ failure: error, unattached, missed });
+        focusFirst(attached);
+        return;
+      }
       // 이미 떠 있는 blur 오류가 있으면 TanStack 제출은 전체 검증 없이 멈춘다. 필드 단위 blur 검증과 폼 검증을
       // 먼저 다시 돌려, 고친 값의 오류는 지우고 남은 오류는 모두 보인다.
       await form.validateAllFields('blur');
@@ -506,10 +534,11 @@ export function useSaveForm<
     clearServerErrors();
     setRejection(undefined);
     setCompletionFailure(undefined);
+    conditional.reconcile();
     const submitted = project(form.state.values);
     const mark = rowMark(form);
     try {
-      if (rejectReferences(form.state.values, mark)) return;
+      if (rejectReferences(projectConditionalFields(form.state.values, latest.current.conditionalFields?.(form.state.values) ?? []), mark)) return;
       const result = await action.schema['~standard'].validate(submitted);
       if (!isCurrent(token)) return;
       if (result.issues !== undefined) {
@@ -582,7 +611,7 @@ export function useSaveForm<
     }
     if (stage.kind !== 'idle' || evaluate(decided.current, source.values)) return;
     decided.current = source.values;
-    if (evaluate(form.state.values, baseline)) replace(source.values);
+    if (evaluate(project(form.state.values), projectChoices(baseline))) replace(source.values);
   });
 
   function replace(next: TInput) {
@@ -635,18 +664,22 @@ export function useSaveForm<
     /** 필드에 붙이지 못한 서버 필드 오류(저장 중 바뀐 필드·폼 경로로 바꾸지 못한 것). 폼 수준 표시의 근거다. */
     unattachedFieldErrors: unattached,
     /** 기준선(마지막으로 확정된 원본 또는 저장 결과). 차이로 요청을 만드는 화면이 읽는다. 바꾸지 않는다. */
-    baseline: project(baseline),
+    baseline: projectChoices(baseline),
     registerChoice,
     /** 현재 입력이 기준선과 다른가. */
-    isDirty: !evaluate(project(values), project(baseline)),
+    isDirty: !evaluate(project(values), projectChoices(baseline)),
     isSaving: stage.kind === 'saving',
     /** 같은 이벤트 안의 이동도 현재 입력과 기준선으로 판정한다. */
-    getState: () => ({
-      stage: stageRef.current.kind,
-      isDirty: !evaluate(project(form.state.values), project(baselineRef.current)),
-      isSaving: stageRef.current.kind === 'saving',
-    }),
+    getState: () => {
+      conditional.reconcile();
+      return {
+        stage: stageRef.current.kind,
+        isDirty: !evaluate(project(form.state.values), projectChoices(baselineRef.current)),
+        isSaving: stageRef.current.kind === 'saving',
+      };
+    },
     fieldId: (field: DeepKeys<TInput>) => formFieldControlId(form.formId, field),
+    isVisible,
     isRequired: (field: DeepKeys<TInput>) => isRequired(field),
     submit,
     confirm,
@@ -677,6 +710,8 @@ export interface SaveFormEditor<TInput, TResult = unknown> {
   readonly isSaving: boolean;
   readonly getState: () => { readonly stage: SaveStage<TInput>['kind']; readonly isDirty: boolean; readonly isSaving: boolean };
   readonly fieldId: (field: DeepKeys<TInput>) => string;
+  /** 조건 선언을 읽은 현재 표시 여부. 숨긴 부모 아래 경로도 false다. */
+  readonly isVisible: (field: DeepKeys<TInput>) => boolean;
   /** 필수 표시(별표·aria-required): 그 칸만 비운 지금 값을 schema가 거부하는가. */
   readonly isRequired: (field: DeepKeys<TInput>) => boolean;
   readonly submit: () => Promise<void>;

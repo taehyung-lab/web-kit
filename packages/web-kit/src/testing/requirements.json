@@ -162,7 +162,16 @@
       "B-enter-add",
       "B-enter-inner",
       "form-protection-optional",
-      "B-form-protection"
+      "B-form-protection",
+      "form-conditional-1",
+      "form-conditional-2",
+      "form-conditional-3",
+      "form-conditional-4",
+      "form-conditional-5",
+      "form-conditional-6",
+      "form-conditional-7",
+      "form-conditional-8",
+      "form-conditional-9"
     ],
     "connections": [
       "form-complex.test.tsx",
