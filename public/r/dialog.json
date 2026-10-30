@@ -30,7 +30,7 @@
     },
     {
       "path": "packages/ui-registry/checks/dialog.page.tsx",
-      "content": "// 파일 책임: 소비 복사본을 키트의 브라우저 검사 화면에 전달한다.\nimport { createRoot } from 'react-dom/client';\nimport { createDialogConformancePage } from '@boosterlab/web-kit/testing/fixtures';\nimport { Dialog } from '../ui/dialog';\nimport '../ui/styles.css';\nconst Page = createDialogConformancePage({ Dialog });\ncreateRoot(document.getElementById('root')!).render(<Page />);\n",
+      "content": "// 파일 책임: 소비 복사본을 키트의 브라우저 검사 화면에 전달한다.\nimport { createRoot } from 'react-dom/client';\nimport { createDialogConformancePage } from '@boosterlab/web-kit/testing/fixtures/dialog';\nimport { Dialog } from '../ui/dialog';\nimport '../ui/styles.css';\nconst Page = createDialogConformancePage({ Dialog });\ncreateRoot(document.getElementById('root')!).render(<Page />);\n",
       "type": "registry:file",
       "target": "~/src/shared/ui/web-kit/checks/dialog.page.tsx"
     },

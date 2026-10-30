@@ -105,3 +105,5 @@ registry `choice`는 `/choice`의 `useChoiceBinding`을 쓴다. 이를 쓰는 `C
 `Choice`의 단일 선택 해제는 `clearLabel`을 지정했을 때만 제공한다. `placeholder`만으로 해제를 허용하지 않는다. 서버 검색 함수가 다시 만들어져도 진행 중 검색은 유지한다. 검색 범위가 상위 값에 따라 달라지면 `searchKey`에 해당 원시 값 배열을 전달해 이전 검색을 취소하고 다시 조회한다.
 
 즉시 조회와 검색 후 조회, 두 조회 방식의 실제 예는 [즉시 조회 선언](../../references/apps/starter/src/features/products/model/list-search.ts.txt)과 [검색 후 조회 선언](../../references/apps/starter/src/features/members/model/list-search.ts.txt)의 gated 값 차이로 확인한다. 두 화면 모두 같은 useList와 registry list를 사용한다. 요청 수 관찰은 [회원 화면 검사](../../references/apps/starter/src/features/members/screens/MemberListScreen.test.tsx.txt)에 있다.
+
+선택 설치의 검사 연결은 `/testing/unit/list`를 쓴다. `blocking-progress`도 설치한 경우 registry 연결이 `/testing/unit/combinations`로 실제 덮개 복사본과의 기존 조회 조합 검사를 추가한다. 패키지와 함께 검사 연결 파일·설치 기록을 새 원본에 맞춰 갱신한다.

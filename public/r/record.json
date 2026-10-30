@@ -3,7 +3,9 @@
   "name": "record",
   "title": "web-kit record",
   "description": "web-kit record 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
-  "dependencies": [],
+  "dependencies": [
+    "@tanstack/react-query@5.102.6"
+  ],
   "devDependencies": [
     "vitest@4.1.11",
     "@testing-library/react@16.3.2"
@@ -20,7 +22,7 @@
     },
     {
       "path": "packages/ui-registry/checks/record-ui.test.tsx",
-      "content": "// @vitest-environment jsdom\n// 파일 책임: 설치한 UI 복사본을 키트의 공통 단위 검사에 연결한다.\nimport { Record } from '../detail-ui';\nimport { checkRecordUiConformance } from '@boosterlab/web-kit/testing/unit';\nimport installation from '../../../../../registry-installation.json';\ncheckRecordUiConformance({ Record }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });\n",
+      "content": "// @vitest-environment jsdom\n// 파일 책임: 설치한 UI 복사본을 키트의 공통 단위 검사에 연결한다.\nimport { Record } from '../detail-ui';\nimport { checkRecordUiConformance } from '@boosterlab/web-kit/testing/unit/record';\nimport installation from '../../../../../registry-installation.json';\ncheckRecordUiConformance({ Record }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });\n",
       "type": "registry:file",
       "target": "~/src/shared/ui/web-kit/checks/record-ui.test.tsx"
     }

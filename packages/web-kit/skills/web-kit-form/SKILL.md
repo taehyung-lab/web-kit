@@ -81,6 +81,8 @@ headless는 화면 배치 없이 상태와 연결 함수만 쓰는 방식이다.
 
 보호 제외는 [로그인](../../references/apps/starter/src/features/auth/screens/LoginScreen.tsx.txt), 저장 후 추가 조회와 완료 실패 재시도는 [작성 예제](../../references/apps/starter/src/features/form-workflows/screens/FormWorkflowScreen.tsx.txt), 완료 확인 뒤 이동은 [약관 등록](../../references/apps/starter/src/features/terms/screens/TermsCreateScreen.tsx.txt)을 참고한다. schema·서버 요청·후속 업무는 프로젝트가 정하고 저장 상태 기계를 새로 만들지 않는다. primary와 secondary의 완료 선언은 각 동작에 따로 준다.
 
+폼과 `blocking-progress` 또는 `checkbox-tree`를 함께 설치하면 registry 검사 연결이 `/testing/unit/combinations`로 자기 UI 복사본의 조합 검사도 등록한다. 둘 중 하나만 설치한 프로젝트에는 그 조합을 요구하지 않는다. 덮개와 폼의 서버 오류 초점 브라우저 화면은 `/testing/fixtures/combinations`를 쓴다.
+
 폼만 채택한 소비 검사는 `/testing/unit/form`과 registry가 연결한 의존 검사 입구를 쓴다. 4.1에서 4.2 후보로 올릴 때는 패키지 갱신과 함께 registry `form`·`choice`·`dialog`·`pending`·`styles`의 검사 연결 import를 새 원본과 대조해 갱신한다. 제품 UI 배치·폼 동작은 그대로다. 작은 검사 입구와 실제 최소 소비의 기준은 [소비 안내](../../docs/consuming.md#복사본-적합성-검사)를 따른다.
 
 ## 줄 추가·삭제·이동 입력

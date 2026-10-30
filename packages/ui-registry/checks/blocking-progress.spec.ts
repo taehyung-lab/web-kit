@@ -1,4 +1,6 @@
-// 파일 책임: 설치한 브라우저 검사 화면을 키트 Playwright 적합성 검사에 연결한다.
-import { checkProgressBrowser } from '@boosterlab/web-kit/testing/browser';
+// 파일 책임: 덮개 자체의 브라우저 검사와 설치한 폼 조합만 등록한다.
+import { checkProgressFeatureBrowser, checkFormProgressBrowser } from '@boosterlab/web-kit/testing/browser';
 import installation from '../../../registry-installation.json' with { type: 'json' };
-checkProgressBrowser({ url: '/web-kit-checks/blocking-progress.html', target: { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit } });
+const options = { url: '/web-kit-checks/blocking-progress.html', target: { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit } };
+checkProgressFeatureBrowser(options);
+if (installation.items.some((item) => item.name === 'form')) checkFormProgressBrowser(options);

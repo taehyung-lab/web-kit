@@ -18,7 +18,7 @@
     },
     {
       "path": "packages/ui-registry/checks/filter-error.test.tsx",
-      "content": "// @vitest-environment jsdom\n// 파일 책임: 설치한 filter-error 복사본을 키트 공통 단위 검사에 연결한다.\nimport { FilterError } from '../search/filter-error';\nimport { checkFilterErrorConformance } from '@boosterlab/web-kit/testing/unit';\nimport installation from '../../../../../registry-installation.json';\ncheckFilterErrorConformance({ FilterError }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });\n",
+      "content": "// @vitest-environment jsdom\n// 파일 책임: 설치한 filter-error 복사본을 키트 공통 단위 검사에 연결한다.\nimport { FilterError } from '../search/filter-error';\nimport { checkFilterErrorConformance } from '@boosterlab/web-kit/testing/unit/primitives';\nimport installation from '../../../../../registry-installation.json';\ncheckFilterErrorConformance({ FilterError }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });\n",
       "type": "registry:file",
       "target": "~/src/shared/ui/web-kit/checks/filter-error.test.tsx"
     }

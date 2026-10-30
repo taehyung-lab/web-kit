@@ -1,8 +1,9 @@
-// 파일 책임: 같은 후보 tarball·registry를 의존이 실제로 빠진 두 격리 소비처에 설치해 단위·브라우저·적합성을 검사한다.
+// 파일 책임: 같은 후보 tarball·registry를 의존이 실제로 빠진 기능별 격리 소비처에 설치해 단위·브라우저·적합성을 검사한다.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
+import { createServer } from 'node:net';
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -40,6 +41,15 @@ function run(cwd, name, args, { failure = false } = {}) {
   return result;
 }
 
+/** 다른 작업 트리의 검사 서버와 겹치지 않도록 OS가 고른 빈 포트를 사용한다. */
+async function availablePort() {
+  const server = createServer();
+  await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+  const port = server.address().port;
+  await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  return port;
+}
+
 /** registry가 선언한 내부 의존만 재귀로 선택한다. */
 function closure(name, names = new Set()) {
   if (names.has(name)) return names;
@@ -50,7 +60,9 @@ function closure(name, names = new Set()) {
   return names;
 }
 
-for (const feature of ['auth', 'form']) {
+const featureAt = process.argv.indexOf('--features');
+const features = featureAt < 0 ? registry.items.filter((item) => item.name !== 'all').map((item) => item.name) : process.argv[featureAt + 1].split(',');
+for (const feature of features) {
   const cwd = mkdtempSync(join(tmpdir(), `web-kit-${feature}-consumer-`));
   console.log(`${feature}: ${cwd}`);
   /** 이 실행이 만든 소비 폴더 안 파일만 기록한다. */
@@ -82,7 +94,8 @@ for (const feature of ['auth', 'form']) {
       return { source: file.path, installed, sourceHash: hash(join(root, file.path)), installedHash: hash(join(cwd, installed)) };
     }) };
   }) });
-  const forbidden = feature === 'auth' ? ['@tanstack/react-form', '@tanstack/react-router', '@tanstack/react-query', '@tanstack/react-virtual', 'zod', 'axios'] : ['@tanstack/react-query', '@tanstack/react-virtual', 'axios'];
+  const declared = [...names].flatMap((name) => { const item = registry.items.find((item) => item.name === name); return [...(item.dependencies ?? []), ...(item.devDependencies ?? [])]; });
+  const forbidden = ['@tanstack/react-form', '@tanstack/react-router', '@tanstack/react-query', '@tanstack/react-virtual', 'zod', 'axios'].filter((name) => !declared.some((dependency) => dependency.startsWith(name + '@')));
   const require = createRequire(join(cwd, 'package.json'));
   const kitRequire = createRequire(realpathSync(require.resolve('@boosterlab/web-kit')));
   for (const name of forbidden) {
@@ -100,15 +113,19 @@ for (const feature of ['auth', 'form']) {
   const alias = "{ '@': fileURLToPath(new URL('./src', import.meta.url)) }";
   write('vitest.config.ts', `import react from '@vitejs/plugin-react';\nimport { fileURLToPath } from 'node:url';\nimport { defineConfig } from 'vitest/config';\nexport default defineConfig({ plugins: [react()], resolve: { alias: ${alias} }, test: { include: ['src/**/*.test.tsx'], environment: 'jsdom', allowOnly: false, setupFiles: ['./src/setup.ts'], execArgv: ['--no-experimental-webstorage'], reporters: ['default', 'json'], outputFile: { json: 'unit.json' } } });\n`);
   write('vite.config.ts', `import react from '@vitejs/plugin-react';\nimport { fileURLToPath } from 'node:url';\nimport { defineConfig } from 'vite';\nexport default defineConfig({ plugins: [react()], optimizeDeps: { extensions: ['.tsx'] }, resolve: { alias: ${alias} } });\n`);
-  write('playwright.config.ts', `import { defineConfig } from '@playwright/test';\nexport default defineConfig({ testDir: './tests/e2e', workers: 1, forbidOnly: true, reporter: [['list'], ['json', { outputFile: 'browser.json' }]], use: { baseURL: 'http://127.0.0.1:4193', locale: 'ko-KR' }, webServer: { command: 'pnpm exec vite --host 127.0.0.1 --port 4193 --strictPort', url: 'http://127.0.0.1:4193/web-kit-checks/${feature}.html', reuseExistingServer: false } });\n`);
-  // 이전 전체 입구로 되돌린 연결은 실제 빠진 라이브러리 때문에 실패해야 한다.
-  const connection = `src/shared/ui/web-kit/checks/${feature === 'auth' ? 'auth' : 'form-ui'}.test.tsx`;
-  const before = readFileSync(join(cwd, connection), 'utf8');
-  write(connection, before.replace(`/testing/unit/${feature}`, '/testing/unit'));
-  const negative = run(cwd, feature + '-old-barrel', ['exec', 'vitest', 'run', connection], { failure: true });
-  assert.notEqual(negative.status, 0, '이전 전체 입구가 의존 부재를 잡지 못함');
+  const browserPort = await availablePort();
+  const browserEntry = [...names].flatMap((name) => registry.items.find((item) => item.name === name).files).find((file) => file.path.endsWith('.html'))?.target.replace(/^~\//, '/') ?? '/';
+  write('playwright.config.ts', `import { defineConfig } from '@playwright/test';\nexport default defineConfig({ testDir: './tests/e2e', workers: 1, forbidOnly: true, reporter: [['list'], ['json', { outputFile: 'browser.json' }]], use: { baseURL: 'http://127.0.0.1:${browserPort}', locale: 'ko-KR' }, webServer: { command: 'pnpm exec vite --host 127.0.0.1 --port ${browserPort} --strictPort', url: 'http://127.0.0.1:${browserPort}${browserEntry}', reuseExistingServer: false } });\n`);
+  // 선언되지 않은 선택 peer를 실제 검사에 넣으면 해석 실패로 거절해야 한다.
+  const connection = 'src/undeclared-peer.test.tsx';
+  const missing = forbidden.includes('@tanstack/react-form') ? '@tanstack/react-form' : forbidden[0];
+  assert(missing, '반례용 미설치 peer 없음');
+  write(connection, `import * as peer from '${missing}';\nimport { it, expect } from 'vitest';\nit('선언되지 않은 peer 반례', () => expect(peer).toBeDefined());\n`);
+  const negative = run(cwd, feature + '-undeclared-peer', ['exec', 'vitest', 'run', connection], { failure: true });
+  assert.notEqual(negative.status, 0, '미설치 peer import가 의존 부재를 잡지 못함');
   assert.match(negative.stdout + negative.stderr, /Cannot find|Failed to resolve|ERR_MODULE_NOT_FOUND|Could not resolve/);
-  write(connection, before);
+  const { unlinkSync } = await import('node:fs');
+  unlinkSync(join(cwd, connection));
   if (feature === 'auth') {
     write('src/old-fixture.test.tsx', "import { expect, it } from 'vitest';\nimport { createAuthConformancePage } from '@boosterlab/web-kit/testing/fixtures';\nit('이전 fixture 입구', () => expect(createAuthConformancePage).toBeTypeOf('function'));\n");
     const oldFixture = run(cwd, 'auth-old-fixture', ['exec', 'vitest', 'run', 'src/old-fixture.test.tsx'], { failure: true });
@@ -119,10 +136,12 @@ for (const feature of ['auth', 'form']) {
     unlinkSync(join(cwd, 'src/old-fixture.test.tsx'));
   }
   run(cwd, feature + '-unit', ['exec', 'vitest', 'run']);
-  run(cwd, feature + '-browser', ['exec', 'playwright', 'test']);
+  const hasBrowser = [...names].some((name) => registry.items.find((item) => item.name === name).files.some((file) => /\.spec\.ts$/.test(file.path)));
+  if (hasBrowser) run(cwd, feature + '-browser', ['exec', 'playwright', 'test']);
+  else writeJson('browser.json', { suites: [], errors: [] });
   run(cwd, feature + '-conformance', ['exec', 'web-kit-check', '--installation', 'registry-installation.json', '--unit', 'unit.json', '--browser', 'browser.json', '--strict-fingerprints']);
   for (const file of ['unit.json', 'browser.json', 'registry-installation.json']) copyFileSync(join(cwd, file), join(reports, feature + '-' + file));
-  results.push({ feature, cwd, candidateVersion: candidate.version, tarballSha256: hash(tarball), registryItems: [...names], absent: forbidden, oldBarrelRejected: true, unitTests: json(join(cwd, 'unit.json')).numPassedTests, browser: 'passed', conformance: 'passed' });
+  results.push({ feature, cwd, candidateVersion: candidate.version, tarballSha256: hash(tarball), registryItems: [...names], absent: forbidden, undeclaredPeerRejected: missing, unitTests: json(join(cwd, 'unit.json')).numPassedTests, browser: hasBrowser ? 'passed' : 'no required browser checks', conformance: 'passed' });
   writeFileSync(join(reports, 'results.json'), JSON.stringify(results, null, 2) + '\n');
 }
 const sourceDiffAfter = createHash('sha256').update(spawnSync('git', ['diff', '--binary', 'HEAD'], { cwd: root }).stdout).digest('hex');

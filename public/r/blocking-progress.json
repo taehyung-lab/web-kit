@@ -11,7 +11,7 @@
   ],
   "registryDependencies": [
     "@web-kit/pending",
-    "@web-kit/form",
+    "@web-kit/dialog",
     "@web-kit/styles"
   ],
   "files": [
@@ -23,19 +23,19 @@
     },
     {
       "path": "packages/ui-registry/checks/blocking-progress.test.tsx",
-      "content": "// @vitest-environment jsdom\n// 파일 책임: 설치한 UI 복사본을 키트의 공통 단위 검사에 연결한다.\nimport { Form } from '../form/ui';\nimport { BlockingProgress } from '../ui/blocking-progress';\nimport { ConfirmDialog } from '../ui/dialog';\nimport { checkBlockingProgressConformance } from '@boosterlab/web-kit/testing/unit';\nimport installation from '../../../../../registry-installation.json';\ncheckBlockingProgressConformance({ Form, BlockingProgress, ConfirmDialog }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });\n",
+      "content": "// @vitest-environment jsdom\n// 파일 책임: 덮개 자체와 실제 함께 설치된 기능의 조합만 소비 복사본으로 검사한다.\nimport { BlockingProgress } from '../ui/blocking-progress';\nimport { ConfirmDialog } from '../ui/dialog';\nimport { checkProgressConformance } from '@boosterlab/web-kit/testing/unit/blocking-progress';\nimport type { checkFormProgressConformance as FormProgressCheck } from '@boosterlab/web-kit/testing/unit/combinations';\nimport installation from '../../../../../registry-installation.json';\nconst target = { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit };\ncheckProgressConformance({ BlockingProgress, ConfirmDialog }, target);\nconst names = new Set(installation.items.map((item) => item.name));\nif (names.has('form')) {\n  const forms = import.meta.glob('../form/ui.tsx');\n  const load = forms['../form/ui.tsx'];\n  if (!load) throw new Error('form 설치 기록에 맞는 소비 복사본 없음');\n  const module = await load() as { Form: Parameters<typeof FormProgressCheck>[0]['Form'] };\n  const { Form } = module;\n  const { checkFormProgressConformance } = await import('@boosterlab/web-kit/testing/unit/combinations');\n  await checkFormProgressConformance({ Form, BlockingProgress }, target);\n}\nif (names.has('list')) {\n  const { checkListProgressConformance } = await import('@boosterlab/web-kit/testing/unit/combinations');\n  await checkListProgressConformance({ BlockingProgress }, target);\n}\nif (names.has('record')) {\n  const { checkRecordProgressConformance } = await import('@boosterlab/web-kit/testing/unit/combinations');\n  await checkRecordProgressConformance({ BlockingProgress }, target);\n}\n",
       "type": "registry:file",
       "target": "~/src/shared/ui/web-kit/checks/blocking-progress.test.tsx"
     },
     {
       "path": "packages/ui-registry/checks/blocking-progress.page.tsx",
-      "content": "// 파일 책임: 소비 복사본을 키트의 브라우저 검사 화면에 전달한다.\nimport { createRoot } from 'react-dom/client';\nimport { createProgressConformancePage } from '@boosterlab/web-kit/testing/fixtures';\nimport { BlockingProgress } from '../ui/blocking-progress';\nimport { Dialog } from '../ui/dialog';\nimport { Form } from '../form/ui';\nimport '../ui/styles.css';\nconst Page = createProgressConformancePage({ BlockingProgress, Dialog, Form });\ncreateRoot(document.getElementById('root')!).render(<Page />);\n",
+      "content": "// 파일 책임: 설치한 덮개·대화창과 선택적인 폼 복사본으로 브라우저 화면을 만든다.\nimport { createRoot } from 'react-dom/client';\nimport { createProgressFeatureConformancePage } from '@boosterlab/web-kit/testing/fixtures/progress';\nimport { BlockingProgress } from '../ui/blocking-progress';\nimport { Dialog } from '../ui/dialog';\nimport type { createFormProgressConformancePage as FormProgressPage } from '@boosterlab/web-kit/testing/fixtures/combinations';\nimport installation from '../../../../../registry-installation.json';\nimport '../ui/styles.css';\nlet Page = createProgressFeatureConformancePage({ BlockingProgress, Dialog });\nif (new URLSearchParams(location.search).get('mode') === 'error' && installation.items.some((item) => item.name === 'form')) {\n  const forms = import.meta.glob('../form/ui.tsx');\n  const load = forms['../form/ui.tsx'];\n  if (!load) throw new Error('form 설치 기록에 맞는 소비 복사본 없음');\n  const { Form } = await load() as { Form: Parameters<typeof FormProgressPage>[0]['Form'] };\n  const { createFormProgressConformancePage } = await import('@boosterlab/web-kit/testing/fixtures/combinations');\n  Page = createFormProgressConformancePage({ Form, BlockingProgress });\n}\ncreateRoot(document.getElementById('root')!).render(<Page />);\n",
       "type": "registry:file",
       "target": "~/src/shared/ui/web-kit/checks/blocking-progress.page.tsx"
     },
     {
       "path": "packages/ui-registry/checks/blocking-progress.spec.ts",
-      "content": "// 파일 책임: 설치한 브라우저 검사 화면을 키트 Playwright 적합성 검사에 연결한다.\nimport { checkProgressBrowser } from '@boosterlab/web-kit/testing/browser';\nimport installation from '../../../registry-installation.json' with { type: 'json' };\ncheckProgressBrowser({ url: '/web-kit-checks/blocking-progress.html', target: { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit } });\n",
+      "content": "// 파일 책임: 덮개 자체의 브라우저 검사와 설치한 폼 조합만 등록한다.\nimport { checkProgressFeatureBrowser, checkFormProgressBrowser } from '@boosterlab/web-kit/testing/browser';\nimport installation from '../../../registry-installation.json' with { type: 'json' };\nconst options = { url: '/web-kit-checks/blocking-progress.html', target: { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit } };\ncheckProgressFeatureBrowser(options);\nif (installation.items.some((item) => item.name === 'form')) checkFormProgressBrowser(options);\n",
       "type": "registry:file",
       "target": "~/tests/e2e/web-kit/blocking-progress.spec.ts"
     },
