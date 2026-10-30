@@ -54,7 +54,30 @@ registry item은 함께 설치하는 파일 묶음이다. UI와 함께 설치된
 
 - **응답 해석(`/http`):** `createHttp`의 `response`가 필수가 됐고 `results` 입력과 `Http.request<T>`·`Unwrapped<T>`는 제거됐다. `results`만 넘기던 Spring 소비자는 `results: resultCodes`를 `response: springEnvelope(resultCodes)`로 바꾼다. starter처럼 손으로 `readEnvelope`·`toRequestFailure`를 합친 계약도 같은 부품으로 바꾼다. 생성 봉투 타입을 받던 mutator는 `/http`의 `SpringEnvelopeData<T>`를 가져와 `http.requestData<SpringEnvelopeData<T>>(config, options)`로 연결한다. 실제 데이터 타입을 이미 쓰는 호출은 `requestData<T>`를 유지한다. 다른 서버 형식은 자기 `ResponseContract`를 명시한다. 보장은 [web-kit-http](../skills/web-kit-http/SKILL.md), 결정 이유는 [응답 결정](../references/docs/decisions/0003-request-response-failure.md)에 있다.
 
-- **UI 입구와 복사본:** [이전 표](../README.md#시험판-ui-입구-이전)로 제거된 UI 입구를 설치한 복사본 import로 바꾼다. 일부 체크 트리의 표시/클릭 변경, 기간 timeZone·now 선택화, /choice 입구도 확인한다. 이전 원본 A·새 원본 B·현재 복사본 C를 비교하는 [갱신 절차](../README.md#복사본-갱신)를 따라 프로젝트 수정을 보존한다. --overwrite를 기본으로 쓰지 않고 적용 뒤 동일 검사를 재실행한다.
+- **UI 입구와 복사본:** 아래 이전 표로 제거된 UI 입구를 설치한 복사본 import로 바꾼다. 일부 체크 트리의 표시/클릭 변경, 기간 timeZone·now 선택화, /choice 입구도 확인한다. 이전 원본 A·새 원본 B·현재 복사본 C를 비교하는 [갱신 절차](../README.md#복사본-갱신)를 따라 프로젝트 수정을 보존한다. --overwrite를 기본으로 쓰지 않고 적용 뒤 동일 검사를 재실행한다.
+
+### UI 입구 이전 표
+
+| 이전 시험판 import | 현재 위치(기본 설치 target 기준) |
+|---|---|
+| `@boosterlab/web-kit/ui` | registry `ui`: `@/shared/ui/web-kit/ui` |
+| `@boosterlab/web-kit/list/ui` | registry `list`: `@/shared/ui/web-kit/list-ui` |
+| `@boosterlab/web-kit/form/ui` | registry `form`: `@/shared/ui/web-kit/form/ui` |
+| `@boosterlab/web-kit/detail/ui` | registry `record`: `@/shared/ui/web-kit/detail-ui` |
+| `@boosterlab/web-kit/filter` | registry `checkbox-tree`·`filter-error`: `@/shared/ui/web-kit/CheckboxTree`·`@/shared/ui/web-kit/search/filter-error`; 순수 계산은 패키지 루트 |
+| `@boosterlab/web-kit/styles.css` | registry `styles`: `@/shared/ui/web-kit/ui/styles.css` |
+
+위 6개 패키지 입구는 제거됐다. `/choice`는 공유 선택/검색의 `useChoiceBinding`을 공개하는 새 입구다. `/dialog`는 대화창과 진행 등록 연결을, `/form`·`/list`·`/record`는 각각의 상태·연결 hook을 제공한다.
+
+- 목록 상태 전달은 `/list`의 `ListProvider`가 기본이며 `model` props도 허용한다. 패키지 Provider는 model·children만 받고 문구·실패 표현은 registry 표시 wrapper에 둔다.
+- `Period`/`PeriodFilter`의 `timeZone`·`now`는 생략 가능하다. 기본 브라우저 시간대·현재 시각을 쓰고 넘긴 값은 그대로 쓴다. 요청 날짜 변환도 같은 시간대를 쓴다.
+- 부모 아래 두 leaf 중 하나만 선택했을 때 `checkboxTreeSelection.checked`는 true에서 false로, 표시는 체크에서 `mixed`(−)로 바뀐다. 부모 클릭은 기존 선택 해제에서 모든 후손 선택으로 바뀐다. `mixed(targets)`를 indeterminate/aria-checked=mixed와 연결한다. 명시적인 set(true/false) 규칙은 유지한다. `checked`의 requireAll 인자는 타입 호환으로 받지만 이제 모두 선택됐을 때만 true다.
+- 기본 Dialog 복원 교정은 패키지 갱신으로 반영된다. 중첩 대화창 위 Choice 클릭 교정은 복사본 Positioner의 `wk-choice-positioner`와 CSS 표시층도 적용해야 한다. 실제 브라우저 적합성 검사를 함께 실행한다.
+
+기존 `selection.run`의 `{ completedIds }` 계약은 유지한다. 부분 성공은 실제 성공 ID만 반환하며 Promise 완료를 전체 성공으로 해석하지 않는다. 폼의 `references`·`secondary`·확인/완료·이탈 보장은 그대로며 정확한 사용 조건은 스킬이 정본이다.
+
+- **타입 import(복사본 교정 필요):** form/ui.tsx·list-ui.tsx·ui/dialog.tsx의 타입 전용 import를 `import type { … }`로 교정한다. 패키지 갱신만으로 기존 복사본 문법은 바뀌지 않는다. 적용 뒤 lint와 적합성 검사를 실행한다.
+- **인증 실패 값(복사본 교정 필요):** `model.failure`를 `verifyFailure`·`resendFailure`로 나누고 `labels.failure`도 `labels.verifyFailure`·`labels.resendFailure`로 바꾼다. 인증 검사 연결은 `/testing/unit/auth`·`/testing/fixtures/auth`를 사용한다.
 
 Vitest JSON과 Playwright JSON 보고서에는 검사 ID·패키지 버전·registry ref/원본 commit이 남는다. Vitest `allowOnly: false`, Playwright `forbidOnly: true`로 일부 검사만 실행하는 only를 CI에서 거절한다. 검사와 `web-kit-check`는 같은 CI 작업(job)에서 연달아 실행하고, 이전에 저장된 결과를 재사용하지 않는다. 점검 명령은 결과의 생성 시점을 확인하지 않으므로 오래된 통과 결과를 현재 복사본의 검증으로 판정할 수 없다. 설치한 모든 항목의 필수 검사를 실행한 뒤 프로젝트 루트에서 다음을 실행한다.
 

@@ -2,7 +2,7 @@
   "version": "5.0.0-rc.4",
   "sourceRef": "v5.0.0-rc.4",
   "shadcn": "4.19.1",
-  "sourceCommit": "f926d6a7b92497646eb01320893b18fae3fdb05c",
+  "sourceCommit": "da0c6168d9fa73964e4c2948fd1018e8b21f548b",
   "sourceWorkingTree": "Source fingerprints identify the installed candidate, including uncommitted changes.",
   "method": "pnpm exec shadcn add ./public/r/all.json --cwd apps/starter --yes --overwrite; local absolute namespace during installation",
   "componentsHash": "9251ff1954ca2e2cdf440bbf02e6b5835dacee282c03442ef68ff7ee1443ddc1",
@@ -166,13 +166,13 @@
     },
     {
       "name": "form",
-      "artifactHash": "a41817d7c3fd44df6309cb98fea9364889dbf5fd944041d303ef689550de7a9f",
+      "artifactHash": "6731682e9e5490f19f0847258a163c52eb93927ccd45ab3cd20f081f684e5f61",
       "files": [
         {
           "source": "packages/ui-registry/src/form/ui.tsx",
           "installed": "apps/starter/src/shared/ui/web-kit/form/ui.tsx",
-          "sourceHash": "abe67b357998065a4b1b1497b6395f02072382405c55dd797a0bbf33ac70359f",
-          "installedHash": "abe67b357998065a4b1b1497b6395f02072382405c55dd797a0bbf33ac70359f"
+          "sourceHash": "b52cdb868c662cdfcaa8092b6ff7b3ba5320c51e16fd5df79835f8f210251a32",
+          "installedHash": "b52cdb868c662cdfcaa8092b6ff7b3ba5320c51e16fd5df79835f8f210251a32"
         },
         {
           "source": "packages/ui-registry/src/form/field.tsx",

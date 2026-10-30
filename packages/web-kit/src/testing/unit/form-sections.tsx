@@ -16,7 +16,7 @@ export function checkFormSectionsConformance({ Form, FormGuard, FormSection }: {
 // @vitest-environment jsdom
 // 파일 책임: 접을 수 있는 폼 구역(Form.Section fields·FormSection)의 오류 처리를 실제 DOM으로 검사한다(결정 0007 구역과 화면 절차 거절).
 // 닫힌 구역 안 칸의 클라이언트 오류·서버 오류 → 그 구역이 펼쳐지고 머리글에 오류 표시(1.5 「!」), 첫 오류 칸에 포커스.
-// 열림 규칙은 참조 프로젝트 use-form-sections의 사건 방식이다: 거절된 제출마다 오류 구역을 펼치고, 그 밖의 열고 닫기는 사용자 상태다.
+// 거절 사건에 따른 열림 규칙을 검사한다: 거절된 제출마다 오류 구역을 펼치고, 그 밖의 열고 닫기는 사용자 상태다.
 
 afterEach(cleanup);
 beforeAll(() => {

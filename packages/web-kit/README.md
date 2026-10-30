@@ -17,12 +17,12 @@ React 19 + TanStack(Router·Query·Form) + zod 4 + axios/orval을 쓰는 웹 프
 |---|---|---|
 | `.` / `/failure` | 실패 12종, 결과 코드 표, 봉투 해석 | 서버 enum의 결과 코드 행 |
 | `/session` | 세대, 시작·종료와 종료 순서(정리 → 안내 → 서버 로그아웃), 다른 탭 변경, 재발급 단일 비행(Web Locks) | 저장 adapter·재발급·서버 로그아웃 호출 |
-| `/session/idle` | `createServerClock`으로 로그인 전후 서버 시계 보정 공유, 유휴 마감(로그인과 서버 연장만 변경: 경고 밖 활동은 서버 연장, 경고 안은 연장 버튼만, API 응답·재발급은 연장 안 함), 경고 구간·대기, 활동 연장, 대표 탭, 만료 종료, 화면 단위 멈춤(`pause`)과 서버 연장 재개(`resume`) | 시간 정책·저장 key·서버 연장 호출·응답의 서버 시각 표본·경고 디자인·멈출 화면 |
+| `/session/idle` | 서버 시계·세션별 마감·탭 병합·만료·멈춤/재개 장치 | 명시 마감·0초 필수 선택·선택 활동 부착과 간격·선택 재개 유예·경고 UI([web-kit-http](skills/web-kit-http/SKILL.md)) |
 | `/auth` + registry `auth` | 코드 기한·종류별 단일 요청·늦은 응답 격리, 입력 오류·만료·재전송 표현 | 공유 시계·기한·자리수·서버 요청·성공 처리·문구 |
 | `/session/browser` | 브라우저 저장 장애 복구·외부 이벤트 판별·해제 | 저장 key·동기 schema·읽기 불가 정책 |
 | `/http` | 헤더·토큰, 필수 응답 계약·선택 Spring 해석, 401 재발급 뒤 한 번 재전송, 반영 여부 판정 | 응답 해석·코드 의미·공개 경로·운영 헤더·axios 기본값 |
 | `/query` | 재시도 대상, 실패 알림 한 번, 선언한 무효화, 민감한 쓰기의 입력값 기록 지움, 세션 전환 시 비움 | 재시도 횟수, 알림 표시, staleTime 등 수치 |
-| `/search` · `/list` | URL 필드 복구·정규 URL·진입 주소 교정(route `validateSearch`·`beforeLoad`), 검색 확정(맞지 않는 기간 쌍은 기본값으로 정리·입력 중 키워드 포함), 정렬 전이, 선택지 확인, 결과 출처, 선택·일괄 작업, 다운로드 대상 고정 | 필드 schema·encode·기본값·조회 시작 조건·첫 정렬 방향, 조회 함수, 다운로드 요청 |
+| `/search` · `/list` | URL 검색 상태·검색 확정·선택 수명([web-kit-list](skills/web-kit-list/SKILL.md)) | 필드 schema·encode·기본값·조회 시작 조건·첫 정렬 방향, 조회 함수, 다운로드 요청 |
 | `/list` + registry `list` | `ListProvider`·`useListModel`과 필터·기간·키워드·표·페이지·일괄 확인·다운로드 연결 hook | model, 필드·컬럼·배치·문구·실패 표현 |
 | `/permission` | 진입 거부·메뉴 숨김·버튼 비활성의 닫힘 기본 판정 | 권한 상태·판정 함수·권한 목록 |
 | 루트 + registry `checkbox-tree`·`filter-error` | 순수 기간·트리 계산과 오류/트리 표현 연결 | checkbox·문구·스타일 |
@@ -109,34 +109,6 @@ pnpm dlx shadcn@4.19.1 add @web-kit/form
 
 적용 뒤 새 설치·검증 기록을 남기고 같은 단위·브라우저·점검 명령을 실행한다. 되돌릴 때는 이전 tgz·lockfile·복사본·설치 기록을 함께 복원한다. 변경 안내는 매번 **패키지만 올리면 반영 / 복사본 교정 필요**를 구분한다.
 
-### rc.3 변경 안내
-
-**패키지만 올리면 반영(문서·검사)**: 같은 행 ID가 돌아오는 검색 변경의 선택 초기화 검사를 보강하고, 같은 CI 작업에서 새 검사 결과로 점검하는 조건과 registry 설치의 검사 도구 버전 영향을 명시했다. 실행 동작과 registry 원본은 그대로이며 복사본 교정은 필요 없다.
-
-### rc.2 변경 안내
-
-**복사본 교정 필요(문법만, 동작 변화 없음)**: registry의 타입 전용 import를 `import type { … }`로 교정했다. rc.1 복사본의 form/ui.tsx·list-ui.tsx·ui/dialog.tsx에 같은 변경을 적용하거나 A/B/C 비교로 rc.2 원본을 반영한다. 패키지만 올리면 이미 설치한 복사본의 문법은 바뀌지 않는다. 적용 뒤 소비처 lint와 같은 적합성 검사를 다시 실행한다. 원본은 이제 `pnpm registry:lint`로 TypeScript·React 및 엄격한 타입 import 규칙을 검사한다.
-
-## 시험판 UI 입구 이전
-
-| 이전 시험판 import | 현재 위치(기본 설치 target 기준) |
-|---|---|
-| `@boosterlab/web-kit/ui` | registry `ui`: `@/shared/ui/web-kit/ui` |
-| `@boosterlab/web-kit/list/ui` | registry `list`: `@/shared/ui/web-kit/list-ui` |
-| `@boosterlab/web-kit/form/ui` | registry `form`: `@/shared/ui/web-kit/form/ui` |
-| `@boosterlab/web-kit/detail/ui` | registry `record`: `@/shared/ui/web-kit/detail-ui` |
-| `@boosterlab/web-kit/filter` | registry `checkbox-tree`·`filter-error`: `@/shared/ui/web-kit/CheckboxTree`·`@/shared/ui/web-kit/search/filter-error`; 순수 계산은 패키지 루트 |
-| `@boosterlab/web-kit/styles.css` | registry `styles`: `@/shared/ui/web-kit/ui/styles.css` |
-
-위 6개 패키지 입구는 제거됐다. `/choice`는 공유 선택/검색의 `useChoiceBinding`을 공개하는 새 입구다. `/dialog`는 대화창과 진행 등록 연결을, `/form`·`/list`·`/record`는 각각의 상태·연결 hook을 제공한다.
-
-- 목록 상태 전달은 `/list`의 `ListProvider`가 기본이며 `model` props도 허용한다. 패키지 Provider는 model·children만 받고 문구·실패 표현은 registry 표시 wrapper에 둔다.
-- `Period`/`PeriodFilter`의 `timeZone`·`now`는 생략 가능하다. 기본 브라우저 시간대·현재 시각을 쓰고 넘긴 값은 그대로 쓴다. 요청 날짜 변환도 같은 시간대를 쓴다.
-- 부모 아래 두 leaf 중 하나만 선택했을 때 `checkboxTreeSelection.checked`는 3.1의 true에서 false로, 표시는 체크에서 `mixed`(−)로 바뀐다. 부모 클릭은 기존 선택 해제에서 모든 후손 선택으로 바뀐다. `mixed(targets)`를 indeterminate/aria-checked=mixed와 연결한다. 명시적인 set(true/false) 규칙은 유지한다. `checked`의 requireAll 인자는 타입 호환으로 받지만 이제 모두 선택됐을 때만 true다.
-- 기본 Dialog 복원 교정은 패키지 갱신으로 반영된다. 중첩 대화창 위 Choice 클릭 교정은 복사본 Positioner의 `wk-choice-positioner`와 CSS 표시층도 적용해야 한다. 실제 브라우저 적합성 검사를 함께 실행한다.
-
-기존 `selection.run`의 `{ completedIds }` 계약은 유지한다. 부분 성공은 실제 성공 ID만 반환하며 Promise 완료를 전체 성공으로 해석하지 않는다. 폼의 `references`·`secondary`·확인/완료·이탈 보장은 그대로며 정확한 사용 조건은 스킬이 정본이다.
-
 ## 개발과 검증
 
 Node 24.19.0, 빈 NODE_OPTIONS, pnpm 10.33.0. `pnpm check`는 키트·링크·registry 일치를 확인한다. `pnpm starter:sync` 후 `pnpm starter:check`는 타입·lint·단위·빌드·브라우저·strict 지문 점검을 실행한다. 처음에는 starter의 Playwright chromium 설치가 필요하다.
@@ -155,7 +127,3 @@ Node 24.19.0, 빈 NODE_OPTIONS, pnpm 10.33.0. `pnpm check`는 키트·링크·re
 기존 로그인 전 타이머와 제출 진행을 `/auth`로 옮긴다. 서버 요청·기한 값·문구·등록 흐름은 프로젝트가 제공한다. `/session/idle`의 `createServerClock` 객체를 인증 단계와 유휴 타이머에 함께 넘긴다. 기존 유휴 타이머 API는 clock을 생략해도 유지된다. starter 로그인은 코드 인증 단계가 없으므로 제품 흐름을 추가하지 않으며, 설치된 검사 화면에서 두 입력 모양을 확인한다.
 
 유휴 타이머의 멈춤·재개 연결과 기존 저장값·정책 입력 이전은 [소비 안내](docs/consuming.md#시험판에서-옮겨-오기)와 [web-kit-http](skills/web-kit-http/SKILL.md)를 따른다.
-
-## 선택 소비 검사
-
-`/testing/unit/form`·`auth`·`choice`·`primitives`·`styles`와 `/testing/fixtures/auth`를 추가했다. 기존 전체 검사 입구는 호환을 유지한다. registry의 해당 검사 import 교정과 form 검사 의존(zod) 설치가 필요하며 제품 실행 코드는 그대로다. [소비 안내](docs/consuming.md#복사본-적합성-검사)의 갱신 순서와 [폼 스킬](skills/web-kit-form/SKILL.md)의 기존 선택·확장 예제를 따른다. 이 후보는 정식 발행하지 않았다.
