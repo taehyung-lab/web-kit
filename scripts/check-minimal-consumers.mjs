@@ -24,13 +24,19 @@ const candidate = json(join(root, 'apps/starter/registry-installation.json'));
 const versions = { ...starter.dependencies, ...starter.devDependencies };
 const lockedPackages = readFileSync(join(root, 'apps/starter/pnpm-lock.yaml'), 'utf8').split('packages:\n')[1].split('\nsnapshots:')[0];
 const sourceDiffBefore = createHash('sha256').update(spawnSync('git', ['diff', '--binary', 'HEAD'], { cwd: root }).stdout).digest('hex');
-/** 범위 의존을 새로 해석해도 기존 lock의 버전만 사용한다. */
-function lockedVersion(name) {
-  const key = [...lockedPackages.matchAll(/^  '?([^\n]+?)'?:$/gm)].map((match) => match[1]).find((key) => key.startsWith(name + '@'));
-  assert(key, '기존 lock에 없는 의존 ' + name);
-  return key.slice(name.length + 1);
+/** 범위 의존을 새로 해석해도 기존 lock의 버전만 쓰도록, lock에 한 버전만 있는 패키지를 모두 그 버전으로 고정한다. */
+function lockedOverrides() {
+  const versions = new Map();
+  // 들여쓰기 두 칸인 패키지 키만 읽는다(더 깊은 줄은 peer 선언 등이다).
+  for (const [, key] of lockedPackages.matchAll(/^  '?([^\s'][^\n]*?)'?:$/gm)) {
+    const at = key.lastIndexOf('@');
+    if (at <= 0) continue;
+    const name = key.slice(0, at);
+    versions.set(name, [...(versions.get(name) ?? []), key.slice(at + 1)]);
+  }
+  return Object.fromEntries([...versions].filter(([name, list]) => list.length === 1 && name !== '@boosterlab/web-kit').map(([name, [version]]) => [name, version]));
 }
-const overrides = Object.fromEntries(['@types/estree', 'postcss', 'tldts-core', 'seroval', 'seroval-plugins', 'rolldown', '@oxc-project/types'].map((name) => [name, lockedVersion(name)]));
+const overrides = lockedOverrides();
 const results = [];
 
 /** 실행 출력과 종료 코드를 파일에 남기고 실패는 호출자에게 돌려준다. */
