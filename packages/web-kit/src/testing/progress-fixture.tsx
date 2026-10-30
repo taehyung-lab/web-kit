@@ -28,4 +28,3 @@ export function createProgressFeatureConformancePage({ BlockingProgress, Dialog 
     return <BlockingProgress messages={{ loading: '조회 중', create: '등록 중', edit: '수정 중', delete: '삭제 중' }}><Content mode={mode} /></BlockingProgress>;
   };
 }
-

@@ -15,4 +15,3 @@ export function createDialogConformancePage({ Dialog }: { Dialog: typeof DialogC
       </Dialog></>;
   };
 }
-
