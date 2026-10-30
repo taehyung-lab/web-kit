@@ -284,3 +284,102 @@ it('S10: 상태 구독은 매초 표시 구독과 분리된다', () => {
   expect(states).toHaveBeenCalledTimes(0); expect(ticks).toHaveBeenCalledTimes(3);
   expect(t.idle.remaining()).toBe(7000);
 });
+
+it('리뷰 교정: 20회 재로드·연장·로그아웃·계정 교체 뒤 현재 세션 기록만 일정 개수로 남는다', async () => {
+  let initial: StoredSession<Creds> | null = null;
+  for (let i = 0; i < 20; i++) {
+    const t = tab({ initial });
+    t.idle.start();
+    if (!initial) t.session.start({ accessToken: 'synthetic' });
+    t.request.mockResolvedValueOnce({ sentAt: Date.now(), deadline: 200_000 + i * 1000 });
+    await t.idle.extend();
+    if (i % 3 === 0) { t.session.end(); t.session.start({ accessToken: 'replacement' }); }
+    else if (i % 3 === 1) t.session.start({ accessToken: 'replacement' });
+    t.idle.acceptDeadline(t.session.current()!.sessionId, { sentAt: Date.now(), deadline: 300_000 + i * 1000 });
+    initial = t.session.current();
+    t.idle.stop(); t.session.dispose();
+    const keys = Array.from({ length: localStorage.length }, (_, n) => localStorage.key(n)!).filter((k) => k.startsWith(key + ':records:'));
+    expect(keys.length).toBeLessThanOrEqual(1);
+    expect(keys.every((k) => k.includes(encodeURIComponent(initial!.sessionId)) && !k.endsWith(':ended'))).toBe(true);
+    const restored = tab({ initial }); restored.idle.start();
+    expect(restored.idle.state().deadline).toBe(300_000 + i * 1000);
+    restored.idle.stop(); restored.session.dispose();
+  }
+});
+
+it('리뷰 교정: 이전 세션 표식 정리 뒤 도착한 다른 탭의 성공도 새 세션을 덮거나 옛 기록을 되살리지 않는다', async () => {
+  const a = tab(); login(a, 10_000);
+  const oldId = a.session.current()!.sessionId;
+  const b = tab({ initial: a.session.current() }); b.idle.start();
+  const reply = deferred<ServerTimeSample | null>(); b.request.mockReturnValueOnce(reply.promise);
+  const pending = b.idle.extend();
+  a.session.end(); a.session.start({ accessToken: 'new-synthetic' });
+  const newId = a.session.current()!.sessionId;
+  a.idle.acceptDeadline(newId, { sentAt: Date.now(), deadline: 150_000 });
+  reply.resolve({ sentAt: Date.now(), deadline: 999_000 }); await pending;
+  storageEvent();
+  expect(b.session.current()).toBeNull(); expect(a.idle.state().deadline).toBe(150_000);
+  const keys = Array.from({ length: localStorage.length }, (_, n) => localStorage.key(n)!).filter((k) => k.startsWith(key + ':records:'));
+  expect(keys.length).toBeLessThanOrEqual(1);
+  expect(keys.some((k) => k.includes(encodeURIComponent(oldId)) || k.endsWith(':ended'))).toBe(false);
+  const reopened = tab({ initial: a.session.current() }); reopened.idle.start();
+  expect(reopened.idle.state().deadline).toBe(150_000);
+});
+
+it('리뷰 교정: 멈춘 옛 타이머의 명시 마감 전달도 교체된 저장 경계를 다시 열지 않는다', () => {
+  const a = tab(); login(a, 10_000);
+  const oldId = a.session.current()!.sessionId;
+  a.idle.stop();
+  const b = tab({ initial: a.session.current() }); b.idle.start();
+  b.session.start({ accessToken: 'new-synthetic' });
+  b.idle.acceptDeadline(b.session.current()!.sessionId, { sentAt: Date.now(), deadline: 150_000 });
+  expect(a.idle.acceptDeadline(oldId, { sentAt: Date.now(), deadline: 999_000 })).toBe(false);
+  a.idle.start();
+  expect(a.session.current()).toBeNull();
+  storageEvent(); expect(b.idle.state().deadline).toBe(150_000);
+});
+
+it('리뷰 교정: A가 요약을 확보한 뒤 삭제하는 사이 B가 더 긴 마감을 쓰고 정리해도 최대값은 남는다', () => {
+  let interleaved = false;
+  let interleave: (() => void) | undefined;
+  const wrapped = {
+    get length() { return localStorage.length; },
+    key: (i: number) => localStorage.key(i),
+    getItem: (k: string) => localStorage.getItem(k),
+    removeItem(k: string) {
+      const run = interleave;
+      if (run && k.startsWith(key + ':records:')) {
+        interleave = undefined; interleaved = true; run();
+      }
+      localStorage.removeItem(k);
+    },
+    setItem: (k: string, raw: string) => localStorage.setItem(k, raw),
+  } as Storage;
+  const a = tab({ storage: () => wrapped }); login(a, 10_000);
+  const b = tab({ initial: a.session.current() }); b.idle.start();
+  const initial = a.session.current();
+  interleave = () => { b.idle.acceptDeadline(initial!.sessionId, { sentAt: Date.now(), deadline: 160_000 }); };
+  a.idle.acceptDeadline(initial!.sessionId, { sentAt: Date.now(), deadline: 150_000 });
+  a.idle.stop(); b.idle.stop();
+  const c = tab({ initial }); c.idle.start();
+  expect(c.idle.state().deadline).toBe(160_000);
+  expect(interleaved).toBe(true);
+  const keys = Array.from({ length: localStorage.length }, (_, n) => localStorage.key(n)!).filter((k) => k.startsWith(key + ':records:'));
+  expect(keys).toHaveLength(1);
+});
+
+it('리뷰 교정: 세션이 없는 새 페이지 시작은 이전 기록과 종료 표식을 정리한다', () => {
+  localStorage.setItem(key + ':records:old:ended', '1');
+  localStorage.setItem(key + ':records:old:writer', JSON.stringify({ sessionId: 'old', server: 130_000, local: null, attempt: null }));
+  const t = tab(); t.idle.start();
+  expect(Array.from({ length: localStorage.length }, (_, n) => localStorage.key(n)!).filter((k) => k.startsWith(key + ':records:'))).toEqual([]);
+});
+
+
+it('리뷰 교정: 구형 종료 표식은 정리하기 전에 경계로 옮겨 옛 세션 복원을 막는다', () => {
+  localStorage.setItem(key + ':records:old:ended', '1');
+  localStorage.setItem(key + ':records:old:writer', JSON.stringify({ sessionId: 'old', server: 130_000, local: null, attempt: null }));
+  const t = tab({ initial: { sessionId: 'old', credentials: { accessToken: 'synthetic' } } }); t.idle.start();
+  expect(t.session.current()).toBeNull();
+  expect(Array.from({ length: localStorage.length }, (_, n) => localStorage.key(n)!).filter((k) => k.startsWith(key + ':records:'))).toEqual([]);
+});

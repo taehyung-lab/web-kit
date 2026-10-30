@@ -138,6 +138,10 @@ export function createIdleTimer<C extends Credentials>({ session, key, policy, e
   const writer = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const prefix = `${key}:records:`;
   const memory = new Map<string, RecordValue>();
+  const lifetimeKey = `${key}:current-session`;
+  let memorySession: string | null | undefined;
+  let sequence = 0;
+  let connectedGeneration = session.generation();
   let started = false;
   let updatingClock = false;
   let detach: (() => void) | undefined;
@@ -159,48 +163,121 @@ export function createIdleTimer<C extends Credentials>({ session, key, policy, e
     state = next;
     for (const listener of [...listeners]) listener();
   }
-  /** 세션별 독립 writer 기록을 병합한다. 서로 다른 탭은 같은 슬롯을 덮지 않는다. */
-  function records(id: string): RecordValue[] {
-    const found = new Map(memory);
+  /** 저장소에서 현재 세션 경계를 읽는다. null은 종료, undefined는 아직 연결 전이다. */
+  function storedSession(): string | null | undefined {
     try {
-      const s = storage();
-      for (let i = 0; i < s.length; i++) {
-        const k = s.key(i);
-        if (k === key || k?.startsWith(prefix)) {
-          const r = parseRecord(s.getItem(k));
-          if (r) found.set(k, r);
-        }
-      }
-    } catch { /* 저장 불가 환경은 이 탭의 메모리만 유지한다. */ }
-    return [...found.values()].filter((r) => r.sessionId === id);
+      const raw = storage().getItem(lifetimeKey);
+      if (raw === null) return undefined;
+      const id: unknown = JSON.parse(raw);
+      return typeof id === 'string' || id === null ? id : undefined;
+    } catch { return memorySession; }
   }
-  /** 서버 마감은 비감소, 로컬 시한은 자신이 본 서버 마감 이후의 유예만 유효하다. */
-  function merged(id: string) {
-    const all = records(id);
+  /** 새 세션 사건만 경계를 열고, 종료는 자신이 아직 현재 세션일 때만 닫는다. */
+  function markSession(id: string | null) {
+    memorySession = id;
+    try { storage().setItem(lifetimeKey, JSON.stringify(id)); } catch { /* 메모리 유지 */ }
+  }
+  /** 기록은 생성 뒤 바꾸지 않는다. 정리 도중 다른 탭이 쓴 값은 다른 키로 남는다. */
+  function snapshot(): Array<{ key: string; value: RecordValue | null }> {
+    const found: Array<{ key: string; value: RecordValue | null }> = [];
+    try {
+      const slot = storage();
+      // 먼저 키를 잡아 두어 정리로 인덱스가 바뀌어도 다른 항목을 건너뛰지 않는다.
+      const keys = Array.from({ length: slot.length }, (_, i) => slot.key(i));
+      for (const k of keys) {
+        if (k === key || k?.startsWith(prefix)) found.push({ key: k, value: parseRecord(slot.getItem(k)) });
+      }
+    } catch { /* 저장 불가 환경은 메모리만 유지한다. */ }
+    return found;
+  }
+  /** 서버 마감·로컬 시한·시도 시각을 같은 규칙으로 합친다. */
+  function combine(all: readonly RecordValue[]) {
     const server = all.reduce<number | null>((v, r) => r.server === null ? v : Math.max(v ?? -Infinity, r.server), null);
     const local = all.map((r) => r.local).filter((l): l is LocalDeadline => l !== null &&
       (l.kind === 'provisional' ? server === null : l.baseServer === server))
-      .sort((a, b) => b.at - a.at || b.deadline - a.deadline)[0];
+      .sort((a, b) => b.at - a.at || b.deadline - a.deadline)[0] ?? null;
     const attempt = all.reduce<number | null>((v, r) => r.attempt === null ? v : Math.max(v ?? -Infinity, r.attempt), null);
+    return { server, local, attempt };
+  }
+  /** 병합 결과를 담은 불변 기록을 확보한 뒤 읽었던 키만 지운다. 동시 정리는 새 요약을 잃지 않는다. */
+  function compact() {
+    const id = storedSession();
+    if (id === undefined) return;
+    for (const previous of memory.keys()) if (previous !== id) memory.delete(previous);
+    const entries = snapshot();
+    const current = entries.filter((entry) => entry.value?.sessionId === id);
+    let summarized = false;
+    let retained: string | undefined;
+    if (id !== null && current.length > 1) {
+      const values = current.map((entry) => entry.value!);
+      const own = memory.get(id);
+      if (own) values.push(own);
+      const value: RecordValue = { sessionId: id, ...combine(values) };
+      try {
+        // 고정 슬롯을 덮으면 두 정리의 요약 중 긴 값이 사라질 수 있어 요약도 새 키에 쓴다.
+        if (storedSession() === id) {
+          // 기존 항목 하나가 병합 결과 전체를 이미 담으면 같은 값을 새로 써 저장 이벤트를 순환시키지 않는다.
+          retained = current.filter((entry) => JSON.stringify(entry.value) === JSON.stringify(value))
+            .map((entry) => entry.key).sort()[0];
+          if (retained === undefined) storage().setItem(`${prefix}${encodeURIComponent(id)}:${writer}:${++sequence}`, JSON.stringify(value));
+          summarized = true;
+        }
+      } catch { /* 요약 저장이 실패하면 기존 현재 기록을 지우지 않는다. */ }
+    }
+    for (const entry of entries) {
+      // 경계가 바뀌었으면 새 현재 세션의 기록을 과거 세션으로 오인해 지우지 않는다.
+      const latest = storedSession();
+      if (entry.key === retained && latest === id) continue;
+      if ((summarized && entry.value?.sessionId === id) || entry.value === null || entry.value.sessionId !== latest) {
+        try { storage().removeItem(entry.key); } catch { /* 정리 실패는 기존 값을 보존한다. */ }
+      }
+    }
+  }
+  /** 모든 입구에서 현재 세션의 불변 기록과 이 탭의 메모리를 병합한다. */
+  function records(id: string): RecordValue[] {
+    const found = snapshot().flatMap((entry) => entry.value?.sessionId === id ? [entry.value] : []);
+    const own = memory.get(id);
+    if (own) found.push(own);
+    return found;
+  }
+  /** 서버 승인은 비감소이며 유예는 자신이 본 서버 마감 이후에만 유효하다. */
+  function merged(id: string) {
+    const { server, local, attempt } = combine(records(id));
     return { server, deadline: local?.deadline ?? server, source: local?.kind ?? (server === null ? null : 'server' as const), attempt };
   }
-  /** 이 타이머 전용 슬롯에만 쓴다. 최대값은 다른 탭이 닫혀도 남는다. */
+  /** 먼저 세션 경계를 확인하고 새 불변 기록을 쓴 뒤 불필요한 기록을 합친다. */
   function write(id: string, patch: Partial<RecordValue>) {
-    const slot = `${prefix}${encodeURIComponent(id)}:${writer}`;
-    const previous = memory.get(slot) ?? { sessionId: id, server: null, local: null, attempt: null };
+    if (ended(id)) return;
+    const previous = memory.get(id) ?? { sessionId: id, server: null, local: null, attempt: null };
     const value = { ...previous, ...patch };
-    memory.set(slot, value);
-    try { storage().setItem(slot, JSON.stringify(value)); } catch { /* 메모리 유지 */ }
+    memory.set(id, value);
+    try { storage().setItem(`${prefix}${encodeURIComponent(id)}:${writer}:${++sequence}`, JSON.stringify(value)); } catch { /* 메모리 유지 */ }
+    compact();
   }
-  /** 종료된 세션의 늦은 탭 쓰기를 차단한다. */
+  /** 단일 현재 세션 경계로 끝났거나 교체된 세션의 늦은 쓰기를 막는다. */
   function ended(id: string): boolean {
+    const current = storedSession();
+    if (current !== undefined && current !== id) return true;
     try { return storage().getItem(`${prefix}${encodeURIComponent(id)}:ended`) !== null; } catch { return false; }
+  }
+  /** start 전의 명시 전달도 새 세션 사건이 있었을 때만 저장 경계를 연다. */
+  function connectSession() {
+    const id = session.current()?.sessionId;
+    if (!id) return;
+    if (storedSession() === undefined) {
+      // 구형 종료 표식도 먼저 현재 세션 경계로 옮긴 뒤 정리해야 복원으로 되살아나지 않는다.
+      let closed = false;
+      try { closed = storage().getItem(`${prefix}${encodeURIComponent(id)}:ended`) !== null; } catch { /* 메모리 유지 */ }
+      markSession(closed ? null : id);
+    } else if (session.generation() > connectedGeneration) markSession(id);
+    connectedGeneration = session.generation();
   }
   /** 지금 세션의 저장 마감과 환경 사실을 반영한다. */
   function refresh() {
     const id = session.current()?.sessionId;
     if (!id || state.phase === 'inactive') return;
     if (ended(id)) { session.expireIdle(); return; }
+    compact();
     const value = merged(id);
     update({ deadline: value.deadline, deadlineSource: value.source, sessionId: id });
   }
@@ -300,10 +377,12 @@ export function createIdleTimer<C extends Credentials>({ session, key, policy, e
   /** 시작·교체는 저장된 값만 이어받고 마감을 생성하지 않는다. */
   function onSessionChange(change: SessionChange) {
     const previous = state.sessionId;
+    connectedGeneration = session.generation();
     invalidateRequests();
-    if (change.kind === 'ended' && previous) {
-      try { storage().setItem(`${prefix}${encodeURIComponent(previous)}:ended`, '1'); } catch { /* 저장 불가 */ }
-    }
+    if (change.kind === 'ended') {
+      if (previous && storedSession() === previous) markSession(null);
+    } else markSession(session.current()!.sessionId);
+    compact();
     deactivate();
     if (change.kind === 'ended') update({ paused: false });
     else { activate(); evaluate(); }
@@ -312,6 +391,7 @@ export function createIdleTimer<C extends Credentials>({ session, key, policy, e
   function applySample(sample: ServerTimeSample, id?: string): boolean {
     updatingClock = true;
     let adopted = false;
+    connectSession();
     try {
       clock.observe(sample.clockOffsetMs, sample.sentAt);
       if (id && id === session.current()?.sessionId && !ended(id) && sample.deadline !== undefined && Number.isFinite(sample.deadline)) {
@@ -359,6 +439,9 @@ export function createIdleTimer<C extends Credentials>({ session, key, policy, e
     /** 저장된 세션 수명에 연결하고 지난 마감을 동기 판정한다. */
     start() {
       if (started) return;
+      if (session.current() === null) markSession(null);
+      else connectSession();
+      compact();
       started = true;
       unsubscribeSession = session.subscribe(onSessionChange, 'cleanup');
       const id = session.current()?.sessionId;
@@ -379,6 +462,7 @@ export function createIdleTimer<C extends Credentials>({ session, key, policy, e
     acceptDeadline: (id, sample) => applySample(sample, id),
     /** 프로젝트가 준 임시 시각만 저장한다. */
     setProvisionalDeadline(id, deadline) {
+      connectSession();
       if (id !== session.current()?.sessionId || ended(id) || !Number.isFinite(deadline) || merged(id).server !== null) return;
       write(id, { local: { deadline, kind: 'provisional', baseServer: null, at: now() } });
       refresh(); evaluate();
