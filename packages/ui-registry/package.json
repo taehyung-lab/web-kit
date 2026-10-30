@@ -1,6 +1,6 @@
 {
   "name": "@boosterlab/web-kit-registry",
-  "version": "4.2.0-rc.1",
+  "version": "5.0.0-rc.1",
   "private": true,
   "type": "module",
   "devDependencies": {

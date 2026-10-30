@@ -1,12 +1,12 @@
 {
-  "version": "4.2.0-rc.1",
-  "sourceRef": "v4.2.0-rc.1",
+  "version": "5.0.0-rc.1",
+  "sourceRef": "v5.0.0-rc.1",
   "shadcn": "4.19.1",
-  "sourceCommit": "d364bc66e2688ef689280ba455500e628f333693",
+  "sourceCommit": "c92cfe6aa320f76f01514966358c8d9acb593038",
   "sourceWorkingTree": "Source fingerprints identify the installed candidate, including uncommitted changes.",
   "method": "pnpm exec shadcn add ./public/r/all.json --cwd apps/starter --yes --overwrite; local absolute namespace during installation",
   "componentsHash": "9251ff1954ca2e2cdf440bbf02e6b5835dacee282c03442ef68ff7ee1443ddc1",
-  "installationComponentsHash": "a837f47aa363fc361501b10b009405d60fd21b058402afd37c225cd0faa28eb4",
+  "installationComponentsHash": "b82415f8e50992a5092de4b12c9837712bf3a767fb77521820f079f78f36825b",
   "items": [
     {
       "name": "inputs",

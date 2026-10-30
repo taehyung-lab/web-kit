@@ -2,7 +2,7 @@
 
 React 19 + TanStack(Router·Query·Form) + zod 4 + axios/orval을 쓰는 웹 프로젝트의 공용 키트다. 서버 응답 구조와 코드 의미는 프로젝트의 `ResponseContract`가 해석한다. 기존 Spring 응답 봉투 도우미도 선택해서 쓸 수 있다. 공통 동작은 패키지 hook·Provider가, 화면 배치는 registry로 설치한 프로젝트 소유 복사본이 맡는다. registry는 복사할 UI와 공통 검사 연결 파일의 묶음이다. 업무 정책·서버 연결 차이는 프로젝트가 정한다. 현재 제공 범위는 아래 표와 `package.json` exports다([4.0 배포 결정](references/docs/decisions/0011-web-kit-4-ui-distribution.md)).
 
-정본: https://github.com/taehyung-lab/web-kit · 패키지 `@boosterlab/web-kit` · 이 문서의 대상 버전 `4.2.0-rc.1`(로컬 후보, 미발행) · 결정 기록 [docs/decisions](references/docs/decisions). 이 패키지는 저장소의 `packages/web-kit`이고, 사용 예이자 소비 검사 앱은 같은 저장소의 [`apps/starter`](references/apps/starter)다.
+정본: https://github.com/taehyung-lab/web-kit · 패키지 `@boosterlab/web-kit` · 이 문서의 대상 버전 `5.0.0-rc.1`(로컬 후보, 미발행) · 결정 기록 [docs/decisions](references/docs/decisions). 이 패키지는 저장소의 `packages/web-kit`이고, 사용 예이자 소비 검사 앱은 같은 저장소의 [`apps/starter`](references/apps/starter)다.
 
 ## 구조
 

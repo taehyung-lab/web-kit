@@ -41,7 +41,12 @@ registry item은 함께 설치하는 파일 묶음이다. UI와 함께 설치된
 
 선택 소비는 기능별 작은 검사 입구를 사용한다. 폼은 `/testing/unit/form`, 인증은 `/testing/unit/auth`와 `/testing/fixtures/auth`, 폼의 UI 의존은 `/testing/unit/choice`·`/testing/unit/primitives`·`/testing/unit/styles`로 연결한다. 기존 `/testing/unit`·`/testing/fixtures`는 호환 입구로 남지만 전체 검사 의존을 불러올 수 있다. form의 zod는 검사 의존이며 사용하는 폼 schema 구현을 제한하지 않는다.
 
-4.2.0-rc.1은 **복사본 교정 필요(검사 연결)** 변경이다. 같은 후보의 패키지와 registry `auth`·`form`·`choice`·`dialog`·`pending`·`styles`를 대조해 검사 import를 갱신하고 설치 기록을 다시 만든다. 제품 UI·저장 상태 기계 변경은 없다. 기본 등록 보호·보호 제외·후속 확장 사용 조건은 [web-kit-form](../skills/web-kit-form/SKILL.md)이 정본이다.
+## 4.1 → 5.0.0-rc.1
+
+5.0은 **사용 계약이 깨지는 변경**(major)이다. 두 갈래로 나뉜다.
+
+- **검사 연결(복사본 교정 필요):** 배포 검사 파일이 기능별 작은 입구와 조합 입구(`/testing/unit/combinations`·`/testing/fixtures/combinations`)를 쓴다. 같은 후보의 registry 검사 연결 파일을 새 원본과 대조해 갱신하고 설치 기록을 다시 만든다. 두 기능을 함께 설치한 경우에만 그 조합 검사가 필수다. 제품 UI 배치·폼 저장 상태 기계 변경은 없다. 기본 등록 보호·보호 제외·후속 확장 사용 조건은 [web-kit-form](../skills/web-kit-form/SKILL.md)이 정본이다.
+- **유휴 세션(`/session/idle`):** 연장·마감·만료의 제품 정책을 키트에서 빼고 프로젝트 입력으로 옮겼다. 키트는 더 이상 스스로 활동 연장·로그인 임시 마감·첫 응답 마감 채택·재개 유예·경고 닫음을 하지 않는다. 기존 동작을 유지하려면 프로젝트가 활동 부품(`/session/activity`), 0초 처리 필수 선택, 임시 마감, 채택할 응답의 명시 전달, 재개 유예 길이, 경고 닫음 UI를 직접 연결한다. 저장 형식이 바뀌었으므로 기존 브라우저 저장값의 유지·삭제는 프로젝트가 정한다. 입력·보장·이전 대응표는 [web-kit-http](../skills/web-kit-http/SKILL.md), 결정 이유는 [0013](../references/docs/decisions/0013-session-policy-split.md)이 정본이다.
 
 Vitest JSON과 Playwright JSON 보고서에는 검사 ID·패키지 버전·registry ref/원본 commit이 남는다. Vitest `allowOnly: false`, Playwright `forbidOnly: true`로 일부 검사만 실행하는 only를 CI에서 거절한다. 검사와 `web-kit-check`는 같은 CI 작업(job)에서 연달아 실행하고, 이전에 저장된 결과를 재사용하지 않는다. 점검 명령은 결과의 생성 시점을 확인하지 않으므로 오래된 통과 결과를 현재 복사본의 검증으로 판정할 수 없다. 설치한 모든 항목의 필수 검사를 실행한 뒤 프로젝트 루트에서 다음을 실행한다.
 
