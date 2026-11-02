@@ -158,3 +158,48 @@ test('브라우저 불필요한 선택은 null을 쓰되 필수 ID 판정은 그
   runConformance(options); verifyConformanceRun(options);
   assert.deepEqual(JSON.parse(readFileSync(options.browserPath, 'utf8')), { suites: [], errors: [] });
 }));
+
+for (const kind of ['unitPath', 'browserPath', 'receiptPath']) test('입력 아래 출력 거절: ' + kind + '는 소스 파일을 보존한다', () => runFixture(({ dir, write, options }) => {
+  write('src/model.ts', 'export const value = 1;\n');
+  const config = JSON.parse(readFileSync(options.configPath, 'utf8'));
+  config.inputs.push('src'); write('web-kit.check.json', config);
+  options[kind] = join(dir, 'src/model.ts');
+  assert.throws(() => runConformance(options), /입력과 출력.*겹/);
+  assert.equal(readFileSync(join(dir, 'src/model.ts'), 'utf8'), 'export const value = 1;\n');
+  assert.equal(existsSync(join(dir, 'unit.json')), false, '입력/출력 오류는 명령 실행 전에 거절한다');
+}));
+
+for (const folder of ['work', 'dist', 'coverage']) test('선언한 소스의 하위 폴더도 기록한다: src/' + folder, () => runFixture(({ dir, write, options }) => {
+  const source = 'src/' + folder + '/model.ts';
+  write(source, 'export const value = 1;\n');
+  const config = JSON.parse(readFileSync(options.configPath, 'utf8'));
+  config.inputs.push('src'); write('web-kit.check.json', config);
+  runConformance(options);
+  const receipt = JSON.parse(readFileSync(options.receiptPath, 'utf8'));
+  assert.equal(receipt.files[source], digest('export const value = 1;\n'));
+  write(source, 'export const value = 999;\n');
+  assert.throws(() => verifyConformanceRun(options), /실행 기록이 다릅니다/);
+  assert.equal(readFileSync(join(dir, source), 'utf8'), 'export const value = 999;\n');
+}));
+
+for (const kind of ['unitPath', 'browserPath', 'receiptPath']) test('심링크 부모를 통한 출력도 실행 전에 거절한다: ' + kind, () => runFixture(({ dir, write, options }) => {
+  write('src/model.ts', 'export const value = 1;\n');
+  write('reports/keep.txt', 'keep');
+  symlinkSync(join(dir, 'src'), join(dir, 'reports/alias'), 'dir');
+  const config = JSON.parse(readFileSync(options.configPath, 'utf8'));
+  config.inputs.push('src'); write('web-kit.check.json', config);
+  options[kind] = join(dir, 'reports/alias/model.ts');
+  assert.throws(() => runConformance(options), /심링크/);
+  assert.equal(readFileSync(join(dir, 'src/model.ts'), 'utf8'), 'export const value = 1;\n');
+  assert.equal(existsSync(join(dir, 'unit.json')), false);
+}));
+
+test('입력의 심링크 부모도 실제 소스 경로로 선언하게 한다', () => runFixture(({ dir, write, options }) => {
+  write('src/model.ts', 'export const value = 1;\n');
+  symlinkSync(join(dir, 'src'), join(dir, 'alias'), 'dir');
+  const config = JSON.parse(readFileSync(options.configPath, 'utf8'));
+  config.inputs.push('alias/model.ts'); write('web-kit.check.json', config);
+  options.unitPath = join(dir, 'src/model.ts');
+  assert.throws(() => runConformance(options), /심링크/);
+  assert.equal(readFileSync(join(dir, 'src/model.ts'), 'utf8'), 'export const value = 1;\n');
+}));
