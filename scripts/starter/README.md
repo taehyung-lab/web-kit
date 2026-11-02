@@ -43,4 +43,4 @@ mock 계정은 `admin` / `password`다. 실제 서버 검증은 별도다. `pack
 
 ## 업데이트
 
-[패키지 설치·복사본 갱신](node_modules/@boosterlab/web-kit/README.md#복사본-갱신)을 따른다. 패키지와 같은 출처의 registry를 사용한다. UI 갱신은 이전 원본·새 원본·현재 수정본을 비교해 프로젝트 수정을 보존한다. AWK는 고정한 버전의 공식 `install.sh --update`로 갱신한다.
+[패키지 설치·복사본 갱신](node_modules/@boosterlab/web-kit/docs/installing.md#복사본-갱신)을 따른다. 패키지와 같은 출처의 registry를 사용한다. UI 갱신은 이전 원본·새 원본·현재 수정본을 비교해 프로젝트 수정을 보존한다. AWK는 고정한 버전의 공식 `install.sh --update`로 갱신한다.

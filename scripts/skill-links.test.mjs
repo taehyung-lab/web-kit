@@ -6,6 +6,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
+import { checkMarkdownLinks } from './document-links.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const skills = readdirSync(resolve(root, 'packages/web-kit/skills')).filter((name) => name.startsWith('web-kit-'));
 for (const name of skills) {
@@ -36,11 +37,13 @@ for (const name of skills) {
 
 /** 풀어 낸 패키지의 모든 문서 링크가 패키지 안에서 읽히는지 확인한다. */
 function checkPackedLinks(packageRoot) {
+  const documents = [];
   const walk = (dir) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const path = resolve(dir, entry.name);
       if (entry.isDirectory()) { walk(path); continue; }
       if (!path.endsWith('.md')) continue;
+      documents.push(path);
       for (const [, href] of readFileSync(path, 'utf8').matchAll(/\]\(([^)]+)\)/g)) {
         if (/^(?:https?:|#)/.test(href)) continue;
         const target = resolve(dirname(path), decodeURIComponent(href.split('#')[0]));
@@ -50,6 +53,7 @@ function checkPackedLinks(packageRoot) {
     }
   };
   walk(packageRoot);
+  checkMarkdownLinks(documents, { root: packageRoot });
 }
 
 test('실제 tarball의 문서·스킬 예제를 독립 폴더에서 읽고, 누락된 예제는 거절한다', () => {

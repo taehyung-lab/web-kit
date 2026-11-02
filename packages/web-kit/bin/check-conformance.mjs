@@ -4,6 +4,9 @@ import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
+import { installedPath } from '../tools/registry.mjs';
+import { projectPath } from '../tools/files.mjs';
+import { runConformance, verifyConformanceRun } from '../tools/run-conformance.mjs';
 const args = process.argv.slice(2);
 /** 필수 경로 인자가 빠지면 실행 방법과 함께 실패한다. */
 function option(name) { const i = args.indexOf(name); if (i < 0 || !args[i + 1]) throw new Error('필수 인자: ' + name); return args[i + 1]; }
@@ -18,8 +21,19 @@ try {
   const packageRoot = fileURLToPath(new URL('../', import.meta.url));
   const version = json(resolve(packageRoot, 'package.json')).version;
   const requirements = json(resolve(packageRoot, 'src/testing/requirements.json'));
-  const unit = json(resolve(option('--unit')));
-  const browser = json(resolve(option('--browser')));
+  const unitPath = resolve(option('--unit'));
+  const browserPath = resolve(option('--browser'));
+  if (args.includes('--run') && args.includes('--verify-run')) throw new Error('--run과 --verify-run은 함께 쓸 수 없습니다');
+  if (args.includes('--run') || args.includes('--verify-run')) {
+    const configPath = projectPath(root, option(args.includes('--run') ? '--run' : '--verify-run'));
+    const receiptAt = args.indexOf('--receipt');
+    const receiptPath = projectPath(root, receiptAt < 0 ? '.web-kit-results/run.json' : option('--receipt'));
+    const execution = { root, configPath, installationPath, unitPath, browserPath, receiptPath };
+    if (args.includes('--run')) runConformance(execution);
+    verifyConformanceRun(execution);
+  }
+  const unit = json(unitPath);
+  const browser = json(browserPath);
   const failures = [];
   const results = [];
   for (const file of unit.testResults ?? []) for (const test of file.assertionResults ?? []) results.push({ title: test.fullName ?? test.title, status: test.status });
@@ -44,10 +58,10 @@ try {
     for (const id of contract.ids) required.add(id);
     for (const connection of contract.connections) {
       const file = item.files.find((file) => file.source.endsWith('/' + connection));
-      if (!file || !existsSync(resolve(root, file.installed.replace(/^apps\/starter\//, '')))) failures.push(name + ': 검사 연결 없음 ' + connection);
+      if (!file || !existsSync(projectPath(root, installedPath(installation, file.installed)))) failures.push(name + ': 검사 연결 없음 ' + connection);
     }
     for (const file of item.files ?? []) {
-      const path = resolve(root, file.installed.replace(/^apps\/starter\//, ''));
+      const path = projectPath(root, installedPath(installation, file.installed));
       if (!existsSync(path)) { failures.push('설치 파일 없음: ' + file.installed); continue; }
       if (/\.(test|spec)\.[cm]?[jt]sx?$/.test(path) && /\b(?:it|test|describe)\s*\.\s*(?:only|skip)\b/.test(readFileSync(path, 'utf8'))) failures.push('skip/only 연결: ' + file.installed);
       if (hash(path) !== file.installedHash) {
