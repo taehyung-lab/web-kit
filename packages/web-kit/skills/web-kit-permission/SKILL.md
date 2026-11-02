@@ -30,7 +30,7 @@ starter 실제 예 없음(검사하지 않음). 연결 위치 참고: [apps/star
 
 starter 실제 예 없음(검사하지 않음). 연결 위치 참고: [apps/starter/src/app/App.tsx](../../references/apps/starter/src/app/App.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다. 공통 판정의 검사 근거는 [permission.test.tsx](../../references/packages/web-kit/tests/permission.test.tsx.txt)다.
 
-registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 단위·브라우저 CI에서 실행하고 `web-kit-check`를 필수 단계로 둔다. starter 통과로 대신하지 않는다. 실제 사용 UI와 검사 대상의 일치는 별도 검토로 판정한다. 설치·결과 파일 연결은 [소비 안내](../../docs/consuming.md#복사본-적합성-검사)를 따른다.
+registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 단위·브라우저 CI에서 실행하고 `web-kit-check`를 필수 단계로 둔다. starter 통과로 대신하지 않는다. 실제 사용 UI와 검사 대상의 일치는 별도 검토로 판정한다. 설치·결과 파일 연결은 [소비 안내](../../docs/checking.md)를 따른다.
 
 - 권한 없는 계정으로 주소를 직접 열면 거부 화면이 뜨고 화면 요청이 나가지 않는다.
 - 권한 상태를 불러오는 중·실패로 두면 버튼이 눌리지 않고 메뉴가 보이지 않는다.

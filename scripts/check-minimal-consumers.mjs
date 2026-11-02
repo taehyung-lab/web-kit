@@ -1,5 +1,6 @@
 // 파일 책임: 같은 후보 tarball·registry를 의존이 실제로 빠진 기능별 격리 소비처에 설치해 단위·브라우저·적합성을 검사한다.
 import assert from 'node:assert/strict';
+import { recordInstallation } from '../packages/web-kit/tools/registry.mjs';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
@@ -93,13 +94,7 @@ for (const feature of features) {
   run(cwd, feature + '-install-frozen', ['install', '--frozen-lockfile', '--ignore-scripts']);
 
   const names = closure(feature);
-  writeJson('registry-installation.json', { version: candidate.version, sourceRef: candidate.sourceRef, sourceCommit: candidate.sourceCommit, items: [...names].map((name) => {
-    const item = registry.items.find((item) => item.name === name);
-    return { name, artifactHash: hash(join(root, `public/r/${name}.json`)), files: item.files.map((file) => {
-      const installed = file.target.replace(/^~\//, '');
-      return { source: file.path, installed, sourceHash: hash(join(root, file.path)), installedHash: hash(join(cwd, installed)) };
-    }) };
-  }) });
+  writeJson('registry-installation.json', recordInstallation({ source: root, project: cwd, version: candidate.version, selected: [feature] }));
   const declared = [...names].flatMap((name) => { const item = registry.items.find((item) => item.name === name); return [...(item.dependencies ?? []), ...(item.devDependencies ?? [])]; });
   const forbidden = ['@tanstack/react-form', '@tanstack/react-router', '@tanstack/react-query', '@tanstack/react-virtual', 'zod', 'axios'].filter((name) => !declared.some((dependency) => dependency.startsWith(name + '@')));
   const require = createRequire(join(cwd, 'package.json'));
@@ -141,11 +136,13 @@ for (const feature of features) {
     const { unlinkSync } = await import('node:fs');
     unlinkSync(join(cwd, 'src/old-fixture.test.tsx'));
   }
-  run(cwd, feature + '-unit', ['exec', 'vitest', 'run']);
   const hasBrowser = [...names].some((name) => registry.items.find((item) => item.name === name).files.some((file) => /\.spec\.ts$/.test(file.path)));
-  if (hasBrowser) run(cwd, feature + '-browser', ['exec', 'playwright', 'test']);
-  else writeJson('browser.json', { suites: [], errors: [] });
-  run(cwd, feature + '-conformance', ['exec', 'web-kit-check', '--installation', 'registry-installation.json', '--unit', 'unit.json', '--browser', 'browser.json', '--strict-fingerprints']);
+  writeJson('web-kit.check.json', {
+    inputs: ['src', 'package.json', 'pnpm-lock.yaml', 'components.json', 'tsconfig.json', 'vitest.config.ts', 'vite.config.ts', 'playwright.config.ts', ...['tests', 'web-kit-checks', 'index.html'].filter((path) => existsSync(join(cwd, path)))],
+    unit: ['pnpm', 'exec', 'vitest', 'run'],
+    browser: hasBrowser ? ['pnpm', 'exec', 'playwright', 'test'] : null,
+  });
+  run(cwd, feature + '-conformance', ['exec', 'web-kit-check', '--run', 'web-kit.check.json', '--installation', 'registry-installation.json', '--unit', 'unit.json', '--browser', 'browser.json', '--strict-fingerprints']);
   for (const file of ['unit.json', 'browser.json', 'registry-installation.json']) copyFileSync(join(cwd, file), join(reports, feature + '-' + file));
   results.push({ feature, cwd, candidateVersion: candidate.version, tarballSha256: hash(tarball), registryItems: [...names], absent: forbidden, undeclaredPeerRejected: missing, unitTests: json(join(cwd, 'unit.json')).numPassedTests, browser: hasBrowser ? 'passed' : 'no required browser checks', conformance: 'passed' });
   writeFileSync(join(reports, 'results.json'), JSON.stringify(results, null, 2) + '\n');

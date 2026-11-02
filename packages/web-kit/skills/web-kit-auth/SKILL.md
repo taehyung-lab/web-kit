@@ -5,7 +5,7 @@ description: 로그인 전 이메일·OTP 코드 확인, 남은 시간·만료, 
 
 # 로그인 전 인증 단계
 
-`/auth`의 순수 계산·진행 hook과 registry `auth` 복사본을 연결한다. 공개 타입은 설치된 `src/auth.ts`가 기준이다. [소비 안내](../../docs/consuming.md#복사본-적합성-검사)의 검사 설치 절차를 따른다.
+`/auth`의 순수 계산·진행 hook과 registry `auth` 복사본을 연결한다. 공개 타입은 설치된 `src/auth.ts`가 기준이다. [소비 안내](../../docs/checking.md)의 검사 설치 절차를 따른다.
 
 ## 연결 순서
 

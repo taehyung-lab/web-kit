@@ -1,0 +1,31 @@
+{
+  "inputs": [
+    "index.html",
+    "src",
+    "tests",
+    "web-kit-checks",
+    "public",
+    "package.json",
+    "pnpm-lock.yaml",
+    "components.json",
+    "vitest.config.ts",
+    "playwright.config.ts",
+    "vite.config.ts",
+    "tsconfig.json",
+    "tsconfig.app.json",
+    "tsconfig.node.json",
+    "tsconfig.base.json"
+  ],
+  "unit": [
+    "pnpm",
+    "exec",
+    "vitest",
+    "run"
+  ],
+  "browser": [
+    "pnpm",
+    "exec",
+    "playwright",
+    "test"
+  ]
+}

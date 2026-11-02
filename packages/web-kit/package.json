@@ -1,6 +1,6 @@
 {
   "name": "@boosterlab/web-kit",
-  "version": "5.0.0-rc.5",
+  "version": "5.0.0-rc.6",
   "private": true,
   "type": "module",
   "sideEffects": false,
@@ -49,7 +49,8 @@
     "GLOSSARY.md",
     "README.md",
     "bin",
-    "references"
+    "references",
+    "tools"
   ],
   "peerDependencies": {
     "@tanstack/react-form": "1.33.5",
@@ -126,6 +127,7 @@
     "tabbable": "6.3.0"
   },
   "bin": {
-    "web-kit-check": "./bin/check-conformance.mjs"
+    "web-kit-check": "./bin/check-conformance.mjs",
+    "web-kit-registry": "./bin/registry.mjs"
   }
 }

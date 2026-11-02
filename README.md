@@ -11,11 +11,11 @@ docs/              결정 기록(decisions/)과 변경·발행 기준(maintainin
 scripts/           starter 맞추기, registry 일치·문서 링크 검사, 검증 기록
 ```
 
-응답 해석은 소비 프로젝트의 필수 입력이다. Spring 봉투 서버는 `/http`의 `springEnvelope(results)`를 선택한다. 자세한 이전 연결은 [소비 안내](packages/web-kit/docs/consuming.md#시험판에서-옮겨-오기)를 따른다.
+응답 해석은 소비 프로젝트의 필수 입력이다. Spring 봉투 서버는 `/http`의 `springEnvelope(results)`를 선택한다. 자세한 이전 연결은 [이전 안내](packages/web-kit/docs/migrating.md)를 따른다.
 
 starter는 기본 연결과 조립 예이며 모든 프로젝트의 고정 페이지가 아니다. 프로젝트는 기능별로 선택해 쓰고 자기 업무·서버 계약·화면을 소유한다. [페이지 일부만 다른 경우](docs/decisions/0001-scope-and-boundaries.md#페이지-일부만-다른-경우)의 책임 구분을 따른다. 공용 수정은 패키지 업데이트로 받되, UI 복사본 교정이 필요한 변경은 프로젝트 수정과 대조해 적용한다.
 
-**5.0.0이 첫 정식 기준이며, 그 전 버전(태그 v0.x–v4.1.0)은 시험판이다.** 현재 패키지는 `5.0.0-rc.5` 로컬 후보이며 아직 정식 발행하지 않았다. 함께 쓰는 agent-workflow-kit(AWK)은 tag `v1.0.0`(= commit `c55ccc2`)이다.
+**5.0.0이 첫 정식 기준이며, 그 전 버전(태그 v0.x–v4.1.0)은 시험판이다.** 현재 패키지는 `5.0.0-rc.6` 로컬 후보이며 아직 정식 발행하지 않았다. 새 프로젝트에 설치하는 agent-workflow-kit(AWK)은 tag `v1.0.0`(= commit `c55ccc2`)이다. 이 저장소 자체의 작업 기준은 [.agents/agent-workflow-kit.version](.agents/agent-workflow-kit.version)의 고정 버전을 따른다.
 
 ## 명령
 
@@ -30,25 +30,15 @@ Node 24.19, pnpm 10.33.
 
 ## 새 프로젝트 시작
 
-내부 `apps/starter`를 실행 가능한 예시 앱으로 복사한다. 기능별 선택 방식은 [소비 안내](packages/web-kit/docs/consuming.md#기능을-골라-쓰기)를 따른다. 최소 빈 앱이나 프로젝트별 템플릿을 여러 개 만들지 않는다.
+실행 가능한 예시 앱 전체로 시작한다. 고정 AWK checkout과 생성·검사 순서는 [새 프로젝트 시작](docs/starting.md)을 따른다. 필요한 기능만 기존 앱에 넣으려면 [선택 사용](packages/web-kit/docs/consuming.md#기능을-골라-쓰기)과 [설치 안내](packages/web-kit/docs/installing.md)로 간다.
 
-```sh
-pnpm starter:create ../my-web --workflow-kit /path/to/agent-workflow-kit
-```
+## 문서 찾기
 
-대상은 아직 없는 폴더여야 한다. AWK는 tag `v1.0.0`의 깨끗한 checkout을 지정한다(`git clone --branch v1.0.0 https://github.com/taehyung-lab/agent-workflow-kit`). `scripts/starter/agent-workflow-kit.version`에는 그 tag의 커밋 `c55ccc2dc1f6616979e2f904dac738efbcb35bc3`이 적혀 있다. 명령은 checkout의 HEAD가 이 커밋인지 확인하고, checkout에 `v1.0.0` tag가 있으면 그 tag도 같은 커밋으로 해소되는지 확인한다. 이 명령은 원격 다운로드·Git 초기화·의존성 설치·발행을 하지 않는다.
-
-명령은 현재 패키지와 starter vendor/lockfile의 일치를 먼저 확인한다. 다른 경우 유지보수자가 `pnpm starter:sync`와 `pnpm starter:check`로 후보를 맞춘다. 새 폴더에는 AWK, web-kit 스킬, 프로젝트 지도, 프로젝트용 README·CI가 들어간다. 로컬 비밀·의존성·빌드·실행 결과와 추적되지 않은 파일은 복사하지 않는다. 검사 앱의 strict 지문 검사는 유지하고 새 프로젝트에는 정상 UI 수정이 가능한 소비 검사 모드를 적용한다.
-
-생성한 폴더에서 다음을 실행한다.
-
-```sh
-pnpm install --frozen-lockfile
-pnpm exec playwright install chromium
-pnpm check
-pnpm dev:mock
-```
-
-후보의 registry tag가 발행되지 않았다면 복사된 UI로만 로컬 확인한다. 새 항목 설치·갱신은 검증된 tag 발행 뒤 [설치 안내](packages/web-kit/README.md#설치와-업그레이드)를 따른다. 새 프로젝트의 사용 스킬은 설치 패키지 안의 예제까지 읽을 수 있다.
-
-발행은 후보 → starter → 실제 소비처 → 교정·독립 검증 → 실서버 확인 → 정식 발행 순서다. [유지보수](docs/maintaining.md)가 세부 기준을 정한다.
+| 하려는 일 | 읽을 곳 |
+|---|---|
+| 공통 책임과 프로젝트 책임 구분 | [구조 결정](docs/decisions/0001-scope-and-boundaries.md) |
+| 공개 입구·기능 선택 | [패키지 안내](packages/web-kit/README.md) |
+| 설치·복사본 갱신·출처 기록 | [설치 안내](packages/web-kit/docs/installing.md) |
+| 현재 복사본에서 새 검사 실행 | [검사 안내](packages/web-kit/docs/checking.md) |
+| 시험판의 제거된 입구 이전 | [이전 안내](packages/web-kit/docs/migrating.md) |
+| 키트 변경·소비 검사·발행 | [유지보수](docs/maintaining.md) |

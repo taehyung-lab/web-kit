@@ -95,8 +95,8 @@ it.each(['core', 'form', 'list', 'dialog', 'choice', 'auth'] as const)('%s 공�
   expect(Object.keys(entries[name]).sort()).toEqual(expected[name]);
 });
 
-/** 4.0 공개 입구에서 시각 UI 경로가 다시 늘어나지 않게 고정한다. */
-it('4.2 패키지 subpath는 승인된 36개 입구만 공개한다', () => {
+/** 공개 입구에서 시각 UI 경로가 다시 늘어나지 않게 고정한다. */
+it('패키지 subpath는 승인된 36개 입구만 공개한다', () => {
   const manifest = Object.values((import.meta as unknown as { glob: (pattern: string, options: object) => Record<string, string> }).glob('../package.json', { query: '?raw', import: 'default', eager: true }))[0]!;
   expect(Object.keys(JSON.parse(manifest).exports).sort()).toEqual([
   ".",

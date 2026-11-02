@@ -83,7 +83,7 @@ headless는 화면 배치 없이 상태와 연결 함수만 쓰는 방식이다.
 
 폼과 `blocking-progress` 또는 `checkbox-tree`를 함께 설치하면 registry 검사 연결이 `/testing/unit/combinations`로 자기 UI 복사본의 조합 검사도 등록한다. 둘 중 하나만 설치한 프로젝트에는 그 조합을 요구하지 않는다. 덮개와 폼의 서버 오류 초점 브라우저 화면은 `/testing/fixtures/combinations`를 쓴다.
 
-폼만 채택한 소비 검사는 `/testing/unit/form`과 registry가 연결한 의존 검사 입구를 쓴다. 작은 검사 입구와 실제 최소 소비의 기준은 [소비 안내](../../docs/consuming.md#복사본-적합성-검사)를 따른다.
+폼만 채택한 소비 검사는 `/testing/unit/form`과 registry가 연결한 의존 검사 입구를 쓴다. 작은 검사 입구와 실제 최소 소비의 기준은 [소비 안내](../../docs/checking.md)를 따른다.
 
 ## 줄 추가·삭제·이동 입력
 
@@ -145,7 +145,7 @@ headless는 화면 배치 없이 상태와 연결 함수만 쓰는 방식이다.
 
 실제 조립 예: [apps/starter/src/shared/ui/web-kit/checks/form-ui.test.tsx](../../references/apps/starter/src/shared/ui/web-kit/checks/form-ui.test.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 단위·브라우저 CI에서 실행하고 `web-kit-check`를 필수 단계로 둔다. starter 통과로 대신하지 않는다. 실제 사용 UI와 검사 대상의 일치는 별도 검토로 판정한다. 설치·결과 파일 연결은 [소비 안내](../../docs/consuming.md#복사본-적합성-검사)를 따른다.
+registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 단위·브라우저 CI에서 실행하고 `web-kit-check`를 필수 단계로 둔다. starter 통과로 대신하지 않는다. 실제 사용 UI와 검사 대상의 일치는 별도 검토로 판정한다. 설치·결과 파일 연결은 [소비 안내](../../docs/checking.md)를 따른다.
 
 - 프로젝트가 자기 칸 틀·확인창을 만들면 `/testing`의 `checkFieldAdapter`·`checkConfirmDialogAdapter`로 연결을 확인하고, 공통 적합성 검사를 자기 CI에서 계속 실행한다.
 - 화면 흐름에서 관찰할 것:

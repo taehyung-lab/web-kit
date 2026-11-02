@@ -75,9 +75,9 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
 - 서버 로그아웃은 `createSession({ signOut })`에 넘긴다. 받은 자격증명의 토큰을 헤더에 직접 실어 공개 요청으로 보낸다. 로그아웃 버튼은 `session.end()`만 부른다. 그 뒤 로그인 이동은 앱 안 이동(router navigate)으로 한다. `window.location`으로 문서를 다시 읽으면 브라우저가 진행 중인 `signOut` 요청을 끊어 서버 세션이 남는다.
 - `session.subscribe`의 `ended`에서 로그인 이동·안내를 한다. `by`로 이 탭의 로그아웃(local), 다른 탭(other-tab), 서버 인증 계약(server)을 구별한다. 토큰 저장 위치는 프로젝트 정책이다.
 - 유휴 마감은 프로젝트의 세션 시작과 명시 마감 전달을 같은 연결에서 조립한다. 어떤 응답의 마감을 받을지·임시 마감 계기·경고 길이·0초 선택·재개 유예 길이·활동 부품 부착과 화면 닫음 상태는 프로젝트가 정한다. 서버 형식은 `ServerTimeSample`로 해석해 넘긴다.
-- 자기 연장 응답 메타가 필요하면 `http.requestWithResponse<T>()`를 쓴다. `{ data, sentAt, response: { status, header } }`는 최종 성공 전송 하나에 묶인다(동시 요청·재전송에도 다른 응답과 섞이지 않음). `requestData`·`request`의 기존 반환값은 유지한다.
+- 자기 연장 응답 메타가 필요하면 `http.requestWithResponse<T>()`를 쓴다. `{ data, sentAt, response: { status, header } }`는 최종 성공 전송 하나에 묶인다(동시 요청·재전송에도 다른 응답과 섞이지 않음). `requestData`는 데이터만, `requestWithResponse`는 그 데이터와 전송 메타를 반환한다.
 - 연결 상태 표시·서버 시각 동기화 같은 관찰은 `observe`로 받는다. 재전송·재발급을 포함한 전송 시도마다 한 번 오고, 응답이 없으면 `response`가 없다.
-- orval mutator는 `http.request` 하나로 둔다.
+- orval mutator의 타입 연결은 아래 「프로젝트별 응답 계약」을 따른다.
 - 요청 query는 `/api`에서 서버 계약에 맞는 것을 고른다. `serializeSpringParams`는 재귀 객체용이고, `serializeFlatListParams`는 한 단계 깊이의 목록용이다(중첩은 TypeError). 둘 다 null·undefined는 빼고 빈 문자열·0·false는 보존한다.
 - `notify`에서 어떤 실패를 어디에 보일지 출처로 고른다(예: 활성 조회의 forbidden만 모달). 화면이 이미 보이는 쓰기 실패와 겹치지 않게 한다.
 
@@ -85,7 +85,7 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
 
 실제 조립 예: [apps/starter/src/app/session.test.tsx](../../references/apps/starter/src/app/session.test.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 단위·브라우저 CI에서 실행하고 `web-kit-check`를 필수 단계로 둔다. starter 통과로 대신하지 않는다. 실제 사용 UI와 검사 대상의 일치는 별도 검토로 판정한다. 설치·결과 파일 연결은 [소비 안내](../../docs/consuming.md#복사본-적합성-검사)를 따른다.
+registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 단위·브라우저 CI에서 실행하고 `web-kit-check`를 필수 단계로 둔다. starter 통과로 대신하지 않는다. 실제 사용 UI와 검사 대상의 일치는 별도 검토로 판정한다. 설치·결과 파일 연결은 [소비 안내](../../docs/checking.md)를 따른다.
 
 - 저장 adapter는 `/testing/session`의 `checkSessionStoreAdapter`로 저장 실패 뒤 재발급·다른 탭 변경·종료를 확인한다. 실제 adapter에 실패를 주입하는 fixture 연결은 [소비 안내](../../docs/consuming.md#저장-adapter-검사)를 따른다.
 - 실제 adapter로 다음을 관찰한다.
@@ -110,7 +110,7 @@ E1(401이 업무 실행 전인가), E2(일반·재발급 요청의 status·resul
 
 Spring 봉투 서버는 `/http`의 `springEnvelope(results)`를 `response`에 전달한다. 이 선택 부품은 2xx에서 `header.resultCode` 200만 성공으로 보고 `data`를 풀며, 봉투가 아니면 contract로 거절한다. 다른 resultCode는 business로 분류하고, 2xx 밖 응답도 `(status, code)` 결과 코드 표의 종류·messageKey·endsSession을 적용한다. 표에 없는 실패는 HTTP 상태로 분류한다. `readEnvelope`·`toRequestFailure`는 이 부품의 낮은 수준 해석 도우미다.
 
-요청은 실제 데이터 타입을 넘기는 `http.requestData<T>` 또는 메타도 받는 `requestWithResponse<T>`를 쓴다. 생성된 Spring 봉투 타입을 받는 orval mutator는 같은 `/http` 입구의 `SpringEnvelopeData<T>`로 타입을 고른 뒤 `http.requestData<SpringEnvelopeData<T>>(config, options)`로 연결한다. `Http.request`와 `Unwrapped`는 제거됐다. 일반 데이터의 `data` 속성은 `requestData`가 그대로 보존한다.
+요청은 실제 데이터 타입을 넘기는 `http.requestData<T>` 또는 메타도 받는 `requestWithResponse<T>`를 쓴다. 생성된 Spring 봉투 타입을 받는 orval mutator는 같은 `/http` 입구의 `SpringEnvelopeData<T>`로 타입을 고른 뒤 `http.requestData<SpringEnvelopeData<T>>(config, options)`로 연결한다. 일반 데이터의 `data` 속성은 `requestData`가 그대로 보존한다.
 
 사용자 정의 `response.read`는 성공 값 또는 `RequestFailure`를 반환한다. 응답 형식이 잘못되어도 실패 값을 반환하며 예외를 던지지 않는다. 키트는 반환된 실패의 상태 코드와 요청 식별자를 실제 HTTP 응답 값으로 맞추므로 응답 본문이 재발급 여부를 바꿀 수 없다.
 

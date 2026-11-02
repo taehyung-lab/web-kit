@@ -77,7 +77,7 @@ function validateSource(workflowKit) {
       const source = resolve(root, file.source);
       if (!source.startsWith(root) || hash(source) !== file.sourceHash) throw new Error(`registry 원본이 설치 기록과 다릅니다: ${file.source}`);
       const expectedPath = definition.files.find((entry) => entry.path === file.source).target.replace(/^~\//, '');
-      const installedPath = file.installed.replace(/^apps\/starter\//, '');
+      const installedPath = installation.schemaVersion === 1 ? file.installed : file.installed.replace(/^apps\/starter\//, '');
       const path = resolve(starter, installedPath);
       if (installedPath !== expectedPath || !path.startsWith(starter + '/') || hash(path) !== file.installedHash)
         throw new Error(`검사 앱의 원본 복사본이 달라졌습니다: ${file.installed}`);
@@ -115,7 +115,7 @@ export function createStarter(destination, workflowKit) {
     writeJson(join(stage, 'components.json'), components);
     installation.componentsHash = hash(join(stage, 'components.json'));
     // 원본·설치 지문은 그대로 두고 위치만 새 프로젝트 기준으로 옮긴다.
-    for (const item of installation.items) for (const file of item.files) file.installed = file.installed.replace(/^apps\/starter\//, '');
+    for (const item of installation.items) for (const file of item.files) file.installed = installation.schemaVersion === 1 ? file.installed : file.installed.replace(/^apps\/starter\//, '');
     writeJson(join(stage, 'registry-installation.json'), installation);
     // 복사 도중 다른 작업이 대상 폴더를 만들었으면 덮어쓰지 않는다.
     if (existsSync(destination)) throw new Error('복사 도중 대상 폴더가 생겼습니다. 다른 경로로 다시 시작하세요.');

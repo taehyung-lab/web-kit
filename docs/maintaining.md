@@ -11,6 +11,12 @@
 5. 아래 버전 기준으로 번호를 정하고 그 번호로 포장한 산출물을 소비 검사에 넣는다. 현재 연결된 소비자와, 호환성이 달라진 경우 짝지은 소비자 revision을 구분한다.
 6. 실제로 검사한 버전·환경·입력·결과·미확인을 기록한다. 새로운 interface가 기존 예제에서 사용되지 않으면 예제 통과만으로 새 기능의 소비 검사를 완료했다고 하지 않는다.
 
+## 소비 도구 변경
+
+설치 기록·원본 변경 비교는 배포 패키지의 tools/registry.mjs가 맡고 starter와 최소 소비 검사도 같은 함수를 쓴다. 새 검사 실행은 tools/run-conformance.mjs가 맡는다. source와 installed 지문을 혼동하지 않고, CLI 변환과 사용자 지정 경로·부분 선택을 실제 임시 파일로 검사한다. 과거 결과만 남기는 실행·명령 실패·보고서 미생성·실행 중/후 입력 변경·보고서 변경은 실패로 판정해야 한다.
+
+starter는 web-kit.check.json의 전체 입력과 기존 Vitest·Playwright 명령을 web-kit-check --run으로 실행한다. 타입·lint·build는 기존 명령을 유지한다. runner include·필수 ID·skip/only·strict 기준은 줄이지 않는다. 입력 선언과 실제 실행 경로의 일치는 검토한다. 문서 이동 후 저장소와 실제 tarball에서 파일 링크와 제목 앵커를 모두 검사한다.
+
 ## 선택 설치 검사
 
 `registry.json`이 설치 의존의 정본이다. `registry:check`는 `requirements.json`의 내부 의존과 정본을 비교하고, 각 항목의 실행 코드·검사 정적 import를 따라 npm 선언 누락도 거절한다. 조합의 검사 ID와 정적 import 시작점은 `src/testing/combinations.json`에서 관리한다. 조건부 import는 설치한 조합별로 검사한다.
@@ -79,7 +85,7 @@ registry JSON은 같은 commit의 `public/r`에 보관하고 tag 고정 raw URL�
 
 ## 복사본 업데이트 안내
 
-변경마다 발행 안내를 **패키지만 올리면 반영 / 복사본 교정 필요**로 구분한다. 후자에는 이전/새 registry tag·항목·변경 파일과 포커스/이벤트 연결의 교정 이유를 적는다. 원본 A와 B를 같은 CLI·설정으로 설치해 차이를 만들고 현재 프로젝트 C의 수정과 함께 비교한다. 디자인 diff를 보존하며 필요한 교정만 적용하고, 충돌 파일은 보존해 검토한다. --overwrite를 기본 갱신법으로 안내하지 않는다. 적용 뒤 단위·브라우저·web-kit-check를 다시 실행한다. [소비 갱신 안내](../packages/web-kit/README.md#복사본-갱신)가 실행 절차다.
+변경마다 발행 안내를 **패키지만 올리면 반영 / 복사본 교정 필요**로 구분한다. 후자에는 이전/새 registry tag·항목·변경 파일과 포커스/이벤트 연결의 교정 이유를 적는다. 원본 A와 B를 같은 CLI·설정으로 설치해 차이를 만들고 현재 프로젝트 C의 수정과 함께 비교한다. 디자인 diff를 보존하며 필요한 교정만 적용하고, 충돌 파일은 보존해 검토한다. --overwrite를 기본 갱신법으로 안내하지 않는다. 적용 뒤 단위·브라우저·web-kit-check를 다시 실행한다. [소비 갱신 안내](../packages/web-kit/docs/installing.md#복사본-갱신)가 실행 절차다.
 
 ## 스킬 탐색 확인
 
