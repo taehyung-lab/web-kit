@@ -104,16 +104,16 @@ test('AWK 발행 tag가 있으면 고정 커밋으로 해소되어야 하고, �
   write(join(awk, 'later'), 'next\n');
   git(awk, 'add', '.');
   git(awk, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-m', 'later');
-  git(awk, 'tag', 'v1.0.0');
+  git(awk, 'tag', 'v1.1.0');
   git(awk, 'checkout', '-q', pinned);
   const wrong = create();
   assert.equal(wrong.status, 1);
-  assert.match(wrong.stderr, /tag v1\.0\.0가 고정 커밋/);
+  assert.match(wrong.stderr, /tag v1\.1\.0가 고정 커밋/);
   assert.equal(existsSync(destination), false);
-  git(awk, 'tag', '-f', 'v1.0.0', pinned);
+  git(awk, 'tag', '-f', 'v1.1.0', pinned);
   const right = create();
   assert.equal(right.status, 0, right.stderr);
-  assert.match(right.stdout, new RegExp('AWK v1\\.0\\.0\\(' + pinned.slice(0, 7) + '\\)'));
+  assert.match(right.stdout, new RegExp('AWK v1\\.1\\.0\\(' + pinned.slice(0, 7) + '\\)'));
 }));
 
 test('같은 버전 번호라도 포장 내용이 달라졌으면 복사를 거절한다', () => fixture(({ repo, destination, create, write }) => {
