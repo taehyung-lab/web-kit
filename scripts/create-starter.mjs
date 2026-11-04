@@ -9,7 +9,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const starter = join(root, 'apps/starter');
 const templates = join(root, 'scripts/starter');
 /** 고정 커밋(agent-workflow-kit.version)에 해당하는 AWK 발행 tag. */
-const workflowKitTag = 'v1.3.0';
+const workflowKitTag = 'v3.0.0';
 const excluded = new Set(['node_modules', 'dist', 'coverage', '.git', 'work', 'test-results', 'playwright-report', '.web-kit-results', '.DS_Store']);
 
 /** JSON과 파일 지문은 실제 복사할 파일에서 읽는다. */
