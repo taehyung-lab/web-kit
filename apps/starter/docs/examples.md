@@ -49,7 +49,7 @@ vendor/                      검사·배포에 사용하는 web-kit tarball(커�
 .agents/skills/              web-kit-*(node_modules로 가는 링크)
 ```
 
-`src/shared`는 `app`·`features`·`api`·`routes`를 import하지 않는다(ESLint로 검사). `features`는 `routes`를 모른다.
+`src/shared`는 `app`·`features`·`api`·`routes`를 import하지 않는다(ESLint로 검사). `features`는 `routes`를 모른다. 화면(`screens/`)은 모양과 연결만 두고 폼 schema는 `model/`에서 import하며(화면의 `zod` import 금지), 버튼·입력·선택은 맨 HTML 대신 `@/shared/ui/web-kit/ui`의 `Button`·`Input`·`Select`·`TextArea`를 쓴다(둘 다 ESLint로 검사).
 
 ### 예시가 보여 주는 것
 

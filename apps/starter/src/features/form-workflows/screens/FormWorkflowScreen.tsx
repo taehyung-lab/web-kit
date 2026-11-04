@@ -1,4 +1,5 @@
 // 파일 책임: 작성·임시 저장과 게시 후 조회를 공용 폼의 저장·완료 수명에 연결한다.
+import { Button } from '@/shared/ui/web-kit/ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSaveForm } from '@boosterlab/web-kit/form';
@@ -55,18 +56,16 @@ export function FormWorkflowScreen() {
               {rows.items.map((item, index) => (
                 <div className="wk-actions" key={item.id}>
                   <F.Text name={`items[${index}].name`} label={t('workflows.item', { count: index + 1 })} />
-                  <button type="button" className="wk-button wk-button-secondary" onClick={() => rows.remove(index)}>
+                  <Button onClick={() => rows.remove(index)}>
                     {t('workflows.remove', { count: index + 1 })}
-                  </button>
+                  </Button>
                 </div>
               ))}
-              <button
-                type="button"
-                className="wk-button wk-button-secondary"
+              <Button
                 onClick={() => rows.append({ id: crypto.randomUUID(), name: t('workflows.newItem', { count: rows.items.length + 1 }) })}
               >
                 {t('workflows.add')}
-              </button>
+              </Button>
             </div>
           )}
         </F.Array>
