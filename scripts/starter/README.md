@@ -13,7 +13,7 @@ pnpm check
 pnpm dev:mock
 ```
 
-mock 계정은 `admin` / `password`다. 실제 서버 검증은 별도다. `package.json`에서 web-kit 파일을, `.agents/agent-workflow-kit.version`에서 AWK 커밋을 확인한다(AWK tag `v1.3.0` = `19c8068`). 두 키트의 스킬은 `.agents/skills/`에 연결돼 있다. 새 에이전트 세션에서 작업에 맞는 스킬을 찾는지도 확인한다.
+mock 계정은 `admin` / `password`다. 실제 서버 검증은 별도다. `package.json`에서 web-kit 파일을, `.agents/agent-workflow-kit.version`에서 AWK 커밋을 확인한다(AWK tag `v3.0.0` = `bc3421e`). 두 키트의 스킬은 `.agents/skills/`에 연결돼 있다. 새 에이전트 세션에서 작업에 맞는 스킬을 찾는지도 확인한다.
 
 후보 버전의 registry tag는 아직 발행되지 않았을 수 있다. 현재 복사된 UI는 사용할 수 있지만, 새 UI 항목 추가·업데이트는 검증한 tag가 발행된 뒤 진행한다.
 
@@ -29,7 +29,7 @@ mock 계정은 `admin` / `password`다. 실제 서버 검증은 별도다. `pack
 | 모양 바꾸기 | `src/shared/ui/web-kit/`, `src/styles.css` |
 | 어떤 공용 기능을 쓸지 판단 | [설치된 소비 안내](node_modules/@boosterlab/web-kit/docs/consuming.md#기능을-골라-쓰기) |
 
-공통 동작을 사용할 때는 해당 기능의 `.agents/skills/web-kit-*`를 읽는다. 사용 기준과 예제가 설치한 패키지 안에 함께 있다. `.agents/skills/wf-*`는 작업 판단·설계·검증 방법이다.
+공통 동작을 사용할 때는 해당 기능의 `.agents/skills/web-kit-*`를 읽는다. 사용 기준과 예제가 설치한 패키지 안에 함께 있다. 작업 판단·검증 기준은 `AGENTS.md`, 필요할 때만 쓰는 지도·독립 검토 안내는 `.agents/skills/guide.md`에 있다.
 
 ## 자기 제품으로 바꾸기
 
