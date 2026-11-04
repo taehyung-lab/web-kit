@@ -13,7 +13,7 @@ description: 로그인 전 이메일·OTP 코드 확인, 남은 시간·만료, 
 
 검사 조립 예: [starter 인증 검사 화면](../../references/apps/starter/src/shared/ui/web-kit/checks/auth.page.tsx.txt). starter 제품 로그인에는 인증 단계가 없어 제품 연결은 검사하지 않음.
 
-1. 프로젝트가 로그인 성공 전 임시 인증 정보를 메모리에서 소유한다. 새 로그인은 새 `scope`와 새 기한을 만들고, 같은 로그인 안 방식 전환은 `scope`만 바꾸며 이메일 코드 기한은 유지한다. 새로고침 후에는 로그인부터 다시 시작한다. URL·영속 저장소에 임시 자격정보를 넣지 않는다.
+1. 프로젝트가 로그인 성공 전 인증 대기(로그인 ID·`scope`·기한)를 소유한다. 키트는 저장하지 않는다. 새로 고침 뒤에도 이어 갈지(탭 저장소 등)와 처음부터 다시 할지는 프로젝트가 정하며, 이어 가면 `scope`와 절대 기한을 그대로 복원한다. 새 로그인은 새 `scope`와 새 기한을 만들고, 같은 로그인 안 방식 전환은 `scope`만 바꾸며 이메일 코드 기한은 유지한다. 비밀번호·토큰 같은 임시 자격정보는 URL·영속 저장소에 넣지 않는다.
 2. 앱 진입점에서 `/session/idle`의 `createServerClock({ key })`를 한 번 만든다. 로그인 전 `useAuthChallenge`와 로그인 후 `createIdleTimer({ clock, ... })`에 **같은 객체**를 넘긴다. 기존 유휴 타이머 key가 `app-idle`이면 시계 key는 기존 저장 형식인 `app-idle:clock`이다. 로그인 전 응답은 `clock.observe(offsetMs)`로 관측하고 로그인 후는 기존 `idle.observe(sample)` 연결을 유지한다. offset은 서버 시각−로컬 시각(ms)이며 헤더 해석은 프로젝트 서버 계약이다.
 3. `useAuthChallenge`에 `codeLength`, 절대 시각 `codeExpiresAt`·`expiresAt`·`resendAvailableAt`, `verify`·`onVerified`, 필요하면 `resend`·`onResent`를 연결한다. 기한은 같은 서버 시계 기준이다. 시간 값 기본값은 없고 전체 기한 생략은 전체 시간 정책을 끈다. 재전송 대기 생략은 별도 cooldown이 없다는 뜻이다. 예: 코드 5분·전체 30분 같은 값은 프로젝트 입력이며 키트 기본값이 아니다.
 4. 요청 함수는 요청·응답 반환만 맡고 세션 저장·화면 이동 같은 성공 효과는 `onVerified`에 둔다. `onResent`에서 **성공한 현재 요청에만** 새 코드 기한과 재전송 가능 시각을 적용한다. 서버가 주지 않으면 프로젝트 시간 정책을 공유 시계 `clock.now()`에 더한다. 성공 콜백은 이동 완료까지 Promise를 반환할 수 있다. 콜백 실행 뒤 추가 비동기 효과가 있다면 프로젝트가 자기 이동 수명도 확인한다.

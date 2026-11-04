@@ -44,7 +44,7 @@ export interface AuthChallengeOptions<Result, Resent> extends AuthDeadlines {
   readonly onResent?: (result: Resent) => void | Promise<void>;
 }
 
-/** 인증 화면 상위에서 사용한다. 메모리에만 보관하며 세션 저장·이동은 유효 응답 콜백에 연결한다. */
+/** 인증 화면 상위에서 사용한다. 인증 대기의 보관은 프로젝트가 하고(이 hook은 저장하지 않는다), 세션 저장·이동은 유효 응답 콜백에 연결한다. */
 export function useAuthChallenge<Result, Resent = void>(options: AuthChallengeOptions<Result, Resent>) {
   const current = useRef(options);
   const active = useRef<{ verify: object | null; resend: object | null }>({ verify: null, resend: null });
