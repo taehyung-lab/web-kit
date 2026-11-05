@@ -1,12 +1,13 @@
 {
   "schemaVersion": 1,
-  "version": "5.0.0-rc.6",
-  "sourceRef": "v5.0.0-rc.6",
-  "sourceCommit": "3e48109b127d9f9159f8875214e094d99bc8094b",
+  "version": "5.0.0-rc.7",
+  "sourceRef": "v5.0.0-rc.7",
+  "sourceCommit": "d33723492c189e901fd05a10cbbb0dbb3295b53f",
   "sourceWorkingTree": "modified; fingerprints identify the candidate",
   "shadcn": "4.19.1",
-  "method": "existing pristine shadcn@4.19.1 copy; common record refresh for new package candidate",
+  "method": "pnpm exec shadcn add ./public/r/all.json --cwd apps/starter --yes --overwrite; pristine test app only",
   "componentsHash": "9251ff1954ca2e2cdf440bbf02e6b5835dacee282c03442ef68ff7ee1443ddc1",
+  "installationComponentsHash": "652e889b40769c756d00278ff07ae37b21ee063a3f3251aa99a74c5c09d37c07",
   "items": [
     {
       "name": "all",
@@ -366,21 +367,21 @@
     },
     {
       "name": "auth",
-      "artifactHash": "6ee82e94b208a8e5a5f39b748c2830c3956bb5e29a3d67b595d0afdc00bf43b6",
+      "artifactHash": "211c1c4a66a95fc83ab4f5c0d8e5baa3c63f6abe68a32273554eeb157e09baa5",
       "files": [
         {
           "source": "packages/ui-registry/src/auth.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/auth.tsx",
           "installed": "src/shared/ui/web-kit/auth.tsx",
-          "sourceHash": "3dc6ba3890e46cdcfc0c80a7308e9a44e580bb1d0bbed80fdffcab9d790e792d",
-          "installedHash": "3dc6ba3890e46cdcfc0c80a7308e9a44e580bb1d0bbed80fdffcab9d790e792d"
+          "sourceHash": "542d810dd916af4f7594fc651ec927e5d056aa5117c5549ee1e4a66e6d570be5",
+          "installedHash": "542d810dd916af4f7594fc651ec927e5d056aa5117c5549ee1e4a66e6d570be5"
         },
         {
           "source": "packages/ui-registry/checks/auth-six.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/checks/auth-six.tsx",
           "installed": "src/shared/ui/web-kit/checks/auth-six.tsx",
-          "sourceHash": "544ae8c04bf9af1ea0710010fafc6fdc28ab58c26c2d47ff89470205e40cfb18",
-          "installedHash": "544ae8c04bf9af1ea0710010fafc6fdc28ab58c26c2d47ff89470205e40cfb18"
+          "sourceHash": "3ab016c8b209558aae5ebda19bdc849673f7650ce72eb809316f4cbcfbb25812",
+          "installedHash": "3ab016c8b209558aae5ebda19bdc849673f7650ce72eb809316f4cbcfbb25812"
         },
         {
           "source": "packages/ui-registry/checks/auth.test.tsx",
