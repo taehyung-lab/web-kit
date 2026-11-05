@@ -77,3 +77,52 @@ for (const pair of [['form', 'blocking-progress'], ['list', 'blocking-progress']
     assert.equal(audit(false).status, 0);
   }));
 }
+
+// 구조 결과는 UI 적합성과 따로 보이고, 둘 중 하나라도 실패면 실패다. 하나의 통과로 합치지 않는다.
+import { cpSync, mkdirSync } from 'node:fs';
+const kitRoot = fileURLToPath(new URL('../packages/web-kit/', import.meta.url));
+/** 키트의 eslint·typescript-eslint를 찾을 수 있게 패키지 폴더 아래에 임시 구조 예제를 둔다(.gitignore 대상). */
+function structureFixture(run) {
+  return fixture(({ dir, audit, ...rest }) => {
+    const project = mkdtempSync(join(kitRoot, 'structure-check-'));
+    try {
+      cpSync(fileURLToPath(new URL('./fixtures/structure/valid', import.meta.url)), project, { recursive: true });
+      cpSync(join(dir, 'inputs.test.tsx'), join(project, 'inputs.test.tsx'));
+      const check = (...extra) => {
+        audit();
+        for (const file of ['installation.json', 'unit.json', 'browser.json']) cpSync(join(dir, file), join(project, file));
+        return spawnSync(process.execPath, [command, '--installation', join(project, 'installation.json'), '--unit', join(project, 'unit.json'), '--browser', join(project, 'browser.json'), '--strict-fingerprints', ...extra], { encoding: 'utf8' });
+      };
+      run({ project, check, ...rest });
+    } finally { rmSync(project, { recursive: true, force: true }); }
+  });
+}
+test('점검: --structure가 없으면 구조는 "검사하지 않음"이고 통과로 세지 않는다', () => fixture(({ audit }) => {
+  const r = audit();
+  assert.equal(r.status, 0);
+  assert.match(r.stdout, /\[구조\] 검사하지 않음/);
+  assert.match(r.stdout, /\[UI 적합성\] web-kit 적합성 통과/);
+}));
+test('점검: 구조와 UI 적합성을 각각 판정해 둘 다 보인다', () => structureFixture(({ check }) => {
+  const r = check('--structure', 'web-kit.structure.json');
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /\[구조\] 통과: 파일 \d+개, 위반 0건/);
+  assert.match(r.stdout, /규칙 web-kit-structure /);
+  assert.match(r.stdout, /\[UI 적합성\] web-kit 적합성 통과/);
+}));
+test('점검: 구조 위반은 UI 적합성이 통과해도 전체 실패이며 UI 결과는 따로 남는다', () => structureFixture(({ project, check }) => {
+  mkdirSync(join(project, 'src/features/orders/screens'), { recursive: true });
+  writeFileSync(join(project, 'src/features/orders/screens/Bad.tsx'), "import { orderListQuery } from '../api/orders';\nexport const q = orderListQuery;\n");
+  const r = check('--structure', 'web-kit.structure.json');
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /\[구조\] 실패/);
+  assert.match(r.stderr, /layer-import/);
+  assert.match(r.stdout, /\[UI 적합성\] web-kit 적합성 통과/);
+}));
+test('점검: UI 적합성 실패는 구조가 통과해도 전체 실패다', () => structureFixture(({ unit, check }) => {
+  unit.testResults = [];
+  const r = check('--structure', 'web-kit.structure.json');
+  assert.equal(r.status, 1);
+  assert.match(r.stdout, /\[구조\] 통과/);
+  assert.match(r.stderr, /\[UI 적합성\] 실패/);
+}));

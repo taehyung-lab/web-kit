@@ -103,7 +103,7 @@ function importsOf(node) {
       all.add(name);
       if (node.importKind !== 'type' && specifier.importKind !== 'type') values.add(name);
     }
-    // 부수효과 import(`import './x'`)는 모듈 전체를 실행한다.
+    // 이름 없이 부수효과만 가져오는 import 문은 모듈 전체를 실행한다.
     if (node.specifiers.length === 0) { all.add('*'); values.add('*'); }
     return { source: node.source.value, all, values };
   }

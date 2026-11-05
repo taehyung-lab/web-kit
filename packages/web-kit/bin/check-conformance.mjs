@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // 파일 책임: 설치 항목의 필수 적합성 결과·연결 파일·버전과 선택적 복사본 지문을 점검한다.
+// --structure를 주면 구조 계약 결과를 따로 판정한다. 두 결과([구조]·[UI 적합성])는 합치지 않고 각각 보이며, 하나라도 실패면 실패다.
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,6 +8,7 @@ import { createHash } from 'node:crypto';
 import { installedPath } from '../tools/registry.mjs';
 import { projectPath } from '../tools/files.mjs';
 import { runConformance, verifyConformanceRun } from '../tools/run-conformance.mjs';
+import { formatStructureResult, runStructureCheck } from '../tools/structure/check.mjs';
 const args = process.argv.slice(2);
 /** 필수 경로 인자가 빠지면 실행 방법과 함께 실패한다. */
 function option(name) { const i = args.indexOf(name); if (i < 0 || !args[i + 1]) throw new Error('필수 인자: ' + name); return args[i + 1]; }
@@ -14,6 +16,21 @@ function option(name) { const i = args.indexOf(name); if (i < 0 || !args[i + 1])
 function json(path) { return JSON.parse(readFileSync(path, 'utf8')); }
 /** 파일 바이트의 지문을 계산한다. */
 function hash(path) { return createHash('sha256').update(readFileSync(path)).digest('hex'); }
+const structureAt = args.indexOf('--structure');
+// 구조 결과: 구조 계약을 채택한 앱은 --structure로 설정을 넘긴다. 없으면 "검사하지 않음"이며 통과로 세지 않는다.
+let structureFailed = false;
+if (structureAt < 0) console.log('[구조] 검사하지 않음: --structure 없음. 구조 계약을 채택한 앱은 --structure web-kit.structure.json을 넘긴다(통과로 세지 않음).');
+else {
+  try {
+    const file = args[structureAt + 1];
+    if (!file || file.startsWith('--')) throw new Error('--structure에 구조 설정 파일을 넘기세요');
+    const installationAt = args.indexOf('--installation');
+    const projectRoot = installationAt < 0 ? resolve('.') : dirname(resolve(args[installationAt + 1]));
+    const structure = await runStructureCheck({ root: projectRoot, configFile: file });
+    if (structure.ok) console.log(formatStructureResult(structure));
+    else { console.error(formatStructureResult(structure)); structureFailed = true; }
+  } catch (error) { console.error('[구조] 실패: ' + (error instanceof Error ? error.message : error)); structureFailed = true; }
+}
 try {
   const installationPath = resolve(option('--installation'));
   const installation = json(installationPath);
@@ -87,5 +104,6 @@ try {
   for (const id of required) if (!matched.has(id)) failures.push('필수 검사 누락: ' + id);
   console.log('한계: 실제 사용 UI와 검사 대상 복사본의 일치는 자동 판정하지 않습니다; 독립 검토가 필요합니다.');
   if (failures.length) throw new Error([...new Set(failures)].join('\n'));
-  console.log('web-kit 적합성 통과: ' + installed.size + '항목, ' + required.size + '개 식별자, package ' + version + ', registry ' + installation.sourceRef + '@' + installation.sourceCommit);
-} catch (error) { console.error(error instanceof Error ? error.message : error); process.exitCode = 1; }
+  console.log('[UI 적합성] web-kit 적합성 통과: ' + installed.size + '항목, ' + required.size + '개 식별자, package ' + version + ', registry ' + installation.sourceRef + '@' + installation.sourceCommit);
+} catch (error) { console.error('[UI 적합성] 실패'); console.error(error instanceof Error ? error.message : error); process.exitCode = 1; }
+if (structureFailed) process.exitCode = 1;

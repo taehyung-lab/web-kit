@@ -18,7 +18,7 @@
     "test:e2e": "playwright test",
     "api:generate": "orval --config orval.config.ts",
     "check": "pnpm typecheck && pnpm lint && pnpm build && pnpm conformance:check",
-    "conformance:check": "web-kit-check --run web-kit.check.json --installation registry-installation.json --unit .web-kit-results/unit.json --browser .web-kit-results/browser.json --strict-fingerprints"
+    "conformance:check": "web-kit-check --run web-kit.check.json --installation registry-installation.json --unit .web-kit-results/unit.json --browser .web-kit-results/browser.json --strict-fingerprints --structure web-kit.structure.json"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",
