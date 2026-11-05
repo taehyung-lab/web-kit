@@ -5,7 +5,7 @@ description: 등록·수정·대화창 폼의 저장·저장 뒤 추가 작업·
 
 # web-kit form
 
-`/form`의 `useSaveForm`(저장 수명)·연결 hook·Provider와 registry `form`의 `Form`·`FormGuard` 복사본을 쓰는 기준이다. registry는 프로젝트에 설치해 소유하는 UI 원본 묶음이다. 입력·대화창·진행 표시는 registry `inputs`·`dialog`·`pending`·`blocking-progress`로 설치한다. 인자와 타입은 설치된 소스를 따른다.
+`/form`의 `useSaveForm`(저장 수명)·연결 hook·Provider와 registry `form`의 `Form`·`FormGuard` 복사본을 쓰는 기준이다. registry는 프로젝트에 설치해 소유하는 UI 원본 묶음이다. 버튼·입력·선택·체크박스 같은 기본 부품은 프로젝트의 shadcn(base-nova) 부품(`@/shared/ui/<부품>`)이고 키트 항목의 `registryDependencies`로 함께 설치된다. 대화창·진행 표시는 registry `dialog`·`pending`·`blocking-progress`로 설치한다. 인자와 타입은 설치된 소스를 따른다.
 
 이 책임만 골라 사용할 수 있다. 선택한 한 책임 안에서는 키트 수명 처리와 자체 구현을 섞지 않는다. 선택 설치 peer(해당 기능을 쓸 때만 설치하는 동료 라이브러리)를 설치하지 않아 실행하지 못한 기능은 "검사하지 않음"으로 기록한다. 예시는 같은 버전의 실제 starter 코드에서 가져와 패키지에 함께 담는다. 링크로 읽고 조립 방식만 참고한다. 예제만 따로 실행하는 용도는 아니다.
 
@@ -33,7 +33,7 @@ registry `form`의 `FormGuard`를 앱(Router 안)에 한 번 둔다. 복사본�
 - Enter: 폼에서 Enter는 기본적으로 제출(저장 버튼 클릭)이다. 단, 폼 안에서 입력한 값을 [추가] 버튼이 목록에 넣는 입력칸(제목 입력 + [추가]로 목록에 넣는 칸 등)에서는 Enter가 제출 대신 [추가] 클릭으로 동작한다. 줄마다 자기 칸이고 [추가]가 빈 줄만 더하는 배열 줄 입력(등급명·회차 날짜 등)은 일반 칸이라 Enter가 폼 제출이다. 모달 안 입력칸의 Enter는 그 모달의 확인(모달 폼 제출)이며 바깥 폼은 제출되지 않는다. 키트에서: 일반 칸은 `Form.Submit`이 있는 `<Form>`이 받으므로 칸에서 Enter를 막지 않는다. 값을 목록에 넣는 [추가] 칸은 `onKeyDown={rows.enterAdds(add)}`. 목록 검색어 칸의 키 연결은 [web-kit-list](../web-kit-list/SKILL.md)를 따른다(기본 복사본은 Enter = 추가 후 검색). 모달은 `Form.Dialog` 안에 자기 `<Form>`과 `Form.Submit`을 둔다.
 - `Form.Dialog`: 대화창 안 하위 폼(자기 `useSaveForm`). 안쪽 제출(버튼·Enter)은 안쪽만 검증·저장하고 바깥 폼의 저장·검증 오류·확인창을 건드리지 않는다. 바깥에 오류가 있어도 안쪽 제출은 막히지 않는다. 닫기·취소는 그 안의 폼만 보고 묻는다(바깥이 dirty여도 바깥 이탈 확인은 뜨지 않는다). 하위 결과를 바깥 값에 넣으면 바깥이 dirty가 되어 이후 이탈은 바깥 기준으로 묻는다. 입력이 있어도 묻지 않고 닫는 대화창은 안쪽을 `<Form protect={false}>`로 둔다.
 - 이탈: `FormGuard`가 등록된 폼 중 하나라도 입력이 기준선과 다르면 Router 이동·브라우저 이탈을 한 번 묻고, 저장 중이면 묻지 않고 막는다. 저장 성공 뒤 이동은 묻지 않는다. Router를 거치지 않는 이탈(같은 메뉴 다시 누르기)은 `useLeave()(run, reason)`로 같은 판정을 받는다. 확인 뒤 `run`이 이동하면 `ignoreBlocker: true`로 이동한다. 로그인 같은 제품 예외만 `<Form protect={false}>`. 이 값은 해당 폼의 보호 등록 자체를 제외하므로 변경 경고와 저장 중 Router·브라우저 이탈 차단이 함께 빠진다. 검증·중복 제출 잠금·기준선 처리는 남고 `Form.Cancel`의 진행 중 잠금도 유지된다. 기존 등록 화면의 보호 정책을 이 예시만으로 바꾸지 않는다.
-- 문구는 `FormGuard messages`(까닭별: navigate·cancel)·`Form messages`·`formatError`(칸 오류 값 → 문구)·`renderFailure(failure, place)`(place: save·completion·options, `null`이면 그 자리에 그리지 않음), 모양은 `--wk-*` 토큰으로 바꾼다. 새 화면마다 Field·이탈 확인·확인창을 다시 만들지 않는다.
+- 문구는 `FormGuard messages`(까닭별: navigate·cancel)·`Form messages`·`formatError`(칸 오류 값 → 문구)·`renderFailure(failure, place)`(place: save·completion·options, `null`이면 그 자리에 그리지 않음), 모양은 프로젝트 shadcn 테마 변수와 복사본의 Tailwind 클래스로 바꾼다(키트 스타일시트는 없다). 새 화면마다 Field·이탈 확인·확인창을 다시 만들지 않는다.
 
 ## 화면 전체 진행 덮개
 
@@ -41,7 +41,7 @@ registry `form`의 `FormGuard`를 앱(Router 안)에 한 번 둔다. 복사본�
 
 registry `blocking-progress`의 `BlockingProgress messages={{ loading, create, edit, delete, wait? }}`를 앱 셸(로그인 뒤 화면 골격)에 한 번 두고 셸 본문을 children으로 감싼다. 공통 등록·정리·복원은 `/dialog`의 `useBlockingProgressBinding`·`BlockingProgressProvider`가 맡고 복사본은 반환 속성과 ref를 연결한다. 문구는 프로젝트가 준다(`wait`는 둘째 줄).
 - 무엇이 덮는가: 등록·수정 폼 저장(`useSaveForm({ progress })`), 확인창을 거친 삭제 실행(`useConfirmationState({ progress: 'delete' })`, 아래 「폼 없는 확인」), 페이지 진입 조회(`useList({ progress: 'page' })`·`useRecord(options, id, { progress: 'page' })` — 각 skill), 화면 고유의 진입 대기(`useBlockingProgress('loading', active)`, 예: 수정 폼을 열기 전 보조 조회). 쓰기(등록·수정·삭제)가 조회보다 앞선다. 덮개 밖(셸 없는 화면·단위 시험)에서는 아무 일도 하지 않는다.
-- 덮는 동안 children은 `inert`·`aria-busy`(클릭·포커스·낭독에서 빠짐)이고, `role="status"` 영역이 문구를 읽는다. 대화창(portal)은 children 밖이라 덮개 위에서 조작된다(세션 경고·만료, 저장 완료 창). 덮개 층은 `--wk-blocking-layer`(기본 999, 키트 대화창 아래)로, 프로젝트 대화창의 층보다 낮게 둔다. 배경·글자색은 `--wk-blocking-backdrop`·`--wk-blocking-fg`. 가운데 진행 표시는 기본이 키트 원형 회전 표시이고 `indicator`(ReactNode)를 주면 그 표시로 바뀐다(덮개째 낭독기에서 숨김, 움직임 줄이기 설정은 표시를 준 프로젝트가 맞춘다).
+- 덮는 동안 children은 `inert`·`aria-busy`(클릭·포커스·낭독에서 빠짐)이고, `role="status"` 영역이 문구를 읽는다. 대화창(portal)은 children 밖이라 덮개 위에서 조작된다(세션 경고·만료, 저장 완료 창). 덮개 층은 `z-40`(shadcn 대화창 `z-50` 아래)이고 배경은 `bg-background/80`이다. 바꾸려면 `ui/blocking-progress.tsx` 복사본의 클래스를 고치되 프로젝트 대화창의 층보다 낮게 둔다. 가운데 진행 표시는 기본이 키트 원형 회전 표시이고 `indicator`(ReactNode)를 주면 그 표시로 바뀐다(덮개째 낭독기에서 숨김, 움직임 줄이기 설정은 표시를 준 프로젝트가 맞춘다).
 - 닫힐 때 포커스가 문서 본문으로 밀려나 있으면(inert) 덮기 전 본문에서 마지막으로 포커스한 요소로 돌린다. 기록하는 것은 본문 DOM 안 요소뿐이라, 확인창(portal)을 거친 저장·삭제는 확인창을 연 버튼으로 돌아온다. 그 요소도 사라졌으면 본문 첫 `h1`, 없으면 본문 영역으로 돌린다(문서 본문에 두지 않는다). 본문에 포커스한 적이 없으면(첫 진입) 옮기지 않는다. 완료 창·오류 칸·대화창이 가진 포커스는 건드리지 않는다(칸 없는 저장 실패는 오류 문구가 `role=alert`로 읽히고 포커스는 저장 버튼에 돌아온다).
 - 덮지 않는 것: 목록 검색·정렬·페이지 이동(이전 결과를 보인 채 조회), 단건 언어 전환·재조회, 선택지 조회(그 칸의 상태), 다운로드(버튼 잠금 + 옆 진행 표시), 선언하지 않은 쓰기(상태 변경·대화창 폼 저장·`List.BulkAction`).
 
@@ -49,8 +49,8 @@ registry `blocking-progress`의 `BlockingProgress messages={{ loading, create, e
 
 실제 조립 예: [apps/starter/src/app/NoticeOutlet.tsx](../../references/apps/starter/src/app/NoticeOutlet.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-registry `inputs`는 `Button`·`Input`·`TextArea`·`Select`·`Checkbox`, `dialog`는 `Dialog`·`ConfirmDialog`·`AlertDialog`, `pending`은 `Pending`, `blocking-progress`는 `BlockingProgress`를 제공한다. 진행 등록은 `/dialog`의 `useBlockingProgress`, 대화창 연결은 `useDialogBinding`·`useConfirmBinding`·`useAcknowledgeBinding`을 쓴다. 대화창은 열린 순간 첫 칸에 포커스하고 Tab·Shift+Tab 순환을 창 안에서 같은 이벤트로 처리한다(포커스가 창 밖에 한 순간도 나가지 않는다). `ConfirmDialog`는 실행 중(`pending`) 닫기·재실행을 막고, `AlertDialog`는 확인만 받으며 연타해도 한 번만 알린다. 둘 다 `pending`이면 버튼 뒤에 진행 표시(`pendingLabel`은 화면 낭독기 문구)가 선다.
-- `Pending`(`label` = 화면 낭독기 문구): 진행 중 표시 하나(회전 표시 `.wk-spinner` + `.wk-visually-hidden` 문구). 목록 다운로드·덮개를 선언하지 않은 `Form.Submit`·확인창이 쓰는 그 부품이다. 키트 폼으로 아직 옮기지 않은 화면도 같은 규칙이다: 등록·수정 저장이면 `useSaveForm`에 `progress`를 주고 버튼만 잠근다, 그 밖의 진행이면 버튼을 잠그고 바로 뒤에 이 부품을 둔다. 설치한 `Pending` 한 부품을 재사용한다.
+기본 부품(`Button`·`Input`·`Textarea`·`Select`·`Checkbox`)은 shadcn 설치본을 쓰고 registry `inputs`는 그 부품이 키트가 기대는 속성(버튼 기본 type=button 등)을 지키는지 보는 검사 연결만 둔다. `dialog`는 `Dialog`·`ConfirmDialog`·`AlertDialog`, `pending`은 `Pending`, `blocking-progress`는 `BlockingProgress`를 제공한다. 진행 등록은 `/dialog`의 `useBlockingProgress`, 대화창 연결은 `useDialogBinding`·`useConfirmBinding`·`useAcknowledgeBinding`을 쓴다. 대화창은 열린 순간 첫 칸에 포커스하고 Tab·Shift+Tab 순환을 창 안에서 같은 이벤트로 처리한다(포커스가 창 밖에 한 순간도 나가지 않는다). `ConfirmDialog`는 실행 중(`pending`) 닫기·재실행을 막고, `AlertDialog`는 확인만 받으며 연타해도 한 번만 알린다. 둘 다 `pending`이면 버튼 뒤에 진행 표시(`pendingLabel`은 화면 낭독기 문구)가 선다.
+- `Pending`(`label` = 화면 낭독기 문구): 진행 중 표시 하나(`role="status"`·`data-slot="pending"` 안에 shadcn Spinner + `sr-only` 문구). 목록 다운로드·덮개를 선언하지 않은 `Form.Submit`·확인창이 쓰는 그 부품이다. 키트 폼으로 아직 옮기지 않은 화면도 같은 규칙이다: 등록·수정 저장이면 `useSaveForm`에 `progress`를 주고 버튼만 잠근다, 그 밖의 진행이면 버튼을 잠그고 바로 뒤에 이 부품을 둔다. 설치한 `Pending` 한 부품을 재사용한다.
 - 칸·구역·폼 한 줄의 기본 여백 초기화는 0 우선순위(`:where`)라 프로젝트의 간격 유틸리티(`space-y-*` 등)가 그대로 적용된다.
 
 ## headless 연결

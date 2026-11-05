@@ -70,7 +70,7 @@ description: 목록 필터·기간 프리셋·키워드 칩·표·페이지 이�
 - `Total`은 이전 조건 결과를 보이는 동안 '…'이다. `Actions`는 그 동안 안의 쓰기 버튼을 통째로 잠근다.
 - `BulkAction`은 확인 당시 결과와 선택이 바뀌면 실행하지 않는다. 실패는 확인창에 남고 선택은 유지된다. 성공 ID 해석·업무 거절 조건은 소비자가 반환한다.
 - `Download`는 `useListDownload` 결과를 받아 종류 선택·버튼·진행·실패 문구를 그린다.
-- 문구는 `messages`, 모양은 `styles.css`의 `--wk-*` 토큰과 `className`으로 바꾼다.
+- 문구는 `messages`, 모양은 프로젝트 shadcn 테마 변수·`className`·복사본의 Tailwind 클래스로 바꾼다. 선택 칸(`Select`·기간 기준·검색어 대상·정렬·페이지 크기·다운로드 종류)은 shadcn Select, 체크는 shadcn Checkbox다.
 - `captureListReturn`/`resolveListReturn`은 목록 주소의 검색·hash를 보존하고 같은 목록 경로에서만 복귀한다. 조회 결과 출처(`isCurrent`)와는 다른 책임이다.
 
 특수 표현은 루트의 `checkboxTreeSelection`·`validateDateRange`, `/list`의 `activateTableRow`와 연결 hook, registry `checkbox-tree`·`filter-error`를 사용한다. 서버·권한·업무 계산을 공용 UI 안으로 옮기지 않는다.

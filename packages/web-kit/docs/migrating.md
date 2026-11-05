@@ -11,6 +11,7 @@
 
 - **응답 해석(`/http`):** `createHttp`의 `response`가 필수가 됐고 `results` 입력과 `Http.request<T>`·`Unwrapped<T>`는 제거됐다. `results`만 넘기던 Spring 소비자는 `results: resultCodes`를 `response: springEnvelope(resultCodes)`로 바꾼다. starter처럼 손으로 `readEnvelope`·`toRequestFailure`를 합친 계약도 같은 부품으로 바꾼다. 생성 봉투 타입을 받던 mutator는 `/http`의 `SpringEnvelopeData<T>`를 가져와 `http.requestData<SpringEnvelopeData<T>>(config, options)`로 연결한다. 실제 데이터 타입을 이미 쓰는 호출은 `requestData<T>`를 유지한다. 다른 서버 형식은 자기 `ResponseContract`를 명시한다. 보장은 [web-kit-http](../skills/web-kit-http/SKILL.md), 결정 이유는 [응답 결정](../references/docs/decisions/0003-request-response-failure.md)에 있다.
 
+- **기본 부품과 스타일(복사본 교정·화면 수정 필요):** 키트 스타일시트(`ui/styles.css`, `.wk-*`·`--wk-*`)와 키트 기본 부품(`Button`·`Input`·`TextArea`·`Select`·`Checkbox`)을 없앴다. 기본 부품은 shadcn base-nova 설치본을 쓰고 native select였던 `Select`는 shadcn Select다. 이전 대응표와 절차는 [설치 안내](installing.md#키트-스타일시트에서-shadcn-기본-부품으로-옮기기), 결정은 [배포 결정](../references/docs/decisions/0002-distribution.md#기본-부품은-shadcn-base-nova)에 있다.
 - **UI 입구와 복사본:** 아래 이전 표로 제거된 UI 입구를 설치한 복사본 import로 바꾼다. 일부 체크 트리의 표시/클릭 변경, 기간 timeZone·now 선택화, /choice 입구도 확인한다. 이전 원본 A·새 원본 B·현재 복사본 C를 비교하는 [갱신 절차](installing.md#복사본-갱신)를 따라 프로젝트 수정을 보존한다. --overwrite를 기본으로 쓰지 않고 적용 뒤 동일 검사를 재실행한다.
 
 ### UI 입구 이전 표
@@ -22,14 +23,14 @@
 | `@boosterlab/web-kit/form/ui` | registry `form`: `@/shared/ui/web-kit/form/ui` |
 | `@boosterlab/web-kit/detail/ui` | registry `record`: `@/shared/ui/web-kit/detail-ui` |
 | `@boosterlab/web-kit/filter` | registry `checkbox-tree`·`filter-error`: `@/shared/ui/web-kit/CheckboxTree`·`@/shared/ui/web-kit/search/filter-error`; 순수 계산은 패키지 루트 |
-| `@boosterlab/web-kit/styles.css` | registry `styles`: `@/shared/ui/web-kit/ui/styles.css` |
+| `@boosterlab/web-kit/styles.css` | 없음: 키트 스타일시트를 없앴다. 프로젝트 shadcn 테마 CSS가 모양을 정한다([설치 안내](installing.md#키트-스타일시트에서-shadcn-기본-부품으로-옮기기)) |
 
 위 6개 패키지 입구는 제거됐다. `/choice`는 공유 선택/검색의 `useChoiceBinding`을 공개하는 새 입구다. `/dialog`는 대화창과 진행 등록 연결을, `/form`·`/list`·`/record`는 각각의 상태·연결 hook을 제공한다.
 
 - 목록 상태 전달은 `/list`의 `ListProvider`가 기본이며 `model` props도 허용한다. 패키지 Provider는 model·children만 받고 문구·실패 표현은 registry 표시 wrapper에 둔다.
 - `Period`/`PeriodFilter`의 `timeZone`·`now`는 생략 가능하다. 기본 브라우저 시간대·현재 시각을 쓰고 넘긴 값은 그대로 쓴다. 요청 날짜 변환도 같은 시간대를 쓴다.
 - 부모 아래 두 leaf 중 하나만 선택했을 때 `checkboxTreeSelection.checked`는 true에서 false로, 표시는 체크에서 `mixed`(−)로 바뀐다. 부모 클릭은 기존 선택 해제에서 모든 후손 선택으로 바뀐다. `mixed(targets)`를 indeterminate/aria-checked=mixed와 연결한다. 명시적인 set(true/false) 규칙은 유지한다. `checked`의 requireAll 인자는 타입 호환으로 받지만 이제 모두 선택됐을 때만 true다.
-- 기본 Dialog 복원 교정은 패키지 갱신으로 반영된다. 중첩 대화창 위 Choice 클릭 교정은 복사본 Positioner의 `wk-choice-positioner`와 CSS 표시층도 적용해야 한다. 실제 브라우저 적합성 검사를 함께 실행한다.
+- 기본 Dialog 복원 교정은 패키지 갱신으로 반영된다. 중첩 대화창 위 Choice 클릭은 shadcn 팝업 층(`z-50`, 대화창보다 나중 포털)으로 지킨다. 실제 브라우저 적합성 검사를 함께 실행한다.
 
 기존 `selection.run`의 `{ completedIds }` 계약은 유지한다. 부분 성공은 실제 성공 ID만 반환하며 Promise 완료를 전체 성공으로 해석하지 않는다. 폼의 `references`·`secondary`·확인/완료·이탈 보장은 그대로며 정확한 사용 조건은 스킬이 정본이다.
 

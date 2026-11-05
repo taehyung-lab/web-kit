@@ -9,15 +9,25 @@
 pnpm add @boosterlab/web-kit@file:vendor/boosterlab-web-kit.tgz
 ```
 
-3. 소비 프로젝트 `components.json`에 같은 버전 tag로 고정한 namespace(항목 이름의 출처)를 둔다. `@web-kit/form`은 이 주소의 form.json을 뜻한다.
+3. 소비 프로젝트는 shadcn base-nova(Base UI 기반) 프로젝트여야 한다. 키트 UI는 스스로 모양을 갖지 않고 shadcn 기본 부품(button·input·select·checkbox·dialog·popover·combobox…)과 테마 변수(`bg-background`·`text-muted-foreground`·`border-input`·`ring-ring`·`bg-primary`·`text-destructive` 등)로 그려진다. Tailwind 4와 `shadcn init`이 만든 테마 CSS(`tw-animate-css`·`shadcn/tailwind.css` import와 `:root` 변수)가 있어야 한다. `components.json`은 아래처럼 `style`을 `base-nova`로, `aliases.ui`(와 `components`)를 `@/shared/ui`로 두고 같은 버전 tag로 고정한 namespace(항목 이름의 출처)를 둔다. `@web-kit/form`은 이 주소의 form.json을 뜻한다. CLI가 별칭을 찾도록 루트 `tsconfig.json`에도 `"paths": { "@/*": ["./src/*"] }`가 있어야 한다.
 
 ```json
 {
+  "style": "base-nova",
+  "iconLibrary": "lucide",
+  "aliases": { "components": "@/shared/ui", "ui": "@/shared/ui", "utils": "@/shared/lib/utils", "lib": "@/shared/lib", "hooks": "@/shared/lib" },
   "registries": {
     "@web-kit": "https://raw.githubusercontent.com/taehyung-lab/web-kit/<검증한-tag>/public/r/{name}.json"
   }
 }
 ```
+
+설치 결과 폴더는 다음과 같다. shadcn 기본 부품은 프로젝트가 소유하는 shadcn 파일이고, `web-kit/` 아래만 키트 복사본(설치 기록·지문 대상)이다.
+
+| 위치 | 내용 | 출처 |
+|---|---|---|
+| `src/shared/ui/<부품>.tsx` (예: `button.tsx`·`select.tsx`) | shadcn 기본 부품 | shadcn 공식 registry(키트 항목의 `registryDependencies`로 함께 설치) |
+| `src/shared/ui/web-kit/…` | 키트 묶음 부품(Form·List·Record·Dialog·Choice…)과 검사 연결 | `@web-kit` registry |
 
 4. shadcn 4.19.1 CLI로 필요한 항목을 먼저 확인한 뒤 설치한다. 항목은 검사 도구(vitest·Testing Library·Playwright)를 정확한 버전의 devDependencies로 설치해 기존 버전을 바꿀 수 있으므로, `shadcn add --dry-run`으로 바뀔 의존 버전과 lockfile 영향을 먼저 확인한다. 기존 프로젝트는 자기 변경과 차이를 확인한다. `--overwrite`를 갱신 기본값으로 쓰지 않는다.
 
@@ -26,7 +36,7 @@ pnpm dlx shadcn@4.19.1 add @web-kit/form --dry-run
 pnpm dlx shadcn@4.19.1 add @web-kit/form
 ```
 
-항목의 npm·registry 의존과 단위/브라우저 검사 연결 파일도 함께 설치한다. UI는 `src/shared/ui/web-kit`에 생긴다. 기본 스타일은 설치한 `ui/styles.css`를 앱에서 한 번 import한다. 예: `@/shared/ui/web-kit/form/ui`의 Form, `@boosterlab/web-kit/form`의 useSaveForm.
+항목의 npm·registry 의존과 단위/브라우저 검사 연결 파일도 함께 설치한다. 항목이 쓰는 shadcn 기본 부품은 shadcn 공식 registry에서 받아 오므로 네트워크가 필요하고, 이미 있는 기본 부품 파일은 덮어쓰기 여부를 묻는다(프로젝트가 고친 부품은 덮어쓰지 않는다). 키트 UI는 `src/shared/ui/web-kit`에 생긴다. 별도 스타일시트는 없으며 앱의 테마 CSS 하나가 모양을 정한다. 예: `@/shared/ui/web-kit/form/ui`의 Form, `@boosterlab/web-kit/form`의 useSaveForm, 화면의 버튼은 `@/shared/ui/button`의 Button.
 
 5. 설치한 버전과 같은 키트 checkout을 지정해 공통 도구로 설치 직후 기록을 만든다. 선택 항목의 내부 의존은 자동으로 포함한다. 원본 정의·빌드 JSON·설치 파일이 맞지 않으면 기록하지 않는다.
 
@@ -41,6 +51,26 @@ pnpm exec web-kit-registry record --source /path/to/same-version-web-kit --items
 6. 설치한 스킬을 링크하고, 함께 설치한 검사 연결을 자기 CI에서 실행한다. [소비 안내](checking.md)의 `web-kit-check`를 필수 단계로 둔다. package.json·lockfile·tgz·복사본·설치 기록·검사 연결을 함께 관리한다.
 
 기록 파일은 프로젝트 루트에 둔다. `--output`으로 이름만 바꿀 수 있으며 하위 폴더는 거절한다. installed 경로는 이 루트 기준으로 쓴다. 새 기록은 schemaVersion 1이며 monorepo의 경로도 그대로 보존한다. 이전 starter 기록의 접두 처리는 구형 기록에서만 유지한다. 원본 commit은 받은 registry의 commit이며 소비 프로젝트의 현재 commit과 혼동하지 않는다. 다른 버전 조합을 검증 없이 섞지 않는다.
+
+### 키트 스타일시트에서 shadcn 기본 부품으로 옮기기
+
+5.0.0-rc.7 후보까지의 복사본은 `ui/styles.css`(`.wk-*` 클래스·`--wk-*` 변수)와 키트 기본 부품(`inputs`)을 썼다. 새 복사본은 shadcn 기본 부품을 조합하고 그 스타일시트를 쓰지 않는다. **복사본 교정과 프로젝트 화면 수정이 모두 필요하다.**
+
+1. 위 3단계대로 base-nova 테마 CSS와 `components.json` 별칭(`aliases.ui: "@/shared/ui"`)을 맞춘다.
+2. 새 원본을 설치하고(기본 부품도 함께 설치된다) 설치 기록을 다시 만든다. 지난 복사본의 `ui/styles.css`·`ui/inputs.tsx`·`checks/styles.test.tsx`는 새 원본에 없으므로 지우고, 앱의 `import '@/shared/ui/web-kit/ui/styles.css'`도 지운다.
+3. 화면 코드의 기본 부품 import와 속성을 바꾼다.
+
+| 이전 | 이후 |
+|---|---|
+| `import { Button } from '@/shared/ui/web-kit/ui'` | `import { Button } from '@/shared/ui/button'` |
+| `<Button>`(기본 `secondary`) · `variant="primary"` · `"secondary"` · `"ghost"` · `"danger"` | `variant="outline"` · 생략(`default`) · `"outline"` · `"ghost"` · `"destructive"` |
+| `Input`·`Checkbox`(`@/shared/ui/web-kit/ui`) | `@/shared/ui/input`·`@/shared/ui/checkbox`(Base UI 속성 그대로) |
+| `TextArea`(`@/shared/ui/web-kit/ui`) | `Textarea`(`@/shared/ui/textarea`) |
+| `<Select value onChange={(e) => set(e.target.value)}><option value="a">A</option></Select>` | `<Select items={options} value={value} onValueChange={set}><SelectTrigger aria-label="…"><SelectValue placeholder="…" /></SelectTrigger><SelectContent>{options.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select>`(`@/shared/ui/select`) |
+| `--wk-*` 변수·`.wk-*` 클래스로 바꾼 모양 | 테마 변수(`:root`)나 복사본의 Tailwind 클래스 |
+
+4. 키트 묶음 부품의 props는 그대로다. 그리는 결과만 바뀐다: `Form.Select`·`List.Select`·목록 기간 기준·검색어 대상·정렬·페이지 크기·다운로드 종류는 shadcn Select(역할 `combobox` 버튼과 `option` 목록)다. `Form.Select`는 값이 비었을 때 빈 선택지 대신 안내 문구(`placeholder`, 기본 `messages.choose`)를 트리거에 보인다. 단일 `Choice`의 radio는 칸마다 하나의 radiogroup이다. `Form.Checkbox`는 shadcn Checkbox(button)다. 검사·화면 테스트가 네이티브 `<select>`·`<option>`(예: `selectOptions`)이나 `.wk-*` 클래스를 찾았다면 트리거를 눌러 `option`을 고르는 방식이나 `data-slot`(예: `pending`·`blocking-progress`)으로 바꾼다.
+5. 덮개 층은 `z-40`(shadcn 대화창 `z-50` 아래)이다. 층·배경을 바꾸려면 `ui/blocking-progress.tsx` 복사본의 클래스를 고친다(`--wk-blocking-*` 변수는 없다).
 
 ### 복사본 갱신
 

@@ -2,7 +2,7 @@
 
 registry item은 함께 설치하는 파일 묶음이다. UI와 함께 설치된 짧은 연결 파일은 자기 복사본을 패키지의 공통 검사 함수에 넘긴다. 단언은 패키지가 소유하므로 프로젝트로 복제하지 않는다. `/testing/unit`은 jsdom(브라우저 DOM을 흉내 내는 단위 환경)에서 상태·속성·요청 수를, `/testing/browser`는 Playwright의 실제 브라우저에서 Tab·중첩 포털·배경 클릭 차단·Enter·포커스 복원을 검사한다. `/testing/fixtures`는 자기 복사본을 주입할 검사 화면을 제공한다.
 
-선택 소비는 기능별 작은 검사 입구를 사용한다. 폼은 `/testing/unit/form`, 인증은 `/testing/unit/auth`와 `/testing/fixtures/auth`, 폼의 UI 의존은 `/testing/unit/choice`·`/testing/unit/primitives`·`/testing/unit/styles`로 연결한다. 기존 `/testing/unit`·`/testing/fixtures`는 호환 입구로 남지만 전체 검사 의존을 불러올 수 있다. form의 zod는 검사 의존이며 사용하는 폼 schema 구현을 제한하지 않는다.
+선택 소비는 기능별 작은 검사 입구를 사용한다. 폼은 `/testing/unit/form`, 인증은 `/testing/unit/auth`와 `/testing/fixtures/auth`, 폼의 UI 의존은 `/testing/unit/choice`·`/testing/unit/primitives`로 연결한다(칸·구역 여백 검사 G110은 폼 검사에 들어 있다). 키트 항목 검사는 프로젝트에 설치된 shadcn 기본 부품을 그대로 import해 실행한다. 브라우저 검사 화면은 프로젝트 테마 CSS `@/styles.css`를 읽는다. 기존 `/testing/unit`·`/testing/fixtures`는 호환 입구로 남지만 전체 검사 의존을 불러올 수 있다. form의 zod는 검사 의존이며 사용하는 폼 schema 구현을 제한하지 않는다.
 
 ## 현재 파일에서 새로 실행
 

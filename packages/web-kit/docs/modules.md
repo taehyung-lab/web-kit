@@ -24,7 +24,7 @@
 | 루트 + registry `checkbox-tree`·`filter-error` | 순수 기간·트리 계산과 오류/트리 표현 연결 | checkbox·문구·스타일 |
 | `/form` · `/dialog` + registry `form`·`dialog` | 제출·확인·저장·기준선·오류·늦은 결과·이탈의 hook/Provider; 복사본 Form·FormGuard·Dialog | schema·원본·저장·완료 동작·배치·문구 |
 | `/record` + registry `record`·`retry` | 단건 상태·갱신 실패·재시도 focus·마스킹; 복사본 Record·항목·이력 | queryOptions·항목·노출 정책·실패 문구 |
-| `/choice` · `/dialog` + registry `inputs`·`choice`·`dialog`·`pending`·`blocking-progress` | 공통 선택·검색·대화창 포커스·진행 등록 hook과 기본 표현 | 값·문구·셸 배치·업무 행동 |
+| `/choice` · `/dialog` + registry `choice`·`dialog`·`pending`·`blocking-progress`(기본 부품은 shadcn base-nova, 검사 연결 `inputs`) | 공통 선택·검색·대화창 포커스·진행 등록 hook과 기본 부품 조합 | 값·문구·셸 배치·업무 행동·테마 |
 | `/api` | Spring query 직렬화 | 적용 endpoint |
 | `/testing` · `/testing/unit`(기능별 하위 입구 포함) · `/testing/browser` · `/testing/fixtures` | adapter 검사, 복사본 단위·브라우저 적합성 기준·검사 화면 | 실제 복사본·연결 파일·실행 대상 버전 |
 | `/testing/session` | 저장 실패·다른 탭 변경·종료의 adapter 검사(React/Form import 없음) | 자기 저장 adapter와 격리된 검사 환경 |

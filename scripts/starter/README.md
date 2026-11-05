@@ -26,7 +26,7 @@ mock 계정은 `admin` / `password`다. 실제 서버 검증은 별도다. `pack
 | 저장 폼 만들기 | `src/features/products/`의 폼과 저장 화면 |
 | 첨부·배열·하위 폼 조립 살펴보기 | `src/features/shows/` |
 | 문구·업무 과정·권한 바꾸기 | 해당 `src/features/`와 `docs/product/` |
-| 모양 바꾸기 | `src/shared/ui/web-kit/`, `src/styles.css` |
+| 모양 바꾸기 | `src/styles.css`(shadcn 테마 변수), `src/shared/ui/<부품>.tsx`(shadcn 기본 부품), `src/shared/ui/web-kit/`(키트 배치) |
 | 어떤 공용 기능을 쓸지 판단 | [설치된 소비 안내](node_modules/@boosterlab/web-kit/docs/consuming.md#기능을-골라-쓰기) |
 
 공통 동작을 사용할 때는 해당 기능의 `.agents/skills/web-kit-*`를 읽는다. 사용 기준과 예제가 설치한 패키지 안에 함께 있다. 작업 판단·검증 기준은 `AGENTS.md`, 필요할 때만 쓰는 지도·독립 검토 안내는 `.agents/skills/guide.md`에 있다.
