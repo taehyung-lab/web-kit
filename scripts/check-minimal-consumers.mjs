@@ -77,13 +77,17 @@ for (const feature of features) {
   /** 소비 설정을 JSON으로 기록한다. */
   const writeJson = (file, value) => write(file, JSON.stringify(value, null, 2) + '\n');
   // 키트 UI는 shadcn 기본 부품과 테마 CSS로 그려지므로 Tailwind와 base-nova 테마 CSS 의존도 starter와 같은 버전으로 둔다.
-  const tools = ['vite', 'vitest', 'jsdom', '@vitejs/plugin-react', '@testing-library/react', '@testing-library/dom', '@playwright/test', 'typescript', '@types/node', '@types/react', '@types/react-dom', 'tailwindcss', '@tailwindcss/vite', 'tw-animate-css', 'shadcn'];
-  writeJson('package.json', { name: `web-kit-${feature}-consumer`, private: true, type: 'module', pnpm: { overrides }, packageManager: 'pnpm@10.33.0', dependencies: { react: versions.react, 'react-dom': versions['react-dom'], '@boosterlab/web-kit': 'file:vendor/web-kit.tgz' }, devDependencies: Object.fromEntries(tools.map((name) => [name, versions[name]])) });
+  // shadcn 패키지(CLI)는 zod 등 많은 의존을 끌어와 미설치 peer 반례를 가리므로 설치하지 않고 그 tailwind.css만 복사한다.
+  // shadcn init(base-nova)이 프로젝트에 미리 두는 런타임 의존. 기본 부품 항목은 이것을 다시 선언하지 않는다.
+  const shadcnBase = Object.fromEntries(['@base-ui/react', 'class-variance-authority', 'lucide-react'].map((name) => [name, versions[name]]));
+  const tools = ['vite', 'vitest', 'jsdom', '@vitejs/plugin-react', '@testing-library/react', '@testing-library/dom', '@playwright/test', 'typescript', '@types/node', '@types/react', '@types/react-dom', 'tailwindcss', '@tailwindcss/vite', 'tw-animate-css'];
+  writeJson('package.json', { name: `web-kit-${feature}-consumer`, private: true, type: 'module', pnpm: { overrides }, packageManager: 'pnpm@10.33.0', dependencies: { react: versions.react, 'react-dom': versions['react-dom'], '@boosterlab/web-kit': 'file:vendor/web-kit.tgz', ...shadcnBase }, devDependencies: Object.fromEntries(tools.map((name) => [name, versions[name]])) });
   write('.npmrc', 'auto-install-peers=false\nstrict-peer-dependencies=false\nnode-linker=isolated\n');
   write('pnpm-workspace.yaml', 'packages: []\n');
   writeJson('tsconfig.json', { compilerOptions: { jsx: 'react-jsx', module: 'ESNext', moduleResolution: 'Bundler', target: 'ES2022', baseUrl: '.', paths: { '@/*': ['./src/*'] } } });
   // 검사 화면이 읽는 프로젝트 테마 CSS(@/styles.css). starter의 base-nova 테마를 그대로 쓴다.
-  write('src/styles.css', readFileSync(join(root, 'apps/starter/src/styles.css'), 'utf8'));
+  write('src/shadcn-tailwind.css', readFileSync(createRequire(join(root, 'package.json')).resolve('shadcn/tailwind.css'), 'utf8'));
+  write('src/styles.css', readFileSync(join(root, 'apps/starter/src/styles.css'), 'utf8').replace("@import 'shadcn/tailwind.css';", "@import './shadcn-tailwind.css';"));
   write('src/setup.ts', "import { afterEach } from 'vitest';\nimport { cleanup } from '@testing-library/react';\nwindow.scrollTo = () => undefined;\nafterEach(cleanup);\n");
   const components = json(join(root, 'apps/starter/components.json'));
   components.registries['@web-kit'] = join(root, 'public/r/{name}.json');

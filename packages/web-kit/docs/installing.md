@@ -9,7 +9,7 @@
 pnpm add @boosterlab/web-kit@file:vendor/boosterlab-web-kit.tgz
 ```
 
-3. 소비 프로젝트는 shadcn base-nova(Base UI 기반) 프로젝트여야 한다. 키트 UI는 스스로 모양을 갖지 않고 shadcn 기본 부품(button·input·select·checkbox·dialog·popover·combobox…)과 테마 변수(`bg-background`·`text-muted-foreground`·`border-input`·`ring-ring`·`bg-primary`·`text-destructive` 등)로 그려진다. Tailwind 4와 `shadcn init`이 만든 테마 CSS(`tw-animate-css`·`shadcn/tailwind.css` import와 `:root` 변수)가 있어야 한다. `components.json`은 아래처럼 `style`을 `base-nova`로, `aliases.ui`(와 `components`)를 `@/shared/ui`로 두고 같은 버전 tag로 고정한 namespace(항목 이름의 출처)를 둔다. `@web-kit/form`은 이 주소의 form.json을 뜻한다. CLI가 별칭을 찾도록 루트 `tsconfig.json`에도 `"paths": { "@/*": ["./src/*"] }`가 있어야 한다.
+3. 소비 프로젝트는 shadcn base-nova(Base UI 기반) 프로젝트여야 한다. 키트 UI는 스스로 모양을 갖지 않고 shadcn 기본 부품(button·input·select·checkbox·dialog·popover·combobox…)과 테마 변수(`bg-background`·`text-muted-foreground`·`border-input`·`ring-ring`·`bg-primary`·`text-destructive` 등)로 그려진다. Tailwind 4와 `shadcn init`이 만든 테마 CSS(`tw-animate-css`·`shadcn/tailwind.css` import와 `:root` 변수), init이 두는 런타임 의존(`@base-ui/react`·`class-variance-authority`·`lucide-react`)이 있어야 한다. 기본 부품 항목은 이 의존을 다시 선언하지 않는다. `components.json`은 아래처럼 `style`을 `base-nova`로, `aliases.ui`(와 `components`)를 `@/shared/ui`로 두고 같은 버전 tag로 고정한 namespace(항목 이름의 출처)를 둔다. `@web-kit/form`은 이 주소의 form.json을 뜻한다. CLI가 별칭을 찾도록 루트 `tsconfig.json`에도 `"paths": { "@/*": ["./src/*"] }`가 있어야 한다.
 
 ```json
 {
