@@ -5,7 +5,7 @@ import { useState, type ReactNode } from 'react';
 import { afterEach, beforeAll, expect, it as baseIt, vi } from 'vitest';
 import { z } from 'zod';
 import { RequestFailure } from '../../failure';
-import { useSaveForm, type SaveFormOptions } from '../../form/save-form';
+import { DiscardSaveAttempt, useSaveForm, type SaveFormOptions } from '../../form/save-form';
 import type * as Contract0 from '../contracts/form/ui';
 import { conformanceTitle, type ConformanceTarget } from '../target.mjs';
 
@@ -300,6 +300,31 @@ it(title('G070', 'F3 저장 뒤 완료 처리가 실패하면 저장을 다시 �
   expect(onSaved).toHaveBeenCalledTimes(2);
   expect(save).toHaveBeenCalledTimes(1);
   await waitFor(() => expect(screen.queryByText('저장은 완료됐지만 다음 작업을 진행하지 못했습니다.')).toBeNull());
+  cleanup();
+  // 일반 완료 오류와 달리, 명시적 폐기는 완료 재시도 없이 새 제출을 연다(완료 확인창 유무 공통).
+  for (const acknowledge of [false, true]) {
+    const discardedSave = vi.fn(async () => undefined);
+    const discarded = vi.fn(() => new DiscardSaveAttempt(new Error('시도 폐기')));
+    function DiscardScreen() {
+      const editor = useSaveForm({ schema, source: { id: 1, values }, save: discardedSave, acknowledge, onSaved: discarded, clearFailureOnEdit: () => true });
+      return <F editor={editor} protect={false} renderFailure={() => '시도 폐기'}>
+        <F.Text name="name" label="이름" /><F.Submit /><F.Failure /><F.Saved>저장했습니다.</F.Saved>
+      </F>;
+    }
+    await mount(() => <DiscardScreen />);
+    await act(async () => fireEvent.click(screen.getByText('저장')));
+    if (acknowledge) await act(async () => fireEvent.click(await screen.findByText('확인')));
+    await screen.findByText('시도 폐기');
+    expect(screen.queryByText('다시 시도')).toBeNull();
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(screen.getByRole('button', { name: '저장' }).getAttribute('aria-disabled')).not.toBe('true');
+    expect(discardedSave).toHaveBeenCalledTimes(1);
+    fireEvent.change(screen.getByRole('textbox', { name: '이름' }), { target: { value: '고친 입력' } });
+    expect(screen.queryByText('시도 폐기')).toBeNull();
+    await act(async () => fireEvent.click(screen.getByText('저장')));
+    expect(discardedSave).toHaveBeenCalledTimes(2);
+    cleanup();
+  }
 });
 
 it(title('G071', 'F8 저장 확인창은 제출 값을 보이고, 저장 중에는 Esc로 닫히지 않으며, 저장 버튼은 disabled가 아니라 aria-disabled로 잠긴다'), async () => {

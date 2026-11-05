@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "version": "5.0.0-rc.9",
-  "sourceRef": "v5.0.0-rc.9",
-  "sourceCommit": "8a01a175181e8ffe9946dbd02c42597fda7a7a96",
+  "version": "5.0.0-rc.10",
+  "sourceRef": "v5.0.0-rc.10",
+  "sourceCommit": "86704369006c0d6d6f9ec542c6d50bd9ab38635c",
   "sourceWorkingTree": "clean",
   "shadcn": "4.19.1",
   "method": "shadcn@4.19.1 add; installation recorded after review",
@@ -183,14 +183,14 @@
     },
     {
       "name": "form",
-      "artifactHash": "2aae016c1b5a3750144538ba9d0150da63ec6f29b5d0a933f7f595ff725f140a",
+      "artifactHash": "facea866fc74391b46cd0ef7169e4cd94c26c13d4c7dc7ca52cebcb10b8cf546",
       "files": [
         {
           "source": "packages/ui-registry/src/form/ui.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/form/ui.tsx",
           "installed": "src/shared/ui/web-kit/form/ui.tsx",
-          "sourceHash": "e45ff727f88844577d8317a73342510a1ec1cbfc4a05cb1897048c69d84f1421",
-          "installedHash": "11a2272c35fed5d15ade8de84af8ba07fc76d854aab9f35964de0614bfe22f88"
+          "sourceHash": "d9b7b216c41cedf4b33a818662dd0ba6222382c3d003809466785f1fe1c4fbbe",
+          "installedHash": "6ca474940a676c5abce7e355b67717c355658c8c67c0a14429d8bb9257753a9b"
         },
         {
           "source": "packages/ui-registry/src/form/field.tsx",

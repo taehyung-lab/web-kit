@@ -726,7 +726,7 @@ function Failure({ className }: { readonly className?: string }) {
   const { editor, copy, renderFailure, formatError } = useFormContext();
   const save = editor.formFailure === undefined ? undefined : renderFailure(editor.formFailure, 'save');
   const completion = editor.completionFailure === undefined ? undefined : renderFailure(editor.completionFailure, 'completion');
-  const showCompletion = editor.completionFailure !== undefined && completion !== null && !editor.acknowledge;
+  const showCompletion = editor.completionFailure !== undefined && completion !== null && (!editor.acknowledge || editor.stage.kind === 'idle');
   return (
     <>
       {editor.formFailure !== undefined && save !== null ? (
@@ -740,10 +740,12 @@ function Failure({ className }: { readonly className?: string }) {
       ) : null}
       {showCompletion ? (
         <p role="alert" data-slot="form-failure" className={cn(failureClass, 'flex flex-wrap items-center gap-2', className)}>
-          {completion ?? copy.completionFailed}
-          <Button type="button" variant="outline" size="sm" onClick={() => void editor.complete()}>
-            {copy.retry}
-          </Button>
+          {completion ?? (editor.stage.kind === 'idle' ? copy.saveFailed : copy.completionFailed)}
+          {editor.stage.kind === 'saved' ? (
+            <Button type="button" variant="outline" size="sm" onClick={() => void editor.complete()}>
+              {copy.retry}
+            </Button>
+          ) : null}
         </p>
       ) : null}
     </>

@@ -4,7 +4,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { StandardSchemaV1 } from '@tanstack/react-form';
 import { afterEach, expect, it, vi } from 'vitest';
 import { RequestFailure } from '../src/failure';
-import { FormRejection, useSaveForm, type SaveFormOptions } from '../src/form/save-form';
+import { DiscardSaveAttempt, FormRejection, useSaveForm, type SaveFormOptions } from '../src/form/save-form';
 
 interface Values {
   readonly name: string;
@@ -667,6 +667,64 @@ it('S20 저장은 성공했는데 완료 처리(이동)가 실패하면 다시 �
   expect(save).toHaveBeenCalledTimes(1);
   expect(screen.getByTestId('stage').textContent).toBe('idle');
   expect(editor.completionFailure).toBeUndefined();
+});
+
+it('명시적 완료 폐기는 입력·이전 기준선을 보존하고 완료 결과를 버려 새 제출만 허용한다', async () => {
+  const reason = new Error('attempt discarded');
+  const save = vi.fn(async () => ({ saved: { name: 'normalized', email: 'a@x' } }));
+  const onSaved = vi.fn(() => new DiscardSaveAttempt(reason));
+  let editor!: ReturnType<typeof useSaveForm<Values, Output>>;
+  function DiscardScreen() {
+    editor = useSaveForm({ schema, source: original, save, onSaved, clearFailureOnEdit: () => true });
+    return <button onClick={() => void editor.submit()}>save</button>;
+  }
+  render(<DiscardScreen />);
+  await act(async () => editor.form.setFieldValue('name', 'edited'));
+  await submit();
+  await flush();
+  expect(editor.stage.kind).toBe('idle');
+  expect(editor.form.state.values.name).toBe('edited');
+  expect(editor.baseline).toEqual(original.values);
+  expect(editor.isDirty).toBe(true);
+  expect(editor.completionFailure).toBe(reason);
+  await act(async () => editor.complete());
+  expect(onSaved).toHaveBeenCalledTimes(1);
+  expect(save).toHaveBeenCalledTimes(1);
+  await act(async () => editor.form.setFieldValue('name', 'corrected'));
+  expect(editor.completionFailure).toBeUndefined();
+  await submit();
+  await flush();
+  expect(save).toHaveBeenCalledTimes(2);
+});
+
+it('완료 폐기는 진행 중 편집을 보존하며 대상 전환 뒤 늦은 폐기는 적용하지 않는다', async () => {
+  const pending = deferred<DiscardSaveAttempt>();
+  let editor!: ReturnType<typeof useSaveForm<Values, Output>>;
+  function DiscardScreen({ id }: { id: number }) {
+    editor = useSaveForm({ schema, source: { id, values: original.values }, save: async () => undefined, onSaved: () => pending.promise });
+    return <button onClick={() => void editor.submit()}>save</button>;
+  }
+  const view = render(<DiscardScreen id={1} />);
+  await act(async () => { void editor.submit(); });
+  await flush();
+  await act(async () => editor.form.setFieldValue('name', 'during completion'));
+  await act(async () => pending.resolve(new DiscardSaveAttempt(new Error('discarded'))));
+  expect(editor.form.state.values.name).toBe('during completion');
+  expect(editor.baseline).toEqual(original.values);
+  // 같은 완료 경로에서 대상이 바뀐 뒤 늦게 도착한 결과는 적용되지 않는다.
+  const late = deferred<DiscardSaveAttempt>();
+  view.unmount();
+  function LateScreen({ id }: { id: number }) {
+    editor = useSaveForm({ schema, source: { id, values: original.values }, save: async () => undefined, onSaved: () => late.promise });
+    return <button onClick={() => void editor.submit()}>save</button>;
+  }
+  const next = render(<LateScreen id={1} />);
+  await act(async () => { void editor.submit(); });
+  await flush();
+  next.rerender(<LateScreen id={2} />);
+  await act(async () => late.resolve(new DiscardSaveAttempt(new Error('old attempt'))));
+  expect(editor.completionFailure).toBeUndefined();
+  expect(editor.stage.kind).toBe('idle');
 });
 
 it('S21 acknowledge면 저장 뒤 saved에서 멈추고, complete()를 두 번 불러도 onSaved는 한 번이다', async () => {

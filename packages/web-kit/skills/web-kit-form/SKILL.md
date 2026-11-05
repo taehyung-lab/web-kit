@@ -70,7 +70,8 @@ headless는 화면 배치 없이 상태와 연결 함수만 쓰는 방식이다.
   - `confirm`
   - `fieldError`: 서버 필드를 폼 경로와 문구로 바꾼다. 돌려준 경로는 제출 때 기준이고, 그 뒤 줄 작업은 키트가 따라간다.
   - `reveal(fields)`: 키트 구역(`Form.Section fields`·`FormSection`)이 아닌 프로젝트 고유의 접힌 영역(탭 등)을 오류 포커스 전에 연다. 거절마다(클라이언트 검증 실패·서버 필드 오류 도착(늦은 도착 포함)·`FormRejection`) 실패 칸 목록으로 한 번 불린다. 제출 횟수를 세어 열지 않는다. 키트 구역은 스스로 열린다.
-  - `onSaved(result)`: 이동·알림·추가 요청. 저장 함수가 돌려준 값을 그대로 받는다(등록 뒤 새 id 등). Promise를 반환해 후속 완료까지 잠금을 유지한다. 저장 성공 뒤 후속이 실패하면 `completionFailure`이며 `Form.Failure`의 재시도(또는 `complete()`)는 저장 없이 후속만 다시 실행한다. 이미 시작한 프로젝트 async 함수 안의 추가 부수효과 취소와 여러 후속 요청 중 일부 성공의 중복 방지는 프로젝트가 책임진다.
+  - `onSaved(result)`: 이동·알림·추가 요청. 저장 함수가 돌려준 값을 그대로 받는다(등록 뒤 새 id 등). Promise를 반환해 후속 완료까지 잠금을 유지한다. 일반 오류를 던지면 `completionFailure`이며 `Form.Failure`의 재시도(또는 `complete()`)는 저장 없이 후속만 다시 실행한다. 이미 시작한 프로젝트 async 함수 안의 추가 부수효과 취소와 여러 후속 요청 중 일부 성공의 중복 방지는 프로젝트가 책임진다.
+  - 완료 과정에서 업무상 이전 결과가 무효가 됐다면 프로젝트가 정리를 끝내고 **새 저장 요청이 안전할 때만** `return new DiscardSaveAttempt(reason)`(`/form`)을 쓴다. 예: 세션을 끝낸 로그인 취소. 키트는 완료 결과를 버리고 이전 기준선을 복원하며 현재 입력을 보존해 `idle`로 돌린다. 저장 성공으로 반영한 정규화만 되돌리고 진행 중 편집은 보존한다. `reason`은 `completionFailure`와 `renderFailure(reason, 'completion')`으로 안내하되 완료 재시도 버튼·저장 완료 확인창은 닫는다. 자동 제출하지 않으며 사용자가 새로 제출한다. `clearFailureOnEdit(reason)`이 true면 제출 입력과 달라진 동안 안내를 숨기고 새 제출 때 지운다. source.id를 바꿔 폼을 새로 만들거나 폼 잠금을 직접 풀지 않는다. 정리가 실패하면 일반 오류를 던져 완료만 다시 시도한다.
   - `acknowledge`: 저장 뒤 사용자 확인(`complete()`)을 기다린 다음 `onSaved`를 실행한다.
 - 입력 control의 id는 `fieldId(name)`을 쓰고, 같은 id를 `FieldFrame`에 넘긴다. 체크 트리(`CheckboxTree`)는 그 id를 `id`로 받으며, 검증 오류의 focus가 그 그룹으로 온다.
 - 줄을 추가·삭제하는 입력은 아래 「줄 추가·삭제 입력」을 따른다.

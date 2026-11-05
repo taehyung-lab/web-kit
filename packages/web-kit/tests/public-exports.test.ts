@@ -25,6 +25,7 @@ const expected = {
     "validateDateRange"
   ],
   "form": [
+    "DiscardSaveAttempt",
     "FormArrayField",
     "FormBindingProvider",
     "FormDialogScopeProvider",
