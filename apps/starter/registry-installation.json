@@ -1,13 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "5.0.0-rc.7",
-  "sourceRef": "v5.0.0-rc.7",
-  "sourceCommit": "4f89e0ce19e36a1c650acdb56fc589614efb12db",
+  "version": "5.0.0-rc.8",
+  "sourceRef": "v5.0.0-rc.8",
+  "sourceCommit": "5354083cb6639331ad0c0adc74cf6e74d8a5f16d",
   "sourceWorkingTree": "clean",
   "shadcn": "4.19.1",
-  "method": "pnpm exec shadcn add ./public/r/all.json --cwd apps/starter --yes --overwrite; pristine test app only",
+  "method": "shadcn@4.19.1 add; installation recorded after review",
   "componentsHash": "7a33830cda235f6d2eecae7871d31a4e8d598f333545e705cdf6dfb79cbd0d2d",
-  "installationComponentsHash": "6b4498159686fb9fa6aad53aece433eeb093372ffacd7308b59d0e225f11b350",
   "items": [
     {
       "name": "all",
