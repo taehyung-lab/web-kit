@@ -7,8 +7,9 @@ import { pathToFileURL } from 'node:url';
 import { loadStructureConfig, posix, CONFIG_FILE } from './config.mjs';
 import { version, webKitStructure } from './index.mjs';
 
-/** 생성기가 남긴 미완성 표시. 이 이름은 선언되지 않아 typecheck가 실패한다. */
-export const TODO_MARKER = 'TODO_web_kit_new_';
+import { TODO_MARKER } from './markers.mjs';
+
+export { TODO_MARKER };
 
 /** 프로젝트에 설치된 패키지를 프로젝트 기준으로 불러온다. */
 async function load(root, name) {
