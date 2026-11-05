@@ -1,0 +1,10 @@
+{
+  "src": "src",
+  "alias": "@/",
+  "tsconfig": "tsconfig.json",
+  "routes": "src/routes",
+  "generated": ["src/api/generated"],
+  "generatedModels": ["src/api/generated/models"],
+  "support": ["src/mocks"],
+  "exceptions": []
+}

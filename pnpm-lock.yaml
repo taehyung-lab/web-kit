@@ -99,6 +99,9 @@ importers:
       axios:
         specifier: 1.20.0
         version: 1.20.0
+      eslint:
+        specifier: 10.9.1
+        version: 10.9.1(jiti@2.7.0)
       jsdom:
         specifier: 30.0.1
         version: 30.0.1
@@ -111,6 +114,9 @@ importers:
       typescript:
         specifier: 5.9.3
         version: 5.9.3
+      typescript-eslint:
+        specifier: 8.68.0
+        version: 8.68.0(eslint@10.9.1(jiti@2.7.0))(typescript@5.9.3)
       vitest:
         specifier: 4.1.11
         version: 4.1.11(@types/node@24.13.3)(jsdom@30.0.1)(msw@2.15.0(@types/node@24.13.3)(typescript@5.9.3))(vite@8.3.5(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
