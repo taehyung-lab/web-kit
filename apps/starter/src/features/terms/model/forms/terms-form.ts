@@ -1,5 +1,5 @@
 // 파일 책임: 약관 등록 폼의 값 모양·검증(예시 규칙: 다섯 항목 필수, 버전은 숫자·점 10자 이하)과
-// 폼 결과 → 저장 요청, 서버 필드 오류 대응, 약관 단건 모양.
+// 서버 필드 오류 대응(순수). 약관 단건 모양은 model/terms.ts가 갖는다.
 import { formMessages } from '@/shared/lib/form-messages';
 import type { FieldError } from '@boosterlab/web-kit/failure';
 import { z } from 'zod';
@@ -21,10 +21,6 @@ export type TermsFormValues = z.output<typeof termsFormSchema>;
 
 /** 등록 화면 첫 값: 게시 상태는 '게시', 나머지는 빈 값(예시 첫 값). */
 export const EMPTY_TERMS_FORM: TermsFormInput = { version: '', effectiveAt: '', status: 'PUBLISHED', publishedAt: '', body: '' };
-
-export interface Terms extends TermsFormValues {
-  readonly termsId: string;
-}
 
 /** 서버 필드 오류 → 폼 경로와 문구. 폼에 없는 필드면 붙이지 않는다. */
 export function termsFieldError(error: FieldError): { readonly field: keyof TermsFormInput; readonly message: string } | undefined {

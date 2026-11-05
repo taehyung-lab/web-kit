@@ -1,5 +1,6 @@
-// 파일 책임: web-kit 초기 연결의 유일한 진입점. 세션 수명·요청 처리·QueryClient를 이 앱의 저장 위치·공개 경로·헤더·재발급 계약에 연결한다.
-// 생성 endpoint(orval)는 여기의 apiRequest(= http.requestData) 하나로 호출된다. adapter 구현(저장소·재발급)은 짧아서 이 파일에 함께 둔다.
+// 파일 책임: web-kit 초기 연결의 유일한 진입점(runtime). 세션 수명·요청 처리·QueryClient를 이 앱의 저장 위치·공개 경로·헤더·재발급 계약에 연결한다.
+// 생성 endpoint(orval)는 여기의 apiRequest(= http.requestData) 하나로 호출된다. adapter 구현(저장소·재발급·서버 로그아웃)은 짧아서 이 파일에 함께 둔다.
+// runtime은 feature·화면·앱 조립을 모른다. 세션 변화에 따른 화면 이동은 app/session/SessionNavigation.tsx가 구독해 정한다.
 import { createResultCodeTable, isRequestFailure, RequestFailure } from '@boosterlab/web-kit';
 import { createHttp, springEnvelope, type Http, type SpringEnvelopeData } from '@boosterlab/web-kit/http';
 import { createQueryClient } from '@boosterlab/web-kit/query';
@@ -7,7 +8,6 @@ import { createSession, type Credentials } from '@boosterlab/web-kit/session';
 import { createBrowserSessionStore } from '@boosterlab/web-kit/session/browser';
 import { z } from 'zod';
 import type { AxiosRequestConfig } from 'axios';
-import { signOut } from '@/features/auth/api/auth';
 import { env } from './env';
 import { i18n } from './i18n';
 import { notices } from './notices';
@@ -36,6 +36,7 @@ const store = createBrowserSessionStore({
 /** 세션 밖 요청: 로그인 전·재발급·로그아웃. 토큰이 자동으로 실리지 않고, 실패가 세션을 건드리지 않는다. */
 const PUBLIC_PATHS = ['/api/auth/sign-in', '/api/auth/reissue', '/api/auth/sign-out'];
 export const REISSUE_PATH = '/api/auth/reissue';
+const SIGN_OUT_PATH = '/api/auth/sign-out';
 
 /** 재발급 응답 data에서 access 토큰을 읽는다. 없으면 계약 불일치(contract)다. */
 function readAccessToken(data: unknown): string {
@@ -48,8 +49,11 @@ export const session = createSession<Credentials>({
   store,
   // refresh 토큰은 httpOnly 쿠키(서버 계약)라 본문이 없다. 공개 요청으로 보낸다.
   reissue: async () => ({ accessToken: readAccessToken(await http.requestData<unknown>({ url: REISSUE_PATH, method: 'POST' })) }),
-  // 로그아웃·유휴 종료 뒤 키트가 잡아 둔 토큰으로 한 번 보낸다. 실패해도 로컬 종료는 그대로다.
-  signOut: (credentials) => signOut(credentials.accessToken),
+  // 로그아웃·유휴 종료 뒤 키트가 잡아 둔 토큰으로 한 번 보낸다. 공개 요청이라 토큰이 자동으로 실리지 않으므로 직접 싣는다.
+  // 실패해도 로컬 종료는 그대로다.
+  signOut: async (credentials) => {
+    await http.requestData<unknown>({ url: SIGN_OUT_PATH, method: 'POST', headers: { Authorization: `Bearer ${credentials.accessToken}` } });
+  },
 });
 
 export const http: Http = createHttp({

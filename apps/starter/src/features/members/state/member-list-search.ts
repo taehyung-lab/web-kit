@@ -1,14 +1,10 @@
 // 파일 책임: 회원 목록 URL 검색 선언과 확정 검색 → 요청 변환. "검색을 눌러야 조회"(gated)·기간 기준·키워드·다중 선택을 값으로만 정한다.
+// URL은 화면 사이에 남는 목록 상태라 state에 둔다. 요청 모양(MemberListParams)은 api가 소유한다.
 import { defineSearch, type FullSearch } from '@boosterlab/web-kit/search';
 import { z } from 'zod';
-import {
-  MEMBER_ACCOUNT_STATUSES,
-  MEMBER_KEYWORD_FIELDS,
-  MEMBER_PAGE_SIZES,
-  MEMBER_PERIOD_TYPES,
-  MEMBER_SIGNUP_METHODS,
-  MEMBER_SORT_KEYS,
-} from './member';
+import type { MemberListParams } from '../api/members';
+import { MEMBER_ACCOUNT_STATUSES, MEMBER_KEYWORD_FIELDS, MEMBER_PERIOD_TYPES, MEMBER_SIGNUP_METHODS } from '../model/member';
+import { MEMBER_PAGE_SIZES, MEMBER_SORT_KEYS } from '../model/rules/member-list-policy';
 
 const isoDate = z.iso.date();
 
@@ -44,7 +40,7 @@ export const MEMBER_LIST_PERIODS = [['startDate', 'endDate']] as const;
 export type MemberListSearch = FullSearch<typeof memberListSearch.fields>;
 
 /** 확정 검색 → 서버 요청. 빈 배열은 조건 없음이라 보내지 않는다. 키워드는 `대상:값` 반복 키다. */
-export function toMemberListParams(search: MemberListSearch) {
+export function toMemberListParams(search: MemberListSearch): MemberListParams {
   return {
     page: search.page - 1,
     size: search.pageSize,
@@ -57,4 +53,3 @@ export function toMemberListParams(search: MemberListSearch) {
     accountStatus: search.accountStatuses.length === 0 ? undefined : [...search.accountStatuses],
   };
 }
-export type MemberListParams = ReturnType<typeof toMemberListParams>;

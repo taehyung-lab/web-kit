@@ -4,7 +4,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { createSession } from '@boosterlab/web-kit/session';
 import { createHttp, springEnvelope } from '@boosterlab/web-kit/http';
 import type { AxiosAdapter } from 'axios';
-import { createStarterIdle } from './session-idle';
+import { createStarterIdle } from '@/runtime/session-idle';
 import { SessionWarning } from './SessionWarning';
 
 const dispose: Array<() => void> = [];

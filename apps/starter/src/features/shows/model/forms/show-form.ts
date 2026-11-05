@@ -1,4 +1,4 @@
-// 파일 책임: 공연 예시 폼의 값 모양·검증과 요청 변환, 서버 필드 오류 대응.
+// 파일 책임: 공연 예시 폼의 값 모양·검증과 요청 변환, 서버 필드 오류 대응(순수).
 // 회차 줄(추가·삭제·이동), 좌석도 파일, 대화창에서 받는 판매처 키. 필수 표시는 이 schema가 정한다.
 import { formMessages } from '@/shared/lib/form-messages';
 import type { FieldError } from '@boosterlab/web-kit/failure';
@@ -34,6 +34,12 @@ export type VendorKeysInput = z.input<typeof vendorKeysSchema>;
 export const newRound = (): ShowRound => ({ key: crypto.randomUUID(), date: '', time: '' });
 
 export const EMPTY_SHOW_FORM: ShowFormInput = { title: '', rounds: [newRound()], seat: { kind: 'empty' }, vendorKeys: [] };
+
+/** 고른 좌석도 파일. schema가 고른 파일·기존 파일만 받으므로, 저장 단계에서 고른 파일이 아니면 잘못 연결된 것이다. */
+export function selectedFile(seat: FormFileValue): File {
+  if (seat.kind !== 'selected') throw new Error('seat file is not selected');
+  return seat.file;
+}
 
 /** 등록 요청 본문. 좌석도는 먼저 올려 받은 id를 넣는다. 빈 판매처 키는 보내지 않는다. */
 export function toShowRequest(values: ShowFormInput, seatFileId: string) {

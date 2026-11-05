@@ -1,7 +1,7 @@
 // 파일 책임: 테스트 공통 준비. msw server를 켜고, 테스트마다 화면·mock 상태·세션·캐시·언어를 처음으로 되돌린다.
 import { i18n } from '@/app/i18n';
-import { notices } from '@/app/notices';
-import { queryClient, session } from '@/app/web-kit';
+import { notices } from '@/runtime/notices';
+import { queryClient, session } from '@/runtime/web-kit';
 import { mockDb } from '@/mocks/db';
 import { server } from '@/mocks/server';
 import { cleanup } from '@testing-library/react';

@@ -9,7 +9,7 @@ import type {
   CategoryListEnvelope
 } from '../models';
 
-import { apiRequest } from '../../../app/web-kit';
+import { apiRequest } from '../../../runtime/web-kit';
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];

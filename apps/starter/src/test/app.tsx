@@ -1,7 +1,7 @@
 // 파일 책임: 화면 테스트 도우미. 실제 앱 조립(App·router·web-kit 연결)을 memory history로 띄우고, 보낸 요청을 기록한다.
 import { App } from '@/app/App';
 import { createAppRouter } from '@/app/router';
-import { session } from '@/app/web-kit';
+import { session } from '@/runtime/web-kit';
 import { mockDb } from '@/mocks/db';
 import { server } from '@/mocks/server';
 import { createMemoryHistory } from '@tanstack/react-router';

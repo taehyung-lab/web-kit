@@ -37,7 +37,7 @@ registry `form`의 `FormGuard`를 앱(Router 안)에 한 번 둔다. 복사본�
 
 ## 화면 전체 진행 덮개
 
-실제 조립 예: [apps/starter/src/routes/_app.tsx](../../references/apps/starter/src/routes/_app.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/app/shell/AppShell.tsx](../../references/apps/starter/src/app/shell/AppShell.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 registry `blocking-progress`의 `BlockingProgress messages={{ loading, create, edit, delete, wait? }}`를 앱 셸(로그인 뒤 화면 골격)에 한 번 두고 셸 본문을 children으로 감싼다. 공통 등록·정리·복원은 `/dialog`의 `useBlockingProgressBinding`·`BlockingProgressProvider`가 맡고 복사본은 반환 속성과 ref를 연결한다. 문구는 프로젝트가 준다(`wait`는 둘째 줄).
 - 무엇이 덮는가: 등록·수정 폼 저장(`useSaveForm({ progress })`), 확인창을 거친 삭제 실행(`useConfirmationState({ progress: 'delete' })`, 아래 「폼 없는 확인」), 페이지 진입 조회(`useList({ progress: 'page' })`·`useRecord(options, id, { progress: 'page' })` — 각 skill), 화면 고유의 진입 대기(`useBlockingProgress('loading', active)`, 예: 수정 폼을 열기 전 보조 조회). 쓰기(등록·수정·삭제)가 조회보다 앞선다. 덮개 밖(셸 없는 화면·단위 시험)에서는 아무 일도 하지 않는다.
@@ -173,7 +173,7 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 
 ## 폼 안 원본과 참조
 
-실제 조립 예: [apps/starter/src/features/form-workflows/model/form.ts](../../references/apps/starter/src/features/form-workflows/model/form.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/form-workflows/model/forms/workflow-form.ts](../../references/apps/starter/src/features/form-workflows/model/forms/workflow-form.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 `references`에 `{ source: values => 원본ID목록, fields: values => 참조필드경로목록, onRemove, message }`를 선언한다. 참조 칸 값은 문자열 ID 또는 ID 배열이며 빈 문자열은 참조 없음이다. 원본 이름은 현재 원본에서 표시하고 이름을 ID로 삼지 않는다. 원본 칸 값 자체가 참조 기준이면 그 값을 ID로 선언한다.
 
@@ -188,7 +188,7 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 
 ## 조건부로 숨기는 칸
 
-실제 조립 예: [작성 예제의 폼 정의](../../references/apps/starter/src/features/form-workflows/model/form.ts.txt)와 [화면](../../references/apps/starter/src/features/form-workflows/screens/FormWorkflowScreen.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [작성 예제의 폼 정의](../../references/apps/starter/src/features/form-workflows/model/forms/workflow-form.ts.txt)와 [화면](../../references/apps/starter/src/features/form-workflows/screens/FormWorkflowScreen.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 `useSaveForm`의 `conditionalFields(values)`에 현재 칸마다 `{ field, visible, emptyValue }`를 돌려준다. 칸 경로와 빈 값은 입력 타입으로 검사한다. `visible`은 현재 값으로 계산하고, 숨긴 칸도 선언 목록에 유지한다. 배열 줄은 ``values.rows.map((row, index) => ({ field: `rows[${index}].detail`, visible: showDetail(row), emptyValue: '' }))``처럼 줄마다 선언한다. 폼 칸은 이 선언을 읽어 그리지 않으므로 화면에서 조건을 다시 쓰지 않는다. 직접 만든 표현은 `editor.isVisible(name)` 또는 `useFormFieldBinding`의 `visible`을 읽는다. `Form.Section` 접기는 칸·값·검증을 유지하는 별개 동작이다.
 

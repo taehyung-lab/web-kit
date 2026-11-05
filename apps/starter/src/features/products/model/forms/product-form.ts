@@ -1,9 +1,9 @@
-// 파일 책임: 상품 등록·수정 폼의 값 모양·검증 schema와, 원본 → 폼 값 / 폼 결과 → 저장 요청 변환, 서버 필드 오류 대응.
+// 파일 책임: 상품 등록·수정 폼의 값 모양·검증 schema와, 원본 → 폼 값 / 폼 결과 → 저장 요청 변환, 서버 필드 오류 대응(순수).
 import type { ProductUpsertRequest } from '@/api/generated/models';
 import { formMessages } from '@/shared/lib/form-messages';
 import type { FieldError } from '@boosterlab/web-kit/failure';
 import { z } from 'zod';
-import { PRODUCT_STATUSES, type Product, type ProductStatus } from './product';
+import { PRODUCT_STATUSES, type Product, type ProductStatus } from '../product';
 
 const m = (key: string) => formMessages.encode(`products.form.errors.${key}`);
 const amount = z.string().trim().regex(/^\d{1,9}$/, m('amount')).transform(Number);

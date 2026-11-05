@@ -1,37 +1,27 @@
-// 파일 책임: 로그인 화면. 자격증명 거절(401)은 입력 아래 한 줄로, 그 밖의 실패는 실패 종류 문구로 보인다. 세션 시작은 onSignedIn이 맡는다.
+// 파일 책임: 로그인 화면. 자격증명 거절(401)은 입력 아래 한 줄로, 그 밖의 실패는 실패 종류 문구로 보인다. 요청·세션·이동은 로그인 flow가 맡는다.
 import { failureCopyKey } from '@/shared/lib/failure-copy';
 import { useFieldMessage } from '@/shared/lib/form-messages';
-import { isRequestFailure } from '@boosterlab/web-kit/failure';
-import { useSaveForm } from '@boosterlab/web-kit/form';
 import { Form } from '@/shared/ui/web-kit/form/ui';
 import { useTranslation } from 'react-i18next';
-import { signIn } from '../api/auth';
-import { loginSchema, loginSource, type LoginInput, type LoginValues } from '../model/login-form';
+import { useLoginFlow } from '../flows/use-login-flow';
+import type { LoginInput } from '../model/forms/login-form';
+import { loginFailureCopyKey } from '../model/rules/login-failure';
 
 const F = Form.of<LoginInput>();
 
-/** 로그인 폼. notice는 세션 종료 사유처럼 이 화면에 들어온 이유를 보인다. */
+/** 로그인 폼. notice는 세션 종료 사유처럼 이 화면에 들어온 이유, redirect는 로그인 뒤 돌아갈 곳이다. */
 export function LoginScreen({
   notice,
   showMockHint,
-  onSignedIn,
+  redirect,
 }: {
   readonly notice?: string;
   readonly showMockHint: boolean;
-  readonly onSignedIn: (accessToken: string) => void;
+  readonly redirect: string | undefined;
 }) {
   const { t } = useTranslation();
   const message = useFieldMessage();
-  /** 입력한 자격증명으로 로그인하고 세션 시작에 쓸 토큰을 돌려준다. */
-  async function submitLogin(values: LoginValues) {
-    return { accessToken: await signIn(values.loginId, values.password) };
-  }
-  const editor = useSaveForm({
-    schema: loginSchema,
-    source: loginSource,
-    save: submitLogin,
-    onSaved: (result) => onSignedIn(result.accessToken),
-  });
+  const { editor } = useLoginFlow({ redirect });
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
@@ -42,14 +32,7 @@ export function LoginScreen({
             {notice}
           </p>
         )}
-        <Form
-          editor={editor}
-          protect={false}
-          formatError={message}
-          renderFailure={(failure) =>
-            isRequestFailure(failure) && failure.kind === 'unauthorized' ? t('auth.credentialRejected') : t(failureCopyKey(failure))
-          }
-        >
+        <Form editor={editor} protect={false} formatError={message} renderFailure={(failure) => t(loginFailureCopyKey(failure) ?? failureCopyKey(failure))}>
           <F.Text name="loginId" label={t('auth.loginId')} autoFocus autoComplete="username" />
           <F.Text name="password" label={t('auth.password')} type="password" autoComplete="current-password" />
           <F.Failure />

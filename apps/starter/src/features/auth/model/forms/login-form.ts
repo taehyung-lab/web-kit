@@ -1,4 +1,4 @@
-// 파일 책임: 로그인 폼의 빈 값과 입력 schema. 화면(screens/LoginScreen)은 이것을 import해 모양과 연결만 맡는다.
+// 파일 책임: 로그인 폼의 빈 값과 입력 schema(순수). 로그인 flow가 저장 수명에 연결하고 화면은 그 결과만 그린다.
 import { formMessages } from '@/shared/lib/form-messages';
 import { z } from 'zod';
 

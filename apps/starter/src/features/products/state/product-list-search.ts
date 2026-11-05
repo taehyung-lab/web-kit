@@ -1,13 +1,12 @@
 // 파일 책임: 상품 목록 URL 검색 선언(web-kit defineSearch)과, 확정 검색 → 목록 요청 변환.
+// URL은 목록·상세를 오가도 남는 화면 사이 상태라 state에 둔다. 분류 확인(check)은 서버 선택지 query를 묶으므로 순수 model에 두지 않는다.
 import type { ListProductsParams } from '@/api/generated/models';
 import { validateDateRange } from '@boosterlab/web-kit';
 import { defineSearch, type FullSearch } from '@boosterlab/web-kit/search';
 import { z } from 'zod';
 import { categoryOptionsQuery } from '../api/categories';
-import { PRODUCT_STATUSES, type Category, type ProductStatus } from './product';
-
-export const PAGE_SIZES = [10, 20, 50] as const;
-export const SORT_KEYS = ['createdAt', 'name', 'price'] as const;
+import { PRODUCT_STATUSES, type Category, type ProductStatus } from '../model/product';
+import { PAGE_SIZES, SORT_KEYS } from '../model/rules/product-list-policy';
 
 /** URL의 쉼표 목록 → 상태 배열. 중복을 없애고 서버 enum 순서로 맞춰 정규 URL이 하나가 되게 한다. */
 const statusList = z

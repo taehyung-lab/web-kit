@@ -1,15 +1,14 @@
-// 파일 책임: 약관 상세. 단건 상태 판정은 web-kit useRecord가 하고, 여기서는 항목 배치만 정한다.
+// 파일 책임: 약관 상세. 단건 상태 판정은 상세 flow(useRecord)가 하고, 여기서는 항목 배치만 정한다.
 import { Record } from '@/shared/ui/web-kit/detail-ui';
-import { useRecord } from '@boosterlab/web-kit/record';
 import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { failureCopyKey } from '@/shared/lib/failure-copy';
-import { termsQuery } from '../api/terms';
+import { useTermsDetail } from '../flows/use-terms-detail';
 
 /** 약관 하나의 상세. */
 export function TermsDetailScreen({ termsId }: { readonly termsId: string }) {
   const { t } = useTranslation();
-  const state = useRecord(termsQuery(termsId), termsId, { progress: 'page' });
+  const state = useTermsDetail(termsId);
   return (
     <div className="flex flex-col gap-5">
       <h1>{t('terms.detailTitle')}</h1>

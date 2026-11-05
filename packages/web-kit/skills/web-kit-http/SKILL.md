@@ -60,9 +60,9 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
 
 ## 프로젝트 연결
 
-소비 검사 연결은 [starter의 세션 연결](../../references/apps/starter/src/app/session-idle.ts.txt), [경고 UI](../../references/apps/starter/src/app/SessionWarning.tsx.txt), [소비 검사](../../references/apps/starter/src/app/session-idle.test.tsx.txt)에 있다. 실제 운영 서버의 경로·헤더 정책을 정하지 않는 격리 fixture이며 starter 기본 화면에는 유휴 정책을 켜지 않는다. [시간·탭 순서 검사](../../references/packages/web-kit/tests/session-policy.test.ts.txt)와 [기존 수명 검사](../../references/packages/web-kit/tests/session-idle.test.ts.txt)는 실제 소비 프로젝트의 연결 검사를 대신하지 않는다.
+소비 검사 연결은 [starter의 세션 연결](../../references/apps/starter/src/runtime/session-idle.ts.txt), [경고 UI](../../references/apps/starter/src/app/session/SessionWarning.tsx.txt), [소비 검사](../../references/apps/starter/src/app/session/session-idle.test.tsx.txt)에 있다. 실제 운영 서버의 경로·헤더 정책을 정하지 않는 격리 fixture이며 starter 기본 화면에는 유휴 정책을 켜지 않는다. [시간·탭 순서 검사](../../references/packages/web-kit/tests/session-policy.test.ts.txt)와 [기존 수명 검사](../../references/packages/web-kit/tests/session-idle.test.ts.txt)는 실제 소비 프로젝트의 연결 검사를 대신하지 않는다.
 
-실제 조립 예: [apps/starter/src/app/web-kit.ts](../../references/apps/starter/src/app/web-kit.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/runtime/web-kit.ts](../../references/apps/starter/src/runtime/web-kit.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 키트 초기 연결의 진입점은 한 곳이다(기본 `app/web-kit.ts`): session·http·QueryClient를 만들고 아래 adapter를 넘긴다. adapter 구현은 각자 자리에 둔다.
 
@@ -106,7 +106,7 @@ E1(401이 업무 실행 전인가), E2(일반·재발급 요청의 status·resul
 
 ## 프로젝트별 응답 계약
 
-실제 조립 예: [apps/starter/src/app/web-kit.ts](../../references/apps/starter/src/app/web-kit.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/runtime/web-kit.ts](../../references/apps/starter/src/runtime/web-kit.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 `createHttp`의 `response`는 필수다. `response: { read(body, status, requestId) }`로 서버 형식·성공 판정·코드 의미를 프로젝트가 해석한다. 결과는 `{ ok: true, data }` 또는 `{ ok: false, failure: RequestFailure }`다. HTTP 거절은 성공으로 바꿀 수 없다. 네트워크·취소·타임아웃과 세션 회복은 키트가 맡는다. 같은 코드의 메시지 키도 프로젝트마다 다를 수 있으며 번역 문구는 키트에 넣지 않는다.
 
@@ -118,6 +118,6 @@ Spring 봉투 서버는 `/http`의 `springEnvelope(results)`를 `response`에 �
 
 ## 기존 소비자 이전
 
-요청과 마감 전달 연결은 [starter 세션 예제](../../references/apps/starter/src/app/session-idle.ts.txt)를 참고한다. 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다. 예제는 격리 소비 검사다.
+요청과 마감 전달 연결은 [starter 세션 예제](../../references/apps/starter/src/runtime/session-idle.ts.txt)를 참고한다. 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다. 예제는 격리 소비 검사다.
 
 프로젝트의 기존 정책 값은 그 프로젝트 문서에서 확인해 연결한다. 전역 최신 표본 변수를 쓰던 연결은 `requestWithResponse`로 교체한다. 탭 전체 동시 요청 수의 엄격한 제한과 다른 탭 종료 동안의 연장 대기는 보장을 확대하지 않는다. 저장 불가·Web Locks/Worker 부재 환경도 실제 적용 환경에서 확인한다.
