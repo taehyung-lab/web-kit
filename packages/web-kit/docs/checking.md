@@ -2,7 +2,7 @@
 
 registry item은 함께 설치하는 파일 묶음이다. UI와 함께 설치된 짧은 연결 파일은 자기 복사본을 패키지의 공통 검사 함수에 넘긴다. 단언은 패키지가 소유하므로 프로젝트로 복제하지 않는다. `/testing/unit`은 jsdom(브라우저 DOM을 흉내 내는 단위 환경)에서 상태·속성·요청 수를, `/testing/browser`는 Playwright의 실제 브라우저에서 Tab·중첩 포털·배경 클릭 차단·Enter·포커스 복원을 검사한다. `/testing/fixtures`는 자기 복사본을 주입할 검사 화면을 제공한다.
 
-선택 소비는 기능별 작은 검사 입구를 사용한다. 폼은 `/testing/unit/form`, 인증은 `/testing/unit/auth`와 `/testing/fixtures/auth`, 폼의 UI 의존은 `/testing/unit/choice`·`/testing/unit/primitives`·`/testing/unit/styles`로 연결한다. 기존 `/testing/unit`·`/testing/fixtures`는 호환 입구로 남지만 전체 검사 의존을 불러올 수 있다. form의 zod는 검사 의존이며 사용하는 폼 schema 구현을 제한하지 않는다.
+선택 소비는 기능별 작은 검사 입구를 사용한다. 폼은 `/testing/unit/form`, 인증은 `/testing/unit/auth`와 `/testing/fixtures/auth`, 폼의 UI 의존은 `/testing/unit/choice`·`/testing/unit/primitives`로 연결한다(칸·구역 여백 검사 G110은 폼 검사에 들어 있다). 키트 항목 검사는 프로젝트에 설치된 shadcn 기본 부품을 그대로 import해 실행한다. 브라우저 검사 화면은 프로젝트 테마 CSS `@/styles.css`를 읽는다. 기존 `/testing/unit`·`/testing/fixtures`는 호환 입구로 남지만 전체 검사 의존을 불러올 수 있다. form의 zod는 검사 의존이며 사용하는 폼 schema 구현을 제한하지 않는다.
 
 ## 현재 파일에서 새로 실행
 
@@ -29,6 +29,18 @@ pnpm exec web-kit-check --run web-kit.check.json --installation registry-install
 출력은 선언한 입력 파일·디렉터리와 겹치지 않는 곳에 둔다. 겹치면 파일 정리와 명령 실행 전에 거절한다. 검사 입력·출력은 부모 폴더까지 실제 경로로 선언한다. 심링크(다른 경로를 가리키는 파일·폴더 링크)를 통한 별칭은 거절한다. `work`·`dist` 같은 결과 폴더의 제외는 프로젝트 루트에만 적용하므로 `src/work` 같은 실제 소스는 기록한다.
 
 실행 후 같은 파일·결과인지 다시 확인하려면 `--run` 대신 `--verify-run web-kit.check.json`을 사용한다. `--receipt`로 실행 기록 경로를 바꿀 수 있다. 파일·설정·lockfile·보고서가 바뀌면 새 실행이 필요하다. 이 기록은 실수로 과거 결과를 재사용하는 것을 잡으며, 실제 제품이 검사 대상 UI를 쓰는지 또는 의도적으로 조작된 검사까지 증명하지 않는다.
+
+## CI에 넣을 명령
+
+소비 프로젝트의 필수 CI(병합 전 통과해야 하는 작업)에 아래를 넣는다. 타입·lint·build 같은 기존 명령은 그대로 둔다. 단위·브라우저 러너는 `web-kit-check --run`이 위 설정의 명령으로 직접 실행하므로 따로 한 번 더 돌릴 필요가 없다. 모노레포 앱이면 각 명령을 그 앱 폴더에서 실행한다(예: `pnpm --dir apps/admin exec ...`).
+
+```sh
+pnpm install --frozen-lockfile
+pnpm exec playwright install --with-deps chromium
+pnpm exec web-kit-check --run web-kit.check.json --installation registry-installation.json --unit .web-kit-results/unit.json --browser .web-kit-results/browser.json
+```
+
+설치본을 고치지 않고 써야 하는 검사 앱만 마지막 명령에 `--strict-fingerprints`를 붙인다. 이 단계를 건너뛰거나 실패를 허용(`continue-on-error` 등)하면 키트 보장을 확인했다고 하지 않는다. CI 설정 변경과 검사 대상 선정은 독립 검토로 확인한다([배포 결정](../references/docs/decisions/0002-distribution.md)).
 
 ## 기존 보고서 점검
 

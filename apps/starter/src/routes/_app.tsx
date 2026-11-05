@@ -2,7 +2,8 @@
 import { useAuth } from '@/app/auth';
 import { changeLanguage, LANGUAGES } from '@/app/i18n';
 import { session } from '@/app/web-kit';
-import { BlockingProgress, Button } from '@/shared/ui/web-kit/ui';
+import { Button } from '@/shared/ui/button';
+import { BlockingProgress } from '@/shared/ui/web-kit/ui';
 import { createFileRoute, Link, Outlet, redirect } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 

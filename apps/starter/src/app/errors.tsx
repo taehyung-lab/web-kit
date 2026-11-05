@@ -1,6 +1,6 @@
 // 파일 책임: 경로 오류·없는 경로 화면과, router 밖 렌더 오류를 받는 마지막 경계.
 import { failureCopyKey } from '@/shared/lib/failure-copy';
-import { Button } from '@/shared/ui/web-kit/ui';
+import { Button } from '@/shared/ui/button';
 import { Link, useRouter, type ErrorComponentProps } from '@tanstack/react-router';
 import { Component, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,7 +13,7 @@ export function RouteError({ error, reset }: ErrorComponentProps) {
     <section role="alert" className="mx-auto flex max-w-md flex-col items-center gap-4 py-24 text-center">
       <p className="text-base font-medium text-slate-800">{t(failureCopyKey(error))}</p>
       <Button
-        variant="secondary"
+        variant="outline"
         onClick={() => {
           reset();
           void router.invalidate();

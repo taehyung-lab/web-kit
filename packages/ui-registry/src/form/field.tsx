@@ -72,7 +72,7 @@ export function FieldFrame({
     <>
       {label}
       {required ? (
-        <span aria-hidden="true" className={classes.required}>
+        <span aria-hidden="true" data-slot="field-required" className={classes.required}>
           *
         </span>
       ) : null}
@@ -92,7 +92,7 @@ export function FieldFrame({
       errorClassName={classes.error}
     >
       {(control, error) => (
-        <div className={classes.root}>
+        <div data-slot="form-field" className={classes.root}>
           {labelTarget === "group" ? (
             <span id={labelId} className={classes.label}>
               {labelText}

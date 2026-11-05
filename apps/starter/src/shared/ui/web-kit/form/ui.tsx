@@ -9,10 +9,18 @@ import {
   createContext,
   useContext,
   useId,
+  useState,
   type FormHTMLAttributes,
   type KeyboardEvent,
   type ReactNode,
 } from 'react';
+import { cn } from 'cn';
+import { Button } from '@/shared/ui/button';
+import { Checkbox as CheckboxInput } from '@/shared/ui/checkbox';
+import { Input } from '@/shared/ui/input';
+import { Label } from '@/shared/ui/label';
+import { Select as SelectRoot, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Textarea } from '@/shared/ui/textarea';
 import { AlertDialog, ConfirmDialog, Dialog } from '../ui/dialog';
 import { Pending } from '../ui/pending';
 import { FormArrayField, type FormArrayRows } from '@boosterlab/web-kit/form';
@@ -70,7 +78,7 @@ export function FormGuard({
         {text.description}
       </ConfirmDialog>
       {owner.failure !== undefined && (
-        <p role="alert" className="wk-error">
+        <p role="alert" className={errorClass}>
           {copy.navigationFailed}
         </p>
       )}
@@ -162,7 +170,7 @@ function FormRoot({
     <FormBindingProvider editor={editor} submitOrigin={submitOrigin}><FormContext.Provider value={value}>
       <form
         {...formProps}
-        className={join('wk-form', formProps.className)}
+        className={cn('grid gap-4', formProps.className)}
         {...binding}
       >
         {children}
@@ -179,7 +187,7 @@ function FormRoot({
         onCancel={() => editor.referenceChange?.cancel()}
       />
       {editor.referenceFailure !== undefined && (
-        <p role="alert" className="wk-error">
+        <p role="alert" className={errorClass}>
           {value.formatError([editor.referenceFailure]) ?? editor.referenceFailure}
         </p>
       )}
@@ -233,7 +241,7 @@ function Field<V = unknown>({
           required={isRequired}
           labelTarget={labelTarget}
           message={disabled ? undefined : formatError(field.state.meta.errors)}
-          classes={{ root: 'wk-field', label: 'wk-label', required: 'wk-required', description: 'wk-description', error: 'wk-error' }}
+          classes={fieldClasses}
         >
           {(control, labelId) =>
             children(
@@ -265,10 +273,10 @@ function Choice({ name, description, status = 'ready', onRetry, ...props }: Form
       {({ value, change, blur, ...control }, labelId) => {
         if (status === 'ready') return <ChoiceInput {...props} {...control} value={value} onValueChange={change} onBlur={blur} />;
         const failureText = status === 'loading' ? undefined : renderFailure(status.failure, 'options');
-        return <div {...control} role="group" tabIndex={-1} aria-labelledby={labelId} className="wk-options-state">
-          {status === 'loading' ? <span role="status">{copy.loading}</span> : failureText === null ? null : <span role="alert">
+        return <div {...control} role="group" tabIndex={-1} aria-labelledby={labelId} className={optionsStateClass}>
+          {status === 'loading' ? <span role="status" className="text-muted-foreground">{copy.loading}</span> : failureText === null ? null : <span role="alert" className="flex flex-wrap items-center gap-2 text-destructive">
             {failureText ?? copy.optionsFailed}
-            {onRetry !== undefined && <button type="button" className="wk-button wk-button-ghost" onClick={retry.onRetry}>{copy.retry}</button>}
+            {onRetry !== undefined && <Button type="button" variant="outline" size="sm" onClick={retry.onRetry}>{copy.retry}</Button>}
           </span>}
         </div>;
       }}
@@ -308,9 +316,8 @@ function Text({
         const text = textBinding.value;
         return (
           <>
-            <input
+            <Input
               {...control}
-              className="wk-input"
               type={type}
               placeholder={placeholder}
               autoComplete={autoComplete}
@@ -326,7 +333,7 @@ function Text({
               }}
             />
             {showCount && maxLength !== undefined ? (
-              <p className="wk-count" aria-live="polite">
+              <p className={countClass} aria-live="polite">
                 {copy.count(text.length, maxLength)}
               </p>
             ) : null}
@@ -353,9 +360,8 @@ function TextArea({
         const text = textBinding.value;
         return (
           <>
-            <textarea
+            <Textarea
               {...control}
-              className="wk-input wk-textarea"
               placeholder={placeholder}
               rows={rows}
               maxLength={maxLength}
@@ -367,7 +373,7 @@ function TextArea({
               }}
             />
             {showCount && maxLength !== undefined ? (
-              <p className="wk-count" aria-live="polite">
+              <p className={countClass} aria-live="polite">
                 {copy.count(text.length, maxLength)}
               </p>
             ) : null}
@@ -416,50 +422,95 @@ function Select({
               role="group"
               tabIndex={-1}
               aria-labelledby={labelId}
-              className="wk-options-state"
+              className={optionsStateClass}
             >
               {status === 'loading' ? (
-                <span role="status">{copy.loading}</span>
+                <span role="status" className="text-muted-foreground">{copy.loading}</span>
               ) : failureText === null ? null : (
-                <span role="alert">
+                <span role="alert" className="flex flex-wrap items-center gap-2 text-destructive">
                   {failureText ?? copy.optionsFailed}
                   {onRetry === undefined ? null : (
-                    <button
-                      type="button"
-                      className="wk-button wk-button-ghost"
-                      onClick={retry.onRetry}
-                    >
+                    <Button type="button" variant="outline" size="sm" onClick={retry.onRetry}>
                       {copy.retry}
-                    </button>
+                    </Button>
                   )}
                 </span>
               )}
             </div>
           );
         }
+        const { name, disabled, ...trigger } = control;
         return (
-          <select
+          <SelectControl
             key="control"
-            {...control}
-            ref={retry.inputRef}
-            className="wk-input"
+            name={name}
+            disabled={disabled}
+            trigger={trigger}
+            triggerRef={retry.inputRef}
             value={selected}
+            options={options}
+            placeholder={placeholder ?? copy.choose}
             onBlur={blur}
-            onChange={(event) => {
-              const next = event.target.value;
-              change(next, () => onChange?.(next));
-            }}
-          >
-            {selected === '' ? <option value="">{placeholder ?? copy.choose}</option> : null}
-            {options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            onValueChange={(next) => change(next, () => onChange?.(next))}
+          />
         );
       }}
     </Field>
+  );
+}
+
+/**
+ * Form.Select의 입력(shadcn Select). 값이 비었을 때만 placeholder를 보이고 선택지에는 빈 값을 두지 않는다(필수 선택을 고른 뒤 다시 비우는 길을 두지 않는다).
+ * 칸을 떠난 판정(blur)은 트리거에서 팝업으로 포커스가 옮겨 갈 때는 하지 않고, 팝업이 닫힌 뒤 칸 밖으로 나갈 때만 한다.
+ */
+function SelectControl({
+  name,
+  disabled,
+  trigger,
+  triggerRef,
+  value,
+  options,
+  placeholder,
+  onBlur,
+  onValueChange,
+}: {
+  readonly name: string;
+  readonly disabled: boolean;
+  readonly trigger: Omit<FieldControlProps, never> & { readonly 'aria-required': boolean };
+  readonly triggerRef: (node: HTMLElement | null) => void;
+  readonly value: string;
+  readonly options: readonly { readonly value: string; readonly label: string }[];
+  readonly placeholder: string;
+  readonly onBlur: () => void;
+  readonly onValueChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <SelectRoot
+      name={name}
+      disabled={disabled}
+      items={options}
+      value={value === '' ? null : value}
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) onBlur();
+      }}
+      onValueChange={(next) => {
+        if (typeof next === 'string') onValueChange(next);
+      }}
+    >
+      <SelectTrigger {...trigger} ref={triggerRef} className="w-full" onBlur={() => (open ? undefined : onBlur())}>
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </SelectRoot>
   );
 }
 
@@ -474,27 +525,27 @@ function Checkbox({ onChange, ...field }: FormFieldProps & { readonly onChange?:
       {(state) => {
         const message = field.disabled ? undefined : formatError(state.state.meta.errors);
         return (
-          <div className="wk-field wk-field-check">
-            <label className="wk-check-label" htmlFor={id}>
-              <input
+          <div data-slot="form-field" className="grid content-start gap-2">
+            <Label htmlFor={id} className="font-normal">
+              {/* 체크박스 자체(button)가 id를 받아 라벨 연결·오류 포커스가 보이는 요소로 간다. */}
+              <CheckboxInput
+                nativeButton
+                render={<button type="button" />}
                 id={id}
                 name={field.name}
-                type="checkbox"
-                className="wk-checkbox"
                 disabled={field.disabled}
                 aria-invalid={message !== undefined}
                 aria-describedby={message === undefined ? undefined : `${id}-error`}
                 checked={state.state.value === true}
                 onBlur={state.handleBlur}
-                onChange={(event) => {
-                  const checked = event.target.checked;
+                onCheckedChange={(checked) => {
                   binding.change(checked, state.handleChange, () => onChange?.(checked));
                 }}
               />
               {field.label}
-            </label>
+            </Label>
             {message === undefined ? null : (
-              <p id={`${id}-error`} role="alert" className="wk-error">
+              <p id={`${id}-error`} role="alert" className={errorClass}>
                 {message}
               </p>
             )}
@@ -520,9 +571,10 @@ function FileField({ accept, ...field }: FormFieldProps & { readonly accept?: st
         const nameId = `${control.id}-file`;
         const describedBy = [control['aria-describedby'], name === undefined ? undefined : nameId].filter(Boolean).join(' ');
         return (
-          <div className="wk-actions">
-            <input
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
               {...control}
+              className="w-auto"
               aria-describedby={describedBy === '' ? undefined : describedBy}
               // 고른 파일이 사라지면(제거·초기화) 네이티브 입력도 비우도록 다시 만든다.
               key={file.inputKey}
@@ -535,15 +587,10 @@ function FileField({ accept, ...field }: FormFieldProps & { readonly accept?: st
             />
             {name === undefined ? null : (
               <>
-                <span id={nameId}>{name}</span>
-                <button
-                  type="button"
-                  className="wk-button wk-button-ghost"
-                  disabled={field.disabled}
-                  onClick={file.remove}
-                >
+                <span id={nameId} className="text-sm">{name}</span>
+                <Button type="button" variant="ghost" size="sm" disabled={field.disabled} onClick={file.remove}>
                   {copy.removeFile}
-                </button>
+                </Button>
               </>
             )}
           </div>
@@ -610,8 +657,8 @@ function Section({
     );
   }
   return (
-    <fieldset className={join('wk-section', className)}>
-      {title === undefined ? null : <legend className="wk-section-title">{title}</legend>}
+    <fieldset data-slot="form-section" className={cn('grid min-w-0 gap-4 rounded-xl border border-border p-4', className)}>
+      {title === undefined ? null : <legend className="px-1 text-sm font-medium">{title}</legend>}
       {children}
     </fieldset>
   );
@@ -644,21 +691,27 @@ export function FormSection({
   const section = useFormSection(form, fields);
   const contentId = useId();
   return (
-    <section className={join('wk-section', 'wk-section-collapsible', className)}>
-      <h2 className="wk-section-heading">
-        <button type="button" className="wk-section-toggle" aria-expanded={section.open} aria-controls={contentId} onClick={section.toggle}>
+    <section data-slot="form-section" className={cn('min-w-0 rounded-xl border border-border', className)}>
+      <h2 className="text-base font-medium">
+        <button
+          type="button"
+          className="flex w-full items-center gap-2 rounded-xl px-4 py-3 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          aria-expanded={section.open}
+          aria-controls={contentId}
+          onClick={section.toggle}
+        >
           {title}
           {section.errorCount > 0 ? ' ' : null}
           {section.errorCount > 0 && errorMarker !== undefined ? errorMarker(section.errorCount) : null}
           {section.errorCount > 0 && errorMarker === undefined ? (
-            <span className="wk-section-badge">
+            <span className="rounded-full bg-destructive px-2 text-xs text-white">
               <span aria-hidden="true">!</span>
-              <span className="wk-visually-hidden">{errorLabel(section.errorCount)}</span>
+              <span className="sr-only">{errorLabel(section.errorCount)}</span>
             </span>
           ) : null}
         </button>
       </h2>
-      <div id={contentId} className="wk-section-content" hidden={!section.open}>
+      <div id={contentId} className="grid gap-4 px-4 pb-4" hidden={!section.open}>
         {children}
       </div>
     </section>
@@ -677,7 +730,7 @@ function Failure({ className }: { readonly className?: string }) {
   return (
     <>
       {editor.formFailure !== undefined && save !== null ? (
-        <p role="alert" className={join('wk-form-failure', className)}>
+        <p role="alert" data-slot="form-failure" className={cn(failureClass, className)}>
           {save ??
             (editor.formFailure instanceof FormRejection && editor.formFailure.root !== undefined
               ? formatError([editor.formFailure.root]) ?? editor.formFailure.root
@@ -686,11 +739,11 @@ function Failure({ className }: { readonly className?: string }) {
         </p>
       ) : null}
       {showCompletion ? (
-        <p role="alert" className={join('wk-form-failure', className)}>
+        <p role="alert" data-slot="form-failure" className={cn(failureClass, 'flex flex-wrap items-center gap-2', className)}>
           {completion ?? copy.completionFailed}
-          <button type="button" className="wk-button wk-button-ghost" onClick={() => void editor.complete()}>
+          <Button type="button" variant="outline" size="sm" onClick={() => void editor.complete()}>
             {copy.retry}
-          </button>
+          </Button>
         </p>
       ) : null}
     </>
@@ -716,12 +769,12 @@ function Submit({
   const binding = useFormSubmitBinding(editor, submitOrigin, mode);
   return (
     <>
-      <button
+      <Button
         {...binding.buttonProps}
-        className={join('wk-button wk-button-primary', className)}
+        className={cn(lockedClass, className)}
       >
         {children ?? copy.submit}
-      </button>
+      </Button>
       {binding.pending ? (
         <Pending label={copy.saving} />
       ) : null}
@@ -745,16 +798,17 @@ function Cancel({
   const { editor, copy } = useFormContext();
   const cancel = useFormCancel(editor, to);
   return (
-    <button
+    <Button
       type="button"
-      className={join('wk-button wk-button-secondary', className)}
+      variant="outline"
+      className={cn(lockedClass, className)}
       aria-disabled={cancel.disabled || undefined}
       onClick={() => {
         cancel.cancel();
       }}
     >
       {children ?? copy.cancel}
-    </button>
+    </Button>
   );
 }
 
@@ -822,7 +876,7 @@ function Saved({
     >
       {children}
       {editor.completionFailure !== undefined && failure !== null ? (
-        <p role="alert" className="wk-error">
+        <p role="alert" className={errorClass}>
           {failure ?? copy.completionFailed}
         </p>
       ) : null}
@@ -866,10 +920,21 @@ function FormDialog({
 /** 지금 폼의 편집 상태를 읽는다(프로젝트가 자기 표시를 그릴 때). */
 export { useFormEditor } from '@boosterlab/web-kit/form';
 
-/** 표시 클래스 이름을 연결한다. */
-function join(...names: readonly (string | undefined)[]): string {
-  return names.filter(Boolean).join(' ');
-}
+// 표시 클래스. 색·모양은 프로젝트 shadcn 테마 토큰이 정한다. 프로젝트가 배치하는 블록(칸·구역·폼 한 줄)의 바깥 여백(margin)은 두지 않는다:
+// 클래스 우선순위 여백은 프로젝트의 간격 유틸리티(space-y 등)를 지운다(결정 0007, 검사 G110).
+const fieldClasses = {
+  root: 'grid content-start gap-2',
+  label: 'flex items-center gap-1 text-sm leading-none font-medium',
+  required: 'text-destructive',
+  description: 'text-sm text-muted-foreground',
+  error: 'text-sm text-destructive',
+};
+const errorClass = 'text-sm text-destructive';
+const countClass = 'text-right text-xs text-muted-foreground';
+const optionsStateClass = 'flex min-h-8 flex-wrap items-center gap-2 text-sm';
+const failureClass = 'rounded-lg border border-destructive/40 px-3 py-2 text-sm text-destructive';
+/** aria-disabled로 잠근 버튼(포커스는 유지)의 표시. */
+const lockedClass = 'aria-disabled:cursor-default aria-disabled:opacity-50';
 
 /**
  * 폼 묶음 부품. `<Form editor={useSaveForm(...)}>` 안에 부품을 원하는 배치로 둔다.

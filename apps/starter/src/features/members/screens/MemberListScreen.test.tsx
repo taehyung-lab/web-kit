@@ -23,7 +23,8 @@ describe('member list (search to load)', () => {
     const user = userEvent.setup();
     const { requests } = renderApp('/members');
     await screen.findByText('검색 조건을 정하고 검색을 누르세요.');
-    await user.selectOptions(screen.getByRole('combobox', { name: '검색어 검색 대상' }), 'email');
+    await user.click(screen.getByRole('combobox', { name: '검색어 검색 대상' }));
+    await user.click(await screen.findByRole('option', { name: '이메일' }));
     await user.type(screen.getByRole('textbox', { name: '검색어' }), 'member2');
     await user.click(screen.getByRole('button', { name: '검색' }));
     await waitFor(() => expect(memberRequests(requests).at(-1)?.line).toBe('GET /api/members?page=0&size=100&sort=joinedAt,desc&periodType=joinedAt'));
@@ -56,7 +57,8 @@ describe('member list (search to load)', () => {
     const { router, requests } = renderApp('/members?searched=true&accountStatuses=%5B%22DORMANT%22%5D');
     expect(await screen.findAllByRole('cell', { name: '휴면' })).not.toHaveLength(0);
     expect(memberRequests(requests).at(-1)?.line).toContain('accountStatus=DORMANT');
-    await user.selectOptions(screen.getByRole('combobox', { name: '정렬' }), 'name');
+    await user.click(screen.getByRole('combobox', { name: '정렬' }));
+    await user.click(await screen.findByRole('option', { name: '이름순' }));
     await waitFor(() => expect(router.state.location.search).toMatchObject({ sortType: 'name', accountStatuses: ['DORMANT'] }));
     expect(memberRequests(requests).at(-1)?.line).toContain('sort=name,desc');
   });

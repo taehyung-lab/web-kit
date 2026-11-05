@@ -11,9 +11,9 @@
 
 | import | 키트가 보장하는 것 | 프로젝트가 넘기는 것 |
 |---|---|---|
-| `.` / `/failure` | 실패 12종, 결과 코드 표, 봉투 해석 | 서버 enum의 결과 코드 행 |
-| `/session` | 세대, 시작·종료와 종료 순서(정리 → 안내 → 서버 로그아웃), 다른 탭 변경, 재발급 단일 비행(Web Locks) | 저장 adapter·재발급·서버 로그아웃 호출 |
-| `/session/idle` | 서버 시계·세션별 마감·탭 병합·만료·멈춤/재개 장치 | 명시 마감·0초 필수 선택·선택 활동 부착과 간격·선택 재개 유예·경고 UI([web-kit-http](../skills/web-kit-http/SKILL.md)) |
+| `.` / `/failure` | 실패 12종, 결과 코드 표, 봉투 해석, 앱 안 이동 주소 판정(`safeAppPath`) | 서버 enum의 결과 코드 행, 이동에서 제외할 경로 |
+| `/session` | 세대, 시작·종료와 종료 순서(정리 → 안내 → 서버 로그아웃), 다른 탭 변경, 재발급 단일 비행(Web Locks), 재발급 응답 전용 종료 표 적용 | 저장 adapter·재발급·서버 로그아웃 호출, 선택 재발급 종료 표(`reissueEnd`) |
+| `/session/idle` | 서버 시계·HTTP `Date` 시계 차이(`clockOffsetFromDate`)·세션별 마감·탭 병합·만료·멈춤/재개 장치 | 명시 마감·0초 필수 선택·선택 활동 부착과 간격·선택 재개 유예·경고 UI([web-kit-http](../skills/web-kit-http/SKILL.md)) |
 | `/auth` + registry `auth` | 코드 기한·종류별 단일 요청·늦은 응답 격리, 입력 오류·만료·재전송 표현 | 공유 시계·기한·자리수·서버 요청·성공 처리·문구 |
 | `/session/browser` | 브라우저 저장 장애 복구·외부 이벤트 판별·해제 | 저장 key·동기 schema·읽기 불가 정책 |
 | `/http` | 헤더·토큰, 필수 응답 계약·선택 Spring 해석, 401 재발급 뒤 한 번 재전송, 반영 여부 판정 | 응답 해석·코드 의미·공개 경로·운영 헤더·axios 기본값 |
@@ -24,7 +24,7 @@
 | 루트 + registry `checkbox-tree`·`filter-error` | 순수 기간·트리 계산과 오류/트리 표현 연결 | checkbox·문구·스타일 |
 | `/form` · `/dialog` + registry `form`·`dialog` | 제출·확인·저장·기준선·오류·늦은 결과·이탈의 hook/Provider; 복사본 Form·FormGuard·Dialog | schema·원본·저장·완료 동작·배치·문구 |
 | `/record` + registry `record`·`retry` | 단건 상태·갱신 실패·재시도 focus·마스킹; 복사본 Record·항목·이력 | queryOptions·항목·노출 정책·실패 문구 |
-| `/choice` · `/dialog` + registry `inputs`·`choice`·`dialog`·`pending`·`blocking-progress` | 공통 선택·검색·대화창 포커스·진행 등록 hook과 기본 표현 | 값·문구·셸 배치·업무 행동 |
+| `/choice` · `/dialog` + registry `choice`·`dialog`·`pending`·`blocking-progress`(기본 부품은 shadcn base-nova, 검사 연결 `inputs`) | 공통 선택·검색·대화창 포커스·진행 등록 hook과 기본 부품 조합 | 값·문구·셸 배치·업무 행동·테마 |
 | `/api` | Spring query 직렬화 | 적용 endpoint |
 | `/testing` · `/testing/unit`(기능별 하위 입구 포함) · `/testing/browser` · `/testing/fixtures` | adapter 검사, 복사본 단위·브라우저 적합성 기준·검사 화면 | 실제 복사본·연결 파일·실행 대상 버전 |
 | `/testing/session` | 저장 실패·다른 탭 변경·종료의 adapter 검사(React/Form import 없음) | 자기 저장 adapter와 격리된 검사 환경 |

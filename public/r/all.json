@@ -15,7 +15,6 @@
     "@web-kit/record",
     "@web-kit/checkbox-tree",
     "@web-kit/filter-error",
-    "@web-kit/styles",
     "@web-kit/auth"
   ],
   "files": [],

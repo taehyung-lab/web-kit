@@ -1,5 +1,5 @@
 // 파일 책임: 상품 목록의 제목·필터·작업·결과를 배치하고 경로 이동을 연결한다.
-import { Button } from '@/shared/ui/web-kit/ui';
+import { Button } from '@/shared/ui/button';
 import { ListProvider, ListResult, ResultTable, Pagination } from '@/shared/ui/web-kit/list-ui';
 import { useList } from '@boosterlab/web-kit/list';
 import type { UrlSearch } from '@boosterlab/web-kit/search';
@@ -38,7 +38,7 @@ export function ProductListScreen({
     <div className="flex flex-col gap-5">
       <header>
         <h1>{t('products.title')}</h1>
-        <Button onClick={onCreate}>
+        <Button variant="outline" onClick={onCreate}>
           {t('products.create')}
         </Button>
       </header>

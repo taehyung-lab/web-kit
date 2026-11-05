@@ -36,7 +36,7 @@ function deferred<T>() {
 
 /** 실제 덮개 DOM의 열림을 읽는다. */
 function overlayOpen() {
-  return document.querySelector('.wk-blocking') !== null;
+  return document.querySelector('[data-slot="blocking-progress"]') !== null;
 }
 
 /** 소비처 덮개 복사본 안에 검사 본문을 배치한다. */

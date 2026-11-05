@@ -1,5 +1,7 @@
 # web-kit
 
+web-kit은 React·TanStack(Query·Router·Form) 위에서 관리자 웹의 공통 동작(요청·세션·폼·목록·단건·권한)을 맡는 패키지와, 그 동작을 연결한 shadcn(Base UI)·Tailwind 복사용 UI 부품을 주는 키트다.
+
 관리자 웹의 공용 키트와, 그 키트로 만든 시작용 앱을 함께 관리하는 저장소다. 범위·책임은 [공용 구조](docs/decisions/0001-scope-and-boundaries.md), UI 소유·배포 이유는 [배포 결정](docs/decisions/0002-distribution.md), 완료·발행 조건은 [유지보수](docs/maintaining.md)가 정한다.
 
 ```
@@ -15,7 +17,7 @@ scripts/           starter 맞추기, registry 일치·문서 링크 검사, 검
 
 starter는 기본 연결과 조립 예이며 모든 프로젝트의 고정 페이지가 아니다. 프로젝트는 기능별로 선택해 쓰고 자기 업무·서버 계약·화면을 소유한다. [페이지 일부만 다른 경우](docs/decisions/0001-scope-and-boundaries.md#페이지-일부만-다른-경우)의 책임 구분을 따른다. 공용 수정은 패키지 업데이트로 받되, UI 복사본 교정이 필요한 변경은 프로젝트 수정과 대조해 적용한다.
 
-**5.0.0이 첫 정식 기준이며, 그 전 버전(태그 v0.x–v4.1.0)은 시험판이다.** 현재 패키지는 `5.0.0-rc.7` 로컬 후보이며 아직 정식 발행하지 않았다. 새 프로젝트에 설치하는 agent-workflow-kit(AWK)은 tag `v3.0.0`(= commit `bc3421e`)이다. 이 저장소 자체의 작업 기준은 [.agents/agent-workflow-kit.version](.agents/agent-workflow-kit.version)의 고정 버전을 따른다.
+**5.0.0이 첫 정식 기준이며, 그 전 버전(태그 v0.x–v4.1.0)은 시험판이다.** 현재 패키지는 `5.0.0-rc.8` 로컬 후보이며 아직 정식 발행하지 않았다. 새 프로젝트에 설치하는 agent-workflow-kit(AWK)은 tag `v3.0.0`(= commit `bc3421e`)이다. 이 저장소 자체의 작업 기준은 [.agents/agent-workflow-kit.version](.agents/agent-workflow-kit.version)의 고정 버전을 따른다.
 
 ## 명령
 

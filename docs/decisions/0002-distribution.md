@@ -39,4 +39,19 @@
 
 - context 부품은 위치를 바꿀 때 같은 배선을 반복하지 않게 한다. render prop만 강제하면 배치가 한 함수에 갇힌다.
 - 단순 table을 기본으로 하고 가상화는 선택적으로 쓴다. 정렬·선택·상태는 목록이 이미 소유하므로 별도 Table 라이브러리를 필수 peer로 늘리지 않는다(구현 선택).
-- 목록 일부 선택은 Base UI Checkbox, 폼 단일 체크는 네이티브 input을 쓴다. 폼의 라벨 클릭·제출 값·접근 가능한 이름 연결을 단순하게 유지한다(구현 선택).
+- ~~목록 일부 선택은 Base UI Checkbox, 폼 단일 체크는 네이티브 input을 쓴다(구현 선택).~~ 아래 「기본 부품은 shadcn base-nova」(2026-11-05)로 대체했다. 체크박스는 모두 shadcn Checkbox이며, 폼 단일 체크는 체크박스 자체(button)가 칸 id를 받아 라벨 클릭·오류 포커스가 보이는 요소로 가게 한다.
+
+## 기본 부품은 shadcn base-nova
+
+- 출처: 사용자 2026-11-05 결정(「기본 부품은 shadcn 공식 registry의 base-nova를 쓰고, 키트 registry 부품은 스스로 모양을 갖지 않고 그 부품을 조합해 동작·연결만 소유한다. 키트 스타일시트를 없애고 Tailwind 유틸리티와 shadcn 테마 토큰을 쓴다. native select Select는 shadcn Select로 바꾼다」). 아래 세 항목은 그 결정을 따르는 구현 선택이다.
+- 이유: 색·모서리·간격을 프로젝트의 shadcn 테마 변수 한 곳에서 정하게 한다. 키트가 별도 `--wk-*` 토큰·`.wk-*` 클래스를 가지면 같은 버튼·입력이 두 디자인 체계로 갈라진다.
+
+| 선택 | 내용 | 이유 |
+|---|---|---|
+| 경로·별칭 | 소비 `components.json`의 `aliases.ui`(와 `components`)는 `@/shared/ui`다. shadcn 기본 부품은 `@/shared/ui/<부품>`(예: `@/shared/ui/button`), 키트 항목은 registry `target`대로 `@/shared/ui/web-kit/…`에 설치된다. 키트 원본은 기본 부품을 `@/components/ui/<부품>`으로 import하고 shadcn CLI가 설치 때 `aliases.ui`로 바꾼다. 각 키트 항목은 쓰는 기본 부품 이름을 `registryDependencies`에 적어 `shadcn add @web-kit/<항목>`이 함께 설치하게 한다. 키트 `ui` 입구는 버튼·입력·선택을 다시 내보내지 않는다 | 기본 부품은 프로젝트가 shadcn으로 소유하는 파일이고, 키트 복사본과 섞이지 않게 폴더를 나눈다. 별칭 변환을 CLI에 맡기면 프로젝트 경로가 달라도 원본을 고치지 않는다 |
+| 검사 | 기본 부품은 키트 소유가 아니므로 설치 기록·지문(`registry-installation.json`)과 키트 필수 검사 목록에 넣지 않는다. 키트 항목의 검사는 프로젝트에 설치된 기본 부품을 실제로 import한 복사본으로 실행하므로, 대화창 포커스·Choice·aria-disabled 저장 버튼 같은 보장은 그 부품과 함께 확인된다. `inputs` 항목은 기본 부품 대신 검사 연결만 남아 키트가 기대는 기본 부품 속성(버튼 기본 type=button, 입력 required·disabled, 체크 mixed)을 확인한다. `registry:check`는 원본의 `@/components/ui/*` import마다 같은 설치 범위에 그 이름의 registry 의존이 있는지 거절 검사한다. 저장소 안 키트 단위 검사는 실제 CLI로 설치한 검사용 사본(`packages/ui-registry/shadcn`)을 쓴다 | 프로젝트가 기본 부품을 고쳐도 키트 보장이 깨지면 소비처 검사가 잡는다. 기본 부품 자체의 모양은 프로젝트 결정이라 지문으로 막지 않는다 |
+| 테마 | starter `src/styles.css`는 `shadcn init -b base -p nova`(shadcn 4.19.1)가 만드는 base-nova 테마 변수(neutral)를 그대로 쓰고 글꼴만 바꾼다. 키트 복사본은 `bg-background`·`text-muted-foreground`·`border-input`·`ring-ring`·`bg-primary`·`text-destructive` 같은 토큰 유틸리티만 쓴다 | 색과 모양은 테마 변수가 정하고 키트는 배치·상태 표시만 맡는다 |
+
+- 저장소 안 경로 대응: `packages/ui-registry/components.json`·`tsconfig.json`과 `packages/web-kit`의 `tsconfig.json`·`vitest.config.ts`가 `@/*`를 `packages/ui-registry/shadcn/*`로 연결한다. 이 사본은 registry 항목이 아니며 배포하지 않는다.
+- 기본 부품의 내용은 설치 시점의 shadcn 공식 registry가 정한다(CLI 버전 고정은 내용 고정이 아니다). 소비처는 설치한 파일을 커밋해 고정하고, 다시 설치할 때는 차이를 검토한다.
+- 검사 화면(`web-kit-checks/*.html`)은 프로젝트 스타일시트를 읽지 않는다. 브라우저 검사는 포커스·키보드·포털 동작을 보며 프로젝트 테마의 겹침·색은 보지 않는다(이전 키트 스타일시트를 import하던 것과 다르다).

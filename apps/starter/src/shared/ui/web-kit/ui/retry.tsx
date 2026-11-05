@@ -1,6 +1,7 @@
 /** 실패 자리의 다시 시도 버튼이 사라질 때만 결과로 focus를 옮긴다. */
 import type { ReactNode } from 'react';
 import { useRetryFocus } from '@boosterlab/web-kit/record';
+import { Button } from '@/shared/ui/button';
 /** 재시도 전에 다른 곳으로 이동한 focus는 빼앗지 않는다. */
 export function RetryRegion({
   failed,
@@ -20,11 +21,11 @@ export function RetryRegion({
   const { retryRef } = useRetryFocus(failed, controlId);
   if (!failed) return children;
   return (
-    <div role="alert">
+    <div role="alert" className="flex flex-wrap items-center gap-2 text-sm text-destructive">
       {message}
-      <button type="button" ref={retryRef} className="wk-button" onClick={onRetry}>
+      <Button type="button" variant="outline" size="sm" ref={retryRef} onClick={onRetry}>
         {retryLabel}
-      </button>
+      </Button>
     </div>
   );
 }

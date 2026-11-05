@@ -37,11 +37,11 @@ function deferred<T>() {
 
 /** 덮개 문구 영역(늘 있음). 닫혀 있으면 비어 있다. */
 function status() {
-  return document.querySelector<HTMLElement>('.wk-blocking-status')!;
+  return document.querySelector<HTMLElement>('[data-slot="blocking-progress-status"]')!;
 }
 /** 실제 덮개 DOM의 열림을 읽는다. */
 function overlayOpen() {
-  return document.querySelector('.wk-blocking') !== null;
+  return document.querySelector('[data-slot="blocking-progress"]') !== null;
 }
 /** 덮개가 막는 본문 영역을 찾는다. */
 function body() {
@@ -166,8 +166,8 @@ it(title('G014', '가운데 진행 표시: 기본은 키트 원형 회전 표시
       <Probe />
     </Host>,
   );
-  const box = () => document.querySelector('.wk-blocking-box')!;
-  expect(box().querySelector('.wk-spinner.wk-spinner-large')).not.toBeNull();
+  const box = () => document.querySelector('[data-slot="blocking-progress-box"]')!;
+  expect(box().querySelector('[data-slot="spinner"][data-size="large"]')).not.toBeNull();
   unmount();
   render(
     <BlockingProgress messages={MESSAGES} indicator={<svg data-testid="bars" />}>
@@ -177,7 +177,7 @@ it(title('G014', '가운데 진행 표시: 기본은 키트 원형 회전 표시
     </BlockingProgress>,
   );
   expect(box().querySelector('[data-testid="bars"]')).not.toBeNull();
-  expect(box().querySelector('.wk-spinner')).toBeNull();
+  expect(box().querySelector('[data-slot="spinner"]')).toBeNull();
   expect(box().closest('[aria-hidden="true"]')).not.toBeNull();
   expect(status().textContent).toContain('데이터를 불러오는 중입니다.');
   expect(body().hasAttribute('inert')).toBe(true);
@@ -199,7 +199,7 @@ it(title('G015', '저장과 조회가 겹치면 저장 문구가 이긴다, 등�
   expect(status().textContent).not.toContain('데이터를 불러오는 중입니다.');
   unmount();
   render(<Probe kind="create" />);
-  expect(document.querySelector('.wk-blocking')).toBeNull();
+  expect(document.querySelector('[data-slot="blocking-progress"]')).toBeNull();
 });
 
 it(title('G021', 'P6·P10 덮개 중 덮개 밖 대화창(세션 안내 등)에 간 포커스는 덮개가 닫혀도 그대로 둔다'), async () => {
@@ -311,7 +311,7 @@ it(title('G024', 'Q1 progress를 선언하지 않은 확인 실행(상태 변경
   fireEvent.click(screen.getByRole('button', { name: '삭제' }));
   const dialog = await screen.findByRole('alertdialog');
   fireEvent.click(within(dialog).getByRole('button', { name: '확인' }));
-  await waitFor(() => expect(dialog.querySelector('.wk-spinner')).not.toBeNull());
+  await waitFor(() => expect(dialog.querySelector('[data-slot="pending"]')).not.toBeNull());
   expect(overlayOpen()).toBe(false);
   expect(screen.getByRole('alertdialog')).toBe(dialog);
   await act(async () => pending.resolve());

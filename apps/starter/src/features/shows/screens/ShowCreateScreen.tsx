@@ -2,7 +2,7 @@
 // 회차 줄은 Form.Array(추가·삭제·위/아래 이동), 좌석도는 Form.File, 판매처 키는 Form.Dialog 안의 자기 useSaveForm이다.
 // 회차·판매처 키는 접을 수 있는 구역(Form.Section fields)이라 닫힌 구역의 오류는 제출 뒤 펼쳐지고 그 칸에 포커스한다.
 // 저장: 좌석도 업로드 → 등록. 저장 완료 확인 뒤 상품 목록으로 간다. 공연 폼 전체를 옮긴 것은 아니다.
-import { Button } from '@/shared/ui/web-kit/ui';
+import { Button } from '@/shared/ui/button';
 import { useSaveForm, type FormFileValue } from '@boosterlab/web-kit/form';
 import { Form } from '@/shared/ui/web-kit/form/ui';
 import { useNavigate } from '@tanstack/react-router';
@@ -70,29 +70,29 @@ export function ShowCreateScreen() {
                 >
                   <F.Text name={`rounds[${index}].date`} type="date" label={t('shows.fields.date', { index: index + 1 })} />
                   <F.Text name={`rounds[${index}].time`} type="time" label={t('shows.fields.time', { index: index + 1 })} />
-                  <div className="wk-actions">
-                    <Button
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button variant="outline"
                       disabled={index === 0}
                       onClick={() => rows.move(index, index - 1)}
                     >
                       {t('shows.moveUp', { index: index + 1 })}
                     </Button>
-                    <Button
+                    <Button variant="outline"
                       disabled={index === rows.items.length - 1}
                       onClick={() => rows.move(index, index + 1)}
                     >
                       {t('shows.moveDown', { index: index + 1 })}
                     </Button>
                     {rows.canRemove ? (
-                      <Button onClick={() => rows.remove(index)}>
+                      <Button variant="outline" onClick={() => rows.remove(index)}>
                         {t('shows.removeRound', { index: index + 1 })}
                       </Button>
                     ) : null}
                   </div>
                 </div>
               ))}
-              <div className="wk-actions">
-                <Button onClick={() => rows.append(newRound())}>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="outline" onClick={() => rows.append(newRound())}>
                   {t('shows.addRound')}
                 </Button>
               </div>
@@ -102,13 +102,13 @@ export function ShowCreateScreen() {
         <F.File name="seat" label={t('shows.fields.seat')} accept="image/*,.pdf" />
         <F.Section title={t('shows.fields.vendorKeys')} fields={['vendorKeys']}>
           <p>{vendorKeys.length === 0 ? t('shows.noVendorKeys') : vendorKeys.map((item) => item.value).join(', ')}</p>
-          <div className="wk-actions">
-            <Button onClick={() => setKeysOpen(true)}>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" onClick={() => setKeysOpen(true)}>
               {t('shows.editVendorKeys')}
             </Button>
           </div>
         </F.Section>
-        <div className="wk-actions">
+        <div className="flex flex-wrap items-center gap-2">
           <F.Submit />
           <F.Cancel to={{ to: '/products' }} />
         </div>
@@ -154,17 +154,17 @@ function VendorKeysForm({
         {(rows) => (
           <>
             {rows.items.map((item, index) => (
-              <div key={item.key} className="wk-actions">
+              <div key={item.key} className="flex flex-wrap items-center gap-2">
                 <K.Text name={`keys[${index}].value`} label={t('shows.fields.vendorKey', { index: index + 1 })} />
                 {rows.canRemove ? (
-                  <Button onClick={() => rows.remove(index)}>
+                  <Button variant="outline" onClick={() => rows.remove(index)}>
                     {t('shows.removeVendorKey', { index: index + 1 })}
                   </Button>
                 ) : null}
               </div>
             ))}
-            <div className="wk-actions">
-              <Button
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline"
                 onClick={() => rows.append({ key: crypto.randomUUID(), value: '' })}
               >
                 {t('shows.addVendorKey')}
@@ -173,7 +173,7 @@ function VendorKeysForm({
           </>
         )}
       </K.Array>
-      <div className="wk-actions">
+      <div className="flex flex-wrap items-center gap-2">
         <K.Submit />
         <K.Cancel />
       </div>

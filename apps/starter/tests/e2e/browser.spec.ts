@@ -93,8 +93,10 @@ async function fillNewProduct(page: Page) {
   await page.getByLabel('상품명').fill('Fresh Item');
   await page.getByLabel('상품 코드').fill('FRESH-1');
   await page.getByLabel(/옵션명 1/).fill('Large');
-  await expect(page.getByRole('option', { name: 'Stationery' })).toBeAttached();
-  await page.getByLabel('분류').selectOption({ label: 'Stationery' });
+  // 분류는 shadcn Select다: 선택지가 준비된 트리거를 눌러 연 뒤 고른다.
+  await page.getByRole('combobox', { name: /분류/ }).click();
+  await page.getByRole('option', { name: 'Stationery' }).click();
+  await expect(page.getByRole('combobox', { name: /분류/ })).toContainText('Stationery');
 }
 
 test('saving a new product moves to its detail without an unsaved-changes question', async ({ page }) => {
@@ -116,7 +118,7 @@ async function setLatency(page: Page, ms: number) {
 
 /** 앱 본문(덮개가 막는 영역) 안에 포커스가 있는가. */
 function focusInBody(page: Page) {
-  return page.evaluate(() => document.activeElement?.closest('.wk-blocking-root') != null);
+  return page.evaluate(() => document.activeElement?.closest('[data-slot="blocking-progress-root"]') != null);
 }
 
 // 저장 중에는 화면 전체 덮개가 입력을 막는다(2026-10-28 사용자 결정, 결정 0007 진행 덮개). 이전의 "저장 중 입력 → 이동 때 묻기"는 덮개가 대신한다.
@@ -125,18 +127,18 @@ test('saving a new product covers the page with the create message and blocks cl
   await fillNewProduct(page);
   await setLatency(page, 1500);
   await page.getByRole('button', { name: '등록', exact: true }).click();
-  await expect(page.locator('.wk-blocking').getByText('등록 중입니다.')).toBeVisible();
-  await expect(page.locator('.wk-blocking').getByText('잠시만 기다려 주세요.')).toBeVisible();
+  await expect(page.locator('[data-slot="blocking-progress"]').getByText('등록 중입니다.')).toBeVisible();
+  await expect(page.locator('[data-slot="blocking-progress"]').getByText('잠시만 기다려 주세요.')).toBeVisible();
   // 화면 낭독기는 늘 있는 상태 영역에서 같은 문구를 읽는다.
   await expect(page.getByRole('status').filter({ hasText: '등록 중입니다.' })).toHaveText('등록 중입니다. 잠시만 기다려 주세요.');
-  await expect(page.locator('.wk-blocking-root')).toHaveAttribute('inert', '');
-  await expect(page.locator('.wk-blocking-root')).toHaveAttribute('aria-busy', 'true');
+  await expect(page.locator('[data-slot="blocking-progress-root"]')).toHaveAttribute('inert', '');
+  await expect(page.locator('[data-slot="blocking-progress-root"]')).toHaveAttribute('aria-busy', 'true');
   // 덮개가 위에 있어 입력칸 클릭이 닿지 않고, Tab으로도 본문에 들어가지 못한다.
   await expect(page.getByLabel('상품명').click({ timeout: 300 })).rejects.toThrow();
   await page.keyboard.press('Tab');
   expect(await focusInBody(page)).toBe(false);
   await expect(page).toHaveURL(/\/products\/[^/]+$/);
-  await expect(page.locator('.wk-blocking')).toHaveCount(0);
+  await expect(page.locator('[data-slot="blocking-progress"]')).toHaveCount(0);
 });
 
 test('an edit closes the confirmation, covers the page with the edit message, then shows the detail', async ({ page }) => {
@@ -148,13 +150,13 @@ test('an edit closes the confirmation, covers the page with the edit message, th
   await page.getByRole('button', { name: '저장', exact: true }).click();
   const confirm = page.getByRole('alertdialog');
   await expect(confirm).toBeVisible();
-  await expect(page.locator('.wk-blocking')).toHaveCount(0);
+  await expect(page.locator('[data-slot="blocking-progress"]')).toHaveCount(0);
   await setLatency(page, 1500);
   await confirm.getByRole('button', { name: '저장', exact: true }).click();
-  await expect(page.locator('.wk-blocking').getByText('수정 중입니다.')).toBeVisible();
+  await expect(page.locator('[data-slot="blocking-progress"]').getByText('수정 중입니다.')).toBeVisible();
   await expect(page.getByRole('alertdialog')).toHaveCount(0);
   await expect(page).toHaveURL(/\/products\/[^/]+$/);
-  await expect(page.locator('.wk-blocking')).toHaveCount(0);
+  await expect(page.locator('[data-slot="blocking-progress"]')).toHaveCount(0);
 });
 
 // 확인창을 거친 저장이 칸 없는 오류(500)로 끝나면, 확인창 버튼은 사라졌으므로 포커스는 본문에서 확인창을 연 저장 버튼으로 돌아온다(결정 0007 진행 덮개 포커스).
@@ -169,7 +171,7 @@ test('an edit that fails after the confirmation returns focus to the save button
   const confirm = page.getByRole('alertdialog');
   await setLatency(page, 800);
   await confirm.getByRole('button', { name: '저장', exact: true }).click();
-  await expect(page.locator('.wk-blocking').getByText('수정 중입니다.')).toBeVisible();
+  await expect(page.locator('[data-slot="blocking-progress"]').getByText('수정 중입니다.')).toBeVisible();
   // 덮개가 열린 동안 mock 서버를 내려 PUT을 500으로 끝낸다(지연 뒤 상품 조회에서 예외).
   await page.evaluate(async () => {
     const dbModule = '/src/mocks/db.ts';
@@ -181,8 +183,8 @@ test('an edit that fails after the confirmation returns focus to the save button
       configurable: true,
     });
   });
-  await expect(page.locator('.wk-blocking')).toHaveCount(0);
-  await expect(page.locator('.wk-form-failure')).toBeVisible();
+  await expect(page.locator('[data-slot="blocking-progress"]')).toHaveCount(0);
+  await expect(page.locator('[data-slot="form-failure"]')).toBeVisible();
   await expect(page.getByRole('alertdialog')).toHaveCount(0);
   await expect(save).toBeFocused();
   expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
@@ -192,10 +194,10 @@ test('a page entry is covered while its first data loads, a page change keeps th
   await signIn(page);
   await setLatency(page, 1500);
   await page.getByRole('cell', { name: 'Mouse Pad' }).click();
-  await expect(page.locator('.wk-blocking').getByText('데이터를 불러오는 중입니다.')).toBeVisible();
-  await expect(page.locator('.wk-blocking-root')).toHaveAttribute('inert', '');
+  await expect(page.locator('[data-slot="blocking-progress"]').getByText('데이터를 불러오는 중입니다.')).toBeVisible();
+  await expect(page.locator('[data-slot="blocking-progress-root"]')).toHaveAttribute('inert', '');
   await expect(page.getByText('Mouse Pad').first()).toBeVisible({ timeout: 5000 });
-  await expect(page.locator('.wk-blocking')).toHaveCount(0);
+  await expect(page.locator('[data-slot="blocking-progress"]')).toHaveCount(0);
 
   await page.goBack();
   await expect(page.getByRole('cell', { name: 'Mouse Pad' })).toBeVisible();
@@ -205,7 +207,7 @@ test('a page entry is covered while its first data loads, a page change keeps th
   await refetch;
   const coveredDuringRefetch = await page.evaluate(async () => {
     for (let i = 0; i < 10; i += 1) {
-      if (document.querySelector('.wk-blocking') !== null || document.querySelector('.wk-blocking-root[inert]') !== null) return true;
+      if (document.querySelector('[data-slot="blocking-progress"]') !== null || document.querySelector('[data-slot="blocking-progress-root"][inert]') !== null) return true;
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
     return false;
@@ -241,8 +243,7 @@ test('save confirmation traps focus and Escape returns to the save button', asyn
   await page.getByRole('cell', { name: 'Mouse Pad' }).click();
   await expect(page).toHaveURL(/\/products\/[^/]+$/);
   await page.goto(`${new URL(page.url()).pathname}/edit`);
-  await expect(page.getByRole('option', { name: 'Kitchen' })).toBeAttached();
-  await expect(page.getByLabel('분류')).toHaveValue('c-kitchen');
+  await expect(page.getByRole('combobox', { name: /분류/ })).toContainText('Kitchen');
   const name = page.getByLabel('상품명');
   await expect(name).toHaveAttribute('aria-required', 'true');
   await name.fill('Keyboard edit');

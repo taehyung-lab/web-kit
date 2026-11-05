@@ -49,7 +49,7 @@ export function TermsCreateScreen() {
           </div>
           <F.TextArea name="body" label={t('terms.fields.body')} rows={10} />
         </F.Section>
-        <div className="wk-actions">
+        <div className="flex flex-wrap items-center gap-2">
           <F.Submit />
           <F.Cancel to={{ to: '/products' }} />
         </div>

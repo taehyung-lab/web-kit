@@ -1,49 +1,41 @@
 {
   "schemaVersion": 1,
-  "version": "5.0.0-rc.7",
-  "sourceRef": "v5.0.0-rc.7",
-  "sourceCommit": "d33723492c189e901fd05a10cbbb0dbb3295b53f",
-  "sourceWorkingTree": "modified; fingerprints identify the candidate",
+  "version": "5.0.0-rc.8",
+  "sourceRef": "v5.0.0-rc.8",
+  "sourceCommit": "5354083cb6639331ad0c0adc74cf6e74d8a5f16d",
+  "sourceWorkingTree": "clean",
   "shadcn": "4.19.1",
-  "method": "pnpm exec shadcn add ./public/r/all.json --cwd apps/starter --yes --overwrite; pristine test app only",
-  "componentsHash": "9251ff1954ca2e2cdf440bbf02e6b5835dacee282c03442ef68ff7ee1443ddc1",
-  "installationComponentsHash": "652e889b40769c756d00278ff07ae37b21ee063a3f3251aa99a74c5c09d37c07",
+  "method": "shadcn@4.19.1 add; installation recorded after review",
+  "componentsHash": "7a33830cda235f6d2eecae7871d31a4e8d598f333545e705cdf6dfb79cbd0d2d",
   "items": [
     {
       "name": "all",
-      "artifactHash": "d56bae78a93f6a9ba727f20b7e7276864cb723dd47912b45fa65b93a67c9d2f1",
+      "artifactHash": "ea3da9c0f2b6083571fe9b97a7d5a9e7765e8a6fc7d0df29e34cd8840edc1363",
       "files": []
     },
     {
       "name": "inputs",
-      "artifactHash": "e4528bb0b5b9593fb01a4e47d04eb32a768c44bfd0a3c6e7edcc1072334ae2d9",
+      "artifactHash": "55e679b942e158b13fff9018fe693aad20a6a8acd831ae214012ce9f5d9be456",
       "files": [
-        {
-          "source": "packages/ui-registry/src/ui/inputs.tsx",
-          "registryTarget": "~/src/shared/ui/web-kit/ui/inputs.tsx",
-          "installed": "src/shared/ui/web-kit/ui/inputs.tsx",
-          "sourceHash": "bbc95d85a1fbb4c76acad1b49938acbe5e2b53aed0858da268328cb1f9c0df43",
-          "installedHash": "bbc95d85a1fbb4c76acad1b49938acbe5e2b53aed0858da268328cb1f9c0df43"
-        },
         {
           "source": "packages/ui-registry/checks/inputs.test.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/checks/inputs.test.tsx",
           "installed": "src/shared/ui/web-kit/checks/inputs.test.tsx",
-          "sourceHash": "c16b9eab7c6b7da55aee716cf621020d0ceabdb4d41042905726287ee157fdcc",
-          "installedHash": "c16b9eab7c6b7da55aee716cf621020d0ceabdb4d41042905726287ee157fdcc"
+          "sourceHash": "df425650461e46e0e4a885324b44dbbba5c4bcccc59f3b813e17a404e0b72f4a",
+          "installedHash": "f970d566747453db1bbf5db9a8b7576422ebc0d3df3649d3318712515e2734d2"
         }
       ]
     },
     {
       "name": "pending",
-      "artifactHash": "9c6f79c2a2f79837769aeeb14795a78274cfa429098a9c8041af3a23cddfe8ec",
+      "artifactHash": "7747520196c22c17e4e9f94c27e4d4e091ec1f57d0a501a2ae19e867b6ac8480",
       "files": [
         {
           "source": "packages/ui-registry/src/ui/pending.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/ui/pending.tsx",
           "installed": "src/shared/ui/web-kit/ui/pending.tsx",
-          "sourceHash": "ae448d8ab39bf6949d6f2812acf02c652262e3a91046e564e6adc9a4a003af95",
-          "installedHash": "ae448d8ab39bf6949d6f2812acf02c652262e3a91046e564e6adc9a4a003af95"
+          "sourceHash": "75a9d76e97bf998fd471fc4603af9acb8a4dd8a4f2e840a44feeb533ba936566",
+          "installedHash": "5cf81a5b948db296ae8d6d65b976f169aa7dc36a2be7f090af30b10bfb4d1d58"
         },
         {
           "source": "packages/ui-registry/checks/pending.test.tsx",
@@ -56,14 +48,14 @@
     },
     {
       "name": "dialog",
-      "artifactHash": "5626e6be482d2533da9ca8c11950fad5526a5b9b92612aa9ed58225ce15fa231",
+      "artifactHash": "c97957a693899a2366dab03d4afeaf0158f5afd0b627961983def0537fcc4dfe",
       "files": [
         {
           "source": "packages/ui-registry/src/ui/dialog.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/ui/dialog.tsx",
           "installed": "src/shared/ui/web-kit/ui/dialog.tsx",
-          "sourceHash": "0c557d5d0c6f88d087701a9222a1697d1c595653554343f084511fc70299faa6",
-          "installedHash": "0c557d5d0c6f88d087701a9222a1697d1c595653554343f084511fc70299faa6"
+          "sourceHash": "80e4f94a3e47d5ae75dc64494d957567ca702b599012813821b517ae461efc5e",
+          "installedHash": "58c15187de0e5037522caa751e35d81bece972c1f33f52e6e75014b96daf1294"
         },
         {
           "source": "packages/ui-registry/checks/dialog.test.tsx",
@@ -76,8 +68,8 @@
           "source": "packages/ui-registry/checks/dialog.page.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/checks/dialog.page.tsx",
           "installed": "src/shared/ui/web-kit/checks/dialog.page.tsx",
-          "sourceHash": "4fe8c9529a7a0e3df9fb5f71e0b65e490429fccda9dd1114ea162ee478b3d6e0",
-          "installedHash": "4fe8c9529a7a0e3df9fb5f71e0b65e490429fccda9dd1114ea162ee478b3d6e0"
+          "sourceHash": "04b87244cc3fe8aeb3054ac0200aa6bfd3dc8b1cf98de460c725a530cec6ff95",
+          "installedHash": "04b87244cc3fe8aeb3054ac0200aa6bfd3dc8b1cf98de460c725a530cec6ff95"
         },
         {
           "source": "packages/ui-registry/checks/dialog.spec.ts",
@@ -96,35 +88,15 @@
       ]
     },
     {
-      "name": "styles",
-      "artifactHash": "49499224ca524f927e5fca4d292780c190bda3010c8ca32cc88e47ee71c3f981",
-      "files": [
-        {
-          "source": "packages/ui-registry/src/ui/styles.css",
-          "registryTarget": "~/src/shared/ui/web-kit/ui/styles.css",
-          "installed": "src/shared/ui/web-kit/ui/styles.css",
-          "sourceHash": "1678c88250d87e0f20d5273dbe17e23f92f10663312a9554048cfbdd7a5beeaf",
-          "installedHash": "1678c88250d87e0f20d5273dbe17e23f92f10663312a9554048cfbdd7a5beeaf"
-        },
-        {
-          "source": "packages/ui-registry/checks/styles.test.tsx",
-          "registryTarget": "~/src/shared/ui/web-kit/checks/styles.test.tsx",
-          "installed": "src/shared/ui/web-kit/checks/styles.test.tsx",
-          "sourceHash": "4544c003e5d59c322206b5606b6913fa69a629a79c484571de7a96872cb41a6d",
-          "installedHash": "4544c003e5d59c322206b5606b6913fa69a629a79c484571de7a96872cb41a6d"
-        }
-      ]
-    },
-    {
       "name": "blocking-progress",
-      "artifactHash": "c234fff94a6eafae6a042653f699773ec9593c61b8e56f4049fabcea477f56db",
+      "artifactHash": "e484e227551d4d0dd5cd87ff4d9ea7f2823303caa19b65c39e814e31c6678f54",
       "files": [
         {
           "source": "packages/ui-registry/src/ui/blocking-progress.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/ui/blocking-progress.tsx",
           "installed": "src/shared/ui/web-kit/ui/blocking-progress.tsx",
-          "sourceHash": "17b461bc65a4775f56e46599f54f7a061b93a74ff90061c7197dda7041b3f9bf",
-          "installedHash": "17b461bc65a4775f56e46599f54f7a061b93a74ff90061c7197dda7041b3f9bf"
+          "sourceHash": "5f0a9443bfb1080801b51103d032fbeeeef42630bb47fd52efec8c25008d718c",
+          "installedHash": "5f0a9443bfb1080801b51103d032fbeeeef42630bb47fd52efec8c25008d718c"
         },
         {
           "source": "packages/ui-registry/checks/blocking-progress.test.tsx",
@@ -137,8 +109,8 @@
           "source": "packages/ui-registry/checks/blocking-progress.page.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/checks/blocking-progress.page.tsx",
           "installed": "src/shared/ui/web-kit/checks/blocking-progress.page.tsx",
-          "sourceHash": "af4887cee0096a007c6c8eb191b69083ba886da6bfe3eae4b7ede7e03a4f0f57",
-          "installedHash": "af4887cee0096a007c6c8eb191b69083ba886da6bfe3eae4b7ede7e03a4f0f57"
+          "sourceHash": "77c6f1f5a7335c4f8b009da1c86eb81ccaaaba8864c446bc003436f08b65275c",
+          "installedHash": "77c6f1f5a7335c4f8b009da1c86eb81ccaaaba8864c446bc003436f08b65275c"
         },
         {
           "source": "packages/ui-registry/checks/blocking-progress.spec.ts",
@@ -158,14 +130,14 @@
     },
     {
       "name": "choice",
-      "artifactHash": "68ef527dd05f3b53190b101ee9ba03c4224d6d014d7a7a9f8c7113751085b0c2",
+      "artifactHash": "96fafcd9ab38e006569a51ac7bb6a870f4cbc4a0557bd81065f63686a343563a",
       "files": [
         {
           "source": "packages/ui-registry/src/ui/choice.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/ui/choice.tsx",
           "installed": "src/shared/ui/web-kit/ui/choice.tsx",
-          "sourceHash": "41eb97c0210da99d621e0ffc511d9f48987e4a88d54f73928334ff8972610947",
-          "installedHash": "41eb97c0210da99d621e0ffc511d9f48987e4a88d54f73928334ff8972610947"
+          "sourceHash": "0db44397e9c5302fa35417812d16fef51c24159e57f865c78e226341c5195211",
+          "installedHash": "8a73535293005189ba63dcc34d02c361a5f2d3c2b2ec629897dfb1f009a02806"
         },
         {
           "source": "packages/ui-registry/checks/choice.test.tsx",
@@ -178,14 +150,14 @@
     },
     {
       "name": "retry",
-      "artifactHash": "8f8feec03da1d32074af44ce02cde1e2548cfd402b259d2ef85d2fa168389f84",
+      "artifactHash": "c5b3162dce68db3a7596b680a31343ac6c0110298aaf3b9af16c9c69e62f3e4a",
       "files": [
         {
           "source": "packages/ui-registry/src/ui/retry.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/ui/retry.tsx",
           "installed": "src/shared/ui/web-kit/ui/retry.tsx",
-          "sourceHash": "7fae77b73661751cb214053ce714f49c7196fd8f2bad7885c4f3c82e82626b65",
-          "installedHash": "7fae77b73661751cb214053ce714f49c7196fd8f2bad7885c4f3c82e82626b65"
+          "sourceHash": "526288f5fca51a0bbb932244ece19cbd210438f7276ed6ac732e958ec3e71874",
+          "installedHash": "025f0330123d2eb59f4c062cade49a8d5aa44c5692ef8820f3304345a992bd2d"
         },
         {
           "source": "packages/ui-registry/checks/retry.test.tsx",
@@ -198,34 +170,34 @@
     },
     {
       "name": "ui",
-      "artifactHash": "b91e43517661697f55f018fc7b2c642918f883b062570a22f6e31b0aa4de61a2",
+      "artifactHash": "12c336cc62c41795ef596bbf87b7a58d3d742c6765253ea2231df2221302e58d",
       "files": [
         {
           "source": "packages/ui-registry/src/ui/index.ts",
           "registryTarget": "~/src/shared/ui/web-kit/ui/index.ts",
           "installed": "src/shared/ui/web-kit/ui/index.ts",
-          "sourceHash": "de49cad83018778ccec744261222becb7f61d1a12db262195dd43fb779eae6fd",
-          "installedHash": "de49cad83018778ccec744261222becb7f61d1a12db262195dd43fb779eae6fd"
+          "sourceHash": "612e0413aab2066ad3672e6f1f2c16e24c57817d13ca7b2a99945af62e536502",
+          "installedHash": "612e0413aab2066ad3672e6f1f2c16e24c57817d13ca7b2a99945af62e536502"
         }
       ]
     },
     {
       "name": "form",
-      "artifactHash": "5bd9226c0b187a7670793476a9c5accc75359c873d5fee35e52404f495961078",
+      "artifactHash": "2aae016c1b5a3750144538ba9d0150da63ec6f29b5d0a933f7f595ff725f140a",
       "files": [
         {
           "source": "packages/ui-registry/src/form/ui.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/form/ui.tsx",
           "installed": "src/shared/ui/web-kit/form/ui.tsx",
-          "sourceHash": "54f333fc3cf0ad1cd88f922b62130422e0a87f1820fb6c3df3af8c836f38d41c",
-          "installedHash": "54f333fc3cf0ad1cd88f922b62130422e0a87f1820fb6c3df3af8c836f38d41c"
+          "sourceHash": "e45ff727f88844577d8317a73342510a1ec1cbfc4a05cb1897048c69d84f1421",
+          "installedHash": "11a2272c35fed5d15ade8de84af8ba07fc76d854aab9f35964de0614bfe22f88"
         },
         {
           "source": "packages/ui-registry/src/form/field.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/form/field.tsx",
           "installed": "src/shared/ui/web-kit/form/field.tsx",
-          "sourceHash": "79b4d5d36f83e5d4ae7e9a6f7c1f707da122ff56c5b2fd722a09849b38875c71",
-          "installedHash": "79b4d5d36f83e5d4ae7e9a6f7c1f707da122ff56c5b2fd722a09849b38875c71"
+          "sourceHash": "57366fa08a29170576bdd8ec50b4ed6152f30470d7a596794f0f51c8370cbc7b",
+          "installedHash": "57366fa08a29170576bdd8ec50b4ed6152f30470d7a596794f0f51c8370cbc7b"
         },
         {
           "source": "packages/ui-registry/checks/form-complex.test.tsx",
@@ -266,8 +238,8 @@
           "source": "packages/ui-registry/checks/form.page.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/checks/form.page.tsx",
           "installed": "src/shared/ui/web-kit/checks/form.page.tsx",
-          "sourceHash": "0a7acdcb0a0120ef1b870b7e429fb9625bf9979c32b6cd75ce4b8d2241f84100",
-          "installedHash": "0a7acdcb0a0120ef1b870b7e429fb9625bf9979c32b6cd75ce4b8d2241f84100"
+          "sourceHash": "355e05581ac9406d9ea165ccbc2e3d18f427bb304b85c9ef6178e8d80e03212e",
+          "installedHash": "355e05581ac9406d9ea165ccbc2e3d18f427bb304b85c9ef6178e8d80e03212e"
         },
         {
           "source": "packages/ui-registry/checks/form.spec.ts",
@@ -287,14 +259,14 @@
     },
     {
       "name": "list",
-      "artifactHash": "e48ba8301c85fe23cfdac316851f954d0f03250b683cd102b60ba8ec52f3f469",
+      "artifactHash": "358b01b2520a1a26daef62bce649107eaa8c36d1f3b17e77782c67bdf84d1545",
       "files": [
         {
           "source": "packages/ui-registry/src/list-ui.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/list-ui.tsx",
           "installed": "src/shared/ui/web-kit/list-ui.tsx",
-          "sourceHash": "ad85f3c358daf5c42751edc7b2eb711fa8e2195165fc73f7275f37936f0d527a",
-          "installedHash": "ad85f3c358daf5c42751edc7b2eb711fa8e2195165fc73f7275f37936f0d527a"
+          "sourceHash": "546028a6258a3d7e605596dbcc8020c3033deed7e2d70810e6ae83cdae87a6bb",
+          "installedHash": "7d22573ef2b4c5053b140023f220e2b2ddbeecce936c03e4d05a5e9ea7f3ecf8"
         },
         {
           "source": "packages/ui-registry/checks/list-ui.test.tsx",
@@ -307,14 +279,14 @@
     },
     {
       "name": "record",
-      "artifactHash": "a07400acf61a62655cf7a579d934223066722e634483689994430902a9e29284",
+      "artifactHash": "d35f6ce995dab716be96f28ddfe3cc831c7ae2b05154421e2489c5cf5820da8d",
       "files": [
         {
           "source": "packages/ui-registry/src/detail-ui.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/detail-ui.tsx",
           "installed": "src/shared/ui/web-kit/detail-ui.tsx",
-          "sourceHash": "53fcab21fd9a5858787b22cc04a0652e24f748d81dcff5177cfa39ff7cbe600a",
-          "installedHash": "53fcab21fd9a5858787b22cc04a0652e24f748d81dcff5177cfa39ff7cbe600a"
+          "sourceHash": "eb6eb87176957638d1316b91d279036144511d5a1b430c1dd9579e7e95007ffd",
+          "installedHash": "dbab4d204fab18739b3fa8dc937c1c73826603f95be83dfc12650859e35cacc1"
         },
         {
           "source": "packages/ui-registry/checks/record-ui.test.tsx",
@@ -347,14 +319,14 @@
     },
     {
       "name": "filter-error",
-      "artifactHash": "bcbb616b041231d39cf957745ad4c7e4b0bb247997e63f8b0f4f4f404a70ce19",
+      "artifactHash": "1ec5f63b5becfd35d6832722e0223fe465284bd140d065f8114b11cc01ccc981",
       "files": [
         {
           "source": "packages/ui-registry/src/search/filter-error.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/search/filter-error.tsx",
           "installed": "src/shared/ui/web-kit/search/filter-error.tsx",
-          "sourceHash": "ab71704968ce814dad39644a2ddbddfd0fcde97b4ba13fa868cf87240713e66b",
-          "installedHash": "ab71704968ce814dad39644a2ddbddfd0fcde97b4ba13fa868cf87240713e66b"
+          "sourceHash": "b317f7e1b5ee97c053bf2f7e9777008ee1a8bdb23eecff0601e7fc60616c4f8e",
+          "installedHash": "b317f7e1b5ee97c053bf2f7e9777008ee1a8bdb23eecff0601e7fc60616c4f8e"
         },
         {
           "source": "packages/ui-registry/checks/filter-error.test.tsx",
@@ -367,14 +339,14 @@
     },
     {
       "name": "auth",
-      "artifactHash": "211c1c4a66a95fc83ab4f5c0d8e5baa3c63f6abe68a32273554eeb157e09baa5",
+      "artifactHash": "67274027bed892cdf76644911ce8857e3db488f1fdae28f3016b0ccb80178aa4",
       "files": [
         {
           "source": "packages/ui-registry/src/auth.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/auth.tsx",
           "installed": "src/shared/ui/web-kit/auth.tsx",
-          "sourceHash": "542d810dd916af4f7594fc651ec927e5d056aa5117c5549ee1e4a66e6d570be5",
-          "installedHash": "542d810dd916af4f7594fc651ec927e5d056aa5117c5549ee1e4a66e6d570be5"
+          "sourceHash": "1b5916dfd5f451cbfed438323b5c1a08686c51aca877af3203fd8f87eda95f7e",
+          "installedHash": "68e03fc9d5cfee27c4b961c6fc8f6e585e67af2b32da6db5c5da7e625c22ead7"
         },
         {
           "source": "packages/ui-registry/checks/auth-six.tsx",

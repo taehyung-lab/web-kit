@@ -242,7 +242,7 @@ it(title('G062', '머리글 오류 표시는 프로젝트가 바꿀 수 있다: 
   // 기본 표시: 보이는 「!」(낭독 제외) + 화면 낭독기 문구.
   const visible = header('기본').querySelector('[aria-hidden="true"]');
   expect(visible?.textContent).toBe('!');
-  expect(header('기본').querySelector('.wk-visually-hidden')?.textContent).toBe('오류 1개');
+  expect(header('기본').querySelector('.sr-only')?.textContent).toBe('오류 1개');
   // 바꾼 표시: 「!」 없이 보이는 배지가 오류 수를 받는다(Form.Section·FormSection 모두).
   expect(header('주문').textContent).toBe('주문 오류 2개');
   expect(header('주문').querySelector('.badge')?.getAttribute('aria-hidden')).toBeNull();

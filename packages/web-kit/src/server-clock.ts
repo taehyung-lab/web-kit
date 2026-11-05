@@ -4,6 +4,15 @@ export interface ServerClock {
   readonly observe: (offsetMs: number | undefined, sentAt?: number) => void;
   readonly subscribe: (listener: () => void) => () => void;
 }
+/**
+ * HTTP `Date` 응답 헤더로 서버 시각−로컬 시각(ms)을 잰다. `Date`는 초 단위라 받은 시각도 초로 내려 비교한다.
+ * 헤더가 없거나 읽을 수 없으면 undefined다(0으로 채우지 않는다). 결과는 `ServerTimeSample.clockOffsetMs`·`clock.observe`에 넘긴다.
+ */
+export function clockOffsetFromDate(date: string | null | undefined, receivedAt: number): number | undefined {
+  if (typeof date !== 'string' || date.trim() === '' || !Number.isFinite(receivedAt)) return undefined;
+  const serverTime = Date.parse(date);
+  return Number.isFinite(serverTime) ? serverTime - Math.floor(receivedAt / 1000) * 1000 : undefined;
+}
 interface ClockSample {
   readonly key: string;
   readonly offset: number;

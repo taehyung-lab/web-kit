@@ -1,5 +1,5 @@
 // 파일 책임: choice 복사본의 공통 적합성 기준과 단언을 소유한다.
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, expect, it as baseIt, vi } from 'vitest';
 import type * as Contract0 from '../contracts/ui/choice';
@@ -95,10 +95,17 @@ it(title('G030', '단일 선택의 radio는 id 생략 시에도 같은 칸끼리
       <Harness />
     </>,
   );
-  const radios = screen.getAllByRole('radio') as HTMLInputElement[];
-  expect(radios[0]!.name).not.toBe('');
-  expect(radios[0]!.name).toBe(radios[1]!.name);
-  expect(radios[0]!.name).not.toBe(radios[3]!.name);
+  // 칸마다 radio 묶음이 하나씩이고, 한 칸에서 고른 값이 다른 칸의 선택을 끄지 않는다.
+  const groups = screen.getAllByRole('radiogroup');
+  expect(groups).toHaveLength(2);
+  const [first, second] = groups.map((group) => within(group).getAllByRole('radio'));
+  expect(first).toHaveLength(3);
+  expect(second).toHaveLength(3);
+  fireEvent.click(within(groups[0]!).getByRole('radio', { name: 'Beta' }));
+  fireEvent.click(within(groups[1]!).getByRole('radio', { name: 'Alpha' }));
+  expect(within(groups[0]!).getByRole('radio', { name: 'Beta' }).getAttribute('aria-checked')).toBe('true');
+  expect(within(groups[1]!).getByRole('radio', { name: 'Alpha' }).getAttribute('aria-checked')).toBe('true');
+  expect(screen.getAllByTestId('value').map((output) => output.textContent)).toEqual(['"b"', '"a"']);
 });
 
 it(title('G031', '함수 객체만 바뀌는 렌더는 진행 요청을 보존하고 검색 맥락 변경만 취소한다'), async () => {

@@ -1,4 +1,6 @@
 // 파일 책임: registry 설치 의존과 검사 요구 목록·실제 정적 import의 누락을 함께 점검한다.
+// `@web-kit/` 의존은 이 registry의 항목이고, 이름만 있는 의존(button·dialog 등)은 shadcn 공식 registry의 기본 부품이다.
+// 키트 원본은 기본 부품을 `@/components/ui/<이름>`으로 import하고(설치 때 shadcn CLI가 프로젝트 ui 별칭으로 바꾼다) 그 이름을 registryDependencies에 적는다.
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname, extname } from 'node:path';
@@ -17,7 +19,7 @@ export function checkRegistryDependencies(root, registry) {
   function closure(name, selected = new Set()) {
     if (selected.has(name)) return selected;
     selected.add(name);
-    for (const dep of items.get(name).registryDependencies ?? []) closure(dep.replace('@web-kit/', ''), selected);
+    for (const dep of items.get(name).registryDependencies ?? []) if (dep.startsWith('@web-kit/')) closure(dep.slice('@web-kit/'.length), selected);
     return selected;
   }
   /** scoped 패키지를 포함해 버전·subpath를 제거한 npm 이름을 읽는다. */
@@ -29,9 +31,10 @@ export function checkRegistryDependencies(root, registry) {
   function localFile(file) {
     return [file, ...['.ts', '.tsx', '.mjs', '.js', '.json', '/index.ts', '/index.tsx'].map((suffix) => file + suffix)].find((path) => existsSync(path) && extname(path));
   }
-  /** 타입 제거 후 남은 정적 import만 따라간다. 조건부 조합 import는 아래 조합별로 따로 확인한다. */
+  /** 타입 제거 후 남은 정적 import만 따라간다. 조건부 조합 import는 아래 조합별로 따로 확인한다. shadcn 기본 부품 import는 이름만 모은다. */
   function externals(files) {
     const found = new Set();
+    const primitives = new Set();
     const visited = new Set();
     /** 한 모듈의 실행 import를 중복 없이 따라간다. */
     function visit(file) {
@@ -43,6 +46,10 @@ export function checkRegistryDependencies(root, registry) {
         if ((!ts.isImportDeclaration(statement) && !ts.isExportDeclaration(statement)) || !statement.moduleSpecifier) continue;
         const specifier = statement.moduleSpecifier.text;
         if (specifier.startsWith('.')) visit(localFile(resolve(dirname(file), specifier)));
+        else if (specifier.startsWith('@/components/ui/')) primitives.add(specifier.slice('@/components/ui/'.length));
+        // 검사 화면은 프로젝트 테마 CSS(@/styles.css)를 읽는다. 그 밖의 프로젝트 별칭은 설치 범위를 알 수 없어 거절한다.
+        else if (specifier === '@/styles.css') continue;
+        else if (specifier.startsWith('@/')) assert.fail(file + ': shadcn 기본 부품(@/components/ui/*) 밖의 프로젝트 별칭 import ' + specifier);
         else if (specifier === kit.name || specifier.startsWith(kit.name + '/')) {
           const key = specifier === kit.name ? '.' : '.' + specifier.slice(kit.name.length);
           assert(kit.exports[key], '공개 입구 없음: ' + specifier);
@@ -51,22 +58,26 @@ export function checkRegistryDependencies(root, registry) {
       }
     }
     for (const file of files) visit(resolve(root, file));
-    return found;
+    return { npm: found, primitives };
   }
   /** 각 선택의 실제 npm import가 그 선택의 선언 의존으로 충족되는지 확인한다. */
   function check(name, selected, extra = []) {
     const declarations = new Set(['react', 'react-dom', kit.name, ...Object.keys(kit.dependencies ?? {})]);
+    const shadcn = new Set();
     const files = [...extra];
     for (const itemName of selected) {
       const item = items.get(itemName);
       for (const dep of [...(item.dependencies ?? []), ...(item.devDependencies ?? [])]) declarations.add(packageName(dep));
+      for (const dep of item.registryDependencies ?? []) if (!dep.startsWith('@web-kit/')) shadcn.add(dep);
       files.push(...(item.files ?? []).map((file) => file.path));
     }
-    for (const dep of externals(files)) assert(declarations.has(dep), name + ': npm 의존 선언 누락 ' + dep);
+    const found = externals(files);
+    for (const dep of found.npm) assert(declarations.has(dep), name + ': npm 의존 선언 누락 ' + dep);
+    for (const primitive of found.primitives) assert(shadcn.has(primitive), name + ': shadcn 기본 부품 registry 의존 선언 누락 ' + primitive);
   }
   assert.deepEqual(Object.keys(requirements).sort(), [...items.keys()].sort(), '설치 항목과 요구 목록 이름 불일치');
   for (const [name, item] of items) {
-    assert.deepEqual([...requirements[name].dependencies].sort(), (item.registryDependencies ?? []).map((dep) => dep.replace('@web-kit/', '')).sort(), name + ': registry.json/requirements.json 의존 불일치');
+    assert.deepEqual([...requirements[name].dependencies].sort(), (item.registryDependencies ?? []).filter((dep) => dep.startsWith('@web-kit/')).map((dep) => dep.slice('@web-kit/'.length)).sort(), name + ': registry.json/requirements.json 의존 불일치');
     check(name, closure(name));
   }
   for (const [name, combination] of Object.entries(combinations)) {

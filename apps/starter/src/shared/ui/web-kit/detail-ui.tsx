@@ -2,6 +2,9 @@
 // 준비된 내용은 Record.Fields·Field·History로 배치한다. 문구·앱 경계 무표시는 프로젝트가 renderFailure·missing 값으로 정한다.
 import { createContext, useContext, useId, type ReactNode } from 'react';
 import type { RecordState } from '@boosterlab/web-kit/record';
+import { cn } from 'cn';
+import { Button } from '@/shared/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { RetryRegion } from './ui/retry';
 
 const defaultMessages = {
@@ -46,7 +49,7 @@ function RecordRoot<T>({
     const text = renderFailure(state.failure, 'missing');
     body =
       text === null ? null : (
-        <div role="status" className="wk-record-missing">
+        <div role="status" className="grid justify-items-center gap-3 py-8 text-sm text-muted-foreground">
           {missing ?? <p>{text ?? copy.missing}</p>}
         </div>
       );
@@ -63,17 +66,17 @@ function RecordRoot<T>({
           retryLabel={copy.retry}
         >
           {state.kind === 'pending' ? (
-            <p role="status" className="wk-record-loading">
+            <p role="status" className="py-8 text-center text-sm text-muted-foreground">
               {copy.loading}
             </p>
           ) : state.kind === 'ready' ? (
-            <section id={id} tabIndex={-1} aria-busy={state.refresh.refreshing} className="wk-record">
+            <section id={id} tabIndex={-1} aria-busy={state.refresh.refreshing} className="grid gap-4">
               {state.refresh.failure !== undefined && refreshText !== null ? (
-                <div role="alert" className="wk-record-refresh-failed">
+                <div role="alert" className="flex flex-wrap items-center gap-2 text-sm text-destructive">
                   {refreshText ?? copy.refreshFailed}
-                  <button type="button" className="wk-button wk-button-ghost" onClick={state.refresh.retry}>
+                  <Button type="button" variant="outline" size="sm" onClick={state.refresh.retry}>
                     {copy.retry}
-                  </button>
+                  </Button>
                 </div>
               ) : null}
               {children(state.data)}
@@ -87,7 +90,7 @@ function RecordRoot<T>({
 
 /** 라벨·값 항목들의 묶음(dl). */
 function Fields({ children, className }: { readonly children: ReactNode; readonly className?: string }) {
-  return <dl className={['wk-record-fields', className].filter(Boolean).join(' ')}>{children}</dl>;
+  return <dl className={cn('grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-x-4 gap-y-1', className)}>{children}</dl>;
 }
 
 /** 라벨·값 한 칸. null·undefined·''만 빈 값 표시('-')이고 0은 그대로 보인다. 값의 의미·마스킹·포맷은 프로젝트가 정한다. */
@@ -95,9 +98,9 @@ function Field({ label, children }: { readonly label: ReactNode; readonly childr
   const copy = useContext(MessagesContext);
   const empty = children === null || children === undefined || children === '' || children === false;
   return (
-    <div className="wk-record-field">
-      <dt className="wk-record-label">{label}</dt>
-      <dd className="wk-record-value">{empty ? copy.empty : children}</dd>
+    <div className="min-w-0 py-2">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="mt-1 text-sm [overflow-wrap:anywhere] whitespace-pre-line">{empty ? copy.empty : children}</dd>
     </div>
   );
 }
@@ -122,30 +125,30 @@ function History({
   readonly empty?: ReactNode;
 }) {
   const copy = useContext(MessagesContext);
-  if (entries.length === 0) return <p className="wk-record-history-empty">{empty ?? copy.historyEmpty}</p>;
+  if (entries.length === 0) return <p className="text-sm text-muted-foreground">{empty ?? copy.historyEmpty}</p>;
   return (
-    <table className="wk-table wk-record-history">
-      <thead>
-        <tr>
-          <th scope="col">{labels.at}</th>
-          <th scope="col">{labels.changes}</th>
-          <th scope="col">{labels.actor}</th>
-        </tr>
-      </thead>
-      <tbody>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead scope="col">{labels.at}</TableHead>
+          <TableHead scope="col">{labels.changes}</TableHead>
+          <TableHead scope="col">{labels.actor}</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
         {entries.map((entry) => (
-          <tr key={entry.id}>
-            <td>{entry.at}</td>
-            <td className="wk-record-changes">
+          <TableRow key={entry.id}>
+            <TableCell>{entry.at}</TableCell>
+            <TableCell className="[overflow-wrap:anywhere] whitespace-pre-line">
               {entry.changes.map((change, index) => (
                 <div key={index}>{change}</div>
               ))}
-            </td>
-            <td>{entry.actor === '' ? copy.empty : entry.actor}</td>
-          </tr>
+            </TableCell>
+            <TableCell>{entry.actor === '' ? copy.empty : entry.actor}</TableCell>
+          </TableRow>
         ))}
-      </tbody>
-    </table>
+      </TableBody>
+    </Table>
   );
 }
 

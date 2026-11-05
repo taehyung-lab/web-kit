@@ -16,7 +16,10 @@ function sourceRegistry(source, version) {
   if (items.size !== registry.items.length) throw new Error('중복 registry 항목');
   return { items, version: pkg.version };
 }
-/** 선택 항목의 내부 의존을 중복 없이 포함한다. */
+/**
+ * 선택 항목의 내부 의존을 중복 없이 포함한다. 이름만 있는 의존(button·dialog 등)은 shadcn 공식 registry의 기본 부품이라
+ * 프로젝트가 소유하는 파일이며 키트 설치 기록·지문에 넣지 않는다. 그 밖의 외부 registry 의존은 거절한다.
+ */
 function selection(items, selected) {
   if (!Array.isArray(selected) || selected.length === 0) throw new Error('설치한 항목을 하나 이상 선택하세요');
   const names = new Set();
@@ -25,6 +28,7 @@ function selection(items, selected) {
     if (!/^[a-z0-9-]+$/.test(name) || !items.has(name)) throw new Error('없는 registry 항목: ' + name);
     names.add(name);
     for (const dep of items.get(name).registryDependencies ?? []) {
+      if (/^[a-z0-9-]+$/.test(dep)) continue;
       if (!dep.startsWith('@web-kit/')) throw new Error('외부 registry 의존: ' + dep);
       visit(dep.slice('@web-kit/'.length));
     }

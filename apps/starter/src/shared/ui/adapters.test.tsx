@@ -3,7 +3,8 @@ import '@/app/i18n';
 import { checkConfirmDialogAdapter, checkFieldAdapter, checkRetryFocusAdapter } from '@boosterlab/web-kit/testing';
 import { describe, it } from 'vitest';
 import { FieldFrame } from '@/shared/ui/web-kit/form/ui';
-import { ConfirmDialog, Input } from '@/shared/ui/web-kit/ui';
+import { Input } from '@/shared/ui/input';
+import { ConfirmDialog } from '@/shared/ui/web-kit/ui';
 import { RetryRegion } from '@/shared/ui/web-kit/detail-ui';
 
 const CLASSES = { root: 'wk-field', label: 'wk-label', required: 'wk-required', description: 'wk-description', error: 'wk-error' };

@@ -1,7 +1,7 @@
 // 파일 책임: 상품 상세 화면. 단건 상태 판정은 web-kit useRecord 한 곳이 하고, 여기서는 상태별 표현과 dt/dd 목록을 그린다.
 import { failureCopyKey } from '@/shared/lib/failure-copy';
 import { Record } from '@/shared/ui/web-kit/detail-ui';
-import { Button } from '@/shared/ui/web-kit/ui';
+import { Button } from '@/shared/ui/button';
 import { useRecord } from '@boosterlab/web-kit/record';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -36,7 +36,7 @@ export function ProductDetailScreen({
         missing={
           <>
             <p>{t(failureCopyKey(state.kind === 'missing' ? state.failure : undefined))}</p>
-            <Button variant="secondary" onClick={onBack}>
+            <Button variant="outline" onClick={onBack}>
               {t('products.backToList')}
             </Button>
           </>
@@ -63,7 +63,7 @@ function ProductDetail({ product, onEdit }: { readonly product: Product; readonl
             <code>{product.code}</code>
           </p>
         </div>
-        <Button variant="primary" onClick={onEdit}>
+        <Button onClick={onEdit}>
           {t('products.edit')}
         </Button>
       </header>

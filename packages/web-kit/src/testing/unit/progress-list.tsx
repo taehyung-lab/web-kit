@@ -39,11 +39,11 @@ function deferred<T>() {
 
 /** 덮개 문구 영역(늘 있음). 닫혀 있으면 비어 있다. */
 function status() {
-  return document.querySelector<HTMLElement>('.wk-blocking-status')!;
+  return document.querySelector<HTMLElement>('[data-slot="blocking-progress-status"]')!;
 }
 /** 실제 덮개 DOM의 열림을 읽는다. */
 function overlayOpen() {
-  return document.querySelector('.wk-blocking') !== null;
+  return document.querySelector('[data-slot="blocking-progress"]') !== null;
 }
 /** 덮개가 막는 본문 영역을 찾는다. */
 function body() {

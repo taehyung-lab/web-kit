@@ -1,5 +1,5 @@
 // 파일 책임: 수정 원본·업무 검증·저장 요청·확인 내용을 키트에 제공한다.
-import { Button } from '@/shared/ui/web-kit/ui';
+import { Button } from '@/shared/ui/button';
 import { Record } from '@/shared/ui/web-kit/detail-ui';
 import { useSaveForm } from '@boosterlab/web-kit/form';
 import { Form } from '@/shared/ui/web-kit/form/ui';
@@ -36,7 +36,7 @@ export function ProductEditScreen({ productId, onBack }: { readonly productId: s
         missing={
           <>
             <p>{t(failureCopyKey(state.kind === 'missing' ? state.failure : undefined))}</p>
-            <Button onClick={onBack}>
+            <Button variant="outline" onClick={onBack}>
               {t('products.backToList')}
             </Button>
           </>
