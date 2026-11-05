@@ -1,34 +1,12 @@
 {
   "hooks": {
-    "UserPromptSubmit": [
+    "SessionStart": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$(git rev-parse --show-toplevel)/.agents/skills/wf-design/approval-gate.py\" prompt",
-            "timeout": 30
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"$(git rev-parse --show-toplevel)/.agents/skills/wf-design/approval-gate.py\" pre",
-            "timeout": 30
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"$(git rev-parse --show-toplevel)/.agents/skills/wf-design/approval-gate.py\" stop",
-            "timeout": 30
+            "command": "p=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; f=\"$p/.agents/skills/wf-context/context.py\"; [ -f \"$f\" ] && command -v python3 >/dev/null 2>&1 && python3 -I \"$f\" hook 2>/dev/null; exit 0",
+            "timeout": 10
           }
         ]
       }
