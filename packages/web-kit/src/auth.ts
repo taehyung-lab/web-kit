@@ -185,6 +185,8 @@ export function useAuthChallenge<Result, Resent = void>(options: AuthChallengeOp
   }
   const timing = getAuthTiming(options, options.clock.now());
   return { ...timing, pending, verifyFailure: failures.verify, resendFailure: failures.resend, invalidate,
+    /** 이 방식에 재전송이 있는가(`resend`를 넘겼는가). 없으면 화면은 재전송 버튼을 그리지 않는다. */
+    resendable: options.resend !== undefined,
     canSubmit: timing.canSubmit && !options.blocked && !running.verify,
     canResend: timing.canResend && !options.blocked && !running.resend && options.resend !== undefined,
     submit: (code: string) => run('verify', code), resend: () => run('resend') };

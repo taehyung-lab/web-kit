@@ -15,11 +15,11 @@ function fixture() {
   let current = null as ReturnType<ReturnType<typeof createSession>['current']>;
   const session = createSession({ store: { read: () => current, write: (v) => { current = v; }, subscribe: () => () => undefined }, reissue: vi.fn() });
   const adapter: AxiosAdapter = async (config) => ({ config, status: 200, statusText: '', data: null,
-    headers: { 'content-type': 'text/plain', 'x-session-expires': '130000' } });
+    headers: { 'content-type': 'text/plain', 'x-synthetic-deadline': '130000' } });
   const http = createHttp({ session, response: springEnvelope({ lookup: () => undefined }), isPublic: () => false, defaults: { adapter } });
   const idle = createStarterIdle({ session, http, key: 'starter-idle-fixture', policy: { warningMs: 1000, pendingAtDeadline: 'wait' },
     request: { url: '/synthetic-session-extension', method: 'POST' },
-    sample: ({ sentAt, response }) => ({ sentAt, deadline: Number(response.header('x-session-expires')) }),
+    sample: ({ sentAt, response }) => ({ sentAt, deadline: Number(response.header('x-synthetic-deadline')) }),
   });
   idle.start(); session.start({ accessToken: 'synthetic' });
   dispose.push(() => { idle.stop(); session.dispose(); });

@@ -139,7 +139,7 @@ it('인증 hook 공개 결과는 종류별 실패 이름을 제공하고 공용 
   const { result } = renderHook(() => useAuthChallenge({ scope: 1, clock, codeLength: 6, verify: vi.fn(), onVerified: vi.fn() }));
   expect(Object.keys(result.current).sort()).toEqual([
     'remainingSeconds', 'challengeRemainingSeconds', 'resendRemainingSeconds', 'expired', 'codeExpired',
-    'canSubmit', 'canResend', 'pending', 'verifyFailure', 'resendFailure', 'invalidate', 'submit', 'resend',
+    'canSubmit', 'canResend', 'resendable', 'pending', 'verifyFailure', 'resendFailure', 'invalidate', 'submit', 'resend',
   ].sort());
 });
 

@@ -28,7 +28,7 @@ export function AuthCodeForm({ model, codeLength, labels }: AuthCodeFormProps) {
     {model.verifyFailure !== undefined && <p role="alert">{labels.verifyFailure}</p>}
     {model.pending !== null && <p role="status">{labels.pending}</p>}
     <button type="submit" disabled={!model.canSubmit}>{labels.confirm}</button>
-    <button type="button" disabled={!model.canResend} onClick={() => { void model.resend(); }}>{labels.resend}</button>
+    {model.resendable && <button type="button" disabled={!model.canResend} onClick={() => { void model.resend(); }}>{labels.resend}</button>}
     {model.resendFailure !== undefined && <p role="alert">{labels.resendFailure}</p>}
     {model.resendRemainingSeconds > 0 && <p aria-label="resend-wait">{labels.resendWait(model.resendRemainingSeconds)}</p>}
   </form>;
