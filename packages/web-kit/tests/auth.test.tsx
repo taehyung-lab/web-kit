@@ -2,7 +2,7 @@
 // 인증 기한·즉시 단일 요청·교체 뒤 응답 격리·세션 공유 시계를 검사한다.
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { getAuthTiming, isAuthCode, remainingAuthSeconds, useAuthChallenge } from '../src/auth';
+import { createAuthChallengeStore, getAuthTiming, isAuthCode, remainingAuthSeconds, useAuthChallenge } from '../src/auth';
 import { createIdleTimer, createServerClock } from '../src/session-idle';
 import { createSession } from '../src/session';
 
@@ -13,7 +13,7 @@ function deferred<T>() {
   const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no; });
   return { promise, resolve, reject };
 }
-beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(100000); localStorage.clear(); });
+beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(100000); localStorage.clear(); sessionStorage.clear(); });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 it('기한·초 경계·재전송 대기와 숫자 길이를 계산한다', () => {
   expect(remainingAuthSeconds(undefined, 0)).toBeUndefined();
@@ -141,4 +141,50 @@ it('인증 hook 공개 결과는 종류별 실패 이름을 제공하고 공용 
     'remainingSeconds', 'challengeRemainingSeconds', 'resendRemainingSeconds', 'expired', 'codeExpired',
     'canSubmit', 'canResend', 'pending', 'verifyFailure', 'resendFailure', 'invalidate', 'submit', 'resend',
   ].sort());
+});
+
+const parseLogin = (value: unknown) =>
+  typeof value === 'object' && value !== null && typeof (value as { id?: unknown }).id === 'string' ? (value as { id: string }) : null;
+
+it('새로 고침해도 같은 scope와 코드 기한으로 이어 가고, 기한이 지나면 대기는 남긴 채 확인만 막는다', async () => {
+  const clock = createServerClock({ key: 'clock' });
+  const started = createAuthChallengeStore({ key: 'pending', parse: parseLogin }).start({ id: 'user' }, { codeExpiresAt: 100000 + 300000 });
+  await act(async () => { await vi.advanceTimersByTimeAsync(120000); });
+  // 새로 고침: 새 저장소 객체가 같은 탭 저장소를 읽는다.
+  const restored = createAuthChallengeStore({ key: 'pending', parse: parseLogin }).current();
+  expect(restored).toEqual(started);
+  const verify = vi.fn(async () => 'ok');
+  const { result } = renderHook(() => useAuthChallenge({ scope: restored!.scope, clock, codeLength: 6, codeExpiresAt: restored!.codeExpiresAt, verify, onVerified: vi.fn() }));
+  expect(result.current.remainingSeconds).toBe(180);
+  expect(result.current.canSubmit).toBe(true);
+  await act(async () => { await vi.advanceTimersByTimeAsync(180000); });
+  expect(createAuthChallengeStore({ key: 'pending', parse: parseLogin }).current()).toEqual(started);
+  expect(result.current).toMatchObject({ remainingSeconds: 0, codeExpired: true, canSubmit: false });
+  await act(async () => { await result.current.submit('123456'); });
+  expect(verify).not.toHaveBeenCalled();
+});
+
+it('인증 대기 저장소는 새 로그인에 새 scope, 재전송에 같은 scope의 새 기한, 취소에 삭제를 적용한다', () => {
+  const store = createAuthChallengeStore({ key: 'pending', parse: parseLogin });
+  const first = store.start({ id: 'user' }, { codeExpiresAt: 1000 });
+  expect(store.update({ codeExpiresAt: 2000, resendAvailableAt: 1500 })).toEqual({ ...first, codeExpiresAt: 2000, resendAvailableAt: 1500 });
+  expect(store.current()?.scope).toBe(first.scope);
+  expect(store.start({ id: 'user' }, { codeExpiresAt: 3000 }).scope).not.toBe(first.scope);
+  store.clear();
+  expect(store.current()).toBeNull();
+  expect(store.update({ codeExpiresAt: 1 })).toBeNull();
+  expect(localStorage.getItem('pending')).toBeNull();
+});
+
+it('인증 대기 저장소는 형식이 다르거나 저장소를 쓸 수 없으면 대기 없음으로 본다', () => {
+  const store = createAuthChallengeStore({ key: 'pending', parse: parseLogin });
+  for (const raw of ['{', 'null', '{"scope":1,"data":{"id":"u"}}', '{"scope":"s","data":{}}', '{"scope":"s","data":{"id":"u"},"codeExpiresAt":"x"}'] ) {
+    sessionStorage.setItem('pending', raw);
+    expect(store.current()).toBeNull();
+  }
+  const broken = { getItem: () => { throw new Error('denied'); }, setItem: () => { throw new Error('denied'); }, removeItem: () => { throw new Error('denied'); } } as unknown as Storage;
+  const blocked = createAuthChallengeStore({ key: 'pending', parse: parseLogin, storage: () => broken });
+  expect(blocked.start({ id: 'user' }, {}).data).toEqual({ id: 'user' });
+  expect(blocked.current()).toBeNull();
+  expect(() => blocked.clear()).not.toThrow();
 });

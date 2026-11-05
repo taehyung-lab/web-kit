@@ -8,7 +8,7 @@ import * as choice from '../src/choice-binding';
 import * as auth from '../src/auth';
 const entries = { core, form, list, dialog, choice, auth };
 const expected = {
-  "auth": ["getAuthTiming", "isAuthCode", "remainingAuthSeconds", "useAuthChallenge"],
+  "auth": ["createAuthChallengeStore", "getAuthTiming", "isAuthCode", "remainingAuthSeconds", "useAuthChallenge"],
   "choice": ["normalizeChoiceValue", "useChoiceBinding"],
   "core": [
     "RequestFailure",

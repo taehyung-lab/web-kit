@@ -30,6 +30,83 @@ export function isAuthCode(code: string, length: number): boolean {
   return Number.isInteger(length) && length > 0 && code.length === length && /^\d+$/.test(code);
 }
 
+/** 저장된 인증 대기. `scope`는 같은 로그인 동안(새로 고침 포함) 같고 새 로그인마다 새 값이다. */
+export interface StoredAuthChallenge<Data> extends AuthDeadlines {
+  readonly scope: string;
+  readonly data: Data;
+}
+
+export interface AuthChallengeStoreOptions<Data> {
+  readonly key: string;
+  /** 저장된 값이 이 프로젝트의 형식인지 확인하여 돌려주고, 아니면 null. 비밀번호·토큰은 담지 않는다. */
+  readonly parse: (value: unknown) => Data | null;
+  /** 기본은 탭 저장소(sessionStorage): 새로 고침은 잇고, 탭을 닫으면 사라지며 다른 탭과 섞이지 않는다. */
+  readonly storage?: () => Storage;
+}
+
+const DEADLINE_KEYS = ['expiresAt', 'codeExpiresAt', 'resendAvailableAt'] as const;
+
+function deadlinesOf(value: Record<string, unknown>): AuthDeadlines | null {
+  const deadlines: Record<string, number> = {};
+  for (const key of DEADLINE_KEYS) {
+    const item = value[key];
+    if (item === undefined) continue;
+    if (typeof item !== 'number' || !Number.isFinite(item)) return null;
+    deadlines[key] = item;
+  }
+  return deadlines;
+}
+
+/**
+ * 로그인 성공 전 인증 대기를 보관한다. 새로 고침해도 같은 `scope`와 절대 기한으로 이어 가며,
+ * 기한이 지난 대기도 그대로 돌려준다(화면은 만료 안내와 막힌 확인 버튼을 보인다). 지우는 것은 취소·성공·새 로그인이다.
+ */
+export function createAuthChallengeStore<Data>({ key, parse, storage = () => sessionStorage }: AuthChallengeStoreOptions<Data>) {
+  function read(): StoredAuthChallenge<Data> | null {
+    try {
+      const raw = storage().getItem(key);
+      const value: unknown = raw === null ? null : JSON.parse(raw);
+      if (typeof value !== 'object' || value === null) return null;
+      const record = value as Record<string, unknown>;
+      if (typeof record.scope !== 'string') return null;
+      const deadlines = deadlinesOf(record);
+      const data = parse(record.data);
+      if (deadlines === null || data === null) return null;
+      return { ...deadlines, scope: record.scope, data };
+    } catch {
+      return null;
+    }
+  }
+  function write(value: StoredAuthChallenge<Data> | null): void {
+    try {
+      if (value === null) storage().removeItem(key);
+      else storage().setItem(key, JSON.stringify(value));
+    } catch {
+      // 저장하지 못하면 이 화면은 이어지고 새로 고침 뒤에는 로그인부터 다시 한다.
+    }
+  }
+  return {
+    /** 새 로그인: 새 `scope`와 새 기한으로 교체한다. */
+    start(data: Data, deadlines: AuthDeadlines): StoredAuthChallenge<Data> {
+      const challenge = { ...deadlines, scope: crypto.randomUUID(), data };
+      write(challenge);
+      return challenge;
+    },
+    current: read,
+    /** 재전송 성공 등으로 기한만 바꾼다. `scope`는 유지한다. */
+    update(deadlines: AuthDeadlines): StoredAuthChallenge<Data> | null {
+      const challenge = read();
+      if (challenge === null) return null;
+      const next = { ...challenge, ...deadlines };
+      write(next);
+      return next;
+    },
+    clear(): void { write(null); },
+  };
+}
+
+export type AuthChallengeStore<Data> = ReturnType<typeof createAuthChallengeStore<Data>>;
+
 export interface AuthChallengeOptions<Result, Resent> extends AuthDeadlines {
   /** 같은 로그인·방식 동안 유지한다. 취소·새 로그인·방식 전환 때 새 값으로 교체한다. */
   readonly scope: unknown;
@@ -44,7 +121,7 @@ export interface AuthChallengeOptions<Result, Resent> extends AuthDeadlines {
   readonly onResent?: (result: Resent) => void | Promise<void>;
 }
 
-/** 인증 화면 상위에서 사용한다. 인증 대기의 보관은 프로젝트가 하고(이 hook은 저장하지 않는다), 세션 저장·이동은 유효 응답 콜백에 연결한다. */
+/** 인증 화면 상위에서 사용한다. 인증 대기는 `createAuthChallengeStore`에서 읽어 넘기고, 세션 저장·이동은 유효 응답 콜백에 연결한다. */
 export function useAuthChallenge<Result, Resent = void>(options: AuthChallengeOptions<Result, Resent>) {
   const current = useRef(options);
   const active = useRef<{ verify: object | null; resend: object | null }>({ verify: null, resend: null });
