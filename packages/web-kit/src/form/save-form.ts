@@ -72,6 +72,7 @@ export interface SaveFormOptions<
    * 이 폼의 저장이 끝난 뒤 저장 함수의 결과로 한 번 실행한다(이동·알림). 늦은 결과에는 실행하지 않는다.
    * 끝날 때까지(Promise면 settle까지) 단계는 `saved`라 다시 저장할 수 없다. 실패하면 `completionFailure`가 되고
    * `complete()`가 이것만 다시 실행한다(저장 요청은 다시 나가지 않는다).
+   * 업무상 이전 결과를 폐기하고 새 제출해도 안전하면 필요한 정리를 마친 뒤 `DiscardSaveAttempt`를 반환한다.
    */
   readonly onSaved?: (result: TResult) => unknown;
   /** true면 저장 성공 뒤 `saved`에서 멈추고, 사용자가 확인해 `complete()`를 부를 때 onSaved를 실행한다(저장 완료 확인창). */
@@ -95,6 +96,15 @@ export type SaveStage<TInput> =
   | { readonly kind: 'saving'; readonly values: TInput }
   /** 저장은 끝났고 완료 처리(onSaved)를 기다리거나 실행 중이거나 실패했다. 이 동안 제출은 잠긴다. */
   | { readonly kind: 'saved'; readonly completing: boolean };
+
+/**
+ * onSaved가 반환하는 명시적 시도 폐기 결과. 프로젝트가 세션 종료·보상 등 필요한 정리를 끝내고,
+ * 새 저장 요청이 안전할 때만 반환한다. 키트는 입력을 보존하고 이전 기준선을 복원해 새 제출을 허용한다.
+ * reason은 완료 위치에 안내하되 완료 재시도는 제공하지 않는다. 일반 throw는 기존 완료 재시도다.
+ */
+export class DiscardSaveAttempt {
+  constructor(readonly reason: unknown) {}
+}
 
 /**
  * 저장 함수(save)가 요청 전에 화면 절차로 거절했음을 알린다(먼저 조회가 필요한 검사·업로드 실패·확인창 취소 등). save 안에서 던진다.
@@ -188,7 +198,10 @@ export function useSaveForm<
   const [baseline, setBaselineState] = useState(source.values);
   const baselineRef = useRef(source.values);
   const baselineMark = useRef(0);
-  const [completionFailure, setCompletionFailure] = useState<unknown>();
+  const [completionRejection, setCompletionRejection] = useState<{
+    readonly failure: unknown;
+    readonly clearWhenEdited?: { readonly submitted: TInput };
+  }>();
   const [stage, setStageState] = useState<SaveStage<TInput>>({ kind: 'idle' });
   /** 마지막 저장 실패와, 그중 필드에 붙이지 못한 서버 필드 오류. 둘은 함께 바뀐다. */
   const [rejection, setRejection] = useState<
@@ -213,7 +226,15 @@ export function useSaveForm<
   const [saveMode, setSaveMode] = useState<'primary' | 'secondary'>('primary');
   const focusTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   /** 저장이 성공해 완료 처리를 기다리는 결과. 완료 처리를 다시 시도할 때 같은 결과를 쓴다. */
-  const savedResult = useRef<{ readonly complete: () => unknown; readonly identity: unknown } | undefined>(undefined);
+  const savedResult = useRef<{
+    readonly complete: () => unknown;
+    readonly identity: unknown;
+    readonly baseline: TInput;
+    readonly baselineMark: number;
+    readonly inputBeforeSaved: TInput;
+    readonly inputAfterSaved: TInput;
+    readonly submitted: TInput;
+  } | undefined>(undefined);
   /** 저장 도중 사용자에게 묻고 있는 물음 수. 0보다 크면 진행 덮개를 내린다. */
   const [asking, setAsking] = useState(0);
 
@@ -448,9 +469,14 @@ export function useSaveForm<
     const declared =
       typeof result === 'object' && result !== null && 'saved' in result ? (result as { readonly saved?: TInput }).saved : undefined;
     const saved = declared ?? submitted;
-    savedResult.current = { complete: () => onSaved?.(result), identity: identity.current };
+    const previous = { baseline: baselineRef.current, baselineMark: baselineMark.current, inputBeforeSaved: form.state.values };
+    const replaceInput = evaluate(project(form.state.values), submitted);
+    savedResult.current = {
+      complete: () => onSaved?.(result), identity: identity.current, ...previous,
+      inputAfterSaved: replaceInput ? saved : form.state.values, submitted,
+    };
     flushSync(() => {
-      if (evaluate(project(form.state.values), submitted)) replace(saved);
+      if (replaceInput) replace(saved);
       else setBaseline(saved, mark);
       setStage({ kind: 'saved', completing: false });
     });
@@ -467,17 +493,26 @@ export function useSaveForm<
     if (pending === undefined || now.kind !== 'saved' || now.completing) return;
     const stillHere = () => mounted.current && savedResult.current === pending && Object.is(identity.current, pending.identity);
     setStage({ kind: 'saved', completing: true });
-    setCompletionFailure(undefined);
+    setCompletionRejection(undefined);
+    let outcome: unknown;
     try {
-      await pending.complete();
+      outcome = await pending.complete();
     } catch (error: unknown) {
       if (!stillHere()) return;
       setStage({ kind: 'saved', completing: false });
-      setCompletionFailure(error);
+      setCompletionRejection({ failure: error });
       return;
     }
     if (!stillHere()) return;
     savedResult.current = undefined;
+    if (outcome instanceof DiscardSaveAttempt) {
+      // 저장 결과 정규화만 되돌린다. 저장·완료 처리 중 사용자가 고친 입력은 그대로 둔다.
+      if (evaluate(form.state.values, pending.inputAfterSaved) && !evaluate(form.state.values, pending.inputBeforeSaved))
+        replace(pending.inputBeforeSaved);
+      setBaseline(pending.baseline, pending.baselineMark);
+      const clearWhenEdited = latest.current.clearFailureOnEdit?.(outcome.reason) === true ? { submitted: pending.submitted } : undefined;
+      setCompletionRejection({ failure: outcome.reason, clearWhenEdited });
+    }
     setStage({ kind: 'idle' });
   }
 
@@ -493,7 +528,7 @@ export function useSaveForm<
     cancelFocus();
     clearServerErrors();
     setRejection(undefined);
-    setCompletionFailure(undefined);
+    setCompletionRejection(undefined);
     try {
       conditional.reconcile();
       if (rejectReferences(projectConditionalFields(form.state.values, latest.current.conditionalFields?.(form.state.values) ?? []), rowMark(form))) return;
@@ -533,7 +568,7 @@ export function useSaveForm<
     cancelFocus();
     clearServerErrors();
     setRejection(undefined);
-    setCompletionFailure(undefined);
+    setCompletionRejection(undefined);
     conditional.reconcile();
     const submitted = project(form.state.values);
     const mark = rowMark(form);
@@ -605,7 +640,7 @@ export function useSaveForm<
       cancelFocus();
       setStage({ kind: 'idle' });
       setRejection(undefined);
-      setCompletionFailure(undefined);
+      setCompletionRejection(undefined);
       replace(source.values);
       return;
     }
@@ -636,6 +671,9 @@ export function useSaveForm<
   // 입력을 고치면 지우기로 한 실패는 지금 입력이 제출 때 입력과 달라진 동안 보이지 않는다.
   const visibleRejection =
     rejection?.clearWhenEdited !== undefined && !evaluate(values, rejection.clearWhenEdited.submitted) ? undefined : rejection;
+  const completionFailure =
+    completionRejection?.clearWhenEdited !== undefined && !evaluate(values, completionRejection.clearWhenEdited.submitted)
+      ? undefined : completionRejection?.failure;
 
   const failure = visibleRejection?.failure;
   const unattached = visibleRejection?.unattached ?? [];
