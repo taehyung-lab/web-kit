@@ -117,4 +117,14 @@ for skill in "$PKG"/node_modules/@boosterlab/web-kit/skills/web-kit-*; do
 done
 ```
 
-기존 같은 이름의 스킬이 있으면 덮어쓰지 않고 출처를 확인한다. 업그레이드 뒤 링크가 설치한 버전의 `SKILL.md`로 해소되는지 확인한다. 프로젝트 역할 스킬은 반복되는 제품 고유 판단이 있을 때만 둔다. 공통 조립법은 키트 스킬이 맡고 제품 근거·검사 위치는 프로젝트 지도에서 찾는다.
+새 버전이 스킬을 더하면(예: `web-kit-structure`) 위 명령을 다시 실행해 링크를 더한다. 기존 같은 이름의 스킬이 있으면 덮어쓰지 않고 출처를 확인한다. 업그레이드 뒤 링크가 설치한 버전의 `SKILL.md`로 해소되는지 확인한다. 프로젝트 역할 스킬은 반복되는 제품 고유 판단이 있을 때만 둔다. 공통 조립법은 키트 스킬이 맡고 제품 근거·검사 위치는 프로젝트 지도에서 찾는다.
+
+## 구조 계약 연결
+
+구조 계약을 채택한 앱만 연결한다(starter는 필수). 내용과 이유는 [web-kit-structure](../skills/web-kit-structure/SKILL.md)가 정본이다.
+
+1. 개발 의존 `eslint`·`typescript`·`typescript-eslint`를 프로젝트에 둔다(키트의 선택 peer). 런타임만 쓰는 앱에는 설치되지 않는다.
+2. 프로젝트 루트에 `web-kit.structure.json`을 둔다. 예: [starter 설정](../references/apps/starter/web-kit.structure.json). 모노레포 앱은 앱 폴더에 두고 `tsconfig`는 별칭(paths)이 실제로 해소되는 앱 tsconfig를 가리킨다.
+3. `eslint.config.js`에서 TypeScript 파서 설정 뒤에 `...webKitStructure({ root: import.meta.dirname })`를 더한다(`import { webKitStructure } from '@boosterlab/web-kit/structure'`). 예: [starter lint 설정](../references/apps/starter/eslint.config.js.txt). 같은 뜻의 프로젝트 자체 규칙(shared import 금지·맨 HTML 금지·화면 zod 금지 등)은 지운다.
+4. 필수 CI의 `web-kit-check`에 `--structure web-kit.structure.json`을 붙인다([검사 안내](checking.md#구조-결과)).
+5. 기존 위반은 [이전 안내](migrating.md#구조-계약-채택)의 순서로 옮기고, 남은 것만 예외 목록에 둔다.

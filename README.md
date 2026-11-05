@@ -29,6 +29,7 @@ Node 24.19, pnpm 10.33.
 | `pnpm check` | 키트 타입·동작, 문서 링크, registry 원본/산출물 일치와 스크립트 검사 |
 | `pnpm starter:sync` | 키트를 포장해 starter에 설치하고 starter lockfile의 키트 지문을 갱신한다. 키트를 바꾼 뒤 실행하고 결과를 같은 PR에 넣는다 |
 | `pnpm starter:check` | starter가 지금 키트에 맞춰져 있는지 확인한 뒤 starter `check`를 돌린다. 단위·브라우저·빌드·복사본 strict 지문과 적합성 점검까지 포함한다 |
+| `pnpm --dir apps/starter exec web-kit-structure` | starter의 구조 계약 결과만 본다(starter `check`의 web-kit-check에도 `--structure`로 포함) |
 
 ## 새 프로젝트 시작
 

@@ -17,6 +17,8 @@
 
 starter는 web-kit.check.json의 전체 입력과 기존 Vitest·Playwright 명령을 web-kit-check --run으로 실행한다. 타입·lint·build는 기존 명령을 유지한다. runner include·필수 ID·skip/only·strict 기준은 줄이지 않는다. 입력 선언과 실제 실행 경로의 일치는 검토한다. 문서 이동 후 저장소와 실제 tarball에서 파일 링크와 제목 앵커를 모두 검사한다.
 
+구조 계약 도구(`tools/structure`, bin `web-kit-structure`·`web-kit-new`)를 바꾸면 `scripts/structure-lint.test.mjs`의 정상·위반 예제(별칭·상대 경로·재export·동적 import·타입 전용·생성 코드·모노레포 별칭·예외·인라인 disable)와 `scripts/new-screen.test.mjs`(덮어쓰기 거절·재실행 동일·--dry-run·미완성 표시)를 함께 통과시킨다. 규칙을 줄이거나 예외 형식을 넓히는 변경은 사용 계약 변경이며 독립 검토를 받는다. starter는 예외 0으로 구조 검사를 통과해야 한다.
+
 ## 선택 설치 검사
 
 `registry.json`이 설치 의존의 정본이다. `registry:check`는 `requirements.json`의 내부 의존과 정본을 비교하고, 각 항목의 실행 코드·검사 정적 import를 따라 npm 선언 누락도 거절한다. 조합의 검사 ID와 정적 import 시작점은 `src/testing/combinations.json`에서 관리한다. 조건부 import는 설치한 조합별로 검사한다.
