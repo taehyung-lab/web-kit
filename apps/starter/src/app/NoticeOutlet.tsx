@@ -1,5 +1,5 @@
 // 파일 책임: 전역 안내(notices) 목록을 화면 구석에 그린다.
-import { Button } from '@/shared/ui/web-kit/ui';
+import { Button } from '@/shared/ui/button';
 import { useTranslation } from 'react-i18next';
 import { notices, useNotices } from './notices';
 

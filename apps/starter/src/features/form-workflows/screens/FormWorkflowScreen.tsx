@@ -1,5 +1,5 @@
 // 파일 책임: 작성·임시 저장과 게시 후 조회를 공용 폼의 저장·완료 수명에 연결한다.
-import { Button } from '@/shared/ui/web-kit/ui';
+import { Button } from '@/shared/ui/button';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSaveForm } from '@boosterlab/web-kit/form';
@@ -54,14 +54,14 @@ export function FormWorkflowScreen() {
           {(rows) => (
             <div className="flex flex-col gap-3">
               {rows.items.map((item, index) => (
-                <div className="wk-actions" key={item.id}>
+                <div className="flex flex-wrap items-center gap-2" key={item.id}>
                   <F.Text name={`items[${index}].name`} label={t('workflows.item', { count: index + 1 })} />
-                  <Button onClick={() => rows.remove(index)}>
+                  <Button variant="outline" onClick={() => rows.remove(index)}>
                     {t('workflows.remove', { count: index + 1 })}
                   </Button>
                 </div>
               ))}
-              <Button
+              <Button variant="outline"
                 onClick={() => rows.append({ id: crypto.randomUUID(), name: t('workflows.newItem', { count: rows.items.length + 1 }) })}
               >
                 {t('workflows.add')}
@@ -75,7 +75,7 @@ export function FormWorkflowScreen() {
           nodes={editor.form.state.values.items.map((item) => ({ value: item.id, label: item.name }))}
         />
         <F.Failure />
-        <div className="wk-actions">
+        <div className="flex flex-wrap items-center gap-2">
           <F.Submit>{t('workflows.publish')}</F.Submit>
           <F.Submit mode="secondary">{t('workflows.draft')}</F.Submit>
           <F.Cancel to={{ to: '/products' }} />

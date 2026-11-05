@@ -1,5 +1,5 @@
 // 파일 책임: 상품 필드·배치·옵션의 업무 값을 선언한다. 입력·검증·오류 연결은 키트 Form 부품이 맡는다.
-import { Button } from '@/shared/ui/web-kit/ui';
+import { Button } from '@/shared/ui/button';
 import { Form } from '@/shared/ui/web-kit/form/ui';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -58,13 +58,13 @@ export function ProductFields({ submitLabel, cancelTo }: { readonly submitLabel:
                     onKeyDown={rows.enterAdds(add)}
                   />
                   {rows.canRemove && (
-                    <Button onClick={() => rows.remove(index)}>
+                    <Button variant="outline" onClick={() => rows.remove(index)}>
                       {t('products.form.removeOption', { index: index + 1 })}
                     </Button>
                   )}
                 </div>
               ))}
-              <Button disabled={!rows.canAdd} onClick={add}>
+              <Button variant="outline" disabled={!rows.canAdd} onClick={add}>
                 {t('products.form.addOption')}
               </Button>
               {message(rows.errors) && <p role="alert">{message(rows.errors)}</p>}
@@ -73,7 +73,7 @@ export function ProductFields({ submitLabel, cancelTo }: { readonly submitLabel:
         }}
       </F.Array>
       <F.TextArea name="description" label={t('products.fields.description')} maxLength={500} />
-      <div className="wk-actions">
+      <div className="flex flex-wrap items-center gap-2">
         <F.Submit>{submitLabel}</F.Submit>
         <F.Cancel to={cancelTo} />
       </div>

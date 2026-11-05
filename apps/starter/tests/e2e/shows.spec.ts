@@ -47,11 +47,11 @@ test('show example keeps errors on their round, isolates the dialog, keeps the f
   // inert가 밀어낸 포커스는 저장 버튼으로 돌아오며, 파일은 남는다.
   const save = page.getByRole('button', { name: '저장', exact: true });
   await save.click();
-  await expect(page.locator('.wk-blocking').getByText('등록 중입니다.')).toBeVisible();
+  await expect(page.locator('[data-slot="blocking-progress"]').getByText('등록 중입니다.')).toBeVisible();
   await expect(save).toHaveAttribute('aria-disabled', 'true');
-  await expect(page.locator('.wk-blocking-root .wk-spinner')).toHaveCount(0);
+  await expect(page.locator('[data-slot="blocking-progress-root"] [data-slot="pending"]')).toHaveCount(0);
   await expect(page.getByText('서버에서 오류가 발생했습니다. 잠시 뒤 다시 시도하세요.')).toBeVisible();
-  await expect(page.locator('.wk-blocking')).toHaveCount(0);
+  await expect(page.locator('[data-slot="blocking-progress"]')).toHaveCount(0);
   await expect(save).toBeFocused();
   await expect(page.getByText('seat-map.png')).toBeVisible();
 

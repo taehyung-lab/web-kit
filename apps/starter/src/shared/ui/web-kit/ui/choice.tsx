@@ -1,11 +1,25 @@
 // 파일 책임: 공유하는 선택 값과 트리를 여러 입력 모양 및 서버 검색에 연결한다.
-import { Checkbox } from '@base-ui/react/checkbox';
-import { Combobox } from '@base-ui/react/combobox';
-import { Menu } from '@base-ui/react/menu';
-import { Popover } from '@base-ui/react/popover';
-import type { ReactNode } from 'react';
+// 입력 모양(체크박스·라디오·팝오버·메뉴·콤보박스)은 프로젝트의 shadcn 기본 부품이 정하고, 여기서는 값·트리·검색 연결과 배치만 맡는다.
+import type { ComponentProps, ReactNode } from 'react';
+import { cn } from 'cn';
+import { ChevronDownIcon } from 'lucide-react';
 import { useChoiceBinding } from '@boosterlab/web-kit/choice';
 import { treeLeaves, treeLeafNodes, type CheckboxTreeNode } from '@boosterlab/web-kit';
+import { Button } from '@/shared/ui/button';
+import { Checkbox } from '@/shared/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/shared/ui/radio-group';
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from '@/shared/ui/dropdown-menu';
+import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList, ComboboxTrigger } from '@/shared/ui/combobox';
+import { InputGroupAddon, InputGroupButton } from '@/shared/ui/input-group';
 
 export type ChoiceNode = CheckboxTreeNode;
 export type ChoiceValue = string | readonly string[] | undefined;
@@ -34,6 +48,22 @@ export interface ChoiceProps {
   readonly messages?: { readonly loading?: string; readonly failed?: string; readonly retry?: string; readonly empty?: string };
 }
 
+/**
+ * 일부 선택(indeterminate)을 체크와 다르게 보이는 체크박스. shadcn Checkbox는 일부 선택에도 체크 표시를 그리므로
+ * 그 상태에서만 표시를 가로줄로 바꾼다(색은 테마 토큰). 목록 선택 열도 같은 부품을 쓴다.
+ */
+export function MixedCheckbox({ className, ...props }: ComponentProps<typeof Checkbox>) {
+  return (
+    <Checkbox
+      {...props}
+      className={cn(
+        'data-indeterminate:border-primary data-indeterminate:bg-primary data-indeterminate:text-primary-foreground data-indeterminate:[&_svg]:hidden data-indeterminate:before:h-0.5 data-indeterminate:before:w-2 data-indeterminate:before:rounded-full data-indeterminate:before:bg-current',
+        className,
+      )}
+    />
+  );
+}
+
 /** 같은 leaf 값 모델을 모든 모양에서 사용한다. 가지 ID는 저장하지 않는다. */
 export function Choice(props: ChoiceProps) {
   const { nodes, multiple = false, appearance = 'dropdown', disabled, label } = props;
@@ -43,69 +73,68 @@ export function Choice(props: ChoiceProps) {
     const targets = node.children === undefined ? [node.value] : treeLeaves(node.children);
 
     return (
-      <li key={node.value ?? key}>
+      <li key={node.value ?? key} className="grid gap-2">
         {multiple ? (
-          <label className="wk-inline">
-            <Checkbox.Root
-              className="wk-check"
+          <label className="flex items-center gap-2 text-sm">
+            <MixedCheckbox
               disabled={disabled}
               checked={selection.checked(targets)}
               indeterminate={selection.mixed(targets)}
               onCheckedChange={() => toggle(targets)}
-            >
-              <Checkbox.Indicator aria-hidden="true">{selection.checked(targets) ? '✓' : '−'}</Checkbox.Indicator>
-            </Checkbox.Root>
-            {node.label}
-          </label>
-        ) : node.children !== undefined ? (
-          <span>{node.label}</span>
-        ) : (
-          <label className="wk-inline">
-            <input
-              type="radio"
-              name={id}
-              disabled={disabled}
-              checked={selected.includes(node.value)}
-              onChange={() => select(node.value)}
             />
             {node.label}
           </label>
+        ) : node.children !== undefined ? (
+          <span className="text-sm font-medium">{node.label}</span>
+        ) : (
+          <label className="flex items-center gap-2 text-sm">
+            <RadioGroupItem value={node.value} disabled={disabled} />
+            {node.label}
+          </label>
         )}
-        {node.children !== undefined && <ul>{node.children.map(branch)}</ul>}
+        {node.children !== undefined && <ul className="grid gap-2 pl-6">{node.children.map(branch)}</ul>}
       </li>
     );
   }
   const clear =
     !multiple && props.clearLabel !== undefined && selected.length > 0 ? (
-      <button type="button" className="wk-button wk-button-ghost" disabled={disabled} onClick={() => select(undefined)}>
+      <Button type="button" variant="ghost" size="sm" disabled={disabled} onClick={() => select(undefined)}>
         {props.clearLabel}
-      </button>
+      </Button>
     ) : null;
+  const list = (
+    <ul className={appearance === 'horizontal' ? 'flex flex-wrap items-center gap-x-4 gap-y-2' : 'grid gap-2'}>
+      {(props.allLabel === undefined || !multiple ? nodes : [{ label: props.allLabel, children: nodes }]).map(branch)}
+    </ul>
+  );
+  // 단일 선택은 라디오 묶음 하나로 같은 칸의 라디오만 서로 배타가 된다(id를 묶음 이름으로 쓴다).
   const tree = (
     <>
-      <div>{clear}</div>
-      <ul className={appearance === 'horizontal' ? 'wk-inline' : undefined}>
-        {(props.allLabel === undefined || !multiple ? nodes : [{ label: props.allLabel, children: nodes }]).map(branch)}
-      </ul>
+      {clear === null ? null : <div>{clear}</div>}
+      {multiple ? (
+        list
+      ) : (
+        <RadioGroup name={id} value={selected[0] ?? null} onValueChange={(value) => select(value as string)} disabled={disabled} className="block w-auto">
+          {list}
+        </RadioGroup>
+      )}
     </>
   );
   /** 단일 계층 메뉴는 가지를 열고 맨 아래 값만 선택한다. */
   function menu(node: ChoiceNode, key: number): ReactNode {
     return node.children === undefined ? (
-      <Menu.Item disabled={disabled} key={node.value} onClick={() => select(node.value)}>
+      <DropdownMenuItem disabled={disabled} key={node.value} onClick={() => select(node.value)}>
         {node.label}
-      </Menu.Item>
+      </DropdownMenuItem>
     ) : (
-      <Menu.SubmenuRoot key={key}>
-        <Menu.SubmenuTrigger disabled={disabled}>{node.label}</Menu.SubmenuTrigger>
-        <Menu.Portal>
-          <Menu.Positioner className="wk-choice-positioner">
-            <Menu.Popup className="wk-choice-popup">{node.children.map(menu)}</Menu.Popup>
-          </Menu.Positioner>
-        </Menu.Portal>
-      </Menu.SubmenuRoot>
+      <DropdownMenuSub key={key}>
+        <DropdownMenuSubTrigger disabled={disabled}>{node.label}</DropdownMenuSubTrigger>
+        <DropdownMenuSubContent>{node.children.map(menu)}</DropdownMenuSubContent>
+      </DropdownMenuSub>
     );
   }
+  /** 팝업을 여는 버튼 모양. 내용은 지금 고른 값 요약이고 이름은 control의 aria-label이 맡는다. */
+  const triggerButton = <Button variant="outline" className="min-w-36 justify-between font-normal" />;
   if (appearance === 'search') {
     const items = treeLeafNodes(result.nodes);
     const selectedItems = selected.map((id) => ({ value: id, label: names.current.get(id) ?? id }));
@@ -118,86 +147,82 @@ export function Choice(props: ChoiceProps) {
       isItemEqualToValue: (a: { value: string }, b: { value: string }) => a.value === b.value,
     };
     const parts = (
-      <>
-        <Combobox.Input {...control} className="wk-input" />
-        <Combobox.Trigger aria-label={label} disabled={disabled}>
-          ▾
-        </Combobox.Trigger>
-        <span aria-live="polite">{summary}</span>
+      <div className="flex flex-wrap items-center gap-2">
+        <ComboboxInput {...control} showTrigger={false} disabled={disabled}>
+          <InputGroupAddon align="inline-end">
+            <InputGroupButton size="icon-xs" variant="ghost" render={<ComboboxTrigger aria-label={label} />} disabled={disabled} />
+          </InputGroupAddon>
+        </ComboboxInput>
+        <span aria-live="polite" className="text-sm text-muted-foreground">
+          {summary}
+        </span>
         {clear}
-        <Combobox.Portal>
-          <Combobox.Positioner className="wk-choice-positioner">
-            <Combobox.Popup className="wk-choice-popup">
-              {result.pending && <p role="status">{props.messages?.loading ?? '불러오는 중입니다.'}</p>}
-              {result.failed && (
-                <div role="alert">
-                  {props.messages?.failed ?? '선택지를 불러오지 못했습니다.'}
-                  <button type="button" onClick={result.retry}>
-                    {props.messages?.retry ?? '다시 시도'}
-                  </button>
-                </div>
-              )}
-              <Combobox.Empty>{props.messages?.empty ?? '선택지가 없습니다.'}</Combobox.Empty>
-              <Combobox.List>
-                {(item: { value: string; label: string }) => (
-                  <Combobox.Item key={item.value} value={item}>
-                    {item.label}
-                    <Combobox.ItemIndicator aria-hidden="true">✓</Combobox.ItemIndicator>
-                  </Combobox.Item>
-                )}
-              </Combobox.List>
-            </Combobox.Popup>
-          </Combobox.Positioner>
-        </Combobox.Portal>
-      </>
+        <ComboboxContent>
+          {result.pending && (
+            <p role="status" className="px-2 py-1.5 text-sm text-muted-foreground">
+              {props.messages?.loading ?? '불러오는 중입니다.'}
+            </p>
+          )}
+          {result.failed && (
+            <div role="alert" className="flex items-center gap-2 px-2 py-1.5 text-sm text-destructive">
+              {props.messages?.failed ?? '선택지를 불러오지 못했습니다.'}
+              <Button type="button" variant="outline" size="sm" onClick={result.retry}>
+                {props.messages?.retry ?? '다시 시도'}
+              </Button>
+            </div>
+          )}
+          <ComboboxEmpty>{props.messages?.empty ?? '선택지가 없습니다.'}</ComboboxEmpty>
+          <ComboboxList>
+            {(item: { value: string; label: string }) => (
+              <ComboboxItem key={item.value} value={item}>
+                {item.label}
+              </ComboboxItem>
+            )}
+          </ComboboxList>
+        </ComboboxContent>
+      </div>
     );
     return multiple ? (
-      <Combobox.Root {...common} multiple value={selectedItems} onValueChange={(items) => select(items.map((item) => item.value))}>
+      <Combobox {...common} multiple value={selectedItems} onValueChange={(items) => select(items.map((item) => item.value))}>
         {parts}
-      </Combobox.Root>
+      </Combobox>
     ) : (
-      <Combobox.Root {...common} value={selectedItems[0] ?? null} onValueChange={(item) => select(item?.value)}>
+      <Combobox {...common} value={selectedItems[0] ?? null} onValueChange={(item) => select(item?.value)}>
         {parts}
-      </Combobox.Root>
+      </Combobox>
     );
   }
   if (appearance === 'menu' && !multiple)
     return (
-      <Menu.Root>
-        <Menu.Trigger {...control} className="wk-input">
+      <DropdownMenu>
+        <DropdownMenuTrigger {...control} render={triggerButton}>
           {summary}
-        </Menu.Trigger>
-        <Menu.Portal>
-          <Menu.Positioner className="wk-choice-positioner">
-            <Menu.Popup className="wk-choice-popup">
-              {!multiple && props.clearLabel !== undefined && selected.length > 0 && (
-                <Menu.Item disabled={disabled} onClick={() => select(undefined)}>
-                  {props.clearLabel}
-                </Menu.Item>
-              )}
-              {nodes.map(menu)}
-            </Menu.Popup>
-          </Menu.Positioner>
-        </Menu.Portal>
-      </Menu.Root>
+          <ChevronDownIcon aria-hidden="true" className="text-muted-foreground" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-auto">
+          {!multiple && props.clearLabel !== undefined && selected.length > 0 && (
+            <DropdownMenuItem disabled={disabled} onClick={() => select(undefined)}>
+              {props.clearLabel}
+            </DropdownMenuItem>
+          )}
+          {nodes.map(menu)}
+        </DropdownMenuContent>
+      </DropdownMenu>
     );
   if (appearance === 'dropdown' || appearance === 'menu')
     return (
-      <Popover.Root>
-        <Popover.Trigger {...control} className="wk-input">
+      <Popover>
+        <PopoverTrigger {...control} render={triggerButton}>
           {summary}
-        </Popover.Trigger>
-        <Popover.Portal>
-          <Popover.Positioner className="wk-choice-positioner">
-            <Popover.Popup className="wk-choice-popup" aria-label={label}>
-              {tree}
-            </Popover.Popup>
-          </Popover.Positioner>
-        </Popover.Portal>
-      </Popover.Root>
+          <ChevronDownIcon aria-hidden="true" className="text-muted-foreground" />
+        </PopoverTrigger>
+        <PopoverContent aria-label={label} align="start" className="max-h-96 w-auto min-w-(--anchor-width) overflow-auto">
+          {tree}
+        </PopoverContent>
+      </Popover>
     );
   return (
-    <div {...control} role="group" tabIndex={-1}>
+    <div {...control} role="group" tabIndex={-1} className="grid gap-2 outline-none">
       {tree}
     </div>
   );

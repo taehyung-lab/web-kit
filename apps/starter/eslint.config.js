@@ -35,15 +35,21 @@ export default tseslint.config(
     },
   },
   {
-    // 화면 코드는 설치한 UI 부품을 쓴다. 맨 HTML 입력·버튼은 키트 모양·포커스·잠금 규칙을 건너뛴다.
+    // 화면 코드는 설치한 UI 부품을 쓴다. 맨 HTML 입력·버튼은 테마 모양·포커스 표시와 키트 잠금 규칙을 건너뛴다.
+    // 기본 부품은 shadcn 설치본(@/shared/ui/<부품>), 폼 칸·목록 필터는 키트 묶음 부품(@/shared/ui/web-kit/…)이다.
     files: ['src/app/**/*.tsx', 'src/features/**/*.tsx', 'src/routes/**/*.tsx'],
     ignores: ['src/**/*.test.tsx'],
     rules: {
       'no-restricted-syntax': [
         'error',
-        ...['button', 'input', 'select', 'textarea'].map((tag) => ({
+        ...[
+          ['button', 'Button(@/shared/ui/button)'],
+          ['input', 'Input(@/shared/ui/input)'],
+          ['select', 'Select(@/shared/ui/select)'],
+          ['textarea', 'Textarea(@/shared/ui/textarea)'],
+        ].map(([tag, part]) => ({
           selector: `JSXOpeningElement[name.name='${tag}']`,
-          message: `<${tag}> 대신 @/shared/ui/web-kit/ui의 Button·Input·Select·TextArea(폼 안이면 Form 칸)를 쓴다.`,
+          message: `<${tag}> 대신 shadcn ${part}를 쓴다(폼 안이면 Form 칸, 목록 필터면 List 칸).`,
         })),
       ],
     },

@@ -16,7 +16,7 @@ export interface BlockingProgressMessages {
 
 /**
  * 앱 셸에 한 번 두는 덮개. children(앱 본문)은 진행 중 inert·aria-busy가 되어 클릭·포커스·낭독에서 빠진다.
- * 대화창(portal)은 children 밖이라 덮개 위에서 조작된다. 덮개 층은 CSS 변수 `--wk-blocking-layer`(기본은 키트 대화창 아래).
+ * 대화창(portal)은 children 밖이라 덮개 위에서 조작된다. 덮개 층은 z-40으로 shadcn 대화창(z-50) 아래이며, 층·배경을 바꾸려면 이 복사본의 클래스를 고친다.
  * 상태 문구 영역(role=status)은 늘 있고 열릴 때 문구가 들어가 낭독기가 바뀜을 읽는다. 최소 표시 시간·지연은 없다.
  * `indicator`는 가운데 진행 표시를 프로젝트 모양으로 바꾼다(없으면 키트 원형 회전 표시). 덮개 전체가 낭독기에 숨겨져 있어(문구는 상태 영역이 읽는다) 표시는 그림만 맡고,
  * 움직임 줄이기 설정은 그 표시를 준 프로젝트가 맞춘다.
@@ -34,25 +34,25 @@ export function BlockingProgress({
   const { kind, open, contentRef, contentProps } = binding;
   return (
     <BlockingProgressProvider binding={binding}>
-      <div
-        ref={contentRef}
-        className="wk-blocking-root"
-        {...contentProps}
-      >
+      <div ref={contentRef} data-slot="blocking-progress-root" {...contentProps}>
         {children}
       </div>
       {open ? (
-        <div className="wk-blocking" aria-hidden="true">
-          <div className="wk-blocking-box">
+        <div
+          data-slot="blocking-progress"
+          aria-hidden="true"
+          className="fixed inset-0 z-40 flex items-center justify-center bg-background/80 backdrop-blur-xs"
+        >
+          <div data-slot="blocking-progress-box" className="flex flex-col items-center gap-6 text-center text-sm text-foreground">
             {indicator === undefined ? <Spinner large /> : indicator}
-            <div className="wk-blocking-text">
+            <div className="grid gap-1">
               <p>{messages[kind!]}</p>
               {messages.wait === undefined ? null : <p>{messages.wait}</p>}
             </div>
           </div>
         </div>
       ) : null}
-      <div role="status" aria-live="polite" aria-atomic="true" className="wk-blocking-status wk-visually-hidden">
+      <div role="status" aria-live="polite" aria-atomic="true" data-slot="blocking-progress-status" className="sr-only">
         {open ? [messages[kind!], messages.wait].filter((text) => text !== undefined).join(' ') : ''}
       </div>
     </BlockingProgressProvider>

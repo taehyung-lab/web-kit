@@ -12,7 +12,8 @@ describe('product create', () => {
 
     await user.type(await screen.findByLabelText(/상품명/), 'Desk Organizer');
     await user.type(screen.getByLabelText(/상품 코드/), 'SKU-9001');
-    await user.selectOptions(screen.getByLabelText(/분류/), await screen.findByRole('option', { name: 'Living' }));
+    await user.click(await screen.findByRole('combobox', { name: /분류/ }));
+    await user.click(await screen.findByRole('option', { name: 'Living' }));
     await user.type(screen.getByLabelText(/옵션명 1/), 'Large');
     await user.click(screen.getByRole('button', { name: '등록' }));
 
