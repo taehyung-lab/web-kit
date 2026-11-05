@@ -30,6 +30,18 @@ pnpm exec web-kit-check --run web-kit.check.json --installation registry-install
 
 실행 후 같은 파일·결과인지 다시 확인하려면 `--run` 대신 `--verify-run web-kit.check.json`을 사용한다. `--receipt`로 실행 기록 경로를 바꿀 수 있다. 파일·설정·lockfile·보고서가 바뀌면 새 실행이 필요하다. 이 기록은 실수로 과거 결과를 재사용하는 것을 잡으며, 실제 제품이 검사 대상 UI를 쓰는지 또는 의도적으로 조작된 검사까지 증명하지 않는다.
 
+## CI에 넣을 명령
+
+소비 프로젝트의 필수 CI(병합 전 통과해야 하는 작업)에 아래를 넣는다. 타입·lint·build 같은 기존 명령은 그대로 둔다. 단위·브라우저 러너는 `web-kit-check --run`이 위 설정의 명령으로 직접 실행하므로 따로 한 번 더 돌릴 필요가 없다. 모노레포 앱이면 각 명령을 그 앱 폴더에서 실행한다(예: `pnpm --dir apps/admin exec ...`).
+
+```sh
+pnpm install --frozen-lockfile
+pnpm exec playwright install --with-deps chromium
+pnpm exec web-kit-check --run web-kit.check.json --installation registry-installation.json --unit .web-kit-results/unit.json --browser .web-kit-results/browser.json
+```
+
+설치본을 고치지 않고 써야 하는 검사 앱만 마지막 명령에 `--strict-fingerprints`를 붙인다. 이 단계를 건너뛰거나 실패를 허용(`continue-on-error` 등)하면 키트 보장을 확인했다고 하지 않는다. CI 설정 변경과 검사 대상 선정은 독립 검토로 확인한다([배포 결정](../references/docs/decisions/0002-distribution.md)).
+
 ## 기존 보고서 점검
 
 기존 `--run` 없는 명령도 유지한다. 필수 ID·버전·skip·파일 유무는 확인하지만 결과가 현재 파일에서 나온 것인지는 보장하지 않는다. 이 방식은 같은 CI 작업에서 새 검사 후 곧바로 점검하는 경우에만 쓴다. 새 소비처와 starter는 위 새 실행 경로를 사용한다.

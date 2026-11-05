@@ -243,7 +243,7 @@ describe('재발급', () => {
   it('재발급 실패도 결과 코드 표로 판정한다: 종료 행이면 그 실패를 사유로 끝낸다', async () => {
     vi.stubGlobal('navigator', {});
     const memory = memoryStore();
-    const terminal = new RequestFailure({ kind: 'business', status: 200, code: '4001', messageKey: 'duplicatedLogin', endsSession: true });
+    const terminal = new RequestFailure({ kind: 'business', status: 200, code: 'E_ENDED', messageKey: 'sessionEnded', endsSession: true });
     const session = createSession({
       store: memory.store,
       reissue: async () => {
