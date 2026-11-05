@@ -37,11 +37,11 @@ function deferred<T>() {
 
 /** 덮개 문구 영역(늘 있음). 닫혀 있으면 비어 있다. */
 function status() {
-  return document.querySelector<HTMLElement>('.wk-blocking-status')!;
+  return document.querySelector<HTMLElement>('[data-slot="blocking-progress-status"]')!;
 }
 /** 실제 덮개 DOM의 열림을 읽는다. */
 function overlayOpen() {
-  return document.querySelector('.wk-blocking') !== null;
+  return document.querySelector('[data-slot="blocking-progress"]') !== null;
 }
 /** 덮개가 막는 본문 영역을 찾는다. */
 function body() {
@@ -112,7 +112,7 @@ it(title('G002', 'P2·P3 수정 폼은 수정 문구이고, 덮개를 쓰는 폼
   fireEvent.click(screen.getByRole('button', { name: '저장' }));
   await waitFor(() => expect(status().textContent).toContain('수정 중입니다.'));
   expect(status().textContent).not.toContain('등록 중입니다.');
-  expect(document.querySelectorAll('.wk-blocking-root .wk-spinner')).toHaveLength(0);
+  expect(document.querySelectorAll('[data-slot="blocking-progress-root"] [data-slot="pending"]')).toHaveLength(0);
   expect(screen.getByRole('button', { name: '저장', hidden: true }).getAttribute('aria-disabled')).toBe('true');
   await act(async () => pending.resolve(undefined));
 });
@@ -125,7 +125,7 @@ it(title('G003', 'P3 덮개를 선언하지 않은 폼은 덮개 없이 저장 �
     </Host>,
   );
   fireEvent.click(screen.getByRole('button', { name: '저장' }));
-  await waitFor(() => expect(document.querySelectorAll('.wk-blocking-root .wk-spinner')).toHaveLength(1));
+  await waitFor(() => expect(document.querySelectorAll('[data-slot="blocking-progress-root"] [data-slot="pending"]')).toHaveLength(1));
   expect(overlayOpen()).toBe(false);
   expect(body().hasAttribute('inert')).toBe(false);
   await act(async () => pending.resolve(undefined));

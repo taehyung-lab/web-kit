@@ -8,11 +8,13 @@
     "vitest@4.1.11",
     "@testing-library/react@16.3.2"
   ],
-  "registryDependencies": [],
+  "registryDependencies": [
+    "spinner"
+  ],
   "files": [
     {
       "path": "packages/ui-registry/src/ui/pending.tsx",
-      "content": "// 파일 책임: 진행 중 표시(회전 표시) 마크업의 유일한 자리. 버튼 옆 표시(Pending)와 화면 전체 덮개의 큰 회전 표시가 이 파일을 쓴다.\n\n/** 회전 표시 하나. 문구는 부르는 쪽이 둔다(낭독기에는 숨김). */\nexport function Spinner({ large = false }: { readonly large?: boolean }) {\n  return <span aria-hidden=\"true\" className={large ? 'wk-spinner wk-spinner-large' : 'wk-spinner'} />;\n}\n\n/** 진행 중 표시: 버튼 바로 뒤에 둔다. label은 화면 낭독기에만 읽히는 문구다. */\nexport function Pending({ label }: { readonly label: string }) {\n  return (\n    <span role=\"status\" className=\"wk-spinner\">\n      <span className=\"wk-visually-hidden\">{label}</span>\n    </span>\n  );\n}\n",
+      "content": "// 파일 책임: 진행 중 표시 마크업의 유일한 자리. 버튼 옆 표시(Pending)와 화면 전체 덮개의 큰 회전 표시가 이 파일을 쓴다.\n// 회전 모양은 프로젝트의 shadcn Spinner가 정하고, 여기서는 낭독기 연결(상태 영역·숨긴 문구)만 맡는다.\nimport { Spinner as SpinnerIcon } from '@/components/ui/spinner';\n\n/** 회전 표시 하나. 문구는 부르는 쪽이 둔다(낭독기에는 숨김). shadcn Spinner의 기본 상태 역할·이름은 끈다. */\nexport function Spinner({ large = false }: { readonly large?: boolean }) {\n  return (\n    <SpinnerIcon\n      aria-hidden=\"true\"\n      role={undefined}\n      aria-label={undefined}\n      data-size={large ? 'large' : undefined}\n      className={large ? 'size-8' : undefined}\n    />\n  );\n}\n\n/** 진행 중 표시: 버튼 바로 뒤에 둔다. label은 화면 낭독기에만 읽히는 문구다. */\nexport function Pending({ label }: { readonly label: string }) {\n  return (\n    <span role=\"status\" data-slot=\"pending\" className=\"inline-flex items-center text-muted-foreground\">\n      <Spinner />\n      <span className=\"sr-only\">{label}</span>\n    </span>\n  );\n}\n",
       "type": "registry:file",
       "target": "~/src/shared/ui/web-kit/ui/pending.tsx"
     },

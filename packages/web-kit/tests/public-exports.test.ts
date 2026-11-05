@@ -133,7 +133,6 @@ it('패키지 subpath는 승인된 36개 입구만 공개한다', () => {
   "./testing/unit/form",
   "./testing/unit/list",
   "./testing/unit/primitives",
-  "./testing/unit/record",
-  "./testing/unit/styles"
+  "./testing/unit/record"
 ]);
 });

@@ -19,10 +19,12 @@ try {
   const registry = JSON.parse(readFileSync(resolve(root, 'registry.json'), 'utf8'));
   checkRegistryDependencies(root, registry);
   const names = new Set(registry.items.map((item) => '@web-kit/' + item.name));
+  // `@web-kit/` 의존은 같은 registry에서 해소되어야 하고, 이름만 있는 의존은 소비 프로젝트 style의 shadcn 공식 기본 부품이다.
   for (const item of registry.items)
     for (const dependency of item.registryDependencies ?? [])
-      assert(names.has(dependency), item.name + ': 같은 registry에서 해소되지 않는 의존 ' + dependency);
-  console.log('registry 원본/산출물 ' + expected.length + '개 일치, 내부 의존 해소 확인');
+      if (dependency.startsWith('@web-kit/')) assert(names.has(dependency), item.name + ': 같은 registry에서 해소되지 않는 의존 ' + dependency);
+      else assert(/^[a-z0-9-]+$/.test(dependency), item.name + ': shadcn 기본 부품 이름이 아닌 외부 의존 ' + dependency);
+  console.log('registry 원본/산출물 ' + expected.length + '개 일치, 내부 의존 해소·shadcn 기본 부품 선언 확인');
 } finally {
   rmSync(temporary, { recursive: true, force: true });
 }

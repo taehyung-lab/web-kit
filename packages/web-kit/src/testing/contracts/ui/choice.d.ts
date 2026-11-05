@@ -33,3 +33,12 @@ export interface ChoiceProps {
 }
 /** 같은 leaf 값 모델을 모든 모양에서 사용한다. 가지 ID는 저장하지 않는다. */
 export declare function Choice(props: ChoiceProps): import("react").JSX.Element;
+/** 일부 선택을 체크와 다르게 보이는 체크박스(프로젝트 shadcn Checkbox를 감싼다). */
+export declare function MixedCheckbox(props: {
+    readonly checked?: boolean;
+    readonly indeterminate?: boolean;
+    readonly disabled?: boolean;
+    readonly 'aria-label'?: string;
+    readonly onCheckedChange?: (checked: boolean) => void;
+    readonly className?: string;
+}): import("react").JSX.Element;

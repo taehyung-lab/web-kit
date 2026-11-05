@@ -1,8 +1,10 @@
 // 파일 책임: 기본 대화창 세 가지(Dialog·ConfirmDialog·AlertDialog)와 그 포커스 규칙.
 // 열린 직후부터 닫힐 때까지 키보드 포커스가 창 밖으로 한 순간도 나가지 않게 한다(Base UI의 focus guard 경유를 막는다).
-import { Dialog as BaseDialog } from '@base-ui/react/dialog';
+// 창·버튼 모양은 프로젝트의 shadcn Dialog·Button이 정하고, 여기서는 열림·닫기 정책·포커스·잠금 연결만 맡는다.
 import type { ReactNode, RefObject } from 'react';
 import { useDialogBinding, useConfirmBinding, useAcknowledgeBinding } from '@boosterlab/web-kit/dialog';
+import { Button } from '@/components/ui/button';
+import { Dialog as DialogRoot, DialogClose, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { Pending } from './pending';
 
 export interface DialogProps {
@@ -37,30 +39,26 @@ export function Dialog({
 }: DialogProps) {
   const { rootProps, popupRef, popupProps } = useDialogBinding({ open, closable, onClose, returnFocus });
   return (
-    <BaseDialog.Root {...rootProps}>
-      <BaseDialog.Portal>
-        <BaseDialog.Backdrop className="wk-backdrop" />
-        <BaseDialog.Popup
-          ref={popupRef}
-          role={role}
-          {...popupProps}
-          className={join('wk-dialog', className)}
-          aria-describedby={undefined}
-
-        >
-          <BaseDialog.Title className="wk-dialog-title">{title}</BaseDialog.Title>
-          {children === undefined ? null : <div className="wk-dialog-body">{children}</div>}
-          {footer === undefined && !closable ? null : (
-            <div className="wk-dialog-footer">
-              {footer}
-              {closable && footer === undefined ? (
-                <BaseDialog.Close className="wk-button wk-button-secondary">{closeLabel}</BaseDialog.Close>
-              ) : null}
-            </div>
-          )}
-        </BaseDialog.Popup>
-      </BaseDialog.Portal>
-    </BaseDialog.Root>
+    <DialogRoot {...rootProps}>
+      {/* 닫기 버튼은 아래 버튼 자리 하나로만 둔다(shadcn 기본 모서리 닫기 버튼을 끈다). 첫 포커스 순서가 창 안 내용부터 시작한다. */}
+      <DialogContent
+        ref={popupRef}
+        role={role}
+        {...popupProps}
+        showCloseButton={false}
+        className={className}
+        aria-describedby={undefined}
+      >
+        <DialogTitle>{title}</DialogTitle>
+        {children === undefined ? null : <div data-slot="dialog-body" className="grid gap-3">{children}</div>}
+        {footer === undefined && !closable ? null : (
+          <DialogFooter className="items-center">
+            {footer}
+            {closable && footer === undefined ? <DialogClose render={<Button variant="outline" />}>{closeLabel}</DialogClose> : null}
+          </DialogFooter>
+        )}
+      </DialogContent>
+    </DialogRoot>
   );
 }
 
@@ -100,12 +98,12 @@ export function ConfirmDialog({
       returnFocus={returnFocus}
       footer={
         <>
-          <button type="button" className="wk-button wk-button-secondary" disabled={binding.locked} onClick={binding.cancel}>
+          <Button type="button" variant="outline" disabled={binding.locked} onClick={binding.cancel}>
             {cancelLabel}
-          </button>
-          <button type="button" className="wk-button wk-button-primary" disabled={binding.locked} onClick={binding.confirm}>
+          </Button>
+          <Button type="button" disabled={binding.locked} onClick={binding.confirm}>
             {confirmLabel}
-          </button>
+          </Button>
           {pending ? <Pending label={pendingLabel} /> : null}
         </>
       }
@@ -144,14 +142,10 @@ export function AlertDialog({
       closable={false}
       footer={
         <>
-          <button
-            type="button"
-            className="wk-button wk-button-primary"
-            aria-disabled={pending || undefined}
-            onClick={binding.confirm}
-          >
+          {/* 잠금은 aria-disabled로 한다. disabled면 포커스가 창 밖으로 떨어진다. */}
+          <Button type="button" aria-disabled={pending || undefined} onClick={binding.confirm}>
             {confirmLabel}
-          </button>
+          </Button>
           {pending ? <Pending label={pendingLabel} /> : null}
         </>
       }
@@ -159,8 +153,4 @@ export function AlertDialog({
       {children}
     </Dialog>
   );
-}
-
-function join(...names: readonly (string | undefined)[]): string {
-  return names.filter(Boolean).join(' ');
 }

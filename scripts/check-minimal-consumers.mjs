@@ -57,13 +57,13 @@ async function availablePort() {
   return port;
 }
 
-/** registry가 선언한 내부 의존만 재귀로 선택한다. */
+/** registry가 선언한 내부 의존만 재귀로 선택한다. 이름만 있는 의존(shadcn 기본 부품)은 shadcn CLI가 설치한다. */
 function closure(name, names = new Set()) {
   if (names.has(name)) return names;
   names.add(name);
   const item = registry.items.find((item) => item.name === name);
   assert(item, '없는 registry 항목 ' + name);
-  for (const dependency of item.registryDependencies ?? []) closure(dependency.replace('@web-kit/', ''), names);
+  for (const dependency of item.registryDependencies ?? []) if (dependency.startsWith('@web-kit/')) closure(dependency.slice('@web-kit/'.length), names);
   return names;
 }
 
@@ -76,12 +76,14 @@ for (const feature of features) {
   const write = (file, content) => { mkdirSync(dirname(join(cwd, file)), { recursive: true }); writeFileSync(join(cwd, file), content); };
   /** 소비 설정을 JSON으로 기록한다. */
   const writeJson = (file, value) => write(file, JSON.stringify(value, null, 2) + '\n');
-  const tools = ['vite', 'vitest', 'jsdom', '@vitejs/plugin-react', '@testing-library/react', '@testing-library/dom', '@playwright/test', 'typescript', '@types/node', '@types/react', '@types/react-dom'];
+  // 키트 UI는 shadcn 기본 부품과 테마 CSS로 그려지므로 Tailwind와 base-nova 테마 CSS 의존도 starter와 같은 버전으로 둔다.
+  const tools = ['vite', 'vitest', 'jsdom', '@vitejs/plugin-react', '@testing-library/react', '@testing-library/dom', '@playwright/test', 'typescript', '@types/node', '@types/react', '@types/react-dom', 'tailwindcss', '@tailwindcss/vite', 'tw-animate-css', 'shadcn'];
   writeJson('package.json', { name: `web-kit-${feature}-consumer`, private: true, type: 'module', pnpm: { overrides }, packageManager: 'pnpm@10.33.0', dependencies: { react: versions.react, 'react-dom': versions['react-dom'], '@boosterlab/web-kit': 'file:vendor/web-kit.tgz' }, devDependencies: Object.fromEntries(tools.map((name) => [name, versions[name]])) });
   write('.npmrc', 'auto-install-peers=false\nstrict-peer-dependencies=false\nnode-linker=isolated\n');
   write('pnpm-workspace.yaml', 'packages: []\n');
   writeJson('tsconfig.json', { compilerOptions: { jsx: 'react-jsx', module: 'ESNext', moduleResolution: 'Bundler', target: 'ES2022', baseUrl: '.', paths: { '@/*': ['./src/*'] } } });
-  write('src/styles.css', '');
+  // 검사 화면이 읽는 프로젝트 테마 CSS(@/styles.css). starter의 base-nova 테마를 그대로 쓴다.
+  write('src/styles.css', readFileSync(join(root, 'apps/starter/src/styles.css'), 'utf8'));
   write('src/setup.ts', "import { afterEach } from 'vitest';\nimport { cleanup } from '@testing-library/react';\nwindow.scrollTo = () => undefined;\nafterEach(cleanup);\n");
   const components = json(join(root, 'apps/starter/components.json'));
   components.registries['@web-kit'] = join(root, 'public/r/{name}.json');
@@ -113,7 +115,7 @@ for (const feature of features) {
   }
   const alias = "{ '@': fileURLToPath(new URL('./src', import.meta.url)) }";
   write('vitest.config.ts', `import react from '@vitejs/plugin-react';\nimport { fileURLToPath } from 'node:url';\nimport { defineConfig } from 'vitest/config';\nexport default defineConfig({ plugins: [react()], resolve: { alias: ${alias} }, test: { include: ['src/**/*.test.tsx'], environment: 'jsdom', allowOnly: false, setupFiles: ['./src/setup.ts'], execArgv: ['--no-experimental-webstorage'], reporters: ['default', 'json'], outputFile: { json: 'unit.json' } } });\n`);
-  write('vite.config.ts', `import react from '@vitejs/plugin-react';\nimport { fileURLToPath } from 'node:url';\nimport { defineConfig } from 'vite';\nexport default defineConfig({ plugins: [react()], optimizeDeps: { extensions: ['.tsx'] }, resolve: { alias: ${alias} } });\n`);
+  write('vite.config.ts', `import react from '@vitejs/plugin-react';\nimport tailwindcss from '@tailwindcss/vite';\nimport { fileURLToPath } from 'node:url';\nimport { defineConfig } from 'vite';\nexport default defineConfig({ plugins: [react(), tailwindcss()], optimizeDeps: { extensions: ['.tsx'] }, resolve: { alias: ${alias} } });\n`);
   const browserPort = await availablePort();
   const browserEntry = [...names].flatMap((name) => registry.items.find((item) => item.name === name).files).find((file) => file.path.endsWith('.html'))?.target.replace(/^~\//, '/') ?? '/';
   write('playwright.config.ts', `import { defineConfig } from '@playwright/test';\nexport default defineConfig({ testDir: './tests/e2e', workers: 1, forbidOnly: true, reporter: [['list'], ['json', { outputFile: 'browser.json' }]], use: { baseURL: 'http://127.0.0.1:${browserPort}', locale: 'ko-KR' }, webServer: { command: 'pnpm exec vite --host 127.0.0.1 --port ${browserPort} --strictPort', url: 'http://127.0.0.1:${browserPort}${browserEntry}', reuseExistingServer: false } });\n`);

@@ -430,8 +430,8 @@ it(title('G049', 'C9 저장 중에는 저장·취소 버튼이 잠기고 그 옆
   expect(screen.queryByRole('status')).toBeNull();
   await act(async () => fireEvent.click(screen.getByText('저장')));
   const status = screen.getByRole('status');
-  expect(status.className).toBe('wk-spinner');
-  expect(within(status).getByText('저장하는 중').className).toBe('wk-visually-hidden');
+  expect(status.getAttribute('data-slot')).toBe('pending');
+  expect(within(status).getByText('저장하는 중').className).toBe('sr-only');
   expect(screen.getByText('저장').getAttribute('aria-disabled')).toBe('true');
   expect(screen.getByText('취소').getAttribute('aria-disabled')).toBe('true');
   expect(status.previousElementSibling).toBe(screen.getByText('저장'));
@@ -456,8 +456,8 @@ it(title('G050', 'C9 저장 확인창으로 저장하는 동안에는 확인창 
   const confirm = await screen.findByRole('alertdialog');
   expect(within(confirm).queryByRole('status')).toBeNull();
   await act(async () => fireEvent.click(within(confirm).getByRole('button', { name: '저장' })));
-  expect(within(confirm).getByRole('status').className).toBe('wk-spinner');
-  expect(within(confirm).getByText('저장 중입니다.').className).toBe('wk-visually-hidden');
+  expect(within(confirm).getByRole('status').getAttribute('data-slot')).toBe('pending');
+  expect(within(confirm).getByText('저장 중입니다.').className).toBe('sr-only');
   await act(async () => pending.resolve());
   await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
 });

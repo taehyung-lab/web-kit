@@ -1,13 +1,19 @@
 // 파일 책임: 목록 기본 UI의 묶음 부품(List.*). 각 부품은 같은 목록 상태(useList)를 context로 읽어서, 필터·표·페이지 이동을
 // 어디에 두어도 조회·정렬·선택 연결을 다시 쓰지 않는다. 검색 직전 보장(기간 검증·입력 중 키워드)은 상태가 맡고 부품은 표시만 한다.
 import { ListProvider as ModelProvider, useListModel, useListField, useListFilterBinding, useListDetailsBinding, useBulkConfirmation, useListChoiceBinding, useListChoiceNormalization, useListMultiChoiceBinding, useListPeriodBinding, listPaginationBinding, useListDownloadBinding, useListKeywordBinding, listViewBinding, listRowBinding, useListVirtualRows, type PeriodShortcut, type DownloadControl, type ListModel } from '@boosterlab/web-kit/list';
-import { Choice as ChoiceInput, type ChoiceProps } from './ui/choice';
-import { Checkbox } from '@base-ui/react/checkbox';
+import { Choice as ChoiceInput, MixedCheckbox, type ChoiceProps } from './ui/choice';
 import { createContext, useContext, useId, useRef, type ReactNode, type RefObject } from 'react';
+import { cn } from 'cn';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select as SelectRoot, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table as TableRoot, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { DownloadKind } from '@boosterlab/web-kit/list';
 import type { Keyword } from '@boosterlab/web-kit/search';
 import { ConfirmDialog } from './ui/dialog';
 import { Pending } from './ui/pending';
+import { XIcon } from 'lucide-react';
 
 const defaultMessages = {
   search: '검색',
@@ -96,7 +102,7 @@ function Filter({ model: explicitModel, children, className }: { readonly childr
   const binding = useListFilterBinding(model);
   return (
     <form
-      className={join('wk-filter', className)}
+      className={cn('grid gap-4', className)}
       {...binding}
     >
       {children}
@@ -109,15 +115,16 @@ function FilterActions({ model: explicitModel, className, children }: { readonly
   const { model, copy } = useListContext(explicitModel);
   const reasonId = useId();
   return (
-    <div className={join('wk-actions', className)}>
+    <div className={cn('flex flex-wrap items-center gap-2', className)}>
       {children}
-      <button type="button" className="wk-button" onClick={model.reset}>
+      <Button type="button" variant="outline" onClick={model.reset}>
         {copy.reset}
-      </button>
-      <button type="submit" className="wk-button wk-button-primary" aria-disabled={model.blockedReason !== undefined || undefined} aria-describedby={model.blockedReason === undefined ? undefined : reasonId}>
+      </Button>
+      {/* 막힌 검색도 초점을 받도록 aria-disabled로 잠근다(이유는 옆 문구가 읽힌다). */}
+      <Button type="submit" className="aria-disabled:opacity-50" aria-disabled={model.blockedReason !== undefined || undefined} aria-describedby={model.blockedReason === undefined ? undefined : reasonId}>
         {copy.search}
-      </button>
-      {model.blockedReason !== undefined && <span id={reasonId}>{model.blockedReason}</span>}
+      </Button>
+      {model.blockedReason !== undefined && <span id={reasonId} className="text-sm text-muted-foreground">{model.blockedReason}</span>}
     </div>
   );
 }
@@ -128,10 +135,10 @@ function Detail({ model: explicitModel, keys, children }: { readonly keys: reado
   const { open, id, toggle } = useListDetailsBinding(model, keys);
   return (
     <>
-      <button type="button" className="wk-button" aria-expanded={open} aria-controls={id} onClick={toggle}>
+      <Button type="button" variant="outline" className="justify-self-start" aria-expanded={open} aria-controls={id} onClick={toggle}>
         {copy.detail}
-      </button>
-      <div id={id} hidden={!open}>
+      </Button>
+      <div id={id} hidden={!open} className="grid gap-4">
         {children}
       </div>
     </>
@@ -146,12 +153,12 @@ function Choice({ model: explicitModel, name, searchName = name, nodes, ...props
   const { check, options, choices } = useListChoiceBinding(model, searchName, nodes);
   useListChoiceNormalization(model, name, props.search === undefined && (check === undefined ? nodes !== undefined : options.isSuccess && !options.isFetching && !options.isError) ? choices : undefined);
   const message = field.issues[0]?.message;
-  return <div className="wk-field">
-    <label className="wk-label" htmlFor={id}>{props.label}{field.required && <span aria-hidden="true"> *</span>}</label>
+  return <div className="grid content-start gap-2">
+    <Label htmlFor={id}>{props.label}{field.required && <RequiredMark />}</Label>
     <ChoiceInput {...props} id={id} nodes={choices} value={field.value} onValueChange={field.set} aria-required={field.required} aria-invalid={message !== undefined} aria-describedby={message === undefined ? undefined : `${id}-error`} />
-    {check !== undefined && options.isFetching && <span role="status">{copy.loading}</span>}
-    {check !== undefined && options.isError && <span role="alert">{copy.fieldOptionsFailed}<button type="button" onClick={() => void options.refetch()}>{copy.retry}</button></span>}
-    {message !== undefined && <span id={`${id}-error`} role="alert">{message}</span>}
+    {check !== undefined && options.isFetching && <span role="status" className="text-sm text-muted-foreground">{copy.loading}</span>}
+    {check !== undefined && options.isError && <span role="alert" className="flex items-center gap-2 text-sm text-destructive">{copy.fieldOptionsFailed}<Button type="button" variant="outline" size="sm" onClick={() => void options.refetch()}>{copy.retry}</Button></span>}
+    {message !== undefined && <FieldMessage id={`${id}-error`}>{message}</FieldMessage>}
   </div>;
 }
 
@@ -160,20 +167,19 @@ function Text({ model: explicitModel, name, label }: { readonly name: string; re
   const field = useListField<string | undefined>(name, name, explicitModel);
   const id = useId();
   return (
-    <div className="wk-field">
-      <label className="wk-label" htmlFor={id}>
-        {label}{field.required && <span aria-hidden="true"> *</span>}
-      </label>
-      <input
+    <div className="grid content-start gap-2">
+      <Label htmlFor={id}>
+        {label}{field.required && <RequiredMark />}
+      </Label>
+      <Input
         id={id}
         aria-required={field.required || undefined}
         aria-invalid={field.issues.length > 0 || undefined}
         aria-describedby={field.issues.length > 0 ? `${id}-error` : undefined}
-        className="wk-input"
         value={field.value ?? ''}
         onChange={(event) => field.setText(event.target.value)}
       />
-      {field.issues[0]?.message !== undefined && <span id={`${id}-error`} role="alert">{field.issues[0].message}</span>}
+      {field.issues[0]?.message !== undefined && <FieldMessage id={`${id}-error`}>{field.issues[0].message}</FieldMessage>}
     </div>
   );
 }
@@ -197,33 +203,26 @@ function Select({
   const field = useListField<string | undefined>(name, name, explicitModel);
   const id = useId();
   return (
-    <div className="wk-field">
-      <label className="wk-label" htmlFor={id}>
-        {label}{field.required && <span aria-hidden="true"> *</span>}
-      </label>
-      <select
+    <div className="grid content-start gap-2">
+      <Label htmlFor={id}>
+        {label}{field.required && <RequiredMark />}
+      </Label>
+      <OptionSelect
         id={id}
         aria-required={field.required || undefined}
         aria-invalid={field.issues.length > 0 || undefined}
         aria-describedby={field.issues.length > 0 ? `${id}-error` : undefined}
-        className="wk-input"
         disabled={disabled}
         value={field.value ?? ''}
-        onChange={(event) => field.setText(event.target.value)}
-      >
-        {emptyLabel !== undefined && <option value="">{emptyLabel}</option>}
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      {field.issues[0]?.message !== undefined && <span id={`${id}-error`} role="alert">{field.issues[0].message}</span>}
+        onValueChange={(next) => field.setText(next)}
+        options={emptyLabel === undefined ? options : [{ value: '', label: emptyLabel }, ...options]}
+      />
+      {field.issues[0]?.message !== undefined && <FieldMessage id={`${id}-error`}>{field.issues[0].message}</FieldMessage>}
     </div>
   );
 }
 
-/** 체크박스 하나(Base UI). 일부 선택은 indeterminate로 보인다. */
+/** 체크박스 하나(shadcn Checkbox). 일부 선택은 indeterminate로 보인다. */
 function Check({
   label,
   checked,
@@ -240,20 +239,17 @@ function Check({
   readonly children?: ReactNode;
 }) {
   const box = (
-    <Checkbox.Root
-      className="wk-check"
+    <MixedCheckbox
       aria-label={label}
       checked={checked}
       indeterminate={mixed}
       disabled={disabled}
       onCheckedChange={(next) => onChange(next)}
-    >
-      <Checkbox.Indicator className="wk-check-indicator" />
-    </Checkbox.Root>
+    />
   );
   if (children === undefined) return box;
   return (
-    <label className="wk-check-label">
+    <label className="flex items-center gap-2 text-sm">
       {box}
       {children}
     </label>
@@ -276,9 +272,9 @@ function MultiSelect({
   const values = options.map((option) => option.value);
   const { effective, set, toggle } = useListMultiChoiceBinding(name, values, explicitModel);
   return (
-    <fieldset className="wk-field">
-      <legend className="wk-label">{label}</legend>
-      <div className="wk-options">
+    <fieldset className="grid content-start gap-2">
+      <legend className={legendClass}>{label}</legend>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         {allLabel !== undefined && (
           <Check
             checked={effective.length === values.length}
@@ -336,26 +332,20 @@ function Period({
   const typeId = useId();
   const { set, rangeOf } = useListPeriodBinding(model, from, to, timeZone, now);
   return (
-    <fieldset className="wk-field">
-      <legend className="wk-label">{label}</legend>
-      <div className="wk-period">
+    <fieldset className="grid content-start gap-2">
+      <legend className={legendClass}>{label}</legend>
+      <div className="flex flex-wrap items-center gap-2">
         {type !== undefined && (
-          <select
+          <OptionSelect
             id={typeId}
             aria-label={copy.periodType}
-            className="wk-input"
             value={String(draft[type.name] ?? '')}
-            onChange={(event) => model.patchDraft({ [type.name]: event.target.value })}
-          >
-            {type.options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            onValueChange={(next) => model.patchDraft({ [type.name]: next })}
+            options={type.options}
+          />
         )}
-        <input
-          className="wk-input"
+        <Input
+          className="w-auto"
           type="date"
           aria-label={startLabel ?? `${label} ${copy.periodStart}`}
           aria-invalid={issue !== undefined || undefined}
@@ -363,8 +353,8 @@ function Period({
           onChange={(event) => model.patchDraft({ [from]: event.target.value || undefined })}
         />
         <span aria-hidden="true">~</span>
-        <input
-          className="wk-input"
+        <Input
+          className="w-auto"
           type="date"
           aria-label={endLabel ?? `${label} ${copy.periodEnd}`}
           aria-invalid={issue !== undefined || undefined}
@@ -373,20 +363,21 @@ function Period({
         />
       </div>
       {presets.length > 0 && (
-        <div className="wk-actions">
+        <div className="flex flex-wrap items-center gap-2">
           {presets.map((preset) => {
             const range = rangeOf(preset);
             const active = (range.from ?? '') === ((draft[from] as string | undefined) ?? '') && (range.to ?? '') === ((draft[to] as string | undefined) ?? '');
             return (
-            <button
+            <Button
               type="button"
-              className="wk-button"
+              variant={active ? 'secondary' : 'outline'}
+              size="sm"
               key={preset.label}
               aria-pressed={active}
               onClick={() => set(rangeOf(preset))}
             >
               {preset.label}
-            </button>
+            </Button>
             );
           })}
         </div>
@@ -418,21 +409,15 @@ function Keywords({
   /** 기본 복사본의 구분 규칙으로 여러 칩을 한 번에 추가한다. */
   const add = () => input.addMany(input.text.split(';'));
   return (
-    <fieldset className="wk-field">
-      <legend className="wk-label">{label}</legend>
-      <div className="wk-keywords">
+    <fieldset className="grid content-start gap-2">
+      <legend className={legendClass}>{label}</legend>
+      <div className="flex flex-wrap items-center gap-2">
         {choices.length > 1 && (
-          <select aria-label={targetLabel ?? `${label} ${copy.keywordTarget}`} className="wk-input" value={input.choice} onChange={(event) => input.setChoice(event.target.value)}>
-            {choices.map((choice) => (
-              <option key={choice.value} value={choice.value}>
-                {choice.label}
-              </option>
-            ))}
-          </select>
+          <OptionSelect aria-label={targetLabel ?? `${label} ${copy.keywordTarget}`} value={input.choice} onValueChange={(next) => input.setChoice(next)} options={choices} />
         )}
-        <input
+        <Input
           aria-label={inputLabel ?? label}
-          className="wk-input"
+          className="w-auto min-w-48 flex-1"
           value={input.text}
           onChange={(event) => input.setText(event.target.value)}
           onKeyDown={(event) => {
@@ -442,25 +427,27 @@ function Keywords({
             submit();
           }}
         />
-        <button type="button" className="wk-button" onClick={add}>
+        <Button type="button" variant="outline" onClick={add}>
           {copy.keywordAdd}
-        </button>
+        </Button>
       </div>
       {items.length > 0 && (
-        <ul className="wk-chips">
+        <ul className="flex flex-wrap gap-1.5">
           {items.map((item, index) => {
             const choiceLabel = choices.find((choice) => choice.value === item.field)?.label ?? item.field;
             return (
-            <li key={`${item.field}:${item.value}`} className="wk-chip">
+            <li key={`${item.field}:${item.value}`} className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary py-0.5 pr-0.5 pl-2.5 text-xs text-secondary-foreground">
               {choiceLabel}: {item.value}
-              <button
+              <Button
                 type="button"
-                className="wk-chip-remove"
+                variant="ghost"
+                size="icon-xs"
+                className="rounded-full"
                 aria-label={removeLabel?.(item, choiceLabel) ?? `${item.value} ${copy.keywordRemove}`}
                 onClick={() => remove(index)}
               >
-                ×
-              </button>
+                <XIcon aria-hidden="true" />
+              </Button>
             </li>
             );
           })}
@@ -484,18 +471,18 @@ function Result({ model: explicitModel, children, className }: { readonly childr
           ? copy.optionsFailed
           : copy.notReady;
     body = (
-      <div role="status" className="wk-state">
+      <div role="status" className={stateClass}>
         {text}
         {'resume' in status && status.reason !== 'not-searched' && (
-          <button type="button" className="wk-button" onClick={status.resume}>
+          <Button type="button" variant="outline" onClick={status.resume}>
             {copy.retry}
-          </button>
+          </Button>
         )}
       </div>
     );
   } else if (status.kind === 'pending' && model.rows.length === 0) {
     body = (
-      <p role="status" className="wk-state">
+      <p role="status" className={stateClass}>
         {copy.loading}
       </p>
     );
@@ -504,16 +491,16 @@ function Result({ model: explicitModel, children, className }: { readonly childr
     const text = custom === undefined ? copy.failed : custom;
     body =
       text === null ? null : (
-        <div role="alert" className="wk-state">
+        <div role="alert" className={stateClass}>
           {text}
-          <button type="button" className="wk-button" onClick={status.retry}>
+          <Button type="button" variant="outline" onClick={status.retry}>
             {copy.retry}
-          </button>
+          </Button>
         </div>
       );
   } else if (status.kind === 'empty') {
     body = (
-      <p role="status" className="wk-state">
+      <p role="status" className={stateClass}>
         {copy.empty}
       </p>
     );
@@ -527,13 +514,13 @@ function Result({ model: explicitModel, children, className }: { readonly childr
       </>
     );
   return (
-    <section id={resultId} tabIndex={-1} className={join('wk-results', className)} aria-busy={model.isFetching || undefined}>
+    <section id={resultId} tabIndex={-1} className={cn('grid gap-3', className)} aria-busy={model.isFetching || undefined}>
       {refreshText !== null && (
-        <div role="alert" className="wk-notice">
+        <div role="alert" className="flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
           {refreshText}
-          <button type="button" className="wk-button" onClick={model.refresh}>
+          <Button type="button" variant="outline" size="sm" onClick={model.refresh}>
             {copy.retry}
-          </button>
+          </Button>
         </div>
       )}
       {body}
@@ -587,42 +574,48 @@ function Table<Row>({
     const activate = onOpen === undefined ? undefined : () => onOpen(row);
     const binding = listRowBinding(model, id, activate);
     return (
-      <tr
+      <TableRow
         key={id}
         data-index={measure?.index}
         ref={measure?.ref}
         data-selected={binding.checked || undefined}
+        data-state={binding.checked ? 'selected' : undefined}
         tabIndex={activate ? 0 : undefined}
-        className={activate ? 'wk-row-link' : undefined}
+        className={activate ? 'cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring' : undefined}
         onClick={binding.onClick}
         onKeyDown={binding.onKeyDown}
       >
         {selectable && (
-          <td className="wk-cell-select">
+          <TableCell className="w-px">
             <Check
               label={rowLabel?.(row) ?? copy.selectRow}
               checked={binding.checked}
               disabled={binding.disabled}
               onChange={binding.toggle}
             />
-          </td>
+          </TableCell>
         )}
         {columns.map((column) => (
-          <td key={column.key} className={column.className}>
+          <TableCell key={column.key} className={column.className}>
             {column.cell(row)}
-          </td>
+          </TableCell>
         ))}
-      </tr>
+      </TableRow>
     );
   };
 
   return (
-    <div ref={viewport} className={join('wk-table-viewport', className)} data-virtual={virtualize || undefined}>
-      <table className="wk-table">
-        <thead>
-          <tr>
+    <div
+      ref={viewport}
+      // 스크롤은 이 영역 하나가 맡는다(shadcn Table의 가로 스크롤 감싸개를 풀어 가상화 측정·머리글 고정이 이 영역 기준이 되게 한다).
+      className={cn('overflow-auto rounded-lg border border-border [&>[data-slot=table-container]]:overflow-visible data-virtual:max-h-[576px] data-virtual:[&_thead]:sticky data-virtual:[&_thead]:top-0 data-virtual:[&_thead]:z-10 data-virtual:[&_thead]:bg-background', className)}
+      data-virtual={virtualize || undefined}
+    >
+      <TableRoot>
+        <TableHeader>
+          <TableRow>
             {selectable && (
-              <th scope="col" className="wk-cell-select">
+              <TableHead scope="col" className="w-px">
                 <Check
                   label={copy.selectPage}
                   checked={model.selection.isAllChecked}
@@ -630,35 +623,35 @@ function Table<Row>({
                   disabled={locked}
                   onChange={(on) => model.selection.togglePage(on)}
                 />
-              </th>
+              </TableHead>
             )}
             {columns.map((column) => {
               const direction = column.sort !== undefined && column.sort === sortKey ? order : undefined;
               return (
-                <th key={column.key} scope="col" aria-sort={direction ? ARIA_SORT[direction] : undefined} className={column.className}>
+                <TableHead key={column.key} scope="col" aria-sort={direction ? ARIA_SORT[direction] : undefined} className={column.className}>
                   {column.sort === undefined ? (
                     column.header
                   ) : (
-                    <button type="button" className="wk-sort" onClick={() => model.toggleSort(column.sort!)}>
+                    <Button type="button" variant="ghost" size="sm" className="-ml-2" onClick={() => model.toggleSort(column.sort!)}>
                       {column.header}
-                      <span aria-hidden="true" className="wk-sort-glyph" data-active={direction !== undefined || undefined}>
+                      <span aria-hidden="true" className={direction === undefined ? 'text-muted-foreground/50' : undefined}>
                         {direction === 'asc' ? '▲' : direction === 'desc' ? '▼' : '↕'}
                       </span>
-                    </button>
+                    </Button>
                   )}
-                </th>
+                </TableHead>
               );
             })}
-          </tr>
-        </thead>
-        <tbody>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {virtualize ? (
             <VirtualRows rows={rows} rowId={rowId} viewport={viewport} columnCount={columnCount} renderRow={renderRow} />
           ) : (
             rows.map((row) => renderRow(row))
           )}
-        </tbody>
-      </table>
+        </TableBody>
+      </TableRoot>
     </div>
   );
 }
@@ -701,8 +694,8 @@ function Total({ model: explicitModel, className }: { readonly className?: strin
   const { total } = listViewBinding(model);
   const count = total === undefined ? '…' : total.toLocaleString();
   return (
-    <p className={join('wk-total', className)}>
-      {copy.total} <strong>{count}</strong>
+    <p className={cn('text-sm text-muted-foreground', className)}>
+      {copy.total} <strong className="text-foreground">{count}</strong>
       {copy.totalUnit}
     </p>
   );
@@ -714,15 +707,9 @@ function PageSize({ model: explicitModel, sizes }: { readonly sizes: readonly nu
   const binding = listViewBinding(model);
   const id = useId();
   return (
-    <span className="wk-inline">
-      <label htmlFor={id}>{copy.size}</label>
-      <select id={id} className="wk-input" value={binding.size} onChange={(event) => binding.setSize(event.target.value)}>
-        {sizes.map((size) => (
-          <option key={size} value={size}>
-            {size}
-          </option>
-        ))}
-      </select>
+    <span className="inline-flex items-center gap-2">
+      <Label htmlFor={id}>{copy.size}</Label>
+      <OptionSelect id={id} value={String(binding.size)} onValueChange={(next) => binding.setSize(next)} options={sizes.map((size) => ({ value: String(size), label: String(size) }))} />
     </span>
   );
 }
@@ -732,18 +719,7 @@ function SortSelect({ model: explicitModel, options }: { readonly options: reado
   const { model, copy } = useListContext(explicitModel);
   const binding = listViewBinding(model);
   return (
-    <select
-      aria-label={copy.sort}
-      className="wk-input"
-      value={binding.sort}
-      onChange={(event) => binding.setSort(event.target.value)}
-    >
-      {options.map((option) => (
-        <option key={option.value} value={option.value}>
-          {option.label}
-        </option>
-      ))}
-    </select>
+    <OptionSelect aria-label={copy.sort} value={binding.sort} onValueChange={(next) => binding.setSort(next)} options={options} />
   );
 }
 
@@ -753,26 +729,27 @@ function Pagination({ model: explicitModel, className }: { readonly className?: 
   const { page, last, pages, visible } = listPaginationBinding(model);
   if (!visible) return null;
   return (
-    <nav aria-label={copy.pagination} className={join('wk-pagination', className)}>
-      <button type="button" className="wk-button" disabled={page === 1} onClick={() => model.goToPage(page - 1)}>
+    <nav aria-label={copy.pagination} className={cn('flex items-center justify-end gap-1', className)}>
+      <Button type="button" variant="ghost" disabled={page === 1} onClick={() => model.goToPage(page - 1)}>
         {copy.previous}
-      </button>
+      </Button>
       {pages.map((number, index, all) => (
-        <span key={number} className="wk-inline">
-          {index > 0 && number - (all[index - 1] ?? number) > 1 && <span aria-hidden="true">…</span>}
-          <button
+        <span key={number} className="inline-flex items-center gap-1">
+          {index > 0 && number - (all[index - 1] ?? number) > 1 && <span aria-hidden="true" className="px-1 text-muted-foreground">…</span>}
+          <Button
             type="button"
-            className="wk-button"
+            variant={number === page ? 'outline' : 'ghost'}
+            size="icon"
             aria-current={number === page ? 'page' : undefined}
             onClick={() => model.goToPage(number)}
           >
             {number}
-          </button>
+          </Button>
         </span>
       ))}
-      <button type="button" className="wk-button" disabled={page === last} onClick={() => model.goToPage(page + 1)}>
+      <Button type="button" variant="ghost" disabled={page === last} onClick={() => model.goToPage(page + 1)}>
         {copy.next}
-      </button>
+      </Button>
     </nav>
   );
 }
@@ -781,7 +758,7 @@ function Pagination({ model: explicitModel, className }: { readonly className?: 
 function Actions({ model: explicitModel, children, className }: { readonly children: ReactNode; readonly className?: string } & { readonly model?: ListModel }) {
   const { model } = useListContext(explicitModel);
   return (
-    <fieldset disabled={!model.isCurrent} className={join('wk-actions wk-fieldset', className)}>
+    <fieldset disabled={!model.isCurrent} className={cn('flex min-w-0 flex-wrap items-center gap-2', className)}>
       {children}
     </fieldset>
   );
@@ -813,14 +790,9 @@ function BulkAction<T>({
   const errorText = error === undefined ? null : typeof error === 'string' ? error : custom === undefined ? copy.actionFailed : custom;
   return (
     <>
-      <button
-        type="button"
-        className="wk-button"
-        disabled={locked}
-        onClick={open}
-      >
+      <Button type="button" variant="outline" disabled={locked} onClick={open}>
         {label}
-      </button>
+      </Button>
       <ConfirmDialog
         open={pending !== undefined}
         title={title}
@@ -832,13 +804,13 @@ function BulkAction<T>({
       >
         {pending === undefined ? null : (describe?.(pending.ids) ?? `${pending.ids.length}${copy.items}`)}
         {errorText !== null && (
-          <p role="alert" className="wk-error">
+          <p role="alert" className="text-sm text-destructive">
             {errorText}
           </p>
         )}
       </ConfirmDialog>
       {pending === undefined && errorText !== null && (
-        <p role="alert" className="wk-error">
+        <p role="alert" className="text-sm text-destructive">
           {errorText}
         </p>
       )}
@@ -866,28 +838,21 @@ function Download({
   const failure = control.state.kind !== 'failed' ? null : custom === undefined ? copy.downloadFailed : custom;
   const running = control.state.kind === 'running';
   return (
-    <span className="wk-inline" aria-busy={running || undefined}>
-      <select
+    <span className="inline-flex flex-wrap items-center gap-2" aria-busy={running || undefined}>
+      <OptionSelect
         aria-label={copy.downloadKind}
-        className="wk-input"
         disabled={running}
         value={kind}
-        onChange={(event) => change(event.target.value)}
-      >
-        <option value="">{copy.downloadChoose}</option>
-        {kinds.map((value) => (
-          <option key={value} value={value}>
-            {kindLabel(value)}
-          </option>
-        ))}
-      </select>
-      <button type="button" className="wk-button" disabled={blocked} onClick={start}>
+        onValueChange={(next) => change(next)}
+        options={[{ value: '', label: copy.downloadChoose }, ...kinds.map((value) => ({ value, label: kindLabel(value) }))]}
+      />
+      <Button type="button" variant="outline" disabled={blocked} onClick={start}>
         {label ?? copy.download}
-      </button>
+      </Button>
       {/* 진행 중에는 종류·버튼을 잠그고 옆에 로딩 표시만 둔다. 문구는 화면 낭독기에만 읽힌다. */}
       {running && <Pending label={copy.downloading} />}
       {failure !== null && (
-        <span role="alert" className="wk-error">
+        <span role="alert" className="text-sm text-destructive">
           {failure}
         </span>
       )}
@@ -895,9 +860,69 @@ function Download({
   );
 }
 
-/** 클래스 이름을 잇는다. */
-function join(...names: readonly (string | undefined)[]): string {
-  return names.filter(Boolean).join(' ');
+/** 묶음 칸 제목(legend). Label과 같은 글자 모양을 쓴다. */
+const legendClass = 'mb-2 text-sm leading-none font-medium';
+/** 결과 자리 안내(조회 전·로딩·실패·빈 결과). */
+const stateClass = 'flex min-h-32 flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground';
+
+/** 필수 칸 표시. 낭독기는 aria-required로 읽으므로 숨긴다. */
+function RequiredMark() {
+  return (
+    <span aria-hidden="true" className="text-destructive">
+      {' *'}
+    </span>
+  );
+}
+
+/** 칸 오류 한 줄. aria-describedby로 칸에 연결된다. */
+function FieldMessage({ id, children }: { readonly id: string; readonly children: ReactNode }) {
+  return (
+    <span id={id} role="alert" className="text-sm text-destructive">
+      {children}
+    </span>
+  );
+}
+
+/**
+ * 문자열 값 하나를 고르는 shadcn Select. 빈 문자열('')은 「값 없음」 선택지로 다룬다(목록 상태는 문자열을 주고받는다).
+ * 칸 이름은 id+Label 또는 aria-label로 트리거에 붙고, 오류 연결(aria-*)도 트리거가 받는다.
+ */
+function OptionSelect({
+  value,
+  onValueChange,
+  options,
+  disabled,
+  ...trigger
+}: {
+  readonly value: string;
+  readonly onValueChange: (value: string) => void;
+  readonly options: readonly { readonly value: string; readonly label: string }[];
+  readonly disabled?: boolean;
+  readonly id?: string;
+  readonly 'aria-label'?: string;
+  readonly 'aria-required'?: boolean;
+  readonly 'aria-invalid'?: boolean;
+  readonly 'aria-describedby'?: string;
+}) {
+  return (
+    <SelectRoot
+      items={options}
+      value={value}
+      disabled={disabled}
+      onValueChange={(next) => onValueChange(typeof next === 'string' ? next : '')}
+    >
+      <SelectTrigger {...trigger} className="min-w-32">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </SelectRoot>
+  );
 }
 
 /** 목록 기본 UI. <List model={useList(...)}> 안에 부품을 원하는 배치로 둔다. */

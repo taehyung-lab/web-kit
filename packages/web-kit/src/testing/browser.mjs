@@ -69,7 +69,8 @@ function registerProgressBrowser({ url, target }, modes) {
                     throw new Error('본문 작업 좌표 없음');
                 await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
                 await page.keyboard.press('Tab');
-                expect(await page.locator('[inert]').evaluate((node) => node.contains(document.activeElement))).toBe(false);
+                // 막힌 본문(aria-busy·inert)만 본다. 닫히는 대화창의 퇴장 효과 동안 남는 Base UI 내부 inert 층은 대상이 아니다.
+                expect(await page.locator('[aria-busy="true"][inert]').evaluate((node) => node.contains(document.activeElement))).toBe(false);
                 await expect(page.getByLabel('작업 횟수')).toHaveText('0');
             }
             await page.evaluate(() => window.dispatchEvent(new Event('web-kit:finish')));
@@ -79,7 +80,7 @@ function registerProgressBrowser({ url, target }, modes) {
             if (mode === 'removed')
                 await expect(page.getByRole('heading')).toBeFocused();
             if (mode === 'root')
-                await expect(page.locator('.wk-blocking-root')).toBeFocused();
+                await expect(page.locator('[data-slot="blocking-progress-root"]')).toBeFocused();
             if (mode === 'saved' || mode === 'portal')
                 expect(await page.getByRole('dialog').evaluate((node) => node.contains(document.activeElement))).toBe(true);
             if (mode === 'error')

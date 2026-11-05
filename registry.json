@@ -7,17 +7,14 @@
       "name": "inputs",
       "type": "registry:block",
       "title": "web-kit inputs",
-      "description": "web-kit inputs \ud45c\ud604 \uc6d0\ubcf8; \ub3d9\uc791\uc740 \uc124\uce58\ud55c \uac19\uc740 \ubc84\uc804\uc758 \ud328\ud0a4\uc9c0\uac00 \uc18c\uc720\ud55c\ub2e4.",
-      "dependencies": [
-        "@base-ui/react@1.7.0"
+      "description": "shadcn \uae30\ubcf8 \ubd80\ud488(button\u00b7input\u00b7checkbox)\uc774 \ud0a4\ud2b8 \ubd80\ud488\uc774 \uae30\ub300\ub294 \uc18d\uc131\uc744 \uc9c0\ud0a4\ub294\uc9c0 \ud655\uc778\ud558\ub294 \uac80\uc0ac \uc5f0\uacb0; \ubd80\ud488 \uc790\uccb4\ub294 shadcn registry\uc5d0\uc11c \uc124\uce58\ud55c\ub2e4.",
+      "dependencies": [],
+      "registryDependencies": [
+        "button",
+        "input",
+        "checkbox"
       ],
-      "registryDependencies": [],
       "files": [
-        {
-          "path": "packages/ui-registry/src/ui/inputs.tsx",
-          "type": "registry:file",
-          "target": "~/src/shared/ui/web-kit/ui/inputs.tsx"
-        },
         {
           "path": "packages/ui-registry/checks/inputs.test.tsx",
           "type": "registry:file",
@@ -35,7 +32,9 @@
       "title": "web-kit pending",
       "description": "web-kit pending \ud45c\ud604 \uc6d0\ubcf8; \ub3d9\uc791\uc740 \uc124\uce58\ud55c \uac19\uc740 \ubc84\uc804\uc758 \ud328\ud0a4\uc9c0\uac00 \uc18c\uc720\ud55c\ub2e4.",
       "dependencies": [],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "spinner"
+      ],
       "files": [
         {
           "path": "packages/ui-registry/src/ui/pending.tsx",
@@ -58,12 +57,11 @@
       "type": "registry:block",
       "title": "web-kit dialog",
       "description": "web-kit dialog \ud45c\ud604 \uc6d0\ubcf8; \ub3d9\uc791\uc740 \uc124\uce58\ud55c \uac19\uc740 \ubc84\uc804\uc758 \ud328\ud0a4\uc9c0\uac00 \uc18c\uc720\ud55c\ub2e4.",
-      "dependencies": [
-        "@base-ui/react@1.7.0"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "@web-kit/pending",
-        "@web-kit/styles"
+        "button",
+        "dialog"
       ],
       "files": [
         {
@@ -106,8 +104,7 @@
       "dependencies": [],
       "registryDependencies": [
         "@web-kit/pending",
-        "@web-kit/dialog",
-        "@web-kit/styles"
+        "@web-kit/dialog"
       ],
       "files": [
         {
@@ -148,9 +145,18 @@
       "title": "web-kit choice",
       "description": "web-kit choice \ud45c\ud604 \uc6d0\ubcf8; \ub3d9\uc791\uc740 \uc124\uce58\ud55c \uac19\uc740 \ubc84\uc804\uc758 \ud328\ud0a4\uc9c0\uac00 \uc18c\uc720\ud55c\ub2e4.",
       "dependencies": [
-        "@base-ui/react@1.7.0"
+        "cn@0.5.2",
+        "lucide-react@1.68.0"
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "button",
+        "checkbox",
+        "radio-group",
+        "popover",
+        "dropdown-menu",
+        "combobox",
+        "input-group"
+      ],
       "files": [
         {
           "path": "packages/ui-registry/src/ui/choice.tsx",
@@ -176,7 +182,9 @@
       "dependencies": [
         "@tanstack/react-query@5.102.6"
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "button"
+      ],
       "files": [
         {
           "path": "packages/ui-registry/src/ui/retry.tsx",
@@ -201,7 +209,6 @@
       "description": "web-kit ui \ud45c\ud604 \uc6d0\ubcf8; \ub3d9\uc791\uc740 \uc124\uce58\ud55c \uac19\uc740 \ubc84\uc804\uc758 \ud328\ud0a4\uc9c0\uac00 \uc18c\uc720\ud55c\ub2e4.",
       "dependencies": [],
       "registryDependencies": [
-        "@web-kit/inputs",
         "@web-kit/pending",
         "@web-kit/dialog",
         "@web-kit/blocking-progress",
@@ -221,6 +228,7 @@
       "title": "web-kit form",
       "description": "web-kit form \ud45c\ud604 \uc6d0\ubcf8; \ub3d9\uc791\uc740 \uc124\uce58\ud55c \uac19\uc740 \ubc84\uc804\uc758 \ud328\ud0a4\uc9c0\uac00 \uc18c\uc720\ud55c\ub2e4.",
       "dependencies": [
+        "cn@0.5.2",
         "@tanstack/react-form@1.33.5",
         "@tanstack/react-router@1.170.32"
       ],
@@ -228,7 +236,12 @@
         "@web-kit/choice",
         "@web-kit/dialog",
         "@web-kit/pending",
-        "@web-kit/styles"
+        "button",
+        "checkbox",
+        "input",
+        "label",
+        "select",
+        "textarea"
       ],
       "files": [
         {
@@ -295,7 +308,8 @@
       "title": "web-kit list",
       "description": "web-kit list \ud45c\ud604 \uc6d0\ubcf8; \ub3d9\uc791\uc740 \uc124\uce58\ud55c \uac19\uc740 \ubc84\uc804\uc758 \ud328\ud0a4\uc9c0\uac00 \uc18c\uc720\ud55c\ub2e4.",
       "dependencies": [
-        "@base-ui/react@1.7.0",
+        "cn@0.5.2",
+        "lucide-react@1.68.0",
         "@tanstack/react-query@5.102.6",
         "@tanstack/react-router@1.170.32",
         "@tanstack/react-virtual@3.14.9"
@@ -303,7 +317,12 @@
       "registryDependencies": [
         "@web-kit/choice",
         "@web-kit/dialog",
-        "@web-kit/pending"
+        "@web-kit/pending",
+        "button",
+        "input",
+        "label",
+        "select",
+        "table"
       ],
       "files": [
         {
@@ -329,10 +348,13 @@
       "title": "web-kit record",
       "description": "web-kit record \ud45c\ud604 \uc6d0\ubcf8; \ub3d9\uc791\uc740 \uc124\uce58\ud55c \uac19\uc740 \ubc84\uc804\uc758 \ud328\ud0a4\uc9c0\uac00 \uc18c\uc720\ud55c\ub2e4.",
       "dependencies": [
+        "cn@0.5.2",
         "@tanstack/react-query@5.102.6"
       ],
       "registryDependencies": [
-        "@web-kit/retry"
+        "@web-kit/retry",
+        "button",
+        "table"
       ],
       "files": [
         {
@@ -380,7 +402,9 @@
       "type": "registry:block",
       "title": "web-kit filter-error",
       "description": "web-kit filter-error \ud45c\ud604 \uc6d0\ubcf8; \ub3d9\uc791\uc740 \uc124\uce58\ud55c \uac19\uc740 \ubc84\uc804\uc758 \ud328\ud0a4\uc9c0\uac00 \uc18c\uc720\ud55c\ub2e4.",
-      "dependencies": [],
+      "dependencies": [
+        "cn@0.5.2"
+      ],
       "registryDependencies": [],
       "files": [
         {
@@ -400,36 +424,16 @@
       ]
     },
     {
-      "name": "styles",
-      "type": "registry:block",
-      "title": "web-kit styles",
-      "description": "web-kit styles \ud45c\ud604 \uc6d0\ubcf8; \ub3d9\uc791\uc740 \uc124\uce58\ud55c \uac19\uc740 \ubc84\uc804\uc758 \ud328\ud0a4\uc9c0\uac00 \uc18c\uc720\ud55c\ub2e4.",
-      "dependencies": [],
-      "registryDependencies": [],
-      "files": [
-        {
-          "path": "packages/ui-registry/src/ui/styles.css",
-          "type": "registry:file",
-          "target": "~/src/shared/ui/web-kit/ui/styles.css"
-        },
-        {
-          "path": "packages/ui-registry/checks/styles.test.tsx",
-          "type": "registry:file",
-          "target": "~/src/shared/ui/web-kit/checks/styles.test.tsx"
-        }
-      ],
-      "devDependencies": [
-        "vitest@4.1.11",
-        "@testing-library/react@16.3.2"
-      ]
-    },
-    {
       "name": "auth",
       "type": "registry:block",
       "title": "web-kit \uc778\uc99d \ucf54\ub4dc",
       "description": "\ub85c\uadf8\uc778 \uc804 \uc778\uc99d \ucf54\ub4dc\u00b7\uae30\ud55c\u00b7\uc7ac\uc804\uc1a1 \ud45c\ud604\uacfc \uac80\uc0ac \uc5f0\uacb0",
       "dependencies": [],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "button",
+        "input",
+        "label"
+      ],
       "devDependencies": [
         "vitest@4.1.11",
         "@testing-library/react@16.3.2",
@@ -485,7 +489,6 @@
         "@web-kit/record",
         "@web-kit/checkbox-tree",
         "@web-kit/filter-error",
-        "@web-kit/styles",
         "@web-kit/auth"
       ],
       "files": []

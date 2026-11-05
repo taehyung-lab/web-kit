@@ -125,7 +125,7 @@ export function useOptionsRetryFocus(retry?: () => void) {
       (event.currentTarget.closest('[role="group"]') as HTMLElement | null)?.focus();
       retry?.();
     },
-    inputRef: (node: HTMLSelectElement | null) => {
+    inputRef: (node: HTMLElement | null) => {
       if (node === null || !retried.current) return;
       retried.current = false;
       if (document.activeElement === null || document.activeElement === document.body) node.focus();

@@ -82,7 +82,7 @@ it(title('G063', 'F4 검증 실패는 저장 0건이고 화면 순서의 첫 오
   expect(screen.getByRole('textbox', { name: '연락처' }).getAttribute('aria-required')).toBe('false');
   fireEvent.click(screen.getByLabelText('필요', { exact: false }));
   expect(screen.getByRole('textbox', { name: '연락처' }).getAttribute('aria-required')).toBe('true');
-  expect(screen.getByText('연락처').querySelector('.wk-required')).not.toBeNull();
+  expect(screen.getByText('연락처').querySelector('[data-slot="field-required"]')).not.toBeNull();
   fireEvent.click(screen.getByLabelText('필요', { exact: false }));
   expect(screen.getByRole('textbox', { name: '연락처' }).getAttribute('aria-required')).toBe('false');
   fireEvent.click(screen.getByText('저장'));
@@ -400,7 +400,7 @@ it(title('G073', '대화창 안 폼의 닫기·취소는 그 안 폼만 보고 �
   expect((screen.getByLabelText('바깥', { exact: false }) as HTMLInputElement).value).toBe('O');
 });
 
-it(title('G074', '선택은 값이 비었을 때만 빈 선택지를 두고, 선택지 상태(불러오는 중·실패·재시도)를 그 칸 자리에 보인다'), async () => {
+it(title('G074', '선택은 값이 비었을 때만 안내 문구를 보이고 고른 뒤 비우는 선택지를 두지 않으며, 선택지 상태(불러오는 중·실패·재시도)를 그 칸 자리에 보인다'), async () => {
   const retry = vi.fn();
   const changed = vi.fn();
   function Screen() {
@@ -427,11 +427,19 @@ it(title('G074', '선택은 값이 비었을 때만 빈 선택지를 두고, 선
   expect(retry).toHaveBeenCalledTimes(1);
   expect(document.activeElement?.getAttribute('role')).toBe('group');
   fireEvent.click(screen.getByText('준비로'));
-  const select = screen.getByRole('combobox', { name: '종류' }) as HTMLSelectElement;
-  expect(Array.from(select.options).map((option) => option.value)).toEqual(['', 'x']);
-  fireEvent.change(select, { target: { value: 'x' } });
+  // 선택 칸(shadcn Select): 값이 비었으면 트리거가 안내 문구를 보이고, 선택지에는 빈 값이 없다(고른 뒤 다시 비우는 길이 없다).
+  const select = screen.getByRole('combobox', { name: '종류' });
+  const options = () => screen.getAllByRole('option').map((option) => option.textContent);
+  expect(select.textContent).toContain('선택');
+  await act(async () => fireEvent.click(select));
+  expect(options()).toEqual(['엑스']);
+  await act(async () => fireEvent.click(screen.getByRole('option', { name: '엑스' })));
   expect(changed).toHaveBeenCalledWith('x');
-  expect(Array.from(select.options).map((option) => option.value)).toEqual(['x']);
+  await waitFor(() => expect(select.getAttribute('aria-expanded')).toBe('false'));
+  expect(select.textContent).toContain('엑스');
+  expect(select.textContent).not.toContain('선택');
+  await act(async () => fireEvent.click(select));
+  expect(options()).toEqual(['엑스']);
 });
 
 it(title('G075', 'useLeave는 Router 밖 이탈(같은 메뉴 다시 누르기)을 같은 판정으로 묻는다'), async () => {
@@ -588,6 +596,36 @@ it(title('form-choice-empty', '성공한 빈 전체 선택지는 기존 다중 �
   fireEvent.click(screen.getByText('저장'));
   await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
   expect(save.mock.lastCall?.[0]).toEqual({ ids: [] });
+});
+
+// 결정 0007: 프로젝트가 배치하는 블록(칸·구역·폼 한 줄)이 클래스 우선순위 여백을 가지면 프로젝트의 간격 유틸리티(space-y 등, 0 우선순위)를 지운다.
+it(title('G110', '칸·구역·폼 한 줄은 바깥 여백(margin) 클래스를 두지 않아 프로젝트 간격 유틸리티를 지우지 않는다'), async () => {
+  function Screen() {
+    const editor = useSaveForm({ schema, source: { id: 1, values }, save: async () => Promise.reject(new Error('x')) });
+    return (
+      <F editor={editor} className="space-y-4" renderFailure={() => '저장 실패 한 줄'}>
+        <F.Failure />
+        <F.Section title="기본">
+          <F.Text name="name" label="이름" />
+          <F.Checkbox name="needed" label="필요" />
+        </F.Section>
+        <F.Section title="접힘" fields={['contact']}>
+          <F.Text name="contact" label="연락처" />
+        </F.Section>
+        <F.Submit />
+      </F>
+    );
+  }
+  await mount(() => <Screen />);
+  await act(async () => fireEvent.click(screen.getByText('저장')));
+  await screen.findByText('저장 실패 한 줄');
+  const blocks = Array.from(document.querySelectorAll('[data-slot="form-field"], [data-slot="form-section"], [data-slot="form-failure"]'));
+  expect(new Set(blocks.map((block) => block.getAttribute('data-slot')))).toEqual(new Set(['form-field', 'form-section', 'form-failure']));
+  for (const block of blocks) {
+    const margins = Array.from(block.classList).filter((name) => /^-?m[trblxyse]?-/.test(name.split(':').pop()!));
+    expect(margins, block.outerHTML.slice(0, 80)).toEqual([]);
+    expect((block as HTMLElement).style.margin).toBe('');
+  }
 });
 
 }

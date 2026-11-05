@@ -31,7 +31,6 @@
     "./testing/unit/auth": "./src/testing/unit/auth.tsx",
     "./testing/unit/choice": "./src/testing/unit/choice.tsx",
     "./testing/unit/primitives": "./src/testing/unit/primitives.tsx",
-    "./testing/unit/styles": "./src/testing/unit/styles.ts",
     "./testing/fixtures/auth": "./src/testing/auth-fixture.tsx",
     "./testing/unit/list": "./src/testing/unit/list-ui.tsx",
     "./testing/unit/record": "./src/testing/unit/record-ui.tsx",

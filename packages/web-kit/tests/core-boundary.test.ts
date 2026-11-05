@@ -178,9 +178,9 @@ it.each(['../src/use-list.ts', '../src/list.ts', '../../ui-registry/src/list-ui.
   for (const file of reach(entry)) expect(file).not.toMatch(/\/form\//);
 });
 
-it('진행 표시 마크업(.wk-spinner)은 /ui의 pending 한 곳에만 있고, 목록 다운로드·폼 저장·확인창은 Pending을, 화면 전체 덮개는 Spinner를 쓴다', () => {
+it('진행 표시 마크업(shadcn Spinner 연결)은 /ui의 pending 한 곳에만 있고, 목록 다운로드·폼 저장·확인창은 Pending을, 화면 전체 덮개는 Spinner를 쓴다', () => {
   const owners = Object.entries(sources)
-    .filter(([file, source]) => !file.startsWith('../src/testing/') && source.includes('wk-spinner'))
+    .filter(([file, source]) => !file.startsWith('../src/testing/') && (source.includes('@/components/ui/spinner') || source.includes('data-slot="pending"')))
     .map(([file]) => file);
   expect(owners).toEqual(['../../ui-registry/src/ui/pending.tsx']);
   for (const file of ['../../ui-registry/src/list-ui.tsx', '../../ui-registry/src/form/ui.tsx', '../../ui-registry/src/ui/dialog.tsx']) expect(sources[file], file).toMatch(/<Pending label=/);

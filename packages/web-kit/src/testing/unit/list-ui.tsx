@@ -49,6 +49,21 @@ type Model = ReturnType<typeof useList<Fields, Row>>;
 let model!: Model;
 
 /** 실제 useList와 URL 상태를 가진 소비 fixture. children이 배치를 정한다. */
+/** 선택 칸(shadcn Select)을 열고 이름이 같은 선택지를 실제 포인터 순서(누름·뗌·클릭)로 고른다. */
+async function chooseOption(trigger: HTMLElement, name: string) {
+  await act(async () => fireEvent.click(trigger));
+  const option = screen.getByRole('option', { name });
+  await act(async () => {
+    fireEvent.pointerDown(option, { pointerType: 'mouse' });
+    fireEvent.mouseDown(option);
+    fireEvent.pointerUp(option, { pointerType: 'mouse' });
+    fireEvent.mouseUp(option);
+    fireEvent.click(option);
+  });
+  // 고른 뒤 팝업이 닫힐 때까지 기다린다(닫히기 전 다시 누르면 닫기로 처리된다).
+  await waitFor(() => expect(trigger.getAttribute('aria-expanded')).toBe('false'));
+}
+
 function mount(
   layout: (model: Model) => ReactNode,
   options: {
@@ -479,27 +494,27 @@ it(title('G103', '다운로드: 누른 순간의 확정 조건·선택을 고정
   fireEvent.change(screen.getByRole('textbox', { name: '키워드' }), { target: { value: 'typed-only' } });
   const kind = screen.getByRole('combobox', { name: '다운로드 종류' });
   const button = screen.getByRole('button', { name: '다운로드' }) as HTMLButtonElement;
-  fireEvent.change(kind, { target: { value: 'selected' } });
+  await chooseOption(kind, '선택 다운로드');
   expect(button.disabled).toBe(true);
-  fireEvent.change(kind, { target: { value: 'all' } });
+  await chooseOption(kind, '전체 다운로드');
   fireEvent.click(button);
   fireEvent.click(button);
   await waitFor(() => expect(targets).toHaveLength(1));
   expect(targets[0]).toEqual({ kind: 'all', search: expect.objectContaining({ keywords: [] }) });
   expect(button.disabled).toBe(true);
   // 진행 중: 종류·버튼 잠금, 옆에는 로딩 표시만(문구는 화면 낭독기용).
-  expect((kind as HTMLSelectElement).disabled).toBe(true);
+  expect(kind.hasAttribute('disabled')).toBe(true);
   const progress = screen.getByRole('status');
-  expect(progress.className).toContain('wk-spinner');
+  expect(progress.getAttribute('data-slot')).toBe('pending');
   expect(progress.textContent).toBe('다운로드 중입니다.');
-  expect(progress.querySelector('.wk-visually-hidden')?.textContent).toBe('다운로드 중입니다.');
+  expect(progress.querySelector('.sr-only')?.textContent).toBe('다운로드 중입니다.');
   // 공개 부품 /ui Pending과 같은 표시다(프로젝트가 버튼 옆 진행 표시를 그릴 때 쓰는 그 부품).
   expect(progress.outerHTML).toBe(renderToStaticMarkup(<Pending label="다운로드 중입니다." />));
   await act(async () => finish());
   expect(screen.queryByRole('status')).toBeNull();
-  expect((kind as HTMLSelectElement).disabled).toBe(false);
+  expect(kind.hasAttribute('disabled')).toBe(false);
   fireEvent.click(screen.getAllByRole('checkbox', { name: '행 선택' })[1]!);
-  fireEvent.change(kind, { target: { value: 'selected' } });
+  await chooseOption(kind, '선택 다운로드');
   fireEvent.click(button);
   fireEvent.click(screen.getAllByRole('checkbox', { name: '행 선택' })[0]!);
   await waitFor(() => expect(targets).toHaveLength(2));
@@ -521,10 +536,10 @@ it(title('G104', '다운로드 실패는 원인을 남기고 종류를 바꾸면
     </>
   ));
   await screen.findByText('a');
-  fireEvent.change(screen.getByRole('combobox', { name: '다운로드 종류' }), { target: { value: 'all' } });
+  await chooseOption(screen.getByRole('combobox', { name: '다운로드 종류' }), '전체 다운로드');
   fireEvent.click(screen.getByRole('button', { name: '다운로드' }));
   expect((await screen.findByRole('alert')).textContent).toContain('다운로드하지 못했습니다');
-  fireEvent.change(screen.getByRole('combobox', { name: '다운로드 종류' }), { target: { value: 'selected' } });
+  await chooseOption(screen.getByRole('combobox', { name: '다운로드 종류' }), '선택 다운로드');
   expect(screen.queryByRole('alert')).toBeNull();
 });
 

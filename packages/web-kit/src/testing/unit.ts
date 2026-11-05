@@ -8,7 +8,6 @@ export { checkFormUiConformance } from './unit/form-ui';
 export { checkFormWorkflowsConformance } from './unit/form-workflows';
 export { checkListUiConformance } from './unit/list-ui';
 export { checkRecordUiConformance } from './unit/record-ui';
-export { checkStylesConformance } from './unit/styles';
 export { checkCheckboxTreeFocusConformance } from './unit/checkbox-tree-focus';
 export { checkDialogConformance, checkRetryConformance, checkInputsConformance, checkPendingConformance, checkFilterErrorConformance } from './unit/primitives';
 export { checkAuthConformance } from './unit/auth';
