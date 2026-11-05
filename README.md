@@ -17,7 +17,7 @@ scripts/           starter 맞추기, registry 일치·문서 링크 검사, 검
 
 starter는 기본 연결과 조립 예이며 모든 프로젝트의 고정 페이지가 아니다. 프로젝트는 기능별로 선택해 쓰고 자기 업무·서버 계약·화면을 소유한다. [페이지 일부만 다른 경우](docs/decisions/0001-scope-and-boundaries.md#페이지-일부만-다른-경우)의 책임 구분을 따른다. 공용 수정은 패키지 업데이트로 받되, UI 복사본 교정이 필요한 변경은 프로젝트 수정과 대조해 적용한다.
 
-**5.0.0이 첫 정식 기준이며, 그 전 버전(태그 v0.x–v4.1.0)은 시험판이다.** 현재 패키지는 `5.0.0-rc.8` 로컬 후보이며 아직 정식 발행하지 않았다. 새 프로젝트에 설치하는 agent-workflow-kit(AWK)은 tag `v3.0.0`(= commit `bc3421e`)이다. 이 저장소 자체의 작업 기준은 [.agents/agent-workflow-kit.version](.agents/agent-workflow-kit.version)의 고정 버전을 따른다.
+**5.0.0이 첫 정식 기준이며, 그 전 버전(태그 v0.x–v4.1.0)은 시험판이다.** 현재 패키지는 `5.0.0-rc.9` 로컬 후보이며 아직 정식 발행하지 않았다. 새 프로젝트에 설치하는 agent-workflow-kit(AWK)은 tag `v3.2.0`(= commit `01a4503`)이다. 이 저장소 자체의 작업 기준은 [.agents/agent-workflow-kit.version](.agents/agent-workflow-kit.version)의 고정 버전을 따른다.
 
 ## 명령
 
@@ -29,6 +29,7 @@ Node 24.19, pnpm 10.33.
 | `pnpm check` | 키트 타입·동작, 문서 링크, registry 원본/산출물 일치와 스크립트 검사 |
 | `pnpm starter:sync` | 키트를 포장해 starter에 설치하고 starter lockfile의 키트 지문을 갱신한다. 키트를 바꾼 뒤 실행하고 결과를 같은 PR에 넣는다 |
 | `pnpm starter:check` | starter가 지금 키트에 맞춰져 있는지 확인한 뒤 starter `check`를 돌린다. 단위·브라우저·빌드·복사본 strict 지문과 적합성 점검까지 포함한다 |
+| `pnpm --dir apps/starter exec web-kit-structure` | starter의 구조 계약 결과만 본다(starter `check`의 web-kit-check에도 `--structure`로 포함) |
 
 ## 새 프로젝트 시작
 

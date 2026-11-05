@@ -30,6 +30,10 @@ pnpm exec web-kit-check --run web-kit.check.json --installation registry-install
 
 실행 후 같은 파일·결과인지 다시 확인하려면 `--run` 대신 `--verify-run web-kit.check.json`을 사용한다. `--receipt`로 실행 기록 경로를 바꿀 수 있다. 파일·설정·lockfile·보고서가 바뀌면 새 실행이 필요하다. 이 기록은 실수로 과거 결과를 재사용하는 것을 잡으며, 실제 제품이 검사 대상 UI를 쓰는지 또는 의도적으로 조작된 검사까지 증명하지 않는다.
 
+## 구조 결과
+
+구조 계약을 채택한 앱은 같은 명령에 `--structure web-kit.structure.json`을 붙인다. 키트가 배포한 구조 규칙만 프로젝트 파일 전체에 실행한다(프로젝트 eslint 설정·인라인 disable은 쓰지 않음). 결과는 UI 적합성과 따로 `[구조] 통과|실패: 파일 N개, 위반 N건, 예외로 남긴 위반 N건(예외 목록 N개), 규칙 web-kit-structure <버전>, 설정 …` 한 줄과 위반 목록으로 보인다. 쓰지 않는 예외도 실패다. `--structure`가 없으면 `[구조] 검사하지 않음`이며 통과로 세지 않는다. 두 결과 중 하나라도 실패면 명령이 실패한다. 구조 결과만 볼 때는 `pnpm exec web-kit-structure`를 쓴다. 규칙과 설정은 [web-kit-structure](../skills/web-kit-structure/SKILL.md)가 정본이다.
+
 ## CI에 넣을 명령
 
 소비 프로젝트의 필수 CI(병합 전 통과해야 하는 작업)에 아래를 넣는다. 타입·lint·build 같은 기존 명령은 그대로 둔다. 단위·브라우저 러너는 `web-kit-check --run`이 위 설정의 명령으로 직접 실행하므로 따로 한 번 더 돌릴 필요가 없다. 모노레포 앱이면 각 명령을 그 앱 폴더에서 실행한다(예: `pnpm --dir apps/admin exec ...`).
@@ -37,10 +41,10 @@ pnpm exec web-kit-check --run web-kit.check.json --installation registry-install
 ```sh
 pnpm install --frozen-lockfile
 pnpm exec playwright install --with-deps chromium
-pnpm exec web-kit-check --run web-kit.check.json --installation registry-installation.json --unit .web-kit-results/unit.json --browser .web-kit-results/browser.json
+pnpm exec web-kit-check --run web-kit.check.json --installation registry-installation.json --unit .web-kit-results/unit.json --browser .web-kit-results/browser.json --structure web-kit.structure.json
 ```
 
-설치본을 고치지 않고 써야 하는 검사 앱만 마지막 명령에 `--strict-fingerprints`를 붙인다. 이 단계를 건너뛰거나 실패를 허용(`continue-on-error` 등)하면 키트 보장을 확인했다고 하지 않는다. CI 설정 변경과 검사 대상 선정은 독립 검토로 확인한다([배포 결정](../references/docs/decisions/0002-distribution.md)).
+`--structure`는 구조 계약을 채택한 앱만 붙인다. 설치본을 고치지 않고 써야 하는 검사 앱만 마지막 명령에 `--strict-fingerprints`를 붙인다. 이 단계를 건너뛰거나 실패를 허용(`continue-on-error` 등)하면 키트 보장을 확인했다고 하지 않는다. CI 설정 변경과 검사 대상 선정은 독립 검토로 확인한다([배포 결정](../references/docs/decisions/0002-distribution.md)).
 
 ## 기존 보고서 점검
 

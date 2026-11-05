@@ -1,13 +1,10 @@
-// 파일 책임: 회원 목록 상태와 필터·결과 영역을 연결한다.
-// 파일 책임: 회원 목록 화면. 필터를 왼쪽에 두는 배치 예시이며, 상태 조립(useList)은 상품 목록과 같고 배치만 다르다.
+// 파일 책임: 회원 목록 화면. 필터를 왼쪽에 두는 배치 예시다. 목록 상태 조립은 회원 목록 flow가 맡는다.
 import { failureCopyKey } from '@/shared/lib/failure-copy';
-import { useList } from '@boosterlab/web-kit/list';
 import { ListProvider, ResultTotal, SortSelect, PageSize, ListResult, ResultTable, Pagination } from '@/shared/ui/web-kit/list-ui';
 import type { UrlSearch } from '@boosterlab/web-kit/search';
 import { useTranslation } from 'react-i18next';
-import { memberListQuery } from '../api/members';
-import { MEMBER_LIST_PERIODS, memberListSearch, toMemberListParams } from '../model/list-search';
-import { MEMBER_PAGE_SIZES, MEMBER_SORT_KEYS } from '../model/member';
+import { useMemberList } from '../flows/use-member-list';
+import { MEMBER_PAGE_SIZES, MEMBER_SORT_KEYS } from '../model/rules/member-list-policy';
 import { MemberFilters } from './MemberFilters';
 import { useMemberColumns } from './member-columns';
 
@@ -20,15 +17,7 @@ export function MemberListScreen({
   readonly navigate: (next: UrlSearch, options: { readonly replace: boolean }) => void;
 }) {
   const { t } = useTranslation();
-  const list = useList({
-    definition: memberListSearch,
-    search,
-    navigate,
-    progress: 'page',
-    query: (full) => memberListQuery(toMemberListParams(full)),
-    rowId: (row) => row.id,
-    periods: MEMBER_LIST_PERIODS,
-  });
+  const list = useMemberList({ search, navigate });
   const columns = useMemberColumns();
   return (
     <div className="flex flex-col gap-5">

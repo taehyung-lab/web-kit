@@ -1,12 +1,10 @@
-// 파일 책임: 상품 목록의 제목·필터·작업·결과를 배치하고 경로 이동을 연결한다.
+// 파일 책임: 상품 목록의 제목·필터·작업·결과를 배치하고 route가 준 이동을 연결한다. 목록 상태 조립은 목록 flow가 맡는다.
 import { Button } from '@/shared/ui/button';
 import { ListProvider, ListResult, ResultTable, Pagination } from '@/shared/ui/web-kit/list-ui';
-import { useList } from '@boosterlab/web-kit/list';
 import type { UrlSearch } from '@boosterlab/web-kit/search';
 import { useTranslation } from 'react-i18next';
 import { failureCopyKey } from '@/shared/lib/failure-copy';
-import { productListQuery } from '../api/products';
-import { PRODUCT_LIST_PERIODS, productListSearch, toListProductsParams } from '../model/list-search';
+import { useProductList } from '../flows/use-product-list';
 import { ProductFilters } from './ProductFilters';
 import { ProductActions } from './ProductActions';
 import { useProductColumns } from './product-columns';
@@ -23,17 +21,8 @@ export function ProductListScreen({
   readonly onCreate: () => void;
 }) {
   const { t } = useTranslation();
-  const columns = useProductColumns();
-  const list = useList({
-    definition: productListSearch,
-    search,
-    navigate,
-    progress: 'page',
-    query: (full) => productListQuery(toListProductsParams(full)),
-    rowId: (row) => row.id,
-    selectable: (row) => row.status !== 'INACTIVE',
-    periods: PRODUCT_LIST_PERIODS,
-  });
+  const { list, categoryName, deactivateSelected, deactivated } = useProductList({ search, navigate });
+  const columns = useProductColumns(categoryName);
   return (
     <div className="flex flex-col gap-5">
       <header>
@@ -60,7 +49,7 @@ export function ProductListScreen({
         }}
       >
         <ProductFilters />
-        <ProductActions total={list.total} selectedCount={list.selection.selectedIds.length} />
+        <ProductActions total={list.total} selectedCount={list.selection.selectedIds.length} deactivateSelected={deactivateSelected} done={deactivated} />
         <ListResult>
           <ResultTable columns={columns} rowId={(row) => row.id} selectable onOpen={(row) => onOpen(row.id)} />
         </ListResult>

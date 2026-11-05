@@ -1,5 +1,5 @@
 // 파일 책임: 상품 목록 경로. URL 검색은 web-kit 검색 선언으로 검증하고(validateSearch), 정규형이 아닌 진입 주소는 교정한다(beforeLoad).
-import { productListSearch } from '@/features/products/model/list-search';
+import { productListSearch } from '@/features/products/state/product-list-search';
 import { ProductListScreen } from '@/features/products/screens/ProductListScreen';
 import { createFileRoute } from '@tanstack/react-router';
 

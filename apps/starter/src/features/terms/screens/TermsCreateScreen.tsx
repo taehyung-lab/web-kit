@@ -1,36 +1,17 @@
-// 파일 책임: 약관 등록 예시 화면. 검증 → 저장 확인 → 저장 → 저장 완료 확인 → 새 약관 상세. 취소는 상품 목록으로 간다.
-// 흐름(확인·완료 확인·이탈 보호·오류 위치)은 키트 값(confirm·acknowledge)으로만 켠다.
-import { useSaveForm } from '@boosterlab/web-kit/form';
+// 파일 책임: 약관 등록 예시 화면. 칸 배치와 확인·완료 문구를 그린다. 저장 흐름은 등록 flow가 맡는다. 취소는 상품 목록으로 간다.
 import { Form } from '@/shared/ui/web-kit/form/ui';
-import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useFormCopy } from '@/shared/lib/form-messages';
-import { useCreateTerms } from '../api/terms';
-import { EMPTY_TERMS_FORM, TERMS_STATUSES, termsFieldError, termsFormSchema, type TermsFormInput, type TermsFormValues } from '../model/terms';
+import { useTermsCreate } from '../flows/use-terms-create';
+import { TERMS_STATUSES, type TermsFormInput } from '../model/forms/terms-form';
 
 const F = Form.of<TermsFormInput>();
-const SOURCE = { id: 'new', values: EMPTY_TERMS_FORM } as const;
 
 /** 약관 등록. */
 export function TermsCreateScreen() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const create = useCreateTerms();
   const copy = useFormCopy();
-  /** 검증된 약관을 등록하고 상세 화면에 필요한 식별자를 돌려준다. */
-  async function saveTerms(values: TermsFormValues) {
-    return { id: (await create.mutateAsync(values)).termsId };
-  }
-  const editor = useSaveForm({
-    schema: termsFormSchema,
-    source: SOURCE,
-    confirm: true,
-    progress: 'create',
-    acknowledge: true,
-    fieldError: termsFieldError,
-    save: saveTerms,
-    onSaved: (result) => navigate({ to: '/terms/$termsId', params: { termsId: result.id } }),
-  });
+  const { editor } = useTermsCreate();
   return (
     <div className="flex flex-col gap-5">
       <h1>{t('terms.createTitle')}</h1>

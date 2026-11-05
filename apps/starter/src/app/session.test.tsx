@@ -4,7 +4,7 @@ import { renderApp, type SentRequest } from '@/test/app';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { session } from './web-kit';
+import { session } from '@/runtime/web-kit';
 
 /** 목록 화면이 함께 보내는 분류 선택지 조회를 뺀 요청. 이 검사는 목록 조회와 재발급의 순서를 본다. */
 const withoutOptions = (requests: readonly SentRequest[]) => requests.filter((request) => request.line !== 'GET /api/categories');

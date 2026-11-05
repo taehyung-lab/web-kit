@@ -7,13 +7,13 @@ description: 등록·수정·대화창 폼의 저장·저장 뒤 추가 작업·
 
 `/form`의 `useSaveForm`(저장 수명)·연결 hook·Provider와 registry `form`의 `Form`·`FormGuard` 복사본을 쓰는 기준이다. registry는 프로젝트에 설치해 소유하는 UI 원본 묶음이다. 버튼·입력·선택·체크박스 같은 기본 부품은 프로젝트의 shadcn(base-nova) 부품(`@/shared/ui/<부품>`)이고 키트 항목의 `registryDependencies`로 함께 설치된다. 대화창·진행 표시는 registry `dialog`·`pending`·`blocking-progress`로 설치한다. 인자와 타입은 설치된 소스를 따른다.
 
-이 책임만 골라 사용할 수 있다. 선택한 한 책임 안에서는 키트 수명 처리와 자체 구현을 섞지 않는다. 선택 설치 peer(해당 기능을 쓸 때만 설치하는 동료 라이브러리)를 설치하지 않아 실행하지 못한 기능은 "검사하지 않음"으로 기록한다. 예시는 같은 버전의 실제 starter 코드에서 가져와 패키지에 함께 담는다. 링크로 읽고 조립 방식만 참고한다. 예제만 따로 실행하는 용도는 아니다.
+이 책임만 골라 사용할 수 있다. 선택한 한 책임 안에서는 키트 수명 처리와 자체 구현을 섞지 않는다. 선택 설치 peer(해당 기능을 쓸 때만 설치하는 동료 라이브러리)를 설치하지 않아 실행하지 못한 기능은 "검사하지 않음"으로 기록한다. 예시는 같은 버전의 실제 starter 코드에서 가져와 패키지에 함께 담는다. 링크로 읽고 조립 방식만 참고한다. 예제만 따로 실행하는 용도는 아니다. 이 책임을 어느 파일에 조립하는지(flow는 `features/<도메인>/flows`, 화면은 `screens`)는 [web-kit-structure](../web-kit-structure/SKILL.md)가 정한다. 아래에서 "화면"은 사용자가 보는 화면 단위를 뜻하며, 키트 수명 hook을 부르는 코드는 그 화면의 flow에 둔다.
 
 ## registry 폼 UI
 
 실제 조립 예: [apps/starter/src/features/products/screens/ProductForm.tsx](../../references/apps/starter/src/features/products/screens/ProductForm.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-registry `form`의 `FormGuard`를 앱(Router 안)에 한 번 둔다. 복사본은 `/form`의 `useFormGuardBinding`과 `FormGuardProvider`, `useFormRootBinding`과 `FormBindingProvider`로 연결한다. 화면은 `const editor = useSaveForm({...})`를 만들고 `<Form editor={editor}>` 안에 부품을 원하는 배치로 둔다. 각 부품은 같은 편집 상태를 context로 읽어서, 칸·버튼·오류 줄의 위치를 바꿔도 저장·검증·focus 연결을 다시 쓰지 않는다. 칸 이름을 값 타입으로 좁히려면 `const F = Form.of<Values>()`로 같은 부품을 쓴다.
+registry `form`의 `FormGuard`를 앱(Router 안)에 한 번 둔다. 복사본은 `/form`의 `useFormGuardBinding`과 `FormGuardProvider`, `useFormRootBinding`과 `FormBindingProvider`로 연결한다. 화면의 flow가 `const editor = useSaveForm({...})`를 만들어 돌려주고([등록 flow](../../references/apps/starter/src/features/products/flows/use-product-create.ts.txt)), 화면은 `<Form editor={editor}>` 안에 부품을 원하는 배치로 둔다. 각 부품은 같은 편집 상태를 context로 읽어서, 칸·버튼·오류 줄의 위치를 바꿔도 저장·검증·focus 연결을 다시 쓰지 않는다. 칸 이름을 값 타입으로 좁히려면 `const F = Form.of<Values>()`로 같은 부품을 쓴다.
 
 - 칸: `Form.Text`·`TextArea`·`Select`·`Checkbox`·`File`·`Array`. 입력을 프로젝트 부품으로 바꿀 때는 `Form.Field`의 render 함수가 받는 `control`(id·aria·value·change·blur)을 그 입력에 건다. 값·검증·오류 표시·첫 오류 focus는 그대로 남는다.
 - 필수 표시(별표·`aria-required`)의 출처는 schema 하나다. 칸마다 `required`를 적지 않는다. 키트는 지금 값에서 그 칸만 비운 값(문자열 '', 목록 [], 체크 false, 파일 비어 있음)을 schema로 검증해 그 칸에 오류가 나면 필수로 본다(`editor.isRequired`). 그래서 다른 칸 값에 따른 조건부 필수도 같은 규칙에서 나온다. 단, 그런 규칙은 다른 칸 오류가 있어도 돌게 쓴다(zod 4: 객체 `superRefine(fn, { when: () => true })`). 기본값이면 다른 칸이 비어 있는 동안 규칙이 건너뛰어져 별표가 빠진다.
@@ -37,7 +37,7 @@ registry `form`의 `FormGuard`를 앱(Router 안)에 한 번 둔다. 복사본�
 
 ## 화면 전체 진행 덮개
 
-실제 조립 예: [apps/starter/src/routes/_app.tsx](../../references/apps/starter/src/routes/_app.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/app/shell/AppShell.tsx](../../references/apps/starter/src/app/shell/AppShell.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 registry `blocking-progress`의 `BlockingProgress messages={{ loading, create, edit, delete, wait? }}`를 앱 셸(로그인 뒤 화면 골격)에 한 번 두고 셸 본문을 children으로 감싼다. 공통 등록·정리·복원은 `/dialog`의 `useBlockingProgressBinding`·`BlockingProgressProvider`가 맡고 복사본은 반환 속성과 ref를 연결한다. 문구는 프로젝트가 준다(`wait`는 둘째 줄).
 - 무엇이 덮는가: 등록·수정 폼 저장(`useSaveForm({ progress })`), 확인창을 거친 삭제 실행(`useConfirmationState({ progress: 'delete' })`, 아래 「폼 없는 확인」), 페이지 진입 조회(`useList({ progress: 'page' })`·`useRecord(options, id, { progress: 'page' })` — 각 skill), 화면 고유의 진입 대기(`useBlockingProgress('loading', active)`, 예: 수정 폼을 열기 전 보조 조회). 쓰기(등록·수정·삭제)가 조회보다 앞선다. 덮개 밖(셸 없는 화면·단위 시험)에서는 아무 일도 하지 않는다.
@@ -61,7 +61,7 @@ headless는 화면 배치 없이 상태와 연결 함수만 쓰는 방식이다.
 
 ## 화면 선언
 
-실제 조립 예: [apps/starter/src/features/products/screens/ProductCreateScreen.tsx](../../references/apps/starter/src/features/products/screens/ProductCreateScreen.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/products/flows/use-product-create.ts](../../references/apps/starter/src/features/products/flows/use-product-create.ts.txt)(아래 선언을 두는 flow)와 [apps/starter/src/features/products/screens/ProductCreateScreen.tsx](../../references/apps/starter/src/features/products/screens/ProductCreateScreen.tsx.txt)(그 결과를 그리는 화면). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 - schema: 동기 Standard Schema(zod 4). 비동기 검증은 받지 않는다. 폼 값의 File·Blob은 복사되지 않고 그대로 저장 함수까지 간다.
 - `source { id, values }`: 원본을 폼 값으로 바꾼 것. 등록 화면이면 기본값이다.
@@ -79,7 +79,7 @@ headless는 화면 배치 없이 상태와 연결 함수만 쓰는 방식이다.
 
 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-보호 제외는 [로그인](../../references/apps/starter/src/features/auth/screens/LoginScreen.tsx.txt), 저장 후 추가 조회와 완료 실패 재시도는 [작성 예제](../../references/apps/starter/src/features/form-workflows/screens/FormWorkflowScreen.tsx.txt), 완료 확인 뒤 이동은 [약관 등록](../../references/apps/starter/src/features/terms/screens/TermsCreateScreen.tsx.txt)을 참고한다. schema·서버 요청·후속 업무는 프로젝트가 정하고 저장 상태 기계를 새로 만들지 않는다. primary와 secondary의 완료 선언은 각 동작에 따로 준다.
+보호 제외는 [로그인 화면](../../references/apps/starter/src/features/auth/screens/LoginScreen.tsx.txt), 저장(요청·응답 반환)과 완료(세션 시작·이동) 분리는 [로그인 flow](../../references/apps/starter/src/features/auth/flows/use-login-flow.ts.txt), 저장 후 추가 조회와 완료 실패 재시도는 [작성 예제 flow](../../references/apps/starter/src/features/form-workflows/flows/use-workflow-form.ts.txt), 완료 확인 뒤 이동은 [약관 등록 flow](../../references/apps/starter/src/features/terms/flows/use-terms-create.ts.txt)를 참고한다. 저장 뒤 효과(세션 시작·이동·후속 조회)는 `save`에 넣지 않고 `onSaved`에 둔다. schema·서버 요청·후속 업무는 프로젝트가 정하고 저장 상태 기계를 새로 만들지 않는다. primary와 secondary의 완료 선언은 각 동작에 따로 준다.
 
 폼과 `blocking-progress` 또는 `checkbox-tree`를 함께 설치하면 registry 검사 연결이 `/testing/unit/combinations`로 자기 UI 복사본의 조합 검사도 등록한다. 둘 중 하나만 설치한 프로젝트에는 그 조합을 요구하지 않는다. 덮개와 폼의 서버 오류 초점 브라우저 화면은 `/testing/fixtures/combinations`를 쓴다.
 
@@ -173,7 +173,7 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 
 ## 폼 안 원본과 참조
 
-실제 조립 예: [apps/starter/src/features/form-workflows/model/form.ts](../../references/apps/starter/src/features/form-workflows/model/form.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/form-workflows/model/forms/workflow-form.ts](../../references/apps/starter/src/features/form-workflows/model/forms/workflow-form.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 `references`에 `{ source: values => 원본ID목록, fields: values => 참조필드경로목록, onRemove, message }`를 선언한다. 참조 칸 값은 문자열 ID 또는 ID 배열이며 빈 문자열은 참조 없음이다. 원본 이름은 현재 원본에서 표시하고 이름을 ID로 삼지 않는다. 원본 칸 값 자체가 참조 기준이면 그 값을 ID로 선언한다.
 
@@ -188,7 +188,7 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 
 ## 조건부로 숨기는 칸
 
-실제 조립 예: [작성 예제의 폼 정의](../../references/apps/starter/src/features/form-workflows/model/form.ts.txt)와 [화면](../../references/apps/starter/src/features/form-workflows/screens/FormWorkflowScreen.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [작성 예제의 폼 정의](../../references/apps/starter/src/features/form-workflows/model/forms/workflow-form.ts.txt)와 [화면](../../references/apps/starter/src/features/form-workflows/screens/FormWorkflowScreen.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 `useSaveForm`의 `conditionalFields(values)`에 현재 칸마다 `{ field, visible, emptyValue }`를 돌려준다. 칸 경로와 빈 값은 입력 타입으로 검사한다. `visible`은 현재 값으로 계산하고, 숨긴 칸도 선언 목록에 유지한다. 배열 줄은 ``values.rows.map((row, index) => ({ field: `rows[${index}].detail`, visible: showDetail(row), emptyValue: '' }))``처럼 줄마다 선언한다. 폼 칸은 이 선언을 읽어 그리지 않으므로 화면에서 조건을 다시 쓰지 않는다. 직접 만든 표현은 `editor.isVisible(name)` 또는 `useFormFieldBinding`의 `visible`을 읽는다. `Form.Section` 접기는 칸·값·검증을 유지하는 별개 동작이다.
 

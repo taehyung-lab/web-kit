@@ -1,11 +1,10 @@
 // 파일 책임: 상품 필드·배치·옵션의 업무 값을 선언한다. 입력·검증·오류 연결은 키트 Form 부품이 맡는다.
 import { Button } from '@/shared/ui/button';
 import { Form } from '@/shared/ui/web-kit/form/ui';
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useFieldMessage } from '@/shared/lib/form-messages';
-import { categoryOptionsQuery } from '../api/categories';
-import { OPTION_LIMITS, type ProductFormValues } from '../model/form';
+import type { CategoryOptions } from '../flows/use-category-options';
+import { OPTION_LIMITS, type ProductFormValues } from '../model/forms/product-form';
 import { PRODUCT_STATUSES } from '../model/product';
 
 const F = Form.of<ProductFormValues>();
@@ -13,10 +12,17 @@ const F = Form.of<ProductFormValues>();
 type CancelTo = Parameters<typeof Form.Cancel>[0]['to'];
 
 /** 등록·수정의 업무 필드는 같은 선언을 사용한다. `<Form editor>` 안에 둔다. */
-export function ProductFields({ submitLabel, cancelTo }: { readonly submitLabel: string; readonly cancelTo: CancelTo }) {
+export function ProductFields({
+  submitLabel,
+  cancelTo,
+  categories,
+}: {
+  readonly submitLabel: string;
+  readonly cancelTo: CancelTo;
+  readonly categories: CategoryOptions;
+}) {
   const { t } = useTranslation();
   const message = useFieldMessage();
-  const categories = useQuery(categoryOptionsQuery());
   return (
     <>
       <F.Failure />
@@ -32,9 +38,9 @@ export function ProductFields({ submitLabel, cancelTo }: { readonly submitLabel:
           name="categoryId"
           label={t('products.fields.category')}
           placeholder={t('products.form.chooseCategory')}
-          status={categories.isError ? { failure: categories.error } : categories.data === undefined ? 'loading' : 'ready'}
-          onRetry={() => void categories.refetch()}
-          options={(categories.data ?? []).map((category) => ({ value: category.id, label: category.name }))}
+          status={categories.status}
+          onRetry={categories.retry}
+          options={categories.options}
         />
         <F.Text name="price" label={t('products.fields.price')} inputMode="numeric" />
         <F.Text name="stock" label={t('products.fields.stock')} inputMode="numeric" />

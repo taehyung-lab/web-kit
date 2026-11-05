@@ -1,39 +1,18 @@
-// 파일 책임: 작성·임시 저장과 게시 후 조회를 공용 폼의 저장·완료 수명에 연결한다.
+// 파일 책임: 작성 예제 화면. 칸·줄·선택 배치를 그린다. 게시·임시 저장과 게시 후 조회는 작성 flow가 맡는다.
 import { Button } from '@/shared/ui/button';
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSaveForm } from '@boosterlab/web-kit/form';
 import { Form } from '@/shared/ui/web-kit/form/ui';
 import { useFormCopy } from '@/shared/lib/form-messages';
-import { readSavedWorkflow, saveWorkflow } from '../api/workflows';
-import { draftSchema, publishSchema, initialWorkflow, workflowReferences, workflowConditionalFields, type WorkflowValues } from '../model/form';
+import { useWorkflowForm } from '../flows/use-workflow-form';
+import type { WorkflowValues } from '../model/forms/workflow-form';
+
 const F = Form.of<WorkflowValues>();
-const SOURCE = { id: 'example', values: initialWorkflow };
+
 /** 관계·검증·문구만 예제가 정하고 확인·정리·잠금·변경 감지는 키트가 처리한다. */
 export function FormWorkflowScreen() {
   const { t } = useTranslation();
   const copy = useFormCopy();
-  const [notice, setNotice] = useState('');
-  /** 필수 제목을 검증한 게시 요청을 보낸다. */
-  function publish(values: WorkflowValues) {
-    return saveWorkflow(values, 'publish');
-  }
-  /** 제목을 아직 입력하지 않아도 임시 저장 요청을 보낸다. */
-  function saveDraft(values: WorkflowValues) {
-    return saveWorkflow(values, 'draft');
-  }
-  const editor = useSaveForm({
-    schema: publishSchema,
-    source: SOURCE,
-    references: workflowReferences,
-    conditionalFields: workflowConditionalFields,
-    save: publish,
-    onSaved: async (result) => {
-      await readSavedWorkflow(result.id);
-      setNotice(t('workflows.published'));
-    },
-    secondary: { schema: draftSchema, save: saveDraft, onSaved: () => setNotice(t('workflows.draftSaved')) },
-  });
+  const { editor, notice } = useWorkflowForm();
   return (
     <div className="flex flex-col gap-5">
       <h1>{t('workflows.title')}</h1>

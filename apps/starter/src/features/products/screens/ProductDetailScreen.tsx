@@ -1,13 +1,11 @@
-// 파일 책임: 상품 상세 화면. 단건 상태 판정은 web-kit useRecord 한 곳이 하고, 여기서는 상태별 표현과 dt/dd 목록을 그린다.
+// 파일 책임: 상품 상세 화면. 단건 상태 판정은 상세 flow(useRecord) 한 곳이 하고, 여기서는 상태별 표현과 dt/dd 목록을 그린다.
 import { failureCopyKey } from '@/shared/lib/failure-copy';
 import { Record } from '@/shared/ui/web-kit/detail-ui';
 import { Button } from '@/shared/ui/button';
-import { useRecord } from '@boosterlab/web-kit/record';
-import { useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { categoryOptionsQuery } from '../api/categories';
-import { productQuery } from '../api/products';
+import { useCategoryOptions } from '../flows/use-category-options';
+import { useProductDetail } from '../flows/use-product-detail';
 import type { Product } from '../model/product';
 import { formatDate, formatPrice } from './format';
 import { StatusBadge } from './StatusBadge';
@@ -23,7 +21,7 @@ export function ProductDetailScreen({
   readonly onBack: () => void;
 }) {
   const { t } = useTranslation();
-  const state = useRecord(productQuery(productId), productId, { progress: 'page' });
+  const state = useProductDetail(productId);
   return (
     <div className="flex flex-col gap-5">
       <Button variant="ghost" className="self-start" onClick={onBack}>
@@ -51,8 +49,8 @@ export function ProductDetailScreen({
 /** 준비된 상품 내용. */
 function ProductDetail({ product, onEdit }: { readonly product: Product; readonly onEdit: () => void }) {
   const { t, i18n } = useTranslation();
-  const categories = useQuery(categoryOptionsQuery());
-  const categoryName = categories.data?.find((category) => category.id === product.categoryId)?.name ?? t('common.empty');
+  const categories = useCategoryOptions();
+  const categoryName = categories.nameOf(product.categoryId) ?? t('common.empty');
   const item = (label: string, value: ReactNode) => <Record.Field label={label}>{value}</Record.Field>;
   return (
     <article className="rounded-xl border border-slate-200 bg-white p-6">

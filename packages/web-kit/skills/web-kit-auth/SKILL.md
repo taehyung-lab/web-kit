@@ -7,6 +7,8 @@ description: 로그인 전 이메일·OTP 코드 확인, 남은 시간·만료, 
 
 `/auth`의 순수 계산·진행 hook과 registry `auth` 복사본을 연결한다. 공개 타입은 설치된 `src/auth.ts`가 기준이다. [소비 안내](../../docs/checking.md)의 검사 설치 절차를 따른다.
 
+이 책임을 어느 파일에 조립하는지(flow는 `features/<도메인>/flows`, 화면은 `screens`)는 [web-kit-structure](../web-kit-structure/SKILL.md)가 정한다. 아래에서 "화면"은 사용자가 보는 화면 단위를 뜻하며, 키트 수명 hook을 부르는 코드는 그 화면의 flow에 둔다.
+
 ## 연결 순서
 
 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
@@ -16,7 +18,7 @@ description: 로그인 전 이메일·OTP 코드 확인, 남은 시간·만료, 
 1. 로그인 성공 전 인증 대기(로그인 ID 같은 프로젝트 값·`scope`·절대 기한)는 `createAuthChallengeStore({ key, parse })`에 둔다. 기본 보관은 탭 저장소라 새로 고침해도 같은 `scope`와 기한으로 2단계 화면을 이어 가고, 탭을 닫으면 사라진다. 로그인 응답이 2단계를 요구하면 `start(data, deadlines)`, 재전송 성공은 `update(deadlines)`, 취소·인증 성공·세션 종료는 `clear()`다. 2단계 화면의 진입 guard는 `current()`가 없을 때만 로그인으로 보낸다. 기한이 지난 대기도 `current()`가 돌려주므로 화면은 만료 안내와 막힌 확인 버튼을 보인다. 같은 로그인 안 방식 전환은 화면 `scope`만 바꾸며 이메일 코드 기한은 유지한다. `data`에는 비밀번호·토큰을 넣지 않는다.
 2. 앱 진입점에서 `/session/idle`의 `createServerClock({ key })`를 한 번 만든다. 로그인 전 `useAuthChallenge`와 로그인 후 `createIdleTimer({ clock, ... })`에 **같은 객체**를 넘긴다. 기존 유휴 타이머 key가 `app-idle`이면 시계 key는 기존 저장 형식인 `app-idle:clock`이다. 로그인 전 응답은 `clock.observe(offsetMs)`로 관측하고 로그인 후는 기존 `idle.observe(sample)` 연결을 유지한다. offset은 서버 시각−로컬 시각(ms)이다. 표준 HTTP `Date` 헤더로 잴 때는 `clockOffsetFromDate(date, receivedAt)`를 쓰고, 그 밖의 헤더 해석은 프로젝트 서버 계약이다.
 3. `useAuthChallenge`에 `codeLength`, 절대 시각 `codeExpiresAt`·`expiresAt`·`resendAvailableAt`, `verify`·`onVerified`, 필요하면 `resend`·`onResent`를 연결한다. 기한은 같은 서버 시계 기준이다. 시간 값 기본값은 없고 전체 기한 생략은 전체 시간 정책을 끈다. 재전송 대기 생략은 별도 cooldown이 없다는 뜻이다. 예: 코드 5분·전체 30분 같은 값은 프로젝트 입력이며 키트 기본값이 아니다.
-4. 요청 함수는 요청·응답 반환만 맡고 세션 저장·화면 이동 같은 성공 효과는 `onVerified`에 둔다. `onResent`에서 **성공한 현재 요청에만** 새 코드 기한과 재전송 가능 시각을 적용한다. 서버가 주지 않으면 프로젝트 시간 정책을 공유 시계 `clock.now()`에 더한다. 성공 콜백은 이동 완료까지 Promise를 반환할 수 있다. 콜백 실행 뒤 추가 비동기 효과가 있다면 프로젝트가 자기 이동 수명도 확인한다.
+4. 요청 함수는 요청·응답 반환만 맡고 세션 저장·화면 이동 같은 성공 효과는 `onVerified`에 둔다. 요청 함수는 `api/`, `useAuthChallenge`와 성공 효과는 인증 화면의 flow(`flows/`)에 두고 화면은 flow가 준 상태를 그린다. `onResent`에서 **성공한 현재 요청에만** 새 코드 기한과 재전송 가능 시각을 적용한다. 서버가 주지 않으면 프로젝트 시간 정책을 공유 시계 `clock.now()`에 더한다. 성공 콜백은 이동 완료까지 Promise를 반환할 수 있다. 콜백 실행 뒤 추가 비동기 효과가 있다면 프로젝트가 자기 이동 수명도 확인한다.
 5. 취소·영역 이탈 또는 라우터 이동 시작에 `invalidate()`를 먼저 부른다. 화면 unmount 전 지연 구간에서도 옛 응답을 버린다. 방식 전환은 새 `scope`로도 무효화된다. 입력 값 초기화는 복사본의 key 또는 프로젝트 입력 상태로 연결한다.
 6. registry `AuthCodeForm`에 모델·자리수·문구를 넘긴다. `resend`를 넘기지 않은 방식(예: 인증 앱 코드)은 `model.resendable`이 false라 재전송 버튼을 그리지 않는다. 입력 오류 문구는 프로젝트 값(`labels.invalidCode`)이다. 복사본은 `isAuthCode`로 형식을 확인하여 요청 없이 오류를 보이고 입력칸에 연결한다. 만료 시 입력 편집은 유지하고 버튼과 Enter 제출을 막는다. 실패 값은 `model.verifyFailure`와 `model.resendFailure`로 나뉜다. 각 종류의 시작은 자기 실패만 지우며 다른 종류의 시작·성공·실패는 기존 안내를 지우지 않는다. 복사본은 `labels.verifyFailure`와 `labels.resendFailure`를 각 요청 자리의 안내로 사용한다. 서버 오류 코드·계정 잠금·안내창 선택은 프로젝트가 해석하고, 제출을 막을 때 `blocked`를 전달한다. 등록 정보 생성·QR 해석·등록 완료 후 이동은 제품 계약이므로 프로젝트에 남긴다.
 

@@ -1,56 +1,25 @@
 // 파일 책임: 공연 예시 등록 화면 — 배열·하위 폼·파일 동작(회차 줄 오류 위치, 대화창 하위 폼 제출 격리, 좌석도 파일 보존)을 키트 값만으로 재현한다.
-// 회차 줄은 Form.Array(추가·삭제·위/아래 이동), 좌석도는 Form.File, 판매처 키는 Form.Dialog 안의 자기 useSaveForm이다.
+// 회차 줄은 Form.Array(추가·삭제·위/아래 이동), 좌석도는 Form.File, 판매처 키는 Form.Dialog 안의 자기 저장 폼(use-vendor-keys-form)이다.
 // 회차·판매처 키는 접을 수 있는 구역(Form.Section fields)이라 닫힌 구역의 오류는 제출 뒤 펼쳐지고 그 칸에 포커스한다.
-// 저장: 좌석도 업로드 → 등록. 저장 완료 확인 뒤 상품 목록으로 간다. 공연 폼 전체를 옮긴 것은 아니다.
+// 저장(좌석도 업로드 → 등록)과 완료 뒤 이동은 등록 flow가 맡는다. 공연 폼 전체를 옮긴 것은 아니다.
 import { Button } from '@/shared/ui/button';
-import { useSaveForm, type FormFileValue } from '@boosterlab/web-kit/form';
 import { Form } from '@/shared/ui/web-kit/form/ui';
-import { useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFormCopy } from '@/shared/lib/form-messages';
-import { createShow, uploadFile } from '../api/shows';
-import {
-  EMPTY_SHOW_FORM,
-  newRound,
-  showFieldError,
-  showFormSchema,
-  toShowRequest,
-  vendorKeysSchema,
-  type ShowFormInput,
-  type VendorKeysInput,
-} from '../model/show';
+import { useShowCreate } from '../flows/use-show-create';
+import { useVendorKeysForm } from '../flows/use-vendor-keys-form';
+import { newRound, type ShowFormInput, type VendorKeysInput } from '../model/forms/show-form';
 
 const F = Form.of<ShowFormInput>();
 const K = Form.of<VendorKeysInput>();
-const SOURCE = { id: 'new', values: EMPTY_SHOW_FORM } as const;
-
-/** 고른 좌석도 파일. 저장 함수가 업로드한다(schema가 고른 파일·기존 파일만 받는다). */
-function selectedFile(seat: FormFileValue): File {
-  if (seat.kind !== 'selected') throw new Error('seat file is not selected');
-  return seat.file;
-}
 
 /** 공연 예시 등록. */
 export function ShowCreateScreen() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const copy = useFormCopy();
   const [keysOpen, setKeysOpen] = useState(false);
-  /** 좌석도를 올린 뒤 파일 식별자를 공연 등록 요청에 연결한다. */
-  async function saveShow(_values: ShowFormInput, submitted: ShowFormInput) {
-    const { fileId } = await uploadFile(selectedFile(submitted.seat));
-    return createShow(toShowRequest(submitted, fileId));
-  }
-  const editor = useSaveForm({
-    schema: showFormSchema,
-    source: SOURCE,
-    acknowledge: true,
-    progress: 'create',
-    fieldError: showFieldError,
-    save: saveShow,
-    onSaved: () => navigate({ to: '/products' }),
-  });
+  const { editor } = useShowCreate();
   const vendorKeys = editor.form.state.values.vendorKeys;
   return (
     <div className="flex flex-col gap-5">
@@ -139,15 +108,7 @@ function VendorKeysForm({
 }) {
   const { t } = useTranslation();
   const copy = useFormCopy();
-  const [source] = useState(() => ({
-    id: 'vendor-keys',
-    values: { keys: initial.length === 0 ? [{ key: crypto.randomUUID(), value: '' }] : [...initial] },
-  }));
-  const editor = useSaveForm({
-    schema: vendorKeysSchema,
-    source,
-    save: async (_values, submitted) => onConfirm(submitted.keys),
-  });
+  const { editor } = useVendorKeysForm(initial, onConfirm);
   return (
     <K editor={editor} {...copy} messages={{ ...copy.messages, submit: t('common.confirm') }}>
       <K.Array name="keys" minItems={1}>

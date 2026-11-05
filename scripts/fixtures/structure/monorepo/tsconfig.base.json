@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@admin/*": ["apps/admin/src/*"],
+      "@acme/ui": ["packages/ui/src/index.ts"]
+    }
+  }
+}

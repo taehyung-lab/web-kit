@@ -11,7 +11,7 @@ description: 경로 진입 차단·메뉴 숨김·버튼 비활성처럼 권한 
 
 ## 연결
 
-starter 실제 예 없음(검사하지 않음). 연결 위치 참고: [apps/starter/src/routes/_app.tsx](../../references/apps/starter/src/routes/_app.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다. 공통 판정의 검사 근거는 [permission.test.tsx](../../references/packages/web-kit/tests/permission.test.tsx.txt)다.
+starter 실제 예 없음(검사하지 않음). 연결 위치 참고: [apps/starter/src/routes/_app/route.tsx](../../references/apps/starter/src/routes/_app/route.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다. 공통 판정의 검사 근거는 [permission.test.tsx](../../references/packages/web-kit/tests/permission.test.tsx.txt)다.
 
 - 프로젝트가 권한 상태 `{ status: 'loading' | 'failed' | 'ready', allows(check) }`를 만들어 `PermissionProvider`로 화면 위에 한 번 둔다. `check`의 모양(정책 ID, [정책, 동작] 등)과 판정 함수는 프로젝트 것이다.
 - 경로 진입: route `beforeLoad`에서 `assertAllowed(access, check)`. 거부는 `AccessDeniedError`(`reason`: 권한 없음 'denied' / 아직 모름 'not-ready')이고 오류 화면이 이것으로 거부 표시를 고른다.

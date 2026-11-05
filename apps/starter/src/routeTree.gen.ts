@@ -9,168 +9,187 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AppRouteImport } from './routes/_app'
-import { Route as LoginRouteImport } from './routes/login'
+import { Route as AppRouteRouteImport } from './routes/_app/route'
+import { Route as PublicRouteRouteImport } from './routes/_public/route'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
-import { Route as AppFormWorkflowsRouteImport } from './routes/_app/form-workflows'
+import { Route as AppSplatRouteImport } from './routes/_app/$'
+import { Route as AppFormWorkflowsIndexRouteImport } from './routes/_app/form-workflows/index'
 import { Route as AppMembersIndexRouteImport } from './routes/_app/members/index'
 import { Route as AppProductsIndexRouteImport } from './routes/_app/products/index'
 import { Route as AppProductsNewRouteImport } from './routes/_app/products/new'
 import { Route as AppShowsNewRouteImport } from './routes/_app/shows/new'
-import { Route as AppTermsTermsIdRouteImport } from './routes/_app/terms/$termsId'
 import { Route as AppTermsNewRouteImport } from './routes/_app/terms/new'
+import { Route as PublicLoginIndexRouteImport } from './routes/_public/login/index'
 import { Route as AppProductsProductIdIndexRouteImport } from './routes/_app/products/$productId/index'
 import { Route as AppProductsProductIdEditRouteImport } from './routes/_app/products/$productId/edit'
+import { Route as AppTermsTermsIdIndexRouteImport } from './routes/_app/terms/$termsId/index'
 
-const AppRoute = AppRouteImport.update({
+const AppRouteRoute = AppRouteRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
+const PublicRouteRoute = PublicRouteRouteImport.update({
+  id: '/_public',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AppRoute,
+  getParentRoute: () => AppRouteRoute,
 } as any)
-const AppFormWorkflowsRoute = AppFormWorkflowsRouteImport.update({
-  id: '/form-workflows',
-  path: '/form-workflows',
-  getParentRoute: () => AppRoute,
+const AppSplatRoute = AppSplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppFormWorkflowsIndexRoute = AppFormWorkflowsIndexRouteImport.update({
+  id: '/form-workflows/',
+  path: '/form-workflows/',
+  getParentRoute: () => AppRouteRoute,
 } as any)
 const AppMembersIndexRoute = AppMembersIndexRouteImport.update({
   id: '/members/',
   path: '/members/',
-  getParentRoute: () => AppRoute,
+  getParentRoute: () => AppRouteRoute,
 } as any)
 const AppProductsIndexRoute = AppProductsIndexRouteImport.update({
   id: '/products/',
   path: '/products/',
-  getParentRoute: () => AppRoute,
+  getParentRoute: () => AppRouteRoute,
 } as any)
 const AppProductsNewRoute = AppProductsNewRouteImport.update({
   id: '/products/new',
   path: '/products/new',
-  getParentRoute: () => AppRoute,
+  getParentRoute: () => AppRouteRoute,
 } as any)
 const AppShowsNewRoute = AppShowsNewRouteImport.update({
   id: '/shows/new',
   path: '/shows/new',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppTermsTermsIdRoute = AppTermsTermsIdRouteImport.update({
-  id: '/terms/$termsId',
-  path: '/terms/$termsId',
-  getParentRoute: () => AppRoute,
+  getParentRoute: () => AppRouteRoute,
 } as any)
 const AppTermsNewRoute = AppTermsNewRouteImport.update({
   id: '/terms/new',
   path: '/terms/new',
-  getParentRoute: () => AppRoute,
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const PublicLoginIndexRoute = PublicLoginIndexRouteImport.update({
+  id: '/login/',
+  path: '/login/',
+  getParentRoute: () => PublicRouteRoute,
 } as any)
 const AppProductsProductIdIndexRoute =
   AppProductsProductIdIndexRouteImport.update({
     id: '/products/$productId/',
     path: '/products/$productId/',
-    getParentRoute: () => AppRoute,
+    getParentRoute: () => AppRouteRoute,
   } as any)
 const AppProductsProductIdEditRoute =
   AppProductsProductIdEditRouteImport.update({
     id: '/products/$productId/edit',
     path: '/products/$productId/edit',
-    getParentRoute: () => AppRoute,
+    getParentRoute: () => AppRouteRoute,
   } as any)
+const AppTermsTermsIdIndexRoute = AppTermsTermsIdIndexRouteImport.update({
+  id: '/terms/$termsId/',
+  path: '/terms/$termsId/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
-  '/login': typeof LoginRoute
-  '/form-workflows': typeof AppFormWorkflowsRoute
+  '/$': typeof AppSplatRoute
   '/products/new': typeof AppProductsNewRoute
   '/shows/new': typeof AppShowsNewRoute
-  '/terms/$termsId': typeof AppTermsTermsIdRoute
   '/terms/new': typeof AppTermsNewRoute
+  '/form-workflows/': typeof AppFormWorkflowsIndexRoute
   '/members/': typeof AppMembersIndexRoute
   '/products/': typeof AppProductsIndexRoute
+  '/login/': typeof PublicLoginIndexRoute
   '/products/$productId/edit': typeof AppProductsProductIdEditRoute
   '/products/$productId/': typeof AppProductsProductIdIndexRoute
+  '/terms/$termsId/': typeof AppTermsTermsIdIndexRoute
 }
 export interface FileRoutesByTo {
-  '/login': typeof LoginRoute
-  '/form-workflows': typeof AppFormWorkflowsRoute
   '/': typeof AppIndexRoute
+  '/$': typeof AppSplatRoute
   '/products/new': typeof AppProductsNewRoute
   '/shows/new': typeof AppShowsNewRoute
-  '/terms/$termsId': typeof AppTermsTermsIdRoute
   '/terms/new': typeof AppTermsNewRoute
+  '/form-workflows': typeof AppFormWorkflowsIndexRoute
   '/members': typeof AppMembersIndexRoute
   '/products': typeof AppProductsIndexRoute
+  '/login': typeof PublicLoginIndexRoute
   '/products/$productId/edit': typeof AppProductsProductIdEditRoute
   '/products/$productId': typeof AppProductsProductIdIndexRoute
+  '/terms/$termsId': typeof AppTermsTermsIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/_app': typeof AppRouteWithChildren
-  '/login': typeof LoginRoute
-  '/_app/form-workflows': typeof AppFormWorkflowsRoute
+  '/_app': typeof AppRouteRouteWithChildren
+  '/_public': typeof PublicRouteRouteWithChildren
+  '/_app/$': typeof AppSplatRoute
   '/_app/': typeof AppIndexRoute
   '/_app/products/new': typeof AppProductsNewRoute
   '/_app/shows/new': typeof AppShowsNewRoute
-  '/_app/terms/$termsId': typeof AppTermsTermsIdRoute
   '/_app/terms/new': typeof AppTermsNewRoute
+  '/_app/form-workflows/': typeof AppFormWorkflowsIndexRoute
   '/_app/members/': typeof AppMembersIndexRoute
   '/_app/products/': typeof AppProductsIndexRoute
+  '/_public/login/': typeof PublicLoginIndexRoute
   '/_app/products/$productId/edit': typeof AppProductsProductIdEditRoute
   '/_app/products/$productId/': typeof AppProductsProductIdIndexRoute
+  '/_app/terms/$termsId/': typeof AppTermsTermsIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/login'
-    | '/form-workflows'
+    | '/$'
     | '/products/new'
     | '/shows/new'
-    | '/terms/$termsId'
     | '/terms/new'
+    | '/form-workflows/'
     | '/members/'
     | '/products/'
+    | '/login/'
     | '/products/$productId/edit'
     | '/products/$productId/'
+    | '/terms/$termsId/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/login'
-    | '/form-workflows'
     | '/'
+    | '/$'
     | '/products/new'
     | '/shows/new'
-    | '/terms/$termsId'
     | '/terms/new'
+    | '/form-workflows'
     | '/members'
     | '/products'
+    | '/login'
     | '/products/$productId/edit'
     | '/products/$productId'
+    | '/terms/$termsId'
   id:
     | '__root__'
     | '/_app'
-    | '/login'
-    | '/_app/form-workflows'
+    | '/_public'
+    | '/_app/$'
     | '/_app/'
     | '/_app/products/new'
     | '/_app/shows/new'
-    | '/_app/terms/$termsId'
     | '/_app/terms/new'
+    | '/_app/form-workflows/'
     | '/_app/members/'
     | '/_app/products/'
+    | '/_public/login/'
     | '/_app/products/$productId/edit'
     | '/_app/products/$productId/'
+    | '/_app/terms/$termsId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  AppRoute: typeof AppRouteWithChildren
-  LoginRoute: typeof LoginRoute
+  AppRouteRoute: typeof AppRouteRouteWithChildren
+  PublicRouteRoute: typeof PublicRouteRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -179,14 +198,14 @@ declare module '@tanstack/react-router' {
       id: '/_app'
       path: ''
       fullPath: '/'
-      preLoaderRoute: typeof AppRouteImport
+      preLoaderRoute: typeof AppRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
+    '/_public': {
+      id: '/_public'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof PublicRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/': {
@@ -194,105 +213,135 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof AppRouteRoute
     }
-    '/_app/form-workflows': {
-      id: '/_app/form-workflows'
+    '/_app/$': {
+      id: '/_app/$'
+      path: '/$'
+      fullPath: '/$'
+      preLoaderRoute: typeof AppSplatRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/form-workflows/': {
+      id: '/_app/form-workflows/'
       path: '/form-workflows'
-      fullPath: '/form-workflows'
-      preLoaderRoute: typeof AppFormWorkflowsRouteImport
-      parentRoute: typeof AppRoute
+      fullPath: '/form-workflows/'
+      preLoaderRoute: typeof AppFormWorkflowsIndexRouteImport
+      parentRoute: typeof AppRouteRoute
     }
     '/_app/members/': {
       id: '/_app/members/'
       path: '/members'
       fullPath: '/members/'
       preLoaderRoute: typeof AppMembersIndexRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof AppRouteRoute
     }
     '/_app/products/': {
       id: '/_app/products/'
       path: '/products'
       fullPath: '/products/'
       preLoaderRoute: typeof AppProductsIndexRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof AppRouteRoute
     }
     '/_app/products/new': {
       id: '/_app/products/new'
       path: '/products/new'
       fullPath: '/products/new'
       preLoaderRoute: typeof AppProductsNewRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof AppRouteRoute
     }
     '/_app/shows/new': {
       id: '/_app/shows/new'
       path: '/shows/new'
       fullPath: '/shows/new'
       preLoaderRoute: typeof AppShowsNewRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/terms/$termsId': {
-      id: '/_app/terms/$termsId'
-      path: '/terms/$termsId'
-      fullPath: '/terms/$termsId'
-      preLoaderRoute: typeof AppTermsTermsIdRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof AppRouteRoute
     }
     '/_app/terms/new': {
       id: '/_app/terms/new'
       path: '/terms/new'
       fullPath: '/terms/new'
       preLoaderRoute: typeof AppTermsNewRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_public/login/': {
+      id: '/_public/login/'
+      path: '/login'
+      fullPath: '/login/'
+      preLoaderRoute: typeof PublicLoginIndexRouteImport
+      parentRoute: typeof PublicRouteRoute
     }
     '/_app/products/$productId/': {
       id: '/_app/products/$productId/'
       path: '/products/$productId'
       fullPath: '/products/$productId/'
       preLoaderRoute: typeof AppProductsProductIdIndexRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof AppRouteRoute
     }
     '/_app/products/$productId/edit': {
       id: '/_app/products/$productId/edit'
       path: '/products/$productId/edit'
       fullPath: '/products/$productId/edit'
       preLoaderRoute: typeof AppProductsProductIdEditRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/terms/$termsId/': {
+      id: '/_app/terms/$termsId/'
+      path: '/terms/$termsId'
+      fullPath: '/terms/$termsId/'
+      preLoaderRoute: typeof AppTermsTermsIdIndexRouteImport
+      parentRoute: typeof AppRouteRoute
     }
   }
 }
 
-interface AppRouteChildren {
-  AppFormWorkflowsRoute: typeof AppFormWorkflowsRoute
+interface AppRouteRouteChildren {
+  AppSplatRoute: typeof AppSplatRoute
   AppIndexRoute: typeof AppIndexRoute
   AppProductsNewRoute: typeof AppProductsNewRoute
   AppShowsNewRoute: typeof AppShowsNewRoute
-  AppTermsTermsIdRoute: typeof AppTermsTermsIdRoute
   AppTermsNewRoute: typeof AppTermsNewRoute
+  AppFormWorkflowsIndexRoute: typeof AppFormWorkflowsIndexRoute
   AppMembersIndexRoute: typeof AppMembersIndexRoute
   AppProductsIndexRoute: typeof AppProductsIndexRoute
   AppProductsProductIdEditRoute: typeof AppProductsProductIdEditRoute
   AppProductsProductIdIndexRoute: typeof AppProductsProductIdIndexRoute
+  AppTermsTermsIdIndexRoute: typeof AppTermsTermsIdIndexRoute
 }
 
-const AppRouteChildren: AppRouteChildren = {
-  AppFormWorkflowsRoute: AppFormWorkflowsRoute,
+const AppRouteRouteChildren: AppRouteRouteChildren = {
+  AppSplatRoute: AppSplatRoute,
   AppIndexRoute: AppIndexRoute,
   AppProductsNewRoute: AppProductsNewRoute,
   AppShowsNewRoute: AppShowsNewRoute,
-  AppTermsTermsIdRoute: AppTermsTermsIdRoute,
   AppTermsNewRoute: AppTermsNewRoute,
+  AppFormWorkflowsIndexRoute: AppFormWorkflowsIndexRoute,
   AppMembersIndexRoute: AppMembersIndexRoute,
   AppProductsIndexRoute: AppProductsIndexRoute,
   AppProductsProductIdEditRoute: AppProductsProductIdEditRoute,
   AppProductsProductIdIndexRoute: AppProductsProductIdIndexRoute,
+  AppTermsTermsIdIndexRoute: AppTermsTermsIdIndexRoute,
 }
 
-const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
+  AppRouteRouteChildren,
+)
+
+interface PublicRouteRouteChildren {
+  PublicLoginIndexRoute: typeof PublicLoginIndexRoute
+}
+
+const PublicRouteRouteChildren: PublicRouteRouteChildren = {
+  PublicLoginIndexRoute: PublicLoginIndexRoute,
+}
+
+const PublicRouteRouteWithChildren = PublicRouteRoute._addFileChildren(
+  PublicRouteRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
-  AppRoute: AppRouteWithChildren,
-  LoginRoute: LoginRoute,
+  AppRouteRoute: AppRouteRouteWithChildren,
+  PublicRouteRoute: PublicRouteRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

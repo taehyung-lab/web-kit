@@ -5,8 +5,9 @@ import { expect, it } from 'vitest';
 import ts from 'typescript';
 
 /** vitest(Vite)가 제공하는 raw import. 키트에 node 타입 의존성을 더하지 않는다. */
-const packageSources = (import.meta as unknown as { glob: (pattern: string, options: object) => Record<string, string> }).glob(
-  '../src/**/*.{ts,tsx,mjs}',
+const packageSources = (import.meta as unknown as { glob: (pattern: string | string[], options: object) => Record<string, string> }).glob(
+  // 개발 도구 입구(/structure)도 공개 입구라 같은 경계 검사를 받는다.
+  ['../src/**/*.{ts,tsx,mjs}', '../tools/structure/**/*.mjs'],
   { query: '?raw', import: 'default', eager: true },
 );
 

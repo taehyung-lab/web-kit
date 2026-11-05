@@ -102,7 +102,8 @@ for (const feature of features) {
   const names = closure(feature);
   writeJson('registry-installation.json', recordInstallation({ source: root, project: cwd, version: candidate.version, selected: [feature] }));
   const declared = [...names].flatMap((name) => { const item = registry.items.find((item) => item.name === name); return [...(item.dependencies ?? []), ...(item.devDependencies ?? [])]; });
-  const forbidden = ['@tanstack/react-form', '@tanstack/react-router', '@tanstack/react-query', '@tanstack/react-virtual', 'zod', 'axios'].filter((name) => !declared.some((dependency) => dependency.startsWith(name + '@')));
+  // 구조 계약 개발 도구(eslint·typescript-eslint)는 선택 peer라 런타임 소비처에 설치되지 않아야 한다.
+  const forbidden = ['@tanstack/react-form', '@tanstack/react-router', '@tanstack/react-query', '@tanstack/react-virtual', 'zod', 'axios', 'eslint', 'typescript-eslint'].filter((name) => !declared.some((dependency) => dependency.startsWith(name + '@')));
   const require = createRequire(join(cwd, 'package.json'));
   const kitRequire = createRequire(realpathSync(require.resolve('@boosterlab/web-kit')));
   for (const name of forbidden) {

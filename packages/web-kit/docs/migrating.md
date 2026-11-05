@@ -1,6 +1,6 @@
 # 시험판에서 옮겨 오기
 
-5.0.0 첫 정식 기준으로 옮길 때는 사용하던 시험판에 따라 다음 연결을 함께 이전한다. 현재 검사용 후보는 5.0.0-rc.8다. 조건부 칸은 web-kit-form의 같은 조건 함수·schema·빈 값 선언을 함께 연결한다.
+5.0.0 첫 정식 기준으로 옮길 때는 사용하던 시험판에 따라 다음 연결을 함께 이전한다. 현재 검사용 후보는 5.0.0-rc.9다. 조건부 칸은 web-kit-form의 같은 조건 함수·schema·빈 값 선언을 함께 연결한다.
 
 - **검색어·선택 칸:** 입력만 하고 [검색]을 누르면 입력 중 글자는 검색에 포함되지 않고 칸에 남는다. Enter 연결은 패키지 바인딩에서 복사본으로 이동했으므로 registry `list` 복사본을 함께 갱신한다. 기본 Enter는 추가 후 검색이며, [추가]와 Enter는 `;`로 여러 검색어를 나눈다. 전체 선택지 밖 값은 표시·검색·저장에서 빠진다. 서버 검색의 일부 결과 밖 선택은 유지한다. `Form.Choice`의 서버 선택지는 `Form.Select`와 같은 `status`·`onRetry`를 연결한다(생략은 고정 선택지 `ready`). 정리만으로 폼 원본이나 이탈 보호는 바뀌지 않는다. 보장은 [web-kit-list](../skills/web-kit-list/SKILL.md)·[web-kit-form](../skills/web-kit-form/SKILL.md), 결정 이유는 [목록·선택 결정](../references/docs/decisions/0006-list-choice-permission.md)에 있다.
 
@@ -36,3 +36,13 @@
 
 - **타입 import(복사본 교정 필요):** form/ui.tsx·list-ui.tsx·ui/dialog.tsx의 타입 전용 import를 `import type { … }`로 교정한다. 패키지 갱신만으로 기존 복사본 문법은 바뀌지 않는다. 적용 뒤 lint와 적합성 검사를 실행한다.
 - **인증 실패 값(복사본 교정 필요):** `model.failure`를 `verifyFailure`·`resendFailure`로 나누고 `labels.failure`도 `labels.verifyFailure`·`labels.resendFailure`로 바꾼다. 인증 검사 연결은 `/testing/unit/auth`·`/testing/fixtures/auth`를 사용한다.
+
+## 구조 계약 채택
+
+구조 계약을 담은 5.0.0-rc.9부터 폴더 책임·import 방향을 사용 계약([web-kit-structure](../skills/web-kit-structure/SKILL.md))으로 배포한다. 런타임 동작은 바뀌지 않는다. 채택하는 앱은 lint·검사 결과가 달라지므로 다음 순서로 옮긴다. 키트 일부만 쓰고 채택하지 않는 앱은 이 절을 건너뛴다.
+
+1. **연결:** [설치 안내의 구조 계약 연결](installing.md#구조-계약-연결)대로 설정·lint·CI를 붙인다. 처음 실행한 위반 목록을 그대로 예외로 옮기지 않는다. 옮길 묶음을 정하고, 이번에 옮기지 않는 파일만 파일·규칙·이유(남기는 이유와 옮길 묶음)로 적는다.
+2. **runtime 분리:** http·세션·QueryClient·서버 시계·i18n 인스턴스·전역 안내 저장소처럼 feature가 쓰는 실행 기반을 `src/runtime/`으로 옮긴다. runtime에서 feature를 부르던 연결(예: 서버 로그아웃 요청을 feature api로 보냄)은 runtime 안의 직접 요청이나 app의 구독으로 바꾼다. feature 문구 모음은 app이 runtime의 i18n 인스턴스에 등록한다. orval mutator 경로도 runtime으로 바꾸고 생성 코드를 다시 만든다. 이것이 끝나야 feature → app 위반이 사라진다.
+3. **대표 화면부터:** 인증 화면 → 목록·등록/수정·상세 대표 → 나머지 순서로 옮긴다. 화면의 `useSaveForm`·`useList`·`useRecord`·`useAuthChallenge`·요청·이동을 `flows/use-<행동>.ts`로 옮기고 화면은 flow 결과만 그린다. 저장(`save`)은 요청과 응답 반환만, 세션 시작·이동·후속 조회는 완료(`onSaved`)로 나눈다. 사용자 조작 중 실행해야 하던 일(권한 요청 등)은 첫 `await` 전 위치를 지킨다. 실패 의미 판정·정책 값은 `model/rules/<업무>-policy.ts`, 저장소는 `state/`, URL 목록 검색 선언은 `state/`로 옮긴다. 옮긴 파일은 바로 예외 없이 통과시킨다.
+4. **route:** `<이름>.tsx`·`$id.tsx` 화면 파일을 `<이름>/index.tsx`·`$id/index.tsx`로, 로그인 전 화면을 `_public/`로 옮기고 이미 로그인한 경우의 이동 판정을 `_public/route.tsx` 한 곳에 둔다. 앱 골격은 `_app/route.tsx`(묶음 골격 파일 이름은 `route.tsx`)로 옮기고 화면 모양은 `app/shell`에 둔다. 기존 제품 URL이 이름 관례와 다르면 URL을 지킨다. 기본 loader는 지우거나 이유와 함께 예외로 남긴다. route 진입 판정이 feature 상태를 읽으면 그 feature에 `public.ts`를 만든다. route 트리를 다시 생성한다.
+5. **보고:** 구조 결과(`[구조]`)와 제품 동작 보존 결과(기존 시나리오·브라우저·실서버)를 따로 센다. 파일을 옮겨 구조가 통과해도 제품 시나리오가 확인되지 않았으면 그 화면의 이전은 완료가 아니다. 남은 예외 수와 이유를 함께 보고한다.

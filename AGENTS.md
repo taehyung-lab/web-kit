@@ -6,15 +6,15 @@
 
 ## 기본 (모든 작업)
 
-1. 요청 원문과 저장소의 근거로 사용자가 받을 결과·범위·확인 방법을 정한다. 현재 동작은 제품 정책의 근거가 아니다. 바꾸는 코드가 지키던 기존 보장도 확인 대상에 넣는다.
+1. 분석·질문·설계·수정 전에 결과를 둘 대상과 읽는 근거(경로·버전·용도)를 구별하고, 요청 원문·유효한 사용자 결정·앞뒤 시나리오(이 단계 전에 성립한 것, 다음 단계가 받을 것)로 사용자가 받을 결과·범위·확인 방법을 정한다. 과거·참고 자료와 현재 동작은 현재 파일과 대조하기 전에는 현재 사실이나 제품 결정이 아니다. 바꾸는 코드가 지키던 기존 보장도 확인 대상에 넣는다.
 2. 결과가 갈리는 선택을 원문·사용자 결정·외부 계약으로 정할 수 없으면 추천과 함께 묻고, 답 전에는 그 선택을 정하지 않는다. 조사로 알 수 있는 것은 묻지 않는다.
-3. 제품 파일은 사용자가 승인한 뒤에만 쓴다(셸로도). 승인은 사용자가 쓴 말('진행해 주세요'·'승인합니다'·'바로 구현해 주세요')이고 뜻이 애매하면 다시 확인한다. 추천을 붙여 물은 뒤 다른 선택 없는 승인은 추천까지 승인한 것이다. 대화로 받은 승인은 그 턴만 유효하다. 승인한 범위를 지키고 요청 밖의 동작·표현은 그대로 둔다. 답에 승인 규칙이나 훅을 설명하지 않는다.
+3. 분명한 실행 요청은 그 자체가 승인이다. 예: "로그인 버튼 문구를 '로그인하기'로 바꿔 주세요"는 바로 바꾸고, 계획을 설명한 뒤 다시 묻지 않는다. 조사·설명·리뷰 요청은 수정 승인이 아니다. 묻는 것은 2의 선택뿐이고 구현 세부까지 고르게 하지 않는다. 추천을 붙여 물은 뒤 다른 선택 없는 승인은 추천까지 승인한 것이다. 사용자가 고르거나 승인한 범위 안에서는 끝까지 진행하며, 새 턴이라는 이유만으로 다시 묻지 않는다. 요청 밖의 동작·표현은 그대로 두고, 별도 권한이 필요한 일은 「실행 경계」로 따로 판단한다.
 4. 완료라고 말하기 전에 요청 원문과 실제 결과를 대조하고, 요구와 연결된 기존 보장마다 실행한 명령과 실제 출력으로 확인한다. 실패했거나 확인하지 못한 것은 사유와 함께 그대로 알리고 완료라 하지 않는다. 확인할 수 없는 조건을 빼거나 낮추는 것은 사용자가 정한다.
 5. 실패하면 원인이 있는 자리를 고치고 다시 재현해 확인한다: 요구 정의·설계·코드·검사·관찰 도구·지침·실행 경계 가운데 원인인 곳. 규칙·문서를 덧붙여 우회하지 않는다.
 
 ## 선택 (필요할 때만, .agents/skills/guide.md 의 해당 절)
 
-- 작업 지도: 결정·의존·완료 조건을 대화만으로 놓칠 위험이 있을 때(크기가 아니라 놓칠 가능성으로 고른다).
+- 작업 지도(맥락 봉투 포함): 결정·의존·완료 조건이나 대상·근거를 대화만으로 놓칠 위험이 있을 때(크기가 아니라 놓칠 가능성으로 고른다).
 - 독립 검토: 어떤 보장이 깨질 수 있는데 직접 확인만으로 확인하기 어려울 때. 사용자가 요구하거나 검사를 지우·건너뛰·약화할 때는 반드시 받는다.
 - 이미 명확한 일에는 둘 다 붙이지 않는다.
 
@@ -23,6 +23,7 @@
 편집 직전 최신 파일을 읽고 타인의 변경을 보존한다. 주석은 프로젝트 관례를 따르고 처음 보는 사람이 이해할 수 있게 쓴다.
 비밀값·토큰은 응답·로그·diff·commit·외부 서비스로 옮기지 않는다.
 force push·`reset --hard`·기본 브랜치 직접 commit/push·일괄 삭제·사용자 변경 폐기·lockfile 밖 의존성·원격 스크립트 실행·배포·비용·자격증명 사용은 요청이 명시한 대상·범위 안에서만 한다. 도구가 허용한다는 사실은 승인이 아니다.
+키트가 설치한 파일(이 표시 영역·CLAUDE.md·`.agents/skills` 의 키트 파일)은 키트 원본 저장소에서 고쳐 다시 설치한다. 프로젝트 지침·역할 스킬·설정은 프로젝트에서 고친다.
 
 <!-- agent-workflow-kit:end -->
 
@@ -30,7 +31,7 @@ force push·`reset --hard`·기본 브랜치 직접 commit/push·일괄 삭제·
 
 저장소가 관리하는 근거의 위치와 한 줄 설명만 둔다. 작업 상태는 작업 기록이, 역할 선택은 description이 맡아 관리한다. 이 절과 그 아래 저장소별 절은 프로젝트가 관리하며, 위 키트 영역은 고치지 않는다.
 
-- 제품 원문·사용자 결정·결정권자: 키트는 제품 정책을 갖지 않는다(소비 프로젝트가 소유). 범위·역할 경계는 `docs/decisions/0001-scope-and-boundaries.md`, 배포·검사 책임은 `docs/decisions/0002-distribution.md`, 응답 결정·서버 계약 미확인(E1–E3)은 `docs/decisions/0003-request-response-failure.md`, 세션은 `docs/decisions/0004-session-lifetime.md`, 로그인 인증 단계는 `docs/decisions/0005-auth-challenge.md`, 목록·선택·권한은 `docs/decisions/0006-list-choice-permission.md`, 폼·상세·대화창·진행은 `docs/decisions/0007-form-record-dialog-progress.md`, 완료·발행 조건은 `docs/maintaining.md`. 결정권자는 사용자.
+- 제품 원문·사용자 결정·결정권자: 키트는 제품 정책을 갖지 않는다(소비 프로젝트가 소유). 범위·역할 경계는 `docs/decisions/0001-scope-and-boundaries.md`, 배포·검사 책임은 `docs/decisions/0002-distribution.md`, 응답 결정·서버 계약 미확인(E1–E3)은 `docs/decisions/0003-request-response-failure.md`, 세션은 `docs/decisions/0004-session-lifetime.md`, 로그인 인증 단계는 `docs/decisions/0005-auth-challenge.md`, 목록·선택·권한은 `docs/decisions/0006-list-choice-permission.md`, 폼·상세·대화창·진행은 `docs/decisions/0007-form-record-dialog-progress.md`, 소비 앱 구조 계약은 `docs/decisions/0008-project-structure.md`, 완료·발행 조건은 `docs/maintaining.md`. 결정권자는 사용자.
 - 코드 진입·상태 관리 위치·외부 계약: 저장소는 키트 패키지 `packages/web-kit`과 소비 검사 앱 `apps/starter`(루트 `README.md`). 키트 구조와 subpath는 `packages/web-kit/README.md` 「구조」와 `packages/web-kit/package.json` `exports`, 동작 소스는 `packages/web-kit/src/`. registry UI 원본은 `packages/ui-registry/src`, 검사 연결은 `packages/ui-registry/checks`, 설치 정의는 `registry.json`, 빌드 JSON은 `public/r`, 실제 소비 복사본은 `apps/starter/src/shared/ui/web-kit`. 사용 계약(보장)은 `packages/web-kit/skills/web-kit-*`가 코드와 같은 버전으로 배포되는 정본이다. 외부 응답 계약은 소비 프로젝트의 `ResponseContract`가 소유한다(`packages/web-kit/src/http.ts`). 응답 해석은 필수 입력이며 Spring 봉투 서버는 `/http`의 `springEnvelope`를 명시적으로 선택한다. 공용화 경계와 선택 칸 결정은 위 결정 기록에서 찾는다.
 - 실행·검사 명령·관찰 환경·시험 데이터: 루트 `package.json` scripts(`check`, `starter:sync`, `starter:check`, `registry:build`, `registry:check`), `packages/web-kit/tests/`, `scripts/*.test.mjs`, starter의 `apps/starter/tests/`. 로컬 검사는 Node 24.19로 돌린다(Node 26이나 외부 `NODE_OPTIONS`에서는 jsdom 저장소 검사가 실패한다). CI `.github/workflows/check.yml`은 키트 검사와 같은 commit의 `apps/starter` tarball·registry 복사본의 단위·브라우저 소비 검사를 맡는다. 설치 기록은 `apps/starter/registry-installation.json`, 필수 검사 목록은 `packages/web-kit/src/testing/requirements.json`, 점검 명령은 `web-kit-check`(`packages/web-kit/bin/check-conformance.mjs`)다. 검증 조합 기록·호환성·발행 기준은 `docs/maintaining.md`.
 - 권한·보호 대상·작업 한도·질문 통로: 원격 `origin`(public). 발행은 `docs/maintaining.md` 「소비 검사와 발행」의 검증한 산출물만 사용한다. 질문은 사용자.

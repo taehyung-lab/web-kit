@@ -1,7 +1,7 @@
 // 파일 책임: 전역 안내(notices) 목록을 화면 구석에 그린다.
 import { Button } from '@/shared/ui/button';
 import { useTranslation } from 'react-i18next';
-import { notices, useNotices } from './notices';
+import { notices, useNotices } from '@/runtime/notices';
 
 /** 떠 있는 안내들. 각 안내는 닫을 수 있다. */
 export function NoticeOutlet() {
