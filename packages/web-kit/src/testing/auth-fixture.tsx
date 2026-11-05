@@ -12,7 +12,8 @@ export interface AuthConformanceFormProps {
 }
 
 /** 실제 복사본을 꽂으며, 요청 결과와 기한 변경은 눈에 보이는 출력으로 검증한다. */
-export function createAuthConformancePage(Form: ComponentType<AuthConformanceFormProps>) {
+/** `resendable: false`는 재전송이 없는 방식(예: 인증 앱 코드)을 흉내 낸다. */
+export function createAuthConformancePage(Form: ComponentType<AuthConformanceFormProps>, { resendable = true }: { readonly resendable?: boolean } = {}) {
   /** 테스트 버튼은 서버 응답·로그인 방식 전환·시계 보정을 대신한다. */
   return function AuthConformancePage() {
     const [clock] = useState(() => createServerClock({ key: 'auth-conformance', storage: () => ({
@@ -30,10 +31,10 @@ export function createAuthConformancePage(Form: ComponentType<AuthConformanceFor
         return new Promise<string>((resolve, reject) => setResponse({ resolve: () => resolve(code), reject: () => reject(new Error('rejected')) }));
       },
       onVerified: (code) => { setApplied(code); },
-      resend: () => {
+      resend: resendable ? () => {
         setResends((count) => count + 1);
         return new Promise<void>((resolve, reject) => setResponse({ resolve, reject: () => reject(new Error('rejected')) }));
-      },
+      } : undefined,
       onResent: () => { setDeadlines((previous) => ({ ...previous, codeExpiresAt: clock.now() + 5000, resendAvailableAt: clock.now() + 3000 })); },
     });
     return <>

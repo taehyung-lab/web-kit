@@ -2,6 +2,7 @@
 // 회차 줄은 Form.Array(추가·삭제·위/아래 이동), 좌석도는 Form.File, 판매처 키는 Form.Dialog 안의 자기 useSaveForm이다.
 // 회차·판매처 키는 접을 수 있는 구역(Form.Section fields)이라 닫힌 구역의 오류는 제출 뒤 펼쳐지고 그 칸에 포커스한다.
 // 저장: 좌석도 업로드 → 등록. 저장 완료 확인 뒤 상품 목록으로 간다. 공연 폼 전체를 옮긴 것은 아니다.
+import { Button } from '@/shared/ui/web-kit/ui';
 import { useSaveForm, type FormFileValue } from '@boosterlab/web-kit/form';
 import { Form } from '@/shared/ui/web-kit/form/ui';
 import { useNavigate } from '@tanstack/react-router';
@@ -70,34 +71,30 @@ export function ShowCreateScreen() {
                   <F.Text name={`rounds[${index}].date`} type="date" label={t('shows.fields.date', { index: index + 1 })} />
                   <F.Text name={`rounds[${index}].time`} type="time" label={t('shows.fields.time', { index: index + 1 })} />
                   <div className="wk-actions">
-                    <button
-                      type="button"
-                      className="wk-button wk-button-secondary"
+                    <Button
                       disabled={index === 0}
                       onClick={() => rows.move(index, index - 1)}
                     >
                       {t('shows.moveUp', { index: index + 1 })}
-                    </button>
-                    <button
-                      type="button"
-                      className="wk-button wk-button-secondary"
+                    </Button>
+                    <Button
                       disabled={index === rows.items.length - 1}
                       onClick={() => rows.move(index, index + 1)}
                     >
                       {t('shows.moveDown', { index: index + 1 })}
-                    </button>
+                    </Button>
                     {rows.canRemove ? (
-                      <button type="button" className="wk-button wk-button-secondary" onClick={() => rows.remove(index)}>
+                      <Button onClick={() => rows.remove(index)}>
                         {t('shows.removeRound', { index: index + 1 })}
-                      </button>
+                      </Button>
                     ) : null}
                   </div>
                 </div>
               ))}
               <div className="wk-actions">
-                <button type="button" className="wk-button wk-button-secondary" onClick={() => rows.append(newRound())}>
+                <Button onClick={() => rows.append(newRound())}>
                   {t('shows.addRound')}
-                </button>
+                </Button>
               </div>
             </F.Section>
           )}
@@ -106,9 +103,9 @@ export function ShowCreateScreen() {
         <F.Section title={t('shows.fields.vendorKeys')} fields={['vendorKeys']}>
           <p>{vendorKeys.length === 0 ? t('shows.noVendorKeys') : vendorKeys.map((item) => item.value).join(', ')}</p>
           <div className="wk-actions">
-            <button type="button" className="wk-button wk-button-secondary" onClick={() => setKeysOpen(true)}>
+            <Button onClick={() => setKeysOpen(true)}>
               {t('shows.editVendorKeys')}
-            </button>
+            </Button>
           </div>
         </F.Section>
         <div className="wk-actions">
@@ -160,20 +157,18 @@ function VendorKeysForm({
               <div key={item.key} className="wk-actions">
                 <K.Text name={`keys[${index}].value`} label={t('shows.fields.vendorKey', { index: index + 1 })} />
                 {rows.canRemove ? (
-                  <button type="button" className="wk-button wk-button-secondary" onClick={() => rows.remove(index)}>
+                  <Button onClick={() => rows.remove(index)}>
                     {t('shows.removeVendorKey', { index: index + 1 })}
-                  </button>
+                  </Button>
                 ) : null}
               </div>
             ))}
             <div className="wk-actions">
-              <button
-                type="button"
-                className="wk-button wk-button-secondary"
+              <Button
                 onClick={() => rows.append({ key: crypto.randomUUID(), value: '' })}
               >
                 {t('shows.addVendorKey')}
-              </button>
+              </Button>
             </div>
           </>
         )}

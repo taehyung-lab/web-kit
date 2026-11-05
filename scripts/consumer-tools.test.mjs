@@ -203,3 +203,34 @@ test('입력의 심링크 부모도 실제 소스 경로로 선언하게 한다'
   assert.throws(() => runConformance(options), /심링크/);
   assert.equal(readFileSync(join(dir, 'src/model.ts'), 'utf8'), 'export const value = 1;\n');
 }));
+
+/** 모노레포 앱: 프로젝트는 apps/admin, 공용 lockfile은 저장소 맨 위에 있다. */
+function workspaceFixture(run) {
+  runFixture(({ dir, write, options }) => {
+    write('../pnpm-lock.yaml', 'root lock\n');
+    const config = JSON.parse(readFileSync(options.configPath, 'utf8'));
+    config.inputs = config.inputs.filter((path) => path !== 'pnpm-lock.yaml');
+    config.workspace = { root: '..', inputs: ['pnpm-lock.yaml'] };
+    write('web-kit.check.json', config);
+    try { run({ dir, write, options, config }); } finally { rmSync(join(dir, '../pnpm-lock.yaml'), { force: true }); }
+  });
+}
+
+test('workspace 입력: 저장소 맨 위 lockfile을 기록하고, 바뀌면 지난 실행을 거절한다', () => workspaceFixture(({ write, options }) => {
+  runConformance(options); verifyConformanceRun(options);
+  assert.ok(JSON.parse(readFileSync(options.receiptPath, 'utf8')).inputs.includes('../pnpm-lock.yaml'));
+  write('../pnpm-lock.yaml', 'changed lock\n');
+  assert.throws(() => verifyConformanceRun(options), /실행 기록이 다릅니다/);
+}));
+
+for (const [label, workspace, pattern] of [
+  ['조상이 아닌 root', { root: 'apps', inputs: ['pnpm-lock.yaml'] }, /조상 폴더/],
+  ['절대 root', { root: '/', inputs: ['pnpm-lock.yaml'] }, /조상 폴더/],
+  ['폴더 입력', { root: '..', inputs: ['.'] }, /상대 경로|밖|일반 파일/],
+  ['root 밖 입력', { root: '..', inputs: ['../x'] }, /밖/],
+  ['빈 입력', { root: '..', inputs: [] }, /workspace.inputs/],
+]) test('workspace 입력 거절: ' + label, () => workspaceFixture(({ write, options, config }) => {
+  write('web-kit.check.json', { ...config, workspace });
+  assert.throws(() => runConformance(options), pattern);
+  assert.equal(existsSync(options.unitPath), false);
+}));

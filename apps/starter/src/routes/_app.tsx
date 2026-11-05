@@ -61,15 +61,15 @@ function AppLayout() {
             <div className="ml-auto flex items-center gap-2">
               <div role="group" aria-label={t('app.language')} className="flex rounded-md border border-slate-200 p-0.5 text-xs">
                 {LANGUAGES.map((language) => (
-                  <button
+                  <Button
                     key={language}
-                    type="button"
+                    variant="ghost"
                     aria-pressed={i18n.language === language}
                     onClick={() => changeLanguage(language)}
                     className="rounded px-2 py-1 uppercase text-slate-500 aria-pressed:bg-slate-900 aria-pressed:text-white"
                   >
                     {language}
-                  </button>
+                  </Button>
                 ))}
               </div>
               <Button variant="ghost" onClick={() => auth.signOut()}>

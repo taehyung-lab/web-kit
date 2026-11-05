@@ -1,4 +1,5 @@
 // 파일 책임: 경고 닫음·재노출을 프로젝트 화면 상태로 관리한다. 시간과 만료 판정은 키트가 맡는다.
+import { Button } from '@/shared/ui/web-kit/ui';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { IdleTimer } from '@boosterlab/web-kit/session/idle';
 import { Dialog } from '@/shared/ui/web-kit/ui/dialog';
@@ -22,7 +23,7 @@ export function SessionWarning({ idle }: { readonly idle: IdleTimer }) {
   return (
     <Dialog open={state.phase === 'warning' && state.leader && !dismissed} title="세션 만료 안내" onClose={() => setDismissed(true)}>
       <p>남은 시간: {seconds}초</p>
-      <button type="button" className="wk-button wk-button-primary" disabled={state.extending} onClick={() => void idle.extend()}>연장</button>
+      <Button variant="primary" disabled={state.extending} onClick={() => void idle.extend()}>연장</Button>
     </Dialog>
   );
 }

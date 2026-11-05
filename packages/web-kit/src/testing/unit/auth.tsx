@@ -57,6 +57,12 @@ export function checkAuthConformance({ Form, enterCode, readCode }: {
     expect(screen.getByText('만료됨')).toBeTruthy();
     expect((screen.getByRole('button', { name: '확인' }) as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByRole('button', { name: '재전송' }) as HTMLButtonElement).disabled).toBe(true);
+    // 재전송이 없는 방식은 재전송 버튼을 그리지 않는다.
+    cleanup();
+    const WithoutResend = createAuthConformancePage(Form, { resendable: false });
+    render(<WithoutResend />);
+    expect(screen.getByRole('button', { name: '확인' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '재전송' })).toBeNull();
   });
   it(conformanceTitle('auth-concurrency', target, '확인·재전송은 서로 막지 않고 같은 종류만 막는다'), async () => {
     for (const first of ['확인', '재전송']) {
