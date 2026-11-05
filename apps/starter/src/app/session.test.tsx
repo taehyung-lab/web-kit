@@ -52,6 +52,20 @@ describe('session', () => {
     expect(session.current()?.credentials.accessToken).toMatch(/^mock-access-/);
   });
 
+  it.each(['/\\evil.example', '//evil.example', 'https://evil.example', '/login?redirect=/products'])(
+    'drops the way back %j that could leave the app or loop to login, and goes to the default page',
+    async (back) => {
+      const user = userEvent.setup();
+      const { router } = renderApp(`/login?redirect=${encodeURIComponent(back)}`, { signedIn: false });
+      expect(router.state.location.search).toEqual({});
+      await user.type(await screen.findByLabelText(/아이디/), 'admin');
+      await user.type(screen.getByLabelText(/비밀번호/), 'password');
+      await user.click(screen.getByRole('button', { name: '로그인' }));
+
+      await waitFor(() => expect(router.state.location.pathname).toBe('/products'));
+    },
+  );
+
   it('shows an inline message when the credentials are rejected and does not open a session', async () => {
     const user = userEvent.setup();
     renderApp('/login', { signedIn: false });
