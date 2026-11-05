@@ -1,7 +1,7 @@
 // 파일 책임: 세션 수명(세대·시작/종료·다른 탭 변경·재발급 단일 비행)의 관찰 결과를 검사한다.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { RequestFailure } from '../src/failure';
-import { createSession, type SessionChange, type SessionStore, type StoredSession } from '../src/session';
+import { createSession, type ReissueEndCodes, type SessionChange, type SessionStore, type StoredSession } from '../src/session';
 
 interface Credentials {
   readonly accessToken: string;
@@ -255,6 +255,70 @@ describe('재발급', () => {
     session.subscribe((change) => changes.push(change));
     await expect(session.refresh(session.generation(), 't1', origin)).rejects.toMatchObject({ kind: 'cancelled' });
     expect(changes).toEqual([{ kind: 'ended', by: 'server', cause: terminal }]);
+  });
+
+  describe('재발급 응답 전용 종료 표(reissueEnd)', () => {
+    const reissueEnd: ReissueEndCodes = { codes: { E_REPLACED: 'ended.replaced', E_REFRESH: 'ended.refresh' }, unauthorizedMessageKey: 'ended.expired' };
+    async function endWith(thrown: RequestFailure, table: ReissueEndCodes = reissueEnd) {
+      vi.stubGlobal('navigator', {});
+      const memory = memoryStore();
+      const session = createSession({
+        store: memory.store,
+        reissue: async () => {
+          throw thrown;
+        },
+        reissueEnd: table,
+      });
+      session.start({ accessToken: 't1', loginId: 'u' });
+      const changes: SessionChange[] = [];
+      session.subscribe((change) => changes.push(change));
+      const result = await session.refresh(session.generation(), 't1', origin).then(
+        () => 'resolved',
+        (reason: unknown) => reason,
+      );
+      return { session, changes, result };
+    }
+
+    it.each([
+      ['HTTP 200 봉투의 코드', new RequestFailure({ kind: 'business', status: 200, code: 'E_REPLACED', requestId: 'r1' }), 'ended.replaced'],
+      ['401과 함께 온 코드', new RequestFailure({ kind: 'unauthorized', status: 401, code: 'E_REFRESH' }), 'ended.refresh'],
+      ['일반 표의 종료 행이어도 재발급 표의 문구가 앞선다', new RequestFailure({ kind: 'business', status: 200, code: 'E_REPLACED', messageKey: 'general', endsSession: true }), 'ended.replaced'],
+      ['표에 없는 401', new RequestFailure({ kind: 'unauthorized', status: 401, code: 'OTHER' }), 'ended.expired'],
+      ['코드 없는 401', new RequestFailure({ kind: 'unauthorized', status: 401 }), 'ended.expired'],
+    ])('%s는 그 재발급 실패에 종료 문구 키를 실어 세션을 끝낸다', async (_name, thrown, messageKey) => {
+      const { changes, result, session } = await endWith(thrown);
+      expect(result).toMatchObject({ kind: 'cancelled' });
+      expect(session.current()).toBeNull();
+      expect(changes).toHaveLength(1);
+      const change = changes[0] as Extract<SessionChange, { kind: 'ended' }>;
+      expect(change).toMatchObject({ kind: 'ended', by: 'server' });
+      expect(change.cause).toMatchObject({ kind: thrown.kind, status: thrown.status, code: thrown.code, requestId: thrown.requestId, messageKey, endsSession: true });
+    });
+
+    it('표에 없는 코드의 일시 실패는 세션을 유지하고 받은 실패를 그대로 돌려준다', async () => {
+      const transient = new RequestFailure({ kind: 'server-error', status: 503, code: 'OTHER' });
+      const { changes, result, session } = await endWith(transient);
+      expect(result).toBe(transient);
+      expect(changes).toEqual([]);
+      expect(session.current()?.credentials.accessToken).toBe('t1');
+    });
+
+    it('표의 코드는 일시 실패 status로 와도 세션을 끝낸다', async () => {
+      const { changes } = await endWith(new RequestFailure({ kind: 'server-error', status: 503, code: 'E_REFRESH' }));
+      expect(changes).toMatchObject([{ kind: 'ended', by: 'server', cause: { messageKey: 'ended.refresh', endsSession: true } }]);
+    });
+
+    it('unauthorizedMessageKey를 생략하면 401은 기존처럼 원 요청 실패를 사유로 끝낸다', async () => {
+      const { changes } = await endWith(new RequestFailure({ kind: 'unauthorized', status: 401 }), { codes: { E_REPLACED: 'ended.replaced' } });
+      expect(changes).toEqual([{ kind: 'ended', by: 'server', cause: origin }]);
+    });
+
+    it('표 키는 객체 기본 속성 이름과 섞이지 않는다', async () => {
+      const failure = new RequestFailure({ kind: 'business', status: 200, code: 'constructor' });
+      const { changes, result } = await endWith(failure);
+      expect(result).toBe(failure);
+      expect(changes).toEqual([]);
+    });
   });
 
   it('원 요청 없는 재발급의 401은 재발급 실패를 사유로 끝낸다', async () => {

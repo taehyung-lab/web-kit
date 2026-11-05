@@ -6,3 +6,4 @@ export {
 export { validateDateRange, type DateRangeIssue } from './date-range';
 export { checkboxTreeSelection, treeLeaves, treeLeafNodes, type CheckboxTreeNode } from './checkbox-tree';
 export { serializeFlatListParams, serializeSpringParams } from './api';
+export { safeAppPath, type AppPathOptions } from './app-path';

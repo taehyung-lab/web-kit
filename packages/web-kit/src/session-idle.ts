@@ -1,6 +1,6 @@
 // 파일 책임: 세션별 마감·연장 시도·탭 수명을 공유하고 시간에 따른 단계와 종료를 판정한다.
 import { createServerClock, type ServerClock } from './server-clock';
-export { createServerClock, type ServerClock } from './server-clock';
+export { clockOffsetFromDate, createServerClock, type ServerClock } from './server-clock';
 import { isRequestFailure, RequestFailure } from './failure';
 import type { Credentials, Session, SessionChange } from './session';
 

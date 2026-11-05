@@ -53,6 +53,35 @@ export interface Session<C extends Credentials> {
   readonly subscribe: (listener: (change: SessionChange) => void, phase?: SessionListenerPhase) => () => void;
 }
 
+/**
+ * 재발급 응답 전용 종료 해석. 같은 결과 코드가 일반 요청에서는 "재발급하라"지만 재발급 응답에서는 "세션 끝"을 뜻할 때 넘긴다.
+ * 일반 요청용 결과 코드 표와 따로 둔다. 키와 문구 키는 프로젝트의 서버 계약에서 옮겨 적는다.
+ */
+export interface ReissueEndCodes {
+  /** 재발급 실패의 결과 코드 → 종료 문구 키. 표에 있는 코드면 HTTP status와 관계없이 그 문구 키로 세션을 끝낸다. */
+  readonly codes: Readonly<Record<string, string>>;
+  /** 표에 없는 재발급 401의 종료 문구 키. 생략하면 401의 종료 사유는 원 요청 실패(없으면 재발급 실패)다. */
+  readonly unauthorizedMessageKey?: string;
+}
+
+/** 재발급 실패에 재발급 응답 전용 종료 해석을 적용한다. 해당 없으면 받은 실패 그대로다. */
+function applyReissueEnd(error: unknown, table: ReissueEndCodes | undefined): unknown {
+  if (table === undefined || !isRequestFailure(error)) return error;
+  const byCode = error.code !== undefined && Object.hasOwn(table.codes, error.code) ? table.codes[error.code] : undefined;
+  const messageKey = byCode ?? (error.status === 401 ? table.unauthorizedMessageKey : undefined);
+  if (messageKey === undefined) return error;
+  return new RequestFailure({
+    kind: error.kind,
+    status: error.status,
+    code: error.code,
+    requestId: error.requestId,
+    messageKey,
+    endsSession: true,
+    fieldErrors: error.fieldErrors,
+    resultUnknown: error.resultUnknown,
+  });
+}
+
 /** 탭 간 재발급 직렬화에 쓰는 Web Locks 이름. 같은 origin의 탭끼리만 공유된다. */
 const REISSUE_LOCK = 'web-kit-session-reissue';
 
@@ -68,16 +97,19 @@ function newSessionId(): string {
  * 세션 수명을 만든다. reissue는 프로젝트의 재발급 호출이며 같은 세션의 새 자격증명을 돌려준다.
  * 재발급 실패는 인증 계약으로 판정한다: 401(자격증명 거부) 또는 결과 코드 표의 세션 종료 행이면 끝낸다(E2 확인 대상).
  * 종료 사유는 종료 행이면 그 재발급 실패, 아니면 원 요청 실패(없으면 재발급 실패)다. 그 밖의 실패는 세션을 유지한다.
+ * reissueEnd는 재발급 응답에서만 쓰는 결과 코드→종료 문구 키 표다. 표에 걸린 실패는 그 문구 키의 종료 행으로 본다.
  * signOut은 이 탭이 끝낸 세션(local·idle)의 서버 로그아웃이다. 로컬 종료와 알림이 끝난 뒤 한 번 보내고, 실패는 종료를 되돌리지 않는다.
  */
 export function createSession<C extends Credentials>({
   store,
   reissue,
   signOut,
+  reissueEnd,
 }: {
   readonly store: SessionStore<C>;
   readonly reissue: (credentials: C) => Promise<C>;
   readonly signOut?: (credentials: C) => Promise<unknown>;
+  readonly reissueEnd?: ReissueEndCodes;
 }): Session<C> {
   let current = store.read();
   let generation = 0;
@@ -146,8 +178,9 @@ export function createSession<C extends Credentials>({
     let next: C;
     try {
       next = await reissue(session.credentials);
-    } catch (error: unknown) {
+    } catch (thrown: unknown) {
       if (generation !== started) throw cancelled();
+      const error = applyReissueEnd(thrown, reissueEnd);
       const latest = store.read();
       if (latest?.sessionId !== session.sessionId) {
         acceptStored(latest);
