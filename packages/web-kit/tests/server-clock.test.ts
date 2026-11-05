@@ -81,3 +81,13 @@ it('시계 교정: 같은 시각의 자기 표본은 최신 관측을 쓰고 구
   expect(a.now()).toBe(97_000); expect(createServerClock({ key }).now()).toBe(97_000);
   expect(localStorage.getItem(key)).toBeNull(); expect(sampleKeys()).toHaveLength(1);
 });
+
+it('Date 헤더 보정: 받은 시각을 초로 내려 서버−로컬 차이를 재고, 읽을 수 없으면 값을 만들지 않는다', async () => {
+  const { clockOffsetFromDate } = await import('../src/session-idle');
+  const date = 'Wed, 04 Nov 2026 01:00:10 GMT';
+  const receivedAt = Date.parse('2026-11-04T01:00:05.900Z');
+  expect(clockOffsetFromDate(date, receivedAt)).toBe(5_000);
+  expect(clockOffsetFromDate(date, Date.parse('2026-11-04T01:00:15.000Z'))).toBe(-5_000);
+  for (const bad of [undefined, null, '', '   ', 'not a date']) expect(clockOffsetFromDate(bad, receivedAt)).toBeUndefined();
+  expect(clockOffsetFromDate(date, Number.NaN)).toBeUndefined();
+});

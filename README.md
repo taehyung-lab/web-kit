@@ -1,5 +1,7 @@
 # web-kit
 
+web-kit은 React·TanStack(Query·Router·Form) 위에서 관리자 웹의 공통 동작(요청·세션·폼·목록·단건·권한)을 맡는 패키지와, 그 동작을 연결한 shadcn(Base UI)·Tailwind 복사용 UI 부품을 주는 키트다.
+
 관리자 웹의 공용 키트와, 그 키트로 만든 시작용 앱을 함께 관리하는 저장소다. 범위·책임은 [공용 구조](docs/decisions/0001-scope-and-boundaries.md), UI 소유·배포 이유는 [배포 결정](docs/decisions/0002-distribution.md), 완료·발행 조건은 [유지보수](docs/maintaining.md)가 정한다.
 
 ```

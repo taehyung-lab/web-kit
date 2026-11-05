@@ -1,5 +1,7 @@
 # web-kit
 
+web-kit은 React·TanStack(Query·Router·Form) 위에서 관리자 웹의 공통 동작(요청·세션·폼·목록·단건·권한)을 맡는 패키지와, 그 동작을 연결한 shadcn(Base UI)·Tailwind 복사용 UI 부품을 주는 키트다.
+
 React 19·TanStack·zod 4·axios/orval을 쓰는 관리자 웹의 공용 키트다. 공통 상태와 처리 순서는 패키지가, 화면 배치와 업무·서버 정책은 프로젝트가 맡는다. UI는 registry(복사할 화면 소스와 검사 연결 묶음)로 설치해 프로젝트가 소유한다.
 
 패키지는 `@boosterlab/web-kit`, 현재 버전은 `5.0.0-rc.7`(미발행 후보)다. 정확한 공개 입구·의존 버전은 [package.json](package.json), 동작 보장은 같은 버전의 스킬이 정본이다.
@@ -11,7 +13,7 @@ React 19·TanStack·zod 4·axios/orval을 쓰는 관리자 웹의 공용 키트�
 - **UI 복사본**은 프로젝트가 배치·디자인을 바꾸고 공통 hook의 상태·이벤트를 연결한다.
 - **AWK**는 웹과 무관한 작업 판단·검증 방법을 맡는다. 웹 사용법은 이 키트가 소유한다.
 
-[책임별 입구와 프로젝트 입력](docs/modules.md), [용어](GLOSSARY.md), [배포 결정](references/docs/decisions/0002-distribution.md)에서 상세 구분을 찾는다. React·ReactDOM은 필수 peer이며 TanStack·axios·검사 러너는 선택 기능에 맞춰 설치한다.
+[책임별 입구와 프로젝트 입력](docs/modules.md), [용어](GLOSSARY.md), [배포 결정](references/docs/decisions/0002-distribution.md)에서 상세 구분을 찾는다. 기능별 결정 이유는 [범위](references/docs/decisions/0001-scope-and-boundaries.md)·[응답·실패](references/docs/decisions/0003-request-response-failure.md)·[세션](references/docs/decisions/0004-session-lifetime.md)·[로그인 인증 단계](references/docs/decisions/0005-auth-challenge.md)·[목록·선택·권한](references/docs/decisions/0006-list-choice-permission.md)·[폼·상세·대화창·진행](references/docs/decisions/0007-form-record-dialog-progress.md) 결정 기록에 있다. React·ReactDOM은 필수 peer이며 TanStack·axios·검사 러너는 선택 기능에 맞춰 설치한다.
 
 ## 시작과 갱신
 

@@ -16,6 +16,7 @@ const expected = {
     "createResultCodeTable",
     "isRequestFailure",
     "readEnvelope",
+    "safeAppPath",
     "serializeFlatListParams",
     "serializeSpringParams",
     "toRequestFailure",
