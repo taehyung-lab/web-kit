@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "version": "5.0.0-rc.14",
-  "sourceRef": "v5.0.0-rc.14",
-  "sourceCommit": "fdcaa8bf2842fcca15c38bd8ff7eca6e238f868a",
+  "version": "5.0.0-rc.15",
+  "sourceRef": "v5.0.0-rc.15",
+  "sourceCommit": "5c0975d269145cb71eb61c10635ef5efc17f7f6c",
   "sourceWorkingTree": "clean",
   "shadcn": "4.19.1",
   "method": "shadcn@4.19.1 add; installation recorded after review",
@@ -339,21 +339,21 @@
     },
     {
       "name": "auth",
-      "artifactHash": "67274027bed892cdf76644911ce8857e3db488f1fdae28f3016b0ccb80178aa4",
+      "artifactHash": "8f9bd01db4477dc9a9d71aa55d51f8d0d6cbd057de66097b09cf244400cfecad",
       "files": [
         {
           "source": "packages/ui-registry/src/auth.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/auth.tsx",
           "installed": "src/shared/ui/web-kit/auth.tsx",
-          "sourceHash": "1b5916dfd5f451cbfed438323b5c1a08686c51aca877af3203fd8f87eda95f7e",
-          "installedHash": "68e03fc9d5cfee27c4b961c6fc8f6e585e67af2b32da6db5c5da7e625c22ead7"
+          "sourceHash": "2ef8eb6ec441f8beb54a6ab5739ced2fbae954747d9cbcecce7d5643c5d80110",
+          "installedHash": "8a2e6ed1bdd473cccc796b3cdb59e8f122172c137c744a45dfa4f1c6ba2de691"
         },
         {
           "source": "packages/ui-registry/checks/auth-six.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/checks/auth-six.tsx",
           "installed": "src/shared/ui/web-kit/checks/auth-six.tsx",
-          "sourceHash": "3ab016c8b209558aae5ebda19bdc849673f7650ce72eb809316f4cbcfbb25812",
-          "installedHash": "3ab016c8b209558aae5ebda19bdc849673f7650ce72eb809316f4cbcfbb25812"
+          "sourceHash": "9869af420fcb8de3fe6d3e848a4497d31863a21df4ad608bf89b8df13d89dc3c",
+          "installedHash": "9869af420fcb8de3fe6d3e848a4497d31863a21df4ad608bf89b8df13d89dc3c"
         },
         {
           "source": "packages/ui-registry/checks/auth.test.tsx",
