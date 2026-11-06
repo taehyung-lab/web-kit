@@ -131,30 +131,44 @@ export interface AuthChallengeOptions<Result, Resent> extends AuthDeadlines {
 /** 인증 화면 상위에서 사용한다. 인증 대기는 `createAuthChallengeStore`에서 읽어 넘기고, 세션 저장·이동은 유효 응답 콜백에 연결한다. */
 export function useAuthChallenge<Result, Resent = void>(options: AuthChallengeOptions<Result, Resent>) {
   const current = useRef(options);
-  const active = useRef<{ verify: object | null; resend: object | null }>({ verify: null, resend: null });
+  const active = useRef<{ verify: object | null; resend: object | null }>({
+    verify: null,
+    resend: null,
+  });
   const mounted = useRef(true);
-  /** 확인은 성공했고 완료(onVerified)가 실패한 결과. 같은 scope 동안 다음 제출이 완료만 다시 실행한다. */
+  /** 확인 성공 결과는 완료가 끝날 때까지 보관한다. 완료 실패 뒤 재시도에는 코드를 다시 보내지 않는다. */
   const verified = useRef<{ readonly scope: unknown; readonly result: Result } | null>(null);
   const [awaitingCompletion, setAwaitingCompletion] = useState(false);
   const [running, setRunning] = useState({ verify: false, resend: false });
-  const pending = running.verify ? (running.resend ? 'both' : 'verify') : (running.resend ? 'resend' : null);
-  const [failures, setFailures] = useState<{ verify: unknown; resend: unknown }>({ verify: undefined, resend: undefined });
+  const [failures, setFailures] = useState<{ verify: unknown; resend: unknown }>({
+    verify: undefined,
+    resend: undefined,
+  });
   const [, setTick] = useState(0);
-  /** 취소·이동 시작 시 호출하여 늦은 성공·실패가 화면에 들어오지 않게 한다. */
+
+  /** 취소·이동 시작 시 예전 요청과 보관한 확인 결과를 무효화한다. */
   const invalidate = useCallback(() => {
     active.current = { verify: null, resend: null };
-    verified.current = null; setAwaitingCompletion(false);
+    verified.current = null;
+    setAwaitingCompletion(false);
     setRunning({ verify: false, resend: false });
     setFailures({ verify: undefined, resend: undefined });
   }, []);
+
   useLayoutEffect(() => {
     if (!Object.is(current.current.scope, options.scope)) invalidate();
     current.current = options;
   });
+
   useEffect(() => {
     mounted.current = true;
-    return () => { mounted.current = false; active.current = { verify: null, resend: null }; verified.current = null; };
+    return () => {
+      mounted.current = false;
+      active.current = { verify: null, resend: null };
+      verified.current = null;
+    };
   }, []);
+
   useEffect(() => {
     const tick = () => setTick((value) => value + 1);
     const timer = setInterval(tick, 1000);
@@ -162,54 +176,92 @@ export function useAuthChallenge<Result, Resent = void>(options: AuthChallengeOp
     document.addEventListener('visibilitychange', tick);
     window.addEventListener('pageshow', tick);
     return () => {
-      clearInterval(timer); unsubscribe();
+      clearInterval(timer);
+      unsubscribe();
       document.removeEventListener('visibilitychange', tick);
       window.removeEventListener('pageshow', tick);
     };
   }, [options.clock]);
-  /** 종류별로 요청 시작부터 결과 적용 완료까지 한 요청만 소유한다. */
+
+  /** 확인과 재전송은 각각 요청 시작부터 성공 후 처리 완료까지 한 번만 실행한다. */
   async function run(kind: 'verify' | 'resend', code = ''): Promise<void> {
     const input = current.current;
     const timing = getAuthTiming(input, input.clock.now());
     if (!mounted.current || active.current[kind] !== null || input.blocked) return;
-    const retry = kind === 'verify' && verified.current !== null && Object.is(verified.current.scope, input.scope) ? verified.current : null;
-    // 완료만 다시 시도할 때는 코드를 보내지 않으므로 코드 기한·형식이 아니라 전체 기한만 본다.
-    if (kind === 'verify' && (retry === null ? !timing.canSubmit || !isAuthCode(code, input.codeLength) : timing.expired)) return;
-    if (kind === 'resend' && (!timing.canResend || input.resend === undefined)) return;
+
+    const accepted = verified.current;
+    const retry = kind === 'verify' && accepted !== null && Object.is(accepted.scope, input.scope)
+      ? accepted
+      : null;
+    if (kind === 'verify') {
+      // 완료만 다시 할 때는 코드가 필요 없으므로 전체 기한만 확인한다.
+      if (retry !== null) {
+        if (timing.expired) return;
+      } else if (!timing.canSubmit || !isAuthCode(code, input.codeLength)) {
+        return;
+      }
+    } else if (!timing.canResend || input.resend === undefined) {
+      return;
+    }
+
+    // 요청마다 다른 표식을 써서 옛 요청이 새 요청의 결과·진행 상태를 바꾸지 못하게 한다.
     const owner = {};
     active.current[kind] = owner;
-    setRunning((previous) => ({ ...previous, [kind]: true })); setFailures((previous) => ({ ...previous, [kind]: undefined }));
-    const live = () => mounted.current && active.current[kind] === owner &&
-      Object.is(current.current.scope, input.scope) && !current.current.blocked &&
-      !getAuthTiming(current.current, current.current.clock.now()).expired;
+    setRunning((previous) => ({ ...previous, [kind]: true }));
+    setFailures((previous) => ({ ...previous, [kind]: undefined }));
+
+    const isCurrent = () => {
+      const latest = current.current;
+      return mounted.current && active.current[kind] === owner &&
+        Object.is(latest.scope, input.scope) && !latest.blocked &&
+        !getAuthTiming(latest, latest.clock.now()).expired;
+    };
+
     try {
       if (kind === 'verify') {
         const result = retry === null ? await input.verify(code) : retry.result;
-        if (live()) {
-          verified.current = { scope: input.scope, result };
-          await input.onVerified(result, { isCurrent: live });
-          if (live()) { verified.current = null; setAwaitingCompletion(false); }
+        if (!isCurrent()) return;
+        verified.current = { scope: input.scope, result };
+        await input.onVerified(result, { isCurrent });
+        if (isCurrent()) {
+          verified.current = null;
+          setAwaitingCompletion(false);
         }
       } else {
         const result = await input.resend!();
-        if (live()) await input.onResent?.(result, { isCurrent: live });
+        if (isCurrent()) await input.onResent?.(result, { isCurrent });
       }
     } catch (error: unknown) {
-      if (live()) {
+      if (isCurrent()) {
         setFailures((previous) => ({ ...previous, [kind]: error }));
         if (kind === 'verify') setAwaitingCompletion(verified.current !== null);
       }
     } finally {
-      if (mounted.current && active.current[kind] === owner) { active.current[kind] = null; setRunning((previous) => ({ ...previous, [kind]: false })); }
+      if (mounted.current && active.current[kind] === owner) {
+        active.current[kind] = null;
+        setRunning((previous) => ({ ...previous, [kind]: false }));
+      }
     }
   }
+
   const timing = getAuthTiming(options, options.clock.now());
-  return { ...timing, pending, verifyFailure: failures.verify, resendFailure: failures.resend, invalidate,
-    /** 이 방식에 재전송이 있는가(`resend`를 넘겼는가). 없으면 화면은 재전송 버튼을 그리지 않는다. */
+  const canVerify = awaitingCompletion ? !timing.expired : timing.canSubmit;
+  const pending = running.verify
+    ? (running.resend ? 'both' : 'verify')
+    : (running.resend ? 'resend' : null);
+  return {
+    ...timing,
+    pending,
+    verifyFailure: failures.verify,
+    resendFailure: failures.resend,
+    invalidate,
+    /** 재전송 함수가 없는 방식에서는 화면도 재전송 버튼을 그리지 않는다. */
     resendable: options.resend !== undefined,
-    /** 확인은 성공했고 완료가 실패해 다시 시도를 기다린다. 이때 제출은 코드를 보내지 않고 완료만 다시 실행한다. */
+    /** 확인은 성공했고 완료가 실패해 다음 제출이 완료만 다시 실행한다. */
     awaitingCompletion,
-    canSubmit: (awaitingCompletion ? !timing.expired : timing.canSubmit) && !options.blocked && !running.verify,
+    canSubmit: canVerify && !options.blocked && !running.verify,
     canResend: timing.canResend && !options.blocked && !running.resend && options.resend !== undefined,
-    submit: (code: string) => run('verify', code), resend: () => run('resend') };
+    submit: (code: string) => run('verify', code),
+    resend: () => run('resend'),
+  };
 }

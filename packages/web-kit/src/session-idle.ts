@@ -9,6 +9,8 @@ export interface IdlePolicy {
   readonly warningMs: number;
   /** 자기 탭의 연장 결과를 기다리거나, 마감에 종료한다. 기본값은 없다. */
   readonly pendingAtDeadline: 'wait' | 'expire';
+  /** 성공한 연장 응답에 서버 마감이 없을 때 쓸 로컬 유효 시간. 생략하면 마감을 만들지 않는다. */
+  readonly extensionFallbackMs?: number;
 }
 /** 프로젝트가 응답 하나에서 해석한 서버 시각(ms). */
 export interface ServerTimeSample {
@@ -69,6 +71,8 @@ interface RecordValue {
   readonly server: number | null;
   readonly local: LocalDeadline | null;
   readonly attempt: number | null;
+  /** 같은 서버 마감을 다시 받아도 이전 로컬 기본 시한을 해제한다. 옛 기록에는 없다. */
+  readonly serverObservedAt?: number;
 }
 const TICK_MS = 1_000;
 const FOLLOWER_GRACE_MS = 5_000;
@@ -114,6 +118,7 @@ function parseRecord(raw: string | null): RecordValue | null {
     if (finite(v.deadline) && finite(v.sentAt)) return { sessionId: v.sessionId, server: v.deadline, local: null, attempt: null };
     if (v.server !== null && !finite(v.server)) return null;
     if (v.attempt !== null && !finite(v.attempt)) return null;
+    if (v.serverObservedAt !== undefined && !finite(v.serverObservedAt)) return null;
     if (v.local !== null && (!v.local || !finite(v.local.deadline) || !finite(v.local.at) ||
       (v.local.baseServer !== null && !finite(v.local.baseServer)) || !['provisional', 'grace'].includes(v.local.kind))) return null;
     return v as RecordValue;
@@ -133,6 +138,8 @@ export function createIdleTimer<C extends Credentials>({ session, key, policy, e
   readonly clock?: ServerClock;
 }): IdleTimer {
   if (!['wait', 'expire'].includes(policy.pendingAtDeadline)) throw new TypeError('pendingAtDeadline is required');
+  if (policy.extensionFallbackMs !== undefined && (!Number.isFinite(policy.extensionFallbackMs) || policy.extensionFallbackMs <= 0))
+    throw new TypeError('extensionFallbackMs must be positive and finite');
   const storage = environment.storage ?? (() => window.localStorage);
   const clock = suppliedClock ?? createServerClock({ key: `${key}:clock`, storage });
   const locks = environment.locks !== undefined ? environment.locks : typeof navigator === 'undefined' ? null : (navigator.locks ?? null);
@@ -194,11 +201,12 @@ export function createIdleTimer<C extends Credentials>({ session, key, policy, e
   /** 서버 마감·로컬 시한·시도 시각을 같은 규칙으로 합친다. */
   function combine(all: readonly RecordValue[]) {
     const server = all.reduce<number | null>((v, r) => r.server === null ? v : Math.max(v ?? -Infinity, r.server), null);
+    const serverObservedAt = all.reduce<number | undefined>((value, record) => record.serverObservedAt === undefined ? value : Math.max(value ?? -Infinity, record.serverObservedAt), undefined);
     const local = all.map((r) => r.local).filter((l): l is LocalDeadline => l !== null &&
-      (l.kind === 'provisional' ? server === null : l.baseServer === server))
+      l.baseServer === server && (l.kind !== 'provisional' || l.at > (serverObservedAt ?? -Infinity)))
       .sort((a, b) => b.at - a.at || b.deadline - a.deadline)[0] ?? null;
     const attempt = all.reduce<number | null>((v, r) => r.attempt === null ? v : Math.max(v ?? -Infinity, r.attempt), null);
-    return { server, local, attempt };
+    return { server, local, attempt, ...(serverObservedAt === undefined ? {} : { serverObservedAt }) };
   }
   /** 병합 결과를 담은 불변 기록을 확보한 뒤 읽었던 키만 지운다. 동시 정리는 새 요약을 잃지 않는다. */
   function compact() {
@@ -243,8 +251,8 @@ export function createIdleTimer<C extends Credentials>({ session, key, policy, e
   }
   /** 서버 승인은 비감소이며 유예는 자신이 본 서버 마감 이후에만 유효하다. */
   function merged(id: string) {
-    const { server, local, attempt } = combine(records(id));
-    return { server, deadline: local?.deadline ?? server, source: local?.kind ?? (server === null ? null : 'server' as const), attempt };
+    const { server, local, attempt, serverObservedAt } = combine(records(id));
+    return { server, deadline: local?.deadline ?? server, source: local?.kind ?? (server === null ? null : 'server' as const), attempt, serverObservedAt, localAt: local?.at };
   }
   /** 먼저 세션 경계를 확인하고 새 불변 기록을 쓴 뒤 불필요한 기록을 합친다. */
   function write(id: string, patch: Partial<RecordValue>) {
@@ -389,16 +397,23 @@ export function createIdleTimer<C extends Credentials>({ session, key, policy, e
     else { activate(); evaluate(); }
   }
   /** 시계와 마감이 함께 올 때 중간 보정만으로 종료하지 않는다. */
-  function applySample(sample: ServerTimeSample, id?: string): boolean {
+  function applySample(sample: ServerTimeSample, id?: string, fallbackMs?: number): boolean {
     updatingClock = true;
     let adopted = false;
     connectSession();
     try {
       clock.observe(sample.clockOffsetMs, sample.sentAt);
-      if (id && id === session.current()?.sessionId && !ended(id) && sample.deadline !== undefined && Number.isFinite(sample.deadline)) {
-        const before = merged(id).server;
-        if (before === null || sample.deadline > before) {
-          write(id, { server: sample.deadline }); adopted = true;
+      if (id && id === session.current()?.sessionId && !ended(id)) {
+        const before = merged(id);
+        if (sample.deadline !== undefined && Number.isFinite(sample.deadline)) {
+          // 같은 ms 안의 기본 연장 뒤 서버 응답도 로컬 시한을 해제하도록 순서를 보존한다.
+          const serverObservedAt = Math.max(now(), before.serverObservedAt ?? -Infinity, before.localAt ?? -Infinity) + 1;
+          write(id, { server: Math.max(before.server ?? -Infinity, sample.deadline), serverObservedAt });
+          adopted = before.server === null || sample.deadline > before.server || before.source === 'provisional';
+        } else if (fallbackMs !== undefined) {
+          const at = Math.max(now(), (before.serverObservedAt ?? -Infinity) + 1, (before.localAt ?? -Infinity) + 1);
+          write(id, { local: { deadline: now() + fallbackMs, kind: 'provisional', baseServer: before.server, at } });
+          adopted = true;
         }
       }
       refresh();
@@ -423,9 +438,9 @@ export function createIdleTimer<C extends Credentials>({ session, key, policy, e
         const sample = await requestServer();
         if (!isCurrent()) return { kind: 'failed', failure: new RequestFailure({ kind: 'cancelled' }) };
         const serverBefore = merged(id).server;
-        if (sample !== null) applySample(sample, id);
-        if (sample?.deadline === undefined || !Number.isFinite(sample.deadline)) return { kind: 'no-deadline' };
-        if (serverBefore !== null && sample.deadline < serverBefore) return { kind: 'earlier-deadline' };
+        const adopted = sample !== null && applySample(sample, id, policy.extensionFallbackMs);
+        if ((sample?.deadline === undefined || !Number.isFinite(sample.deadline)) && !adopted) return { kind: 'no-deadline' };
+        if (serverBefore !== null && sample?.deadline !== undefined && sample.deadline < serverBefore) return { kind: 'earlier-deadline' };
         return { kind: state.deadline !== null && state.deadline - now() > policy.warningMs ? 'adopted-active' : 'adopted-warning' };
       } catch (failure) {
         return { kind: 'failed', failure: isCurrent() ? failure : new RequestFailure({ kind: 'cancelled' }) };

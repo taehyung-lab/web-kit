@@ -10,7 +10,7 @@ export function SixDigitAuthCodeForm({ model, codeLength, labels }: AuthCodeForm
   const errorId = useId();
   return <form onSubmit={(event) => { event.preventDefault();
     if (!model.canSubmit) return;
-    const valid = isAuthCode(code, codeLength);
+    const valid = model.awaitingCompletion || isAuthCode(code, codeLength);
     setInvalid(!valid);
     if (valid) void model.submit(code); }}>
     <fieldset><legend>{labels.code}</legend>{Array.from({ length: codeLength }, (_, index) =>
@@ -22,7 +22,7 @@ export function SixDigitAuthCodeForm({ model, codeLength, labels }: AuthCodeForm
         }} />)}</fieldset>
     {invalid && <p id={errorId} role="alert">{labels.invalidCode}</p>}
     {model.remainingSeconds !== undefined && <p role="timer">{labels.remaining(model.remainingSeconds)}</p>}
-    {(model.expired || model.codeExpired) && <p role="alert">{labels.expired}</p>}
+    {(model.expired || (model.codeExpired && !model.awaitingCompletion)) && <p role="alert">{labels.expired}</p>}
     {model.verifyFailure !== undefined && <p role="alert">{labels.verifyFailure}</p>}
     {model.pending !== null && <p role="status">{labels.pending}</p>}
     <button type="submit" disabled={!model.canSubmit}>{labels.confirm}</button>

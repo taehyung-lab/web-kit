@@ -169,6 +169,25 @@ export function checkAuthBrowser({ url, target, enterCode, readCode }) {
         await expect(page.getByText('만료됨', { exact: true })).toBeVisible();
         await expect(page.getByRole('button', { name: '확인', exact: true })).toBeDisabled();
         await expect(page.getByRole('button', { name: '재전송', exact: true })).toBeDisabled();
+        // 완료 재시도에는 새 코드가 필요 없고, 이미 확인한 코드를 다시 전송하지 않는다.
+        await page.goto(url);
+        await page.getByRole('checkbox', { name: '완료 처리 실패' }).check();
+        await enterCode(page, '123456');
+        await page.keyboard.press('Enter');
+        await page.getByRole('button', { name: '응답 성공' }).click();
+        await expect(page.getByLabel('요청 횟수')).toHaveText('1');
+        await expect(page.getByLabel('완료 횟수')).toHaveText('1');
+        await expect(page.getByText('확인 실패', { exact: true })).toBeVisible();
+        await page.clock.runFor(5000);
+        await expect(page.getByText('만료됨', { exact: true })).toHaveCount(0);
+        await page.getByRole('checkbox', { name: '완료 처리 실패' }).uncheck();
+        await enterCode(page, 'x');
+        await page.keyboard.press('Enter');
+        await expect(page.getByLabel('요청 횟수')).toHaveText('1');
+        await expect(page.getByLabel('완료 횟수')).toHaveText('2');
+        await expect(page.getByLabel('적용 코드')).toHaveText('123456');
+        await expect(page.getByText('숫자 6자리를 입력하세요', { exact: true })).toHaveCount(0);
+        await expect(page.getByText('확인 실패', { exact: true })).toHaveCount(0);
     });
     test(conformanceTitle('B-auth-concurrency', target, '확인·재전송의 독립된 관문'), async ({ page }) => {
         await page.clock.install({ time: new Date(100000) });
