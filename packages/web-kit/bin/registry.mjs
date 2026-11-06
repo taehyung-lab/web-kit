@@ -17,7 +17,7 @@ function option(name, fallback) {
 try {
   const mode = process.argv[2];
   if (process.argv.includes('--help')) {
-    console.log('사용법: web-kit-registry record --source <키트 checkout> --items form,auth [--project .] [--paths paths.json] [--output registry-installation.json]\n비교: web-kit-registry compare --source <새 checkout> [--project .] [--installation registry-installation.json]\nrecord는 새 기록만 만들며 기존 기록 갱신에는 --update가 필요합니다. UI 파일과 lockfile은 바꾸지 않습니다.');
+    console.log('사용법: web-kit-registry record --source <키트 checkout> --items form,auth [--project .] [--paths paths.json] [--output registry-installation.json]\n비교: web-kit-registry compare --source <새 checkout> [--project .] [--installation registry-installation.json]\nrecord는 새 기록만 만들며 기존 기록 갱신에는 --update가 필요합니다. --update에서 --items를 빼면 기존 기록의 항목을 그대로 씁니다. UI 파일과 lockfile은 바꾸지 않습니다.');
   } else {
     const project = resolve(option('--project', '.'));
     const source = resolve(option('--source'));
@@ -26,7 +26,11 @@ try {
       const output = projectPath(project, option('--output', 'registry-installation.json'));
       if (dirname(output) !== project) throw new Error('설치 기록은 프로젝트 루트에 두세요. --output에는 파일 이름만 지정하세요');
       if (existsSync(output) && !process.argv.includes('--update')) throw new Error('설치 기록이 이미 있습니다. 변경 비교·검토 뒤 --update를 사용하세요');
-      const record = recordInstallation({ source, project, version: kit.version, selected: option('--items').split(','), paths: process.argv.includes('--paths') ? readJson(resolve(option('--paths'))) : {} });
+      // 갱신에서 --items를 빼면 기존 기록의 항목을 그대로 다시 기록한다. 새 기록은 항목을 반드시 받는다.
+      const items = !process.argv.includes('--items') && process.argv.includes('--update') && existsSync(output)
+        ? readJson(output).items.map((item) => item.name)
+        : option('--items').split(',');
+      const record = recordInstallation({ source, project, version: kit.version, selected: items, paths: process.argv.includes('--paths') ? readJson(resolve(option('--paths'))) : {} });
       writeFileSync(output, JSON.stringify(record, null, 2) + '\n');
       console.log('설치 기록: ' + output + ' (' + record.items.map((item) => item.name).join(', ') + ')');
     } else if (mode === 'compare') {
