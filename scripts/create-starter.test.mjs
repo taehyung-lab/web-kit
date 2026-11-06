@@ -99,21 +99,22 @@ test('AWK에 변경이 있으면 새 대상도 만들지 않는다', () => fixtu
   assert.equal(existsSync(destination), false);
 }));
 
-test('AWK 발행 tag가 있으면 고정 커밋으로 해소되어야 하고, 맞으면 tag와 커밋을 알린다', () => fixture(({ awk, destination, create, write, git }) => {
+test('AWK 발행 tag는 고정 커밋에 붙은 것을 찾아 알리고, 없으면 커밋만 알린다(고정은 커밋으로 한다)', () => fixture(({ awk, destination, create, write, git }) => {
   const pinned = git(awk, 'rev-parse', 'HEAD');
   write(join(awk, 'later'), 'next\n');
   git(awk, 'add', '.');
   git(awk, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-m', 'later');
-  git(awk, 'tag', 'v3.3.1');
+  git(awk, 'tag', 'v9.9.9');
   git(awk, 'checkout', '-q', pinned);
-  const wrong = create();
-  assert.equal(wrong.status, 1);
-  assert.match(wrong.stderr, /tag v3\.3\.1가 고정 커밋/);
-  assert.equal(existsSync(destination), false);
-  git(awk, 'tag', '-f', 'v3.3.1', pinned);
-  const right = create();
-  assert.equal(right.status, 0, right.stderr);
-  assert.match(right.stdout, new RegExp('AWK v3\\.3\\.1\\(' + pinned.slice(0, 7) + '\\)'));
+  const untagged = create();
+  assert.equal(untagged.status, 0, untagged.stderr);
+  assert.match(untagged.stdout, new RegExp('AWK ' + pinned.slice(0, 7) + '를'));
+  assert.doesNotMatch(untagged.stdout, /v9\.9\.9/);
+  rmSync(destination, { recursive: true, force: true });
+  git(awk, 'tag', 'v9.9.8', pinned);
+  const tagged = create();
+  assert.equal(tagged.status, 0, tagged.stderr);
+  assert.match(tagged.stdout, new RegExp('AWK v9\\.9\\.8\\(' + pinned.slice(0, 7) + '\\)'));
 }));
 
 test('같은 버전 번호라도 포장 내용이 달라졌으면 복사를 거절한다', () => fixture(({ repo, destination, create, write }) => {
