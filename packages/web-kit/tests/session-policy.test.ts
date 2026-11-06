@@ -11,14 +11,14 @@ const key = 'policy';
 const policy: IdlePolicy = { warningMs: 1000, pendingAtDeadline: 'wait' };
 const cleanups: Array<() => void> = [];
 /** 다른 탭 저장 알림을 명시적으로 배달하는 환경. */
-function tab({ initial = null as StoredSession<Creds> | null, mode = 'wait' as IdlePolicy['pendingAtDeadline'], locks = null as LockManager | null, storage = () => localStorage } = {}) {
+function tab({ initial = null as StoredSession<Creds> | null, mode = 'wait' as IdlePolicy['pendingAtDeadline'], locks = null as LockManager | null, storage = () => localStorage, extensionFallbackMs = undefined as number | undefined } = {}) {
   let value = initial;
   let receive: (v: StoredSession<Creds> | null) => void = () => undefined;
   const store: SessionStore<Creds> = { read: () => value, write: (v) => { value = v; }, subscribe: (fn) => { receive = fn; return () => undefined; } };
   const session = createSession({ store, reissue: vi.fn() });
   const request = vi.fn<() => Promise<ServerTimeSample | null>>(async () => null);
   const clock = createServerClock({ key: key + ':clock', storage });
-  const idle = createIdleTimer({ session, key, clock, policy: { ...policy, pendingAtDeadline: mode }, extend: request, environment: { locks, storage } });
+  const idle = createIdleTimer({ session, key, clock, policy: { ...policy, pendingAtDeadline: mode, extensionFallbackMs }, extend: request, environment: { locks, storage } });
   cleanups.push(() => { idle.stop(); session.dispose(); });
   return { session, idle, request, clock, external(v: StoredSession<Creds> | null) { value = v; receive(v); } };
 }
@@ -41,6 +41,101 @@ function storageEvent() { window.dispatchEvent(new StorageEvent('storage', { key
 
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(100_000); localStorage.clear(); vi.spyOn(document, 'hasFocus').mockReturnValue(true); });
 afterEach(() => { for (const fn of cleanups.splice(0)) fn(); vi.restoreAllMocks(); vi.useRealTimers(); });
+
+it.each([undefined, 10_000])('성공한 무마감 연장은 프로젝트 기본 길이를 쓰고 재로드도 같은 시한을 잇는다(기존 서버 %s)', async (initialMs) => {
+  const t = tab({ extensionFallbackMs: 30_000 }); login(t, initialMs);
+  t.request.mockResolvedValueOnce({ sentAt: Date.now(), clockOffsetMs: 5000 });
+  await expect(t.idle.extend()).resolves.toEqual({ kind: 'adopted-active' });
+  expect(t.idle.state()).toMatchObject({ deadline: 135_000, deadlineSource: 'provisional' });
+  const initial = t.session.current(); t.idle.stop();
+  vi.setSystemTime(101_000);
+  const restored = tab({ initial, extensionFallbackMs: 30_000 }); restored.idle.start();
+  expect(restored.idle.state()).toMatchObject({ deadline: 135_000, deadlineSource: 'provisional' });
+  expect(restored.idle.remaining()).toBe(29_000);
+});
+
+it.each(['missing-policy', 'null', 'failure'] as const)('기본 연장은 %s 때 기한을 만들거나 옮기지 않는다', async (outcome) => {
+  const t = tab({ extensionFallbackMs: outcome === 'missing-policy' ? undefined : 30_000 }); login(t, 10_000);
+  if (outcome === 'failure') t.request.mockRejectedValueOnce(new RequestFailure({ kind: 'network' }));
+  else t.request.mockResolvedValueOnce(outcome === 'null' ? null : { sentAt: Date.now() });
+  await expect(t.idle.extend()).resolves.toMatchObject({ kind: outcome === 'failure' ? 'failed' : 'no-deadline' });
+  expect(t.idle.state()).toMatchObject({ deadline: 110_000, deadlineSource: 'server' });
+});
+
+it.each([105_000, 110_000, 115_000])('기본 연장 뒤 실제 서버 %i는 로컬 시한을 해제하고 서버끼리 긴 기한을 유지한다', async (deadline) => {
+  const t = tab({ extensionFallbackMs: 30_000 }); login(t, 10_000);
+  t.request.mockResolvedValueOnce({ sentAt: Date.now() }); await t.idle.extend();
+  expect(t.idle.state().deadline).toBe(130_000);
+  t.request.mockResolvedValueOnce({ sentAt: Date.now(), deadline }); await t.idle.extend();
+  expect(t.idle.state()).toMatchObject({ deadline: Math.max(deadline, 110_000), deadlineSource: 'server' });
+  const restored = tab({ initial: t.session.current() }); restored.idle.start();
+  expect(restored.idle.state()).toMatchObject({ deadline: Math.max(deadline, 110_000), deadlineSource: 'server' });
+});
+
+it('일반 무마감 표본은 기본 연장 정책이 있어도 시계만 보정한다', () => {
+  const t = tab({ extensionFallbackMs: 30_000 }); login(t, 10_000);
+  t.idle.observe({ sentAt: Date.now(), clockOffsetMs: 2000 });
+  expect(t.idle.state()).toMatchObject({ deadline: 110_000, deadlineSource: 'server' });
+  expect(t.idle.remaining()).toBe(8000);
+});
+
+it('다른 탭의 같은 ms 서버 응답은 기본 시한을 해제하고 옛 메모리로 되살아나지 않는다', async () => {
+  const a = tab({ extensionFallbackMs: 30_000 }); login(a, 10_000);
+  const b = tab({ initial: a.session.current(), extensionFallbackMs: 30_000 }); b.idle.start();
+  b.request.mockResolvedValueOnce({ sentAt: Date.now() }); await b.idle.extend();
+  expect(b.idle.state()).toMatchObject({ deadline: 130_000, deadlineSource: 'provisional' });
+  a.idle.acceptDeadline(a.session.current()!.sessionId, { sentAt: Date.now(), deadline: 110_000 });
+  storageEvent();
+  expect(b.idle.state()).toMatchObject({ deadline: 110_000, deadlineSource: 'server' });
+  b.idle.observe({ sentAt: Date.now() }); storageEvent();
+  const restored = tab({ initial: a.session.current() }); restored.idle.start();
+  expect(restored.idle.state()).toMatchObject({ deadline: 110_000, deadlineSource: 'server' });
+});
+
+it('같은 옛 저장값으로 동시에 기록한 기본 시한과 서버 응답은 서버를 우선한다', async () => {
+  const a = tab({ extensionFallbackMs: 30_000 }); login(a, 10_000);
+  const snapshot = new Map(Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i)!).map((k) => [k, localStorage.getItem(k)!]));
+  let stale = true;
+  const staleStorage = {
+    get length() { return stale ? snapshot.size : localStorage.length; },
+    key: (i: number) => stale ? [...snapshot.keys()][i] ?? null : localStorage.key(i),
+    getItem: (k: string) => stale ? snapshot.get(k) ?? null : localStorage.getItem(k),
+    setItem: (k: string, v: string) => localStorage.setItem(k, v),
+    removeItem: (k: string) => localStorage.removeItem(k),
+  } as Storage;
+  const b = tab({ initial: a.session.current(), storage: () => staleStorage }); b.idle.start();
+  a.request.mockResolvedValueOnce({ sentAt: Date.now() }); await a.idle.extend();
+  b.idle.acceptDeadline(b.session.current()!.sessionId, { sentAt: Date.now(), deadline: 110_000 });
+  stale = false; storageEvent();
+  expect(a.idle.state()).toMatchObject({ deadline: 110_000, deadlineSource: 'server' });
+  expect(b.idle.state()).toMatchObject({ deadline: 110_000, deadlineSource: 'server' });
+});
+
+it.each(['deadline', 'server'] as const)('관측 시각이 없는 옛 %s 저장값도 기본 연장과 서버 복귀를 잇는다', async (format) => {
+  const t = tab({ extensionFallbackMs: 30_000 }); login(t);
+  const sessionId = t.session.current()!.sessionId;
+  localStorage.setItem(key, JSON.stringify(format === 'deadline'
+    ? { sessionId, deadline: 110_000, sentAt: Date.now() }
+    : { sessionId, server: 110_000, local: null, attempt: null }));
+  storageEvent();
+  expect(t.idle.state()).toMatchObject({ deadline: 110_000, deadlineSource: 'server' });
+  t.request.mockResolvedValueOnce({ sentAt: Date.now() }); await t.idle.extend();
+  expect(t.idle.state()).toMatchObject({ deadline: 130_000, deadlineSource: 'provisional' });
+  t.idle.acceptDeadline(sessionId, { sentAt: Date.now(), deadline: 105_000 });
+  expect(t.idle.state()).toMatchObject({ deadline: 110_000, deadlineSource: 'server' });
+});
+
+it.each(['end', 'replace', 'stop'] as const)('%s 뒤 늦은 무마감 성공은 기본 시한을 쓰지 않는다', async (transition) => {
+  const t = tab({ extensionFallbackMs: 30_000 }); login(t, 10_000);
+  const reply = deferred<ServerTimeSample | null>(); t.request.mockReturnValueOnce(reply.promise);
+  const pending = t.idle.extend();
+  if (transition === 'end') t.session.end();
+  if (transition === 'replace') t.session.start({ accessToken: 'replacement' });
+  if (transition === 'stop') t.idle.stop();
+  reply.resolve({ sentAt: Date.now() });
+  await expect(pending).resolves.toMatchObject({ kind: 'failed', failure: { kind: 'cancelled' } });
+  expect(t.idle.state().deadlineSource).not.toBe('provisional');
+});
 
 it('S1: 부품 없이 모든 조작은 0회, 부착 후 경고·멈춤·유예는 0회', async () => {
   const t = tab(); login(t, 10_000);

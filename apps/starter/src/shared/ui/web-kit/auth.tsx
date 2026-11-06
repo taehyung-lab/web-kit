@@ -21,14 +21,14 @@ export function AuthCodeForm({ model, codeLength, labels }: AuthCodeFormProps) {
   const errorId = useId();
   return <form className="grid gap-3" onSubmit={(event) => { event.preventDefault();
     if (!model.canSubmit) return;
-    const valid = isAuthCode(code, codeLength);
+    const valid = model.awaitingCompletion || isAuthCode(code, codeLength);
     setInvalid(!valid);
     if (valid) void model.submit(code); }}>
     <Label className="grid gap-2">{labels.code}<Input aria-label={labels.code} aria-invalid={invalid} aria-describedby={invalid ? errorId : undefined} inputMode="numeric" autoComplete="one-time-code"
       maxLength={codeLength} value={code} onChange={(event) => setCode(event.target.value)} /></Label>
     {invalid && <p id={errorId} role="alert" className="text-sm text-destructive">{labels.invalidCode}</p>}
     {model.remainingSeconds !== undefined && <p role="timer" className="text-sm text-muted-foreground">{labels.remaining(model.remainingSeconds)}</p>}
-    {(model.expired || model.codeExpired) && <p role="alert" className="text-sm text-destructive">{labels.expired}</p>}
+    {(model.expired || (model.codeExpired && !model.awaitingCompletion)) && <p role="alert" className="text-sm text-destructive">{labels.expired}</p>}
     {model.verifyFailure !== undefined && <p role="alert" className="text-sm text-destructive">{labels.verifyFailure}</p>}
     {model.pending !== null && <p role="status" className="text-sm text-muted-foreground">{labels.pending}</p>}
     <div className="flex flex-wrap items-center gap-2">

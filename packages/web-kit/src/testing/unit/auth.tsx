@@ -63,6 +63,25 @@ export function checkAuthConformance({ Form, enterCode, readCode }: {
     render(<WithoutResend />);
     expect(screen.getByRole('button', { name: '확인' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: '재전송' })).toBeNull();
+    // 확인 성공 뒤 완료만 실패했다면 코드 편집·만료와 무관하게 완료만 다시 실행한다.
+    cleanup();
+    render(<Page />);
+    fireEvent.click(screen.getByRole('checkbox', { name: '완료 처리 실패' }));
+    enterCode('123456');
+    await click('확인'); await click('응답 성공');
+    expect(screen.getByLabelText('요청 횟수').textContent).toBe('1');
+    expect(screen.getByLabelText('완료 횟수').textContent).toBe('1');
+    expect(screen.getByText('확인 실패')).toBeTruthy();
+    enterCode('x');
+    await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
+    expect(screen.queryByText('만료됨')).toBeNull();
+    fireEvent.click(screen.getByRole('checkbox', { name: '완료 처리 실패' }));
+    await click('확인');
+    expect(screen.getByLabelText('요청 횟수').textContent).toBe('1');
+    expect(screen.getByLabelText('완료 횟수').textContent).toBe('2');
+    expect(screen.getByLabelText('적용 코드').textContent).toBe('123456');
+    expect(screen.queryByText('숫자 6자리를 입력하세요')).toBeNull();
+    expect(screen.queryByText('확인 실패')).toBeNull();
   });
   it(conformanceTitle('auth-concurrency', target, '확인·재전송은 서로 막지 않고 같은 종류만 막는다'), async () => {
     for (const first of ['확인', '재전송']) {

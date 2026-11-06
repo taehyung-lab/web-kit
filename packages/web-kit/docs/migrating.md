@@ -1,7 +1,9 @@
 # 시험판에서 옮겨 오기
 
-5.0.0 첫 정식 기준으로 옮길 때는 사용하던 시험판에 따라 다음 연결을 함께 이전한다. 현재 검사용 후보는 5.0.0-rc.14이다. 조건부 칸은 web-kit-form의 같은 조건 함수·schema·빈 값 선언을 함께 연결한다.
+5.0.0 첫 정식 기준으로 옮길 때는 사용하던 시험판에 따라 다음 연결을 함께 이전한다. 현재 검사용 후보는 5.0.0-rc.15이다. 조건부 칸은 web-kit-form의 같은 조건 함수·schema·빈 값 선언을 함께 연결한다.
 
+- **성공한 무마감 연장의 기본 길이(선택 연결):** 소비자가 `policy.extensionFallbackMs`에 기본 길이를 주고 성공 응답을 `ServerTimeSample`로 반환하면, 유효한 서버 마감이 없을 때만 로컬 기본 시한을 적용한다. `null`·실패에는 적용하지 않으며 실제 서버 마감 재수신이 로컬 기본 시한보다 우선한다. 기본 길이는 패키지가 정하지 않는다.
+- **인증 완료 재시도의 입력 검사(복사본 교정 필요):** registry `auth`의 `auth.tsx`와 검사 입력 `checks/auth-six.tsx`는 `model.awaitingCompletion`일 때 코드 형식 검증을 건너뛴다. 이미 확인한 코드를 편집하거나 기한이 지나도 완료만 다시 시도할 수 있다. 이때 코드 만료 안내는 숨기며 전체 인증 기한의 만료 안내는 유지한다. 패키지만 올리면 기존 복사본은 바뀌지 않으므로 두 파일의 제출 조건을 함께 갱신하고 단위·브라우저 인증 검사를 실행한다.
 - **인증 확인 뒤 완료만 다시 시도(rc.13 → rc.14, 패키지만 올리면 반영):** `useAuthChallenge`의 `onVerified`가 실패하면 확인 성공 결과를 보관하고, 같은 scope의 다음 제출은 코드를 다시 보내지 않고 `onVerified`만 다시 실행한다. 이 동안 `model.awaitingCompletion`이 true이고, 코드 기한이 지나도 전체 기한 안이면 제출할 수 있다. 무효화·scope 교체·unmount는 보관한 결과를 버린다. 다시 시도할 수 없는 결과(예: 프로젝트가 세션을 끝낸 취소)는 `onVerified`가 정리·이동을 마치고 정상 반환한다. registry 원본·복사본 변경은 없다.
 - **deprecated API lint(rc.13 → rc.14, starter 기준 lint를 쓰는 프로젝트):** starter `eslint.config.js`가 타입 정보(`parserOptions.projectService`)로 `@typescript-eslint/no-deprecated`를 켠다. 같은 두 줄을 프로젝트 lint 설정에 옮기고, 걸린 호출은 라이브러리가 안내하는 대체 API로 바꾼다(예: TanStack Query `fetchQuery` → `query`).
 - **설치 기록 갱신의 항목 생략(rc.12 → rc.13, CLI만 해당):** `web-kit-registry record --update`에서 `--items`를 빼면 기존 기록의 항목을 그대로 쓴다. 새로 만드는 기록은 여전히 `--items`가 필요하다.
