@@ -1,6 +1,8 @@
 // 로그인 전 코드의 기한과 단일 요청 진행을 관리한다. 서버 요청·화면 이동·문구는 소비자가 소유한다.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ServerClock } from './server-clock';
+import type { CompletionStep } from './completion';
+export type { CompletionStep } from './completion';
 
 export interface AuthDeadlines {
   readonly expiresAt?: number;
@@ -115,10 +117,11 @@ export interface AuthChallengeOptions<Result, Resent> extends AuthDeadlines {
   /** 서버 계정 잠금 등 프로젝트가 판정한 제출 차단이다. */
   readonly blocked?: boolean;
   readonly verify: (code: string) => Promise<Result>;
-  readonly onVerified: (result: Result) => void | Promise<void>;
+  /** 추가 await 뒤의 효과는 step.isCurrent()로 현재 시도인지 확인한다. */
+  readonly onVerified: (result: Result, step: CompletionStep) => void | Promise<void>;
   readonly resend?: () => Promise<Resent>;
   /** 성공한 현재 요청만 호출한다. 새 기한은 이 콜백에서 프로젝트가 갱신한다. */
-  readonly onResent?: (result: Resent) => void | Promise<void>;
+  readonly onResent?: (result: Resent, step: CompletionStep) => void | Promise<void>;
 }
 
 /** 인증 화면 상위에서 사용한다. 인증 대기는 `createAuthChallengeStore`에서 읽어 넘기고, 세션 저장·이동은 유효 응답 콜백에 연결한다. */
@@ -172,10 +175,10 @@ export function useAuthChallenge<Result, Resent = void>(options: AuthChallengeOp
     try {
       if (kind === 'verify') {
         const result = await input.verify(code);
-        if (live()) await input.onVerified(result);
+        if (live()) await input.onVerified(result, { isCurrent: live });
       } else {
         const result = await input.resend!();
-        if (live()) await input.onResent?.(result);
+        if (live()) await input.onResent?.(result, { isCurrent: live });
       }
     } catch (error: unknown) {
       if (live()) setFailures((previous) => ({ ...previous, [kind]: error }));

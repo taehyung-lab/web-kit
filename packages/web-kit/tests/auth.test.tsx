@@ -34,7 +34,7 @@ it('같은 순간 중복 실행을 차단하고 만료 뒤 직접 호출도 차�
   act(() => { pending = result.current.submit('123456'); void result.current.submit('654321'); });
   expect(verify).toHaveBeenCalledTimes(1);
   await act(async () => { response.resolve('ok'); await pending; });
-  expect(onVerified).toHaveBeenCalledWith('ok');
+  expect(onVerified).toHaveBeenCalledWith('ok', expect.objectContaining({ isCurrent: expect.any(Function) }));
   await act(async () => { await vi.advanceTimersByTimeAsync(5000); await result.current.submit('123456'); });
   expect(verify).toHaveBeenCalledTimes(1);
   expect(result.current.canSubmit).toBe(false);
@@ -51,7 +51,7 @@ it('전환 뒤 옛 성공·실패가 새 진행을 끄거나 결과를 적용하
   await act(async () => { first.reject(new Error('old')); await a; });
   expect(result.current.pending).toBe('verify'); expect(result.current.verifyFailure).toBeUndefined(); expect(result.current.resendFailure).toBeUndefined();
   await act(async () => { second.resolve('new'); await b; });
-  expect(onVerified).toHaveBeenCalledExactlyOnceWith('new');
+  expect(onVerified).toHaveBeenCalledExactlyOnceWith('new', expect.objectContaining({ isCurrent: expect.any(Function) }));
 });
 it('전체 기한 뒤와 unmount 뒤의 성공은 적용하지 않는다', async () => {
   const response = deferred<string>(); const onVerified = vi.fn(); const clock = createServerClock({ key: 'clock' });
@@ -113,7 +113,7 @@ it.each(['verify', 'resend'] as const)('종류별 관문은 %s 대기 중 다른
   expect(result.current.pending).toBe('verify');
   expect(result.current.canSubmit).toBe(false); expect(result.current.canResend).toBe(true);
   await act(async () => { verification.resolve('ok'); await checking; });
-  expect(onVerified).toHaveBeenCalledExactlyOnceWith('ok'); expect(onResent).toHaveBeenCalledTimes(1);
+  expect(onVerified).toHaveBeenCalledExactlyOnceWith('ok', expect.objectContaining({ isCurrent: expect.any(Function) })); expect(onResent).toHaveBeenCalledTimes(1);
 });
 
 it('다른 탭의 시계 보정이 유휴 단계·남은 시간과 인증 남은 초에 즉시 함께 반영된다', () => {
@@ -187,4 +187,46 @@ it('인증 대기 저장소는 형식이 다르거나 저장소를 쓸 수 없�
   expect(blocked.start({ id: 'user' }, {}).data).toEqual({ id: 'user' });
   expect(blocked.current()).toBeNull();
   expect(() => blocked.clear()).not.toThrow();
+});
+
+
+it.each(['invalidate', 'scope', 'unmount', 'expires'] as const)('이미 시작한 완료도 %s 뒤의 효과를 적용하지 않도록 현재 시도를 전달한다', async (leave) => {
+  const later = deferred<void>();
+  const apply = vi.fn();
+  const clock = createServerClock({ key: 'completion-clock' });
+  let started = false;
+  const view = renderHook(({ scope }) => useAuthChallenge({
+    scope, clock, codeLength: 6, expiresAt: 101000,
+    verify: async () => 'accepted',
+    onVerified: async (_result, step) => {
+      started = true;
+      expect(step.isCurrent()).toBe(true);
+      await later.promise;
+      if (step.isCurrent()) apply();
+    },
+  }), { initialProps: { scope: 'first' } });
+  let pending!: Promise<void>;
+  await act(async () => { pending = view.result.current.submit('123456'); });
+  expect(started).toBe(true);
+  if (leave === 'invalidate') act(() => view.result.current.invalidate());
+  if (leave === 'scope') view.rerender({ scope: 'second' });
+  if (leave === 'unmount') view.unmount();
+  if (leave === 'expires') await act(async () => vi.advanceTimersByTimeAsync(1000));
+  await act(async () => { later.resolve(); await pending; });
+  expect(apply).not.toHaveBeenCalled();
+});
+
+it('재전송 완료도 무효화 뒤의 비동기 효과를 적용하지 않는다', async () => {
+  const later = deferred<void>(); const apply = vi.fn();
+  const clock = createServerClock({ key: 'resent-completion-clock' });
+  const view = renderHook(() => useAuthChallenge({ scope: 1, clock, codeLength: 6,
+    verify: async () => undefined, onVerified: () => undefined,
+    resend: async () => undefined,
+    onResent: async (_result, step) => { await later.promise; if (step.isCurrent()) apply(); },
+  }));
+  let pending!: Promise<void>;
+  await act(async () => { pending = view.result.current.resend(); });
+  act(() => view.result.current.invalidate());
+  await act(async () => { later.resolve(); await pending; });
+  expect(apply).not.toHaveBeenCalled();
 });

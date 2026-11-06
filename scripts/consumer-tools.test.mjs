@@ -90,8 +90,16 @@ test('배포 CLI: 새 기록·기존 기록 보호·비교가 같은 공통 modu
   const cli = join(root, 'packages/web-kit/bin/registry.mjs');
   const args = ['--source', source, '--project', project, '--items', 'form'];
   const run = (mode) => spawnSync(process.execPath, [cli, mode, ...args], { encoding: 'utf8' });
-  assert.equal(run('record').status, 0);
+  const first = run('record');
+  assert.equal(first.status, 0);
   assert.equal(run('record').status, 1);
+  // 갱신에서 --items를 빼면 기존 기록의 항목을 그대로 쓴다. 새 기록에서는 항목이 빠지면 거절한다.
+  const reuse = spawnSync(process.execPath, [cli, 'record', '--source', source, '--project', project, '--update'], { encoding: 'utf8' });
+  assert.equal(reuse.status, 0, reuse.stderr);
+  assert.equal(reuse.stdout, first.stdout);
+  const fresh = spawnSync(process.execPath, [cli, 'record', '--source', source, '--project', project, '--output', 'other.json'], { encoding: 'utf8' });
+  assert.equal(fresh.status, 1);
+  assert.match(fresh.stderr, /필수 인자: --items/);
   const result = run('compare');
   assert.equal(result.status, 0, result.stderr);
   assert(JSON.parse(result.stdout).every((file) => file.change === 'unchanged'));

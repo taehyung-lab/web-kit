@@ -51,7 +51,11 @@ starter 통과만으로 소비 검증을 끝내지 않는다. 실제 소비처�
 
 registry JSON은 같은 commit의 `public/r`에 보관하고 tag 고정 raw URL로 배포한다. 패키지와 registry가 같은 commit인지, 소비처가 어떤 원본/설치 지문과 검사 결과를 썼는지는 설치 기록·검사 보고서와 함께 확인한다. 현재 verification.json 자동 기록은 위 패키지 산출물 범위이며 registry/소비 검증을 저절로 완료했다고 해석하지 않는다.
 
-발행은 모든 순서를 확인한 main의 해당 키트 commit에서 통과한 산출물 그대로 한다. 번호가 맞는 tag와 release에 올리고 다시 pack하지 않는다. 발행한 번호로 내용이 다른 산출물을 만들지 않는다.
+발행은 모든 순서를 확인한 main의 해당 키트 commit에서 통과한 산출물 그대로 한다. 번호가 맞는 tag와 release에 올리고 다시 pack하지 않는다. 발행한 번호로 내용이 다른 산출물을 만들지 않는다. 명령 순서:
+
+1. 패키지·registry 변경을 커밋한 뒤 `pnpm release:candidate`(starter 설치 기록을 그 commit으로 다시 만들고 `starter:sync`) → `pnpm starter:check` → `chore(release)` 커밋 → PR.
+2. PR CI 통과 → main 병합 → main push run이 성공하면 `pnpm release:publish --run <run id> --notes <본문.md>`(먼저 `--dry-run`). run·commit·verification.json·tag 중복을 확인한 뒤 그 산출물로 tag·release를 만든다.
+3. 소비처는 release의 tarball로 바꾸고 `web-kit-registry record --source <main checkout> --update`로 설치 기록을 그 commit에 맞춘다.
 사용법이 바뀌는 변경은 이전 소비자의 실패와 새 소비자의 통과를 구분한다. 새 소비자가 아직 준비되지 않았다면 키트 내부 검사만으로 소비 검증 완료나 발행 가능을 선언하지 않는다. 프로젝트 연결이 별도 범위인 작업에서는 키트 준비 완료와 미수행 소비 검사를 따로 보고한다.
 
 ## 완료 기준

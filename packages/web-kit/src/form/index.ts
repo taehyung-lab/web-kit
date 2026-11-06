@@ -28,3 +28,5 @@ export {
 export type { LeaveReason } from './navigation';
 
 export type { ConditionalField } from './conditional';
+
+export type { CompletionStep } from '../completion';

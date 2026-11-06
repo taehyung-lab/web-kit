@@ -1,6 +1,11 @@
 # 시험판에서 옮겨 오기
 
-5.0.0 첫 정식 기준으로 옮길 때는 사용하던 시험판에 따라 다음 연결을 함께 이전한다. 현재 검사용 후보는 5.0.0-rc.11이다. 조건부 칸은 web-kit-form의 같은 조건 함수·schema·빈 값 선언을 함께 연결한다.
+5.0.0 첫 정식 기준으로 옮길 때는 사용하던 시험판에 따라 다음 연결을 함께 이전한다. 현재 검사용 후보는 5.0.0-rc.13이다. 조건부 칸은 web-kit-form의 같은 조건 함수·schema·빈 값 선언을 함께 연결한다.
+
+- **설치 기록 갱신의 항목 생략(rc.12 → rc.13, CLI만 해당):** `web-kit-registry record --update`에서 `--items`를 빼면 기존 기록의 항목을 그대로 쓴다. 새로 만드는 기록은 여전히 `--items`가 필요하다.
+- **폼 초기화의 기본값 동기화(rc.12 → rc.13, 패키지만 올리면 반영):** 대상 교체·원본 재도착·저장 결과 반영은 TanStack Form의 `reset(values)`로 입력과 기본값을 함께 바꾼다. hook의 다음 갱신에도 마지막 확정 기본값을 전달하며, 이를 위해 React 상태를 따로 만들거나 초기화 안에서 `flushSync`를 부르지 않는다. 저장 성공의 기준선·완료 상태 반영 뒤 후속 작업을 실행하는 순서는 유지한다. registry 복사본 교정은 없다.
+
+- **비동기 완료의 현재 시도 확인(rc.11 → rc.12, 패키지만 올리면 반영):** `onSaved`·`onVerified`·`onResent`는 두 번째 인자 `step.isCurrent()`를 받는다. 콜백 안에서 추가 조회 등을 기다린 뒤 이동·상태 변경 직전에 확인한다. 응답이 콜백에 들어오기 전의 보호는 계속 자동 적용하며, 이미 실행 중인 임의의 JavaScript 콜백을 강제로 중단하지는 않는다. 기존 인자 하나짜리 콜백은 호환된다. registry 원본·복사본 변경은 없고 rc.11 복사본을 그대로 쓴다. 설치 기록은 패키지 `version`만 새 버전으로 맞추고 registry `sourceRef`·`sourceCommit`·지문은 보존한다.
 
 - **앱 기본 문구 공급과 확인창 필수 선언(rc.10 → rc.11, 복사본 교정 필요, 기존 사용 깨짐):** registry `form`·`dialog`(그리고 `dialog`를 쓰는 `list`)를 같은 후보로 갱신한다. ① 앱 맨 위(Router 안) 한 곳에 `<DialogDefaults labels>`와 `<FormDefaults messages formatError? renderFailure?>`를 두고, 화면마다 넘기던 문구·`formatError`·`renderFailure` 연결을 지운다(화면 값은 그 폼에서만 앞선다). 공급이 없으면 폼·대화창이 렌더할 때 오류가 난다. 한국어 앱은 복사본이 내보내는 `defaultFormMessages`·`defaultDialogLabels`·`defaultFormGuardMessages`를 그대로 넘긴다. ② `FormGuard messages`와 `FormDefaults messages`는 전체 집합이다(참조 정리 확인창 `referenceTitle`·`referenceConfirm` 포함). 키트에 문구가 늘면 소비 앱 타입 검사가 실패한다. ③ `Form.Confirm`·`Form.Saved` 부품을 지우고 그 props를 `<Form confirm={{ title, confirmLabel, cancelLabel, body: (values) => … }}>`·`saved={{ title, confirmLabel, body }}`로 옮긴다(`children`은 `body`). `useSaveForm`의 `confirm`·`acknowledge`(두 번째 저장 포함)를 켠 폼은 그 prop이 없으면, 끈 폼은 있으면 타입 오류다. `useSaveForm`에 타입 인자를 직접 적던 곳은 인자를 지워 추론에 맡긴다. ④ 적합성 검사 연결(`checks/*`)이 공급 부품과 한국어 문구를 함께 넘기도록 같은 후보의 검사 연결 파일로 갱신하고 설치 기록을 다시 만든다. 보장은 [web-kit-form](../skills/web-kit-form/SKILL.md), 결정 이유는 [폼·대화창 결정](../references/docs/decisions/0007-form-record-dialog-progress.md)에 있다. 이전 원본 `v5.0.0-rc.10`과 새 후보 `v5.0.0-rc.11`의 해당 파일을 현재 복사본과 대조해 디자인 수정을 보존한다.
 

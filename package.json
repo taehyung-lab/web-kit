@@ -14,7 +14,9 @@
     "registry:check": "node scripts/check-registry.mjs",
     "registry:lint": "pnpm --filter @boosterlab/web-kit-registry lint",
     "starter:create": "node scripts/create-starter.mjs",
-    "consumer:minimal": "node scripts/check-minimal-consumers.mjs"
+    "consumer:minimal": "node scripts/check-minimal-consumers.mjs",
+    "release:candidate": "node scripts/release-candidate.mjs",
+    "release:publish": "node scripts/release-publish.mjs"
   },
   "devDependencies": {
     "shadcn": "4.19.1"

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // 파일 책임: useSaveForm의 제출·확인·성공 기준선·실패·늦은 결과·원본 재도착을 실제 입력 DOM으로 검사한다.
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import type { StandardSchemaV1 } from '@tanstack/react-form';
 import { afterEach, expect, it, vi } from 'vitest';
 import { RequestFailure } from '../src/failure';
@@ -839,4 +839,86 @@ it('S24 FormRejection의 폼 수준 실패: 칸이 모두 붙고 root가 없으�
   await flush();
   expect(editor.failure).toBe(rejection);
   expect(editor.formFailure).toBeUndefined();
+});
+
+
+it.each(['unmount', 'record'] as const)('완료 콜백이 이미 시작했어도 %s 뒤의 효과는 현재 시도에서 제외한다', async (leave) => {
+  const later = deferred<void>(); const apply = vi.fn();
+  let editor!: ReturnType<typeof useSaveForm<Values, Output>>;
+  let started = false;
+  function CurrentScreen({ id }: { id: number }) {
+    editor = useSaveForm({ schema, source: { id, values: original.values }, save: async () => undefined,
+      onSaved: async (_result, step) => {
+        started = true;
+        expect(step.isCurrent()).toBe(true);
+        await later.promise;
+        if (step.isCurrent()) apply();
+      },
+    });
+    return null;
+  }
+  const view = render(<CurrentScreen id={1} />);
+  let pending!: Promise<void>;
+  await act(async () => { pending = editor.submit(); });
+  expect(started).toBe(true);
+  if (leave === 'unmount') view.unmount();
+  else view.rerender(<CurrentScreen id={2} />);
+  await act(async () => { later.resolve(); await pending; });
+  expect(apply).not.toHaveBeenCalled();
+});
+
+it('완료 재시도는 새 유효성을 주고 이전 완료 도구를 다시 유효하게 만들지 않는다', async () => {
+  const steps: { isCurrent: () => boolean }[] = [];
+  let editor!: ReturnType<typeof useSaveForm<Values, Output>>;
+  const save = vi.fn(async () => undefined);
+  const view = renderHookForCompletion();
+  function renderHookForCompletion() {
+    function CurrentScreen() {
+      editor = useSaveForm({ schema, source: original, save,
+        onSaved: (_result, step) => { steps.push(step); if (steps.length === 1) throw new Error('retry'); },
+      });
+      return null;
+    }
+    return render(<CurrentScreen />);
+  }
+  await act(async () => editor.submit());
+  expect(steps[0].isCurrent()).toBe(false);
+  await act(async () => editor.complete());
+  expect(save).toHaveBeenCalledTimes(1);
+  expect(steps).toHaveLength(2);
+  expect(steps.every(step => !step.isCurrent())).toBe(true);
+  view.unmount();
+});
+
+
+it.each(['record', 'pristine-source'] as const)('%s 초기화는 값·기본값·기준선을 함께 바꾸고 React 강제 갱신 경고를 내지 않는다', async (change) => {
+  const errors = vi.spyOn(console, 'error');
+  try {
+    const props = { schema, save: async () => undefined };
+    const view = renderHook(({ source }) => useSaveForm({ ...props, source }), { initialProps: { source: original } });
+    if (change === 'record') await act(async () => view.result.current.form.setFieldValue('name', 'edited'));
+    const next = { id: change === 'record' ? 2 : original.id, values: { name: 'new source', email: 'new@x' } };
+    view.rerender({ source: next });
+    expect(view.result.current.form.state.values).toEqual(next.values);
+    expect(view.result.current.baseline).toEqual(next.values);
+    expect(view.result.current.isDirty).toBe(false);
+    view.rerender({ source: { ...next } });
+    await act(async () => view.result.current.form.setFieldValue('name', 'after reset'));
+    await act(async () => view.result.current.form.reset());
+    expect(view.result.current.form.state.values).toEqual(next.values);
+    expect(errors.mock.calls.flat().some(message => /flushSync.*lifecycle/.test(String(message)))).toBe(false);
+  } finally { errors.mockRestore(); }
+});
+
+it('저장 결과로 바꾼 기본값은 부모 재렌더·reset 뒤에도 이전 원본으로 되돌아가지 않는다', async () => {
+  const saved = { name: 'normalized', email: 'saved@x' };
+  const view = renderHook(() => useSaveForm({ schema, source: original, save: async () => ({ saved }) }));
+  await act(async () => view.result.current.submit());
+  expect(view.result.current.form.state.values).toEqual(saved);
+  view.rerender();
+  await act(async () => view.result.current.form.setFieldValue('name', 'after save'));
+  await act(async () => view.result.current.form.reset());
+  expect(view.result.current.form.state.values).toEqual(saved);
+  expect(view.result.current.baseline).toEqual(saved);
+  expect(view.result.current.isDirty).toBe(false);
 });
