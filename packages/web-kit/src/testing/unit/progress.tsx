@@ -1,5 +1,5 @@
 // 파일 책임: progress.tsx 조합이 소비 복사본에서 내는 화면 결과를 검사한다.
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { afterEach, expect, it as baseIt } from 'vitest';
@@ -7,10 +7,12 @@ import { useBlockingProgress } from '../../progress';
 import type * as Contract1 from '../contracts/ui/blocking-progress';
 import type * as Contract2 from '../contracts/ui/dialog';
 import { conformanceTitle, type ConformanceTarget } from '../target.mjs';
+import { dialogDefaultsWrapper, renderUnder, type DialogDefaultsParts } from '../copy-defaults';
 import { useConfirmationState } from '../../confirmation';
 
 /** 필요한 기능의 실제 복사본으로 해당 검사만 등록한다. */
-export function checkProgressConformance({ BlockingProgress, ConfirmDialog }: { BlockingProgress: typeof Contract1.BlockingProgress; ConfirmDialog: typeof Contract2.ConfirmDialog }, target: ConformanceTarget) {
+export function checkProgressConformance({ BlockingProgress, ConfirmDialog, ...copy }: { BlockingProgress: typeof Contract1.BlockingProgress; ConfirmDialog: typeof Contract2.ConfirmDialog } & DialogDefaultsParts, target: ConformanceTarget) {
+  const render = renderUnder(dialogDefaultsWrapper(copy));
   const it = baseIt;
   const title = (id: string, label: string) => conformanceTitle(id, target, label);
 

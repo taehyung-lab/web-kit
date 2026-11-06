@@ -1,16 +1,18 @@
 // 파일 책임: progress-form.tsx 조합이 소비 복사본에서 내는 화면 결과를 검사한다.
-import { act, cleanup, fireEvent, render, screen, waitFor, } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor, } from '@testing-library/react';
 import { type ReactNode } from 'react';
 import { afterEach, expect, it as baseIt } from 'vitest';
 import type * as Contract1 from '../contracts/ui/blocking-progress';
 import { conformanceTitle, type ConformanceTarget } from '../target.mjs';
+import { formDefaultsWrapper, renderUnder, type FormDefaultsParts } from '../copy-defaults';
 import { z } from 'zod';
 import { RequestFailure } from '../../failure';
 import { useSaveForm, type SaveFormOptions } from '../../form/save-form';
 import type * as Contract0 from '../contracts/form/ui';
 
 /** 필요한 기능의 실제 복사본으로 해당 검사만 등록한다. */
-export function checkFormProgressConformance({ Form, BlockingProgress }: { Form: typeof Contract0.Form; BlockingProgress: typeof Contract1.BlockingProgress }, target: ConformanceTarget) {
+export function checkFormProgressConformance({ Form, BlockingProgress, ...copy }: { Form: typeof Contract0.Form; BlockingProgress: typeof Contract1.BlockingProgress } & FormDefaultsParts, target: ConformanceTarget) {
+  const render = renderUnder(formDefaultsWrapper(copy));
   const it = baseIt;
   const title = (id: string, label: string) => conformanceTitle(id, target, label);
 
@@ -62,19 +64,18 @@ type Values = z.input<typeof schema>;
 const F = Form.of<Values>();
 
 /** 실제 폼 복사본과 저장 수명을 연결한다. */
-function Editor(props: Partial<SaveFormOptions<Values, Values, unknown>> & { readonly saved?: boolean }) {
-  const editor = useSaveForm<Values, Values, unknown>({
+function Editor(props: Partial<SaveFormOptions<Values, Values, unknown>>) {
+  const editor = useSaveForm({
     schema,
     source: { id: 1, values: { name: 'A' } },
-    save: async () => undefined,
+    save: async (): Promise<unknown> => undefined,
     ...props,
   });
+  // 저장 확인·완료 확인을 켠 검사(confirm·acknowledge)에서만 열리고, 끈 검사에서는 닫힌 채다.
   return (
-    <F editor={editor} protect={false} messages={{ saving: '저장 중' }}>
+    <F editor={editor} protect={false} messages={{ saving: '저장 중' }} confirm={{ title: '저장할까요?' }} saved={{ title: '저장되었습니다.' }}>
       <F.Text name="name" label="이름" />
       <F.Submit />
-      <F.Confirm title="저장할까요?" />
-      {props.saved ? <F.Saved title="저장되었습니다." /> : null}
     </F>
   );
 }
@@ -135,7 +136,7 @@ it(title('G004', 'P4 확인창 → 확인하면 확인창이 닫히고 덮개 �
   const pending = deferred<undefined>();
   render(
     <Host>
-      <Editor progress="edit" confirm acknowledge saved save={() => pending.promise} />
+      <Editor progress="edit" confirm acknowledge save={() => pending.promise} />
     </Host>,
   );
   fireEvent.click(screen.getByRole('button', { name: '저장' }));
@@ -211,7 +212,7 @@ it(title('G008', 'P6 저장 완료 창이 열리면 포커스는 완료 창에 �
   const pending = deferred<undefined>();
   render(
     <Host>
-      <Editor progress="create" acknowledge saved save={() => pending.promise} />
+      <Editor progress="create" acknowledge save={() => pending.promise} />
     </Host>,
   );
   const submit = screen.getByRole('button', { name: '저장' });

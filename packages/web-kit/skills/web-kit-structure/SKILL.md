@@ -83,9 +83,9 @@ URL 목록 검색을 `state/`에 두는 이유: URL은 목록·상세를 오가�
 
 - 모든 화면은 URL 폴더와 정해진 파일 이름을 쓴다. 목록·상세·단일 화면은 `<폴더>/index.tsx`, 등록은 `new.tsx`, 수정은 `$<id>/edit.tsx`. 예: `/terms/$termsId` → `terms/$termsId/index.tsx`, `/form-workflows` → `form-workflows/index.tsx`. `terms/$termsId.tsx`·`form-workflows.tsx` 같은 형태는 쓰지 않는다.
 - 기존 제품 URL을 보존해야 하면 이름 관례보다 URL이 우선한다. URL 조각마다 폴더를 만들고 마지막을 `index.tsx`로 둔다(예: `/a/b/c` → `a/b/c/index.tsx`).
-- 로그인 전 화면은 `_public/` 묶음에 둔다. "이미 로그인했으면 앱 첫 경로로" 판정은 `_public/route.tsx` 한 곳에 둔다. 로그인 뒤 화면은 `_app/` 묶음이고 진입 판정과 골격 연결은 `_app/route.tsx`에 둔다. 골격이 다른 화면 무리는 별도 묶음(`_<이름>/route.tsx`)으로 만든다. 묶음 골격 파일 이름은 `route.tsx`다.
+- 화면은 진입 판정과 골격이 같은 무리마다 route 묶음(`_<이름>/`, 주소에 나타나지 않음)으로 나누고, 그 판정과 골격 연결은 묶음의 `route.tsx` 한 곳에 둔다. 묶음 이름은 프로젝트가 역할이 읽히게 정한다(예: 로그인 전 `_public`, 로그인 뒤 `_authenticated`; starter는 `_public`·`_app`). 로그인 전 묶음은 "이미 로그인했으면 앱 첫 경로로" 판정을, 로그인 뒤 묶음은 "세션이 없으면 로그인으로" 판정을 맡는다. 골격이 다른 화면 무리는 별도 묶음으로 만든다. 묶음 골격 파일 이름은 `route.tsx`다.
 - 같은 화면을 여러 URL에서 쓰면 route는 URL·진입 조건·문맥(검증한 params·search·이동 콜백)만 넘기고 화면은 features에 하나만 둔다.
-- 골격 안의 없는 경로는 `_app/$.tsx`가 골격을 둔 채 없음 화면을 그린다.
+- 골격 안의 없는 경로는 로그인 뒤 묶음의 `$.tsx`(예: `_authenticated/$.tsx`)가 골격을 둔 채 없음 화면을 그린다.
 - route에 검사 파일을 두지 않는다. 기본 loader를 두지 않는다. 조회 상태 판정은 화면 flow의 `useRecord`·`useList` 한 곳이 한다. 꼭 필요한 loader는 이유와 함께 예외로 남긴다.
 - 진입 판정이 feature 상태를 읽으면 그 feature의 `public.ts`를 쓴다(예: `isSignedIn`).
 
@@ -117,7 +117,7 @@ URL 목록 검색을 `state/`에 두는 이유: URL은 목록·상세를 오가�
 
 실제 조립 예: [apps/starter/src/features/members/flows/use-member-list.ts](../../references/apps/starter/src/features/members/flows/use-member-list.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-- `pnpm exec web-kit-new --feature <도메인> --kind list|form|detail --url <URL> [--entity <단수 이름>] [--group _app] [--dry-run]`을 프로젝트 루트에서 실행한다. form은 URL이 `/new`면 등록, `/$<id>/edit`면 수정 골격이다.
+- `pnpm exec web-kit-new --feature <도메인> --kind list|form|detail --url <URL> [--entity <단수 이름>] [--group <_묶음>] [--dry-run]`을 프로젝트 루트에서 실행한다. `--group`이 없으면 `web-kit.structure.json`의 `screenGroup` 묶음에 만들고, 둘 다 없거나 그 묶음에 `route.tsx`가 없으면 아무것도 쓰지 않고 실패한다(진입 판정 없는 화면을 만들지 않는다). form은 URL이 `/new`면 등록, `/$<id>/edit`면 수정 골격이다.
 - 같은 feature의 공유 파일(앱 모델·단건 query·폼 schema)은 이미 있으면 그대로 쓰고, 화면 파일이 다른 내용으로 이미 있으면 아무 파일도 쓰지 않고 실패한다. 같은 입력으로 다시 실행하면 바뀌는 것이 없다.
 - 생성기는 완료를 만들지 않는다. 서버 endpoint·필드·화면 배치·저장 뒤 목적지는 `TODO_web_kit_new_*`라는 선언되지 않은 이름으로 남아 채우기 전에는 typecheck가 실패한다. 성공 응답을 지어내지 않고 검사 파일(건너뛴 검사 포함)을 만들지 않는다. 문구 등록·메뉴·route 트리 재생성은 직접 한다.
 - 생성한 파일 수·화면 수는 완료 수가 아니다. 화면은 제품 근거(원문·결정·시나리오)로 채우고 그 행동을 확인하는 검사를 직접 작성한 뒤에 완료로 센다.

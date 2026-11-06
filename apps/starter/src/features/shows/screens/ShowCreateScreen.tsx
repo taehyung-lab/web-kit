@@ -6,7 +6,6 @@ import { Button } from '@/shared/ui/button';
 import { Form } from '@/shared/ui/web-kit/form/ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useFormCopy } from '@/shared/lib/form-messages';
 import { useShowCreate } from '../flows/use-show-create';
 import { useVendorKeysForm } from '../flows/use-vendor-keys-form';
 import { newRound, type ShowFormInput, type VendorKeysInput } from '../model/forms/show-form';
@@ -17,14 +16,13 @@ const K = Form.of<VendorKeysInput>();
 /** 공연 예시 등록. */
 export function ShowCreateScreen() {
   const { t } = useTranslation();
-  const copy = useFormCopy();
   const [keysOpen, setKeysOpen] = useState(false);
   const { editor } = useShowCreate();
   const vendorKeys = editor.form.state.values.vendorKeys;
   return (
     <div className="flex flex-col gap-5">
       <h1>{t('shows.createTitle')}</h1>
-      <F editor={editor} {...copy}>
+      <F editor={editor} saved={{ body: t('shows.savedBody') }}>
         <F.Failure />
         <F.Text name="title" label={t('shows.fields.title')} />
         <F.Array name="rounds" minItems={1}>
@@ -81,7 +79,6 @@ export function ShowCreateScreen() {
           <F.Submit />
           <F.Cancel to={{ to: '/products' }} />
         </div>
-        <F.Saved>{t('shows.savedBody')}</F.Saved>
         {keysOpen ? (
           <F.Dialog title={t('shows.vendorKeysTitle')} onClose={() => setKeysOpen(false)}>
             <VendorKeysForm
@@ -107,10 +104,9 @@ function VendorKeysForm({
   readonly onConfirm: (keys: VendorKeysInput['keys']) => void;
 }) {
   const { t } = useTranslation();
-  const copy = useFormCopy();
   const { editor } = useVendorKeysForm(initial, onConfirm);
   return (
-    <K editor={editor} {...copy} messages={{ ...copy.messages, submit: t('common.confirm') }}>
+    <K editor={editor} messages={{ submit: t('common.confirm') }}>
       <K.Array name="keys" minItems={1}>
         {(rows) => (
           <>

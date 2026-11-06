@@ -1,7 +1,6 @@
 // 파일 책임: 약관 등록 예시 화면. 칸 배치와 확인·완료 문구를 그린다. 저장 흐름은 등록 flow가 맡는다. 취소는 상품 목록으로 간다.
 import { Form } from '@/shared/ui/web-kit/form/ui';
 import { useTranslation } from 'react-i18next';
-import { useFormCopy } from '@/shared/lib/form-messages';
 import { useTermsCreate } from '../flows/use-terms-create';
 import { TERMS_STATUSES, type TermsFormInput } from '../model/forms/terms-form';
 
@@ -10,12 +9,11 @@ const F = Form.of<TermsFormInput>();
 /** 약관 등록. */
 export function TermsCreateScreen() {
   const { t } = useTranslation();
-  const copy = useFormCopy();
   const { editor } = useTermsCreate();
   return (
     <div className="flex flex-col gap-5">
       <h1>{t('terms.createTitle')}</h1>
-      <F editor={editor} {...copy}>
+      <F editor={editor} confirm={{ body: () => <p>{t('terms.confirmBody')}</p> }} saved={{ body: t('terms.savedBody') }}>
         <F.Failure />
         <F.Section title={t('terms.section')}>
           <div className="grid gap-5 md:grid-cols-2">
@@ -34,8 +32,6 @@ export function TermsCreateScreen() {
           <F.Submit />
           <F.Cancel to={{ to: '/products' }} />
         </div>
-        <F.Confirm>{() => <p>{t('terms.confirmBody')}</p>}</F.Confirm>
-        <F.Saved>{t('terms.savedBody')}</F.Saved>
       </F>
     </div>
   );

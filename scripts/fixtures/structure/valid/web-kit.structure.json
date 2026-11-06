@@ -3,6 +3,7 @@
   "alias": "@/",
   "tsconfig": "tsconfig.json",
   "routes": "src/routes",
+  "screenGroup": "_app",
   "generated": ["src/api/generated"],
   "generatedModels": ["src/api/generated/models"],
   "support": ["src/mocks"],

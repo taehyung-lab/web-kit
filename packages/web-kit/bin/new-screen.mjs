@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // 파일 책임: 새 화면의 구조 골격을 만든다. 프로젝트 폴더(web-kit.structure.json이 있는 곳)에서 실행한다.
-//   web-kit-new --feature orders --kind list --url /orders [--entity order] [--group _app] [--dry-run]
+//   web-kit-new --feature orders --kind list --url /orders [--entity order] [--group <_묶음>] [--dry-run]
+//   --group이 없으면 web-kit.structure.json의 screenGroup 묶음에 만든다. 묶음 이름은 프로젝트가 정한다.
 // 기존 파일을 덮어쓰지 않고, 같은 입력으로 다시 실행하면 바뀌는 것이 없다. 완료를 만들지 않는다(skills/web-kit-structure).
 import { resolve } from 'node:path';
 import { formatScaffold, scaffoldScreen } from '../tools/structure/scaffold.mjs';

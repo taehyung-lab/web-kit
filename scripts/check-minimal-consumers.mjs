@@ -25,7 +25,11 @@ const candidate = json(join(root, 'apps/starter/registry-installation.json'));
 const versions = { ...starter.dependencies, ...starter.devDependencies };
 const lockedPackages = readFileSync(join(root, 'apps/starter/pnpm-lock.yaml'), 'utf8').split('packages:\n')[1].split('\nsnapshots:')[0];
 const sourceDiffBefore = createHash('sha256').update(spawnSync('git', ['diff', '--binary', 'HEAD'], { cwd: root }).stdout).digest('hex');
-/** 범위 의존을 새로 해석해도 기존 lock의 버전만 쓰도록, lock에 한 버전만 있는 패키지를 모두 그 버전으로 고정한다. */
+/**
+ * 범위 의존을 새로 해석해도 기존 lock의 버전만 쓰도록 고정한다. lock에 한 버전만 있는 패키지는 이름으로,
+ * 여러 버전이 있는 패키지(예: undici 7·8)는 major 범위 선택자(undici@^8)로 그 major의 lock 버전에 고정한다.
+ * 고정하지 않으면 lock 뒤에 나온 새 버전이 해석돼 lock 밖 버전 검사에 걸린다. 같은 major에 여러 버전이면 고정하지 않는다.
+ */
 function lockedOverrides() {
   const versions = new Map();
   // 들여쓰기 두 칸인 패키지 키만 읽는다(더 깊은 줄은 peer 선언 등이다).
@@ -35,7 +39,16 @@ function lockedOverrides() {
     const name = key.slice(0, at);
     versions.set(name, [...(versions.get(name) ?? []), key.slice(at + 1)]);
   }
-  return Object.fromEntries([...versions].filter(([name, list]) => list.length === 1 && name !== '@boosterlab/web-kit').map(([name, [version]]) => [name, version]));
+  const pins = [];
+  for (const [name, list] of versions) {
+    if (name === '@boosterlab/web-kit') continue;
+    if (list.length === 1) { pins.push([name, list[0]]); continue; }
+    // 0.x는 minor가 호환 경계라 ^0.<minor>로 묶는다.
+    const range = (version) => { const [major, minor] = version.split('.'); return major === '0' ? `^0.${minor}` : `^${major}`; };
+    const byRange = Map.groupBy(list, range);
+    for (const [selector, same] of byRange) if (same.length === 1) pins.push([`${name}@${selector}`, same[0]]);
+  }
+  return Object.fromEntries(pins);
 }
 const overrides = lockedOverrides();
 const results = [];

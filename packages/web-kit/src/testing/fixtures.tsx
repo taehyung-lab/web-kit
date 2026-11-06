@@ -5,28 +5,31 @@ import { RequestFailure } from '../failure';
 import { createBrowserHistory, createRootRoute, createRoute, createRouter, Outlet, RouterProvider } from '@tanstack/react-router';
 import { useBlockingProgress } from '../progress';
 import type * as DialogContract from './contracts/ui/dialog';
+import { dialogDefaultsWrapper, formDefaultsWrapper, type DialogDefaultsParts, type FormDefaultsParts } from './copy-defaults';
 import type * as ProgressContract from './contracts/ui/blocking-progress';
 import type * as FormContract from './contracts/form/ui';
 import type * as ChoiceContract from './contracts/ui/choice';
 import { z } from 'zod';
 
 /** 팝업 진입·동일 이벤트 Tab 순환·중첩 포털·복원을 관찰할 화면을 만든다. */
-export function createDialogConformancePage({ Dialog }: { Dialog: typeof DialogContract.Dialog }) {
+export function createDialogConformancePage({ Dialog, ...copy }: { Dialog: typeof DialogContract.Dialog } & DialogDefaultsParts) {
+  const Root = dialogDefaultsWrapper(copy);
   /** 바깥 대화창과 안쪽 포털의 독립 닫기 상태를 제공한다. */
   return function DialogConformancePage() {
     const [open, setOpen] = useState(false);
     const [nested, setNested] = useState(false);
     const [clicks, setClicks] = useState(0);
-    return <><button onClick={() => setOpen(true)}>열기</button><button onClick={() => setClicks(clicks + 1)}>배경</button><output aria-label="배경 횟수">{clicks}</output>
+    return <Root><button onClick={() => setOpen(true)}>열기</button><button onClick={() => setClicks(clicks + 1)}>배경</button><output aria-label="배경 횟수">{clicks}</output>
       <Dialog open={open} title="외부 창" onClose={() => setOpen(false)} footer={<><button onClick={() => setNested(true)}>안쪽 열기</button><button onClick={() => setOpen(false)}>닫기</button></>}>
         <input aria-label="첫 입력" />
         <Dialog open={nested} title="내부 창" onClose={() => setNested(false)} footer={<button onClick={() => setNested(false)}>안쪽 닫기</button>}><input aria-label="안쪽 입력" /></Dialog>
-      </Dialog></>;
+      </Dialog></Root>;
   };
 }
 
 /** inert·배경 차단·포커스 복원 각 분기를 실제 덮개로 관찰할 화면을 만든다. */
-export function createProgressConformancePage({ BlockingProgress, Dialog, Form }: { Form: typeof FormContract.Form; BlockingProgress: typeof ProgressContract.BlockingProgress; Dialog: typeof DialogContract.Dialog }) {
+export function createProgressConformancePage({ BlockingProgress, Dialog, Form, ...copy }: { Form: typeof FormContract.Form; BlockingProgress: typeof ProgressContract.BlockingProgress; Dialog: typeof DialogContract.Dialog } & FormDefaultsParts) {
+  const Root = formDefaultsWrapper(copy);
   /** 조회 종료를 외부 이벤트로 전달해 완료 순간의 포커스를 인위적으로 바꾸지 않는다. */
   function Content({ mode }: { mode: string }) {
     const [active, setActive] = useState(mode === 'initial');
@@ -57,12 +60,13 @@ export function createProgressConformancePage({ BlockingProgress, Dialog, Form }
   /** 주소의 mode로 복원 분기만 바꾸고 같은 복사본 덮개를 사용한다. */
   return function ProgressConformancePage() {
     const mode = new URLSearchParams(location.search).get('mode') ?? 'restore';
-    return <BlockingProgress messages={{ loading: '조회 중', create: '등록 중', edit: '수정 중', delete: '삭제 중' }}>{mode === 'error' ? <ErrorForm /> : <Content mode={mode} />}</BlockingProgress>;
+    return <Root><BlockingProgress messages={{ loading: '조회 중', create: '등록 중', edit: '수정 중', delete: '삭제 중' }}>{mode === 'error' ? <ErrorForm /> : <Content mode={mode} />}</BlockingProgress></Root>;
   };
 }
 
 /** 실제 Enter 암묵 제출과 중첩 선택 포털을 관찰할 폼 화면을 만든다. */
-export function createFormConformancePage({ Form, FormGuard, Choice }: { FormGuard: typeof FormContract.FormGuard; Form: typeof FormContract.Form; Choice: typeof ChoiceContract.Choice }) {
+export function createFormConformancePage({ Form, FormGuard, Choice, ...copy }: { FormGuard: typeof FormContract.FormGuard; Form: typeof FormContract.Form; Choice: typeof ChoiceContract.Choice } & FormDefaultsParts) {
+  const Root = formDefaultsWrapper(copy);
   const schema = z.object({ title: z.string().min(1), tags: z.array(z.object({ value: z.string() })) });
   const F = Form.of<z.input<typeof schema>>();
   const inner = z.object({ code: z.string().min(1) });
@@ -88,7 +92,7 @@ export function createFormConformancePage({ Form, FormGuard, Choice }: { FormGua
       {open && <F.Dialog title="하위 폼" onClose={() => setOpen(false)}><Inner saved={() => setInnerCount((n) => n + 1)} /></F.Dialog>}
     </F></>;
   }
-  const route = createRootRoute({ component: () => <FormGuard><Outlet /></FormGuard> });
+  const route = createRootRoute({ component: () => <Root><FormGuard messages={copy.defaultFormGuardMessages}><Outlet /></FormGuard></Root> });
   const page = createRoute({ getParentRoute: () => route, path: '$', component: FormConformancePage });
   const router = createRouter({ routeTree: route.addChildren([page]), history: createBrowserHistory() });
   /** 검사 전용 Router 안에서 실제 보호 범위를 제공한다. */

@@ -1,5 +1,22 @@
 // 파일 책임: 적합성 검사에 주입하는 UI의 구조 타입 계약이며 런타임 구현은 포함하지 않는다.
 import { type ReactNode, type RefObject } from 'react';
+/** 대화창 버튼의 앱 기본 문구. pending은 실행 중 진행 표시를 화면 낭독기가 읽는 문구다. */
+export interface DialogLabels {
+    readonly close: string;
+    readonly confirm: string;
+    readonly cancel: string;
+    readonly pending: string;
+}
+/** 키트가 제공하는 한국어 문구. 한국어 앱은 이 값을 DialogDefaults에 그대로 넘긴다(공급이 없으면 한국어로 떨어지지 않고 오류가 난다). */
+export declare const defaultDialogLabels: DialogLabels;
+/**
+ * 앱 맨 위에 한 번 두고 대화창 기본 문구 전체를 넘긴다. 이 아래의 Dialog·ConfirmDialog·AlertDialog(폼·목록이 그리는 창 포함)가 이 문구를 쓴다.
+ * 폼 기본 문구(FormDefaults)와 따로 두어, 폼 없이 대화창만 설치한 앱도 이것만으로 쓴다.
+ */
+export declare function DialogDefaults({ labels, children }: {
+    readonly labels: DialogLabels;
+    readonly children: ReactNode;
+}): import("react").JSX.Element;
 export interface DialogProps {
     readonly open: boolean;
     readonly title: ReactNode;

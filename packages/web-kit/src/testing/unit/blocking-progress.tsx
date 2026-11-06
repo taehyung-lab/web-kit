@@ -7,8 +7,9 @@ import type * as Form from '../contracts/form/ui';
 import type * as Progress from '../contracts/ui/blocking-progress';
 import type * as Dialog from '../contracts/ui/dialog';
 import type { ConformanceTarget } from '../target.mjs';
+import type { FormDefaultsParts } from '../copy-defaults';
 /** 기존 Form·덮개·확인창 입력으로 기존 검사 ID를 모두 등록한다. */
-export function checkBlockingProgressConformance(parts: { Form: typeof Form.Form; BlockingProgress: typeof Progress.BlockingProgress; ConfirmDialog: typeof Dialog.ConfirmDialog }, target: ConformanceTarget) {
+export function checkBlockingProgressConformance(parts: { Form: typeof Form.Form; BlockingProgress: typeof Progress.BlockingProgress; ConfirmDialog: typeof Dialog.ConfirmDialog } & FormDefaultsParts, target: ConformanceTarget) {
   checkProgressConformance(parts, target);
   checkFormProgressConformance(parts, target);
   checkListProgressConformance(parts, target);

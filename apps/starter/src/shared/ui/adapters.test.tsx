@@ -4,7 +4,7 @@ import { checkConfirmDialogAdapter, checkFieldAdapter, checkRetryFocusAdapter } 
 import { describe, it } from 'vitest';
 import { FieldFrame } from '@/shared/ui/web-kit/form/ui';
 import { Input } from '@/shared/ui/input';
-import { ConfirmDialog } from '@/shared/ui/web-kit/ui';
+import { ConfirmDialog, DialogDefaults, defaultDialogLabels } from '@/shared/ui/web-kit/ui';
 import { RetryRegion } from '@/shared/ui/web-kit/detail-ui';
 
 const CLASSES = { root: 'wk-field', label: 'wk-label', required: 'wk-required', description: 'wk-description', error: 'wk-error' };
@@ -21,17 +21,19 @@ describe('installed kit UI', () => {
   it('ConfirmDialog opens on the stage, blocks closing while saving and saves the shown snapshot', async () => {
     await checkConfirmDialogAdapter(
       ({ open, pending, onConfirm, onCancel, children }) => (
-        <ConfirmDialog
-          open={open}
-          pending={pending}
-          title="Save?"
-          confirmLabel="Save"
-          cancelLabel="Cancel"
-          onConfirm={onConfirm}
-          onCancel={onCancel}
-        >
-          {children}
-        </ConfirmDialog>
+        <DialogDefaults labels={defaultDialogLabels}>
+          <ConfirmDialog
+            open={open}
+            pending={pending}
+            title="Save?"
+            confirmLabel="Save"
+            cancelLabel="Cancel"
+            onConfirm={onConfirm}
+            onCancel={onCancel}
+          >
+            {children}
+          </ConfirmDialog>
+        </DialogDefaults>
       ),
       { confirm: 'Save', cancel: 'Cancel' },
     );

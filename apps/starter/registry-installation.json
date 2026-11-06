@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "version": "5.0.0-rc.10",
-  "sourceRef": "v5.0.0-rc.10",
-  "sourceCommit": "86704369006c0d6d6f9ec542c6d50bd9ab38635c",
+  "version": "5.0.0-rc.11",
+  "sourceRef": "v5.0.0-rc.11",
+  "sourceCommit": "c8233c6fa80684d5bca4a95759324b0e9dbc0bef",
   "sourceWorkingTree": "clean",
   "shadcn": "4.19.1",
   "method": "shadcn@4.19.1 add; installation recorded after review",
@@ -48,28 +48,28 @@
     },
     {
       "name": "dialog",
-      "artifactHash": "c97957a693899a2366dab03d4afeaf0158f5afd0b627961983def0537fcc4dfe",
+      "artifactHash": "fe76db1faae20865f68d1883f8c6b01e7f2c0edef98f53cb4b98c01b79452cd9",
       "files": [
         {
           "source": "packages/ui-registry/src/ui/dialog.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/ui/dialog.tsx",
           "installed": "src/shared/ui/web-kit/ui/dialog.tsx",
-          "sourceHash": "80e4f94a3e47d5ae75dc64494d957567ca702b599012813821b517ae461efc5e",
-          "installedHash": "58c15187de0e5037522caa751e35d81bece972c1f33f52e6e75014b96daf1294"
+          "sourceHash": "152ece3aa47ac28bf398c63548c6929b25288e700a473ac71dd38ea39552625e",
+          "installedHash": "28dd0475ba60cc4cb7c5646afb60b1837623bab6137766ee7ec2a8afc2d2b256"
         },
         {
           "source": "packages/ui-registry/checks/dialog.test.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/checks/dialog.test.tsx",
           "installed": "src/shared/ui/web-kit/checks/dialog.test.tsx",
-          "sourceHash": "4957fdee296a96bfb9bb2afea7abc8ec3f69f96554229e98ae4b5410836ab6a1",
-          "installedHash": "4957fdee296a96bfb9bb2afea7abc8ec3f69f96554229e98ae4b5410836ab6a1"
+          "sourceHash": "9ecac349bb655d91f1844488623dda207e5a5248cbbb42741123836b714b314c",
+          "installedHash": "9ecac349bb655d91f1844488623dda207e5a5248cbbb42741123836b714b314c"
         },
         {
           "source": "packages/ui-registry/checks/dialog.page.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/checks/dialog.page.tsx",
           "installed": "src/shared/ui/web-kit/checks/dialog.page.tsx",
-          "sourceHash": "04b87244cc3fe8aeb3054ac0200aa6bfd3dc8b1cf98de460c725a530cec6ff95",
-          "installedHash": "04b87244cc3fe8aeb3054ac0200aa6bfd3dc8b1cf98de460c725a530cec6ff95"
+          "sourceHash": "e6e60b3e2ad1f0822114a1d8a34fda3109284c385aeb29dbb563b07287ce1eba",
+          "installedHash": "e6e60b3e2ad1f0822114a1d8a34fda3109284c385aeb29dbb563b07287ce1eba"
         },
         {
           "source": "packages/ui-registry/checks/dialog.spec.ts",
@@ -89,7 +89,7 @@
     },
     {
       "name": "blocking-progress",
-      "artifactHash": "e484e227551d4d0dd5cd87ff4d9ea7f2823303caa19b65c39e814e31c6678f54",
+      "artifactHash": "1157d72846e703fae1d673a14d39693dfe2e4b37d17f0e15737ec97057b91bb1",
       "files": [
         {
           "source": "packages/ui-registry/src/ui/blocking-progress.tsx",
@@ -102,15 +102,15 @@
           "source": "packages/ui-registry/checks/blocking-progress.test.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/checks/blocking-progress.test.tsx",
           "installed": "src/shared/ui/web-kit/checks/blocking-progress.test.tsx",
-          "sourceHash": "573ef124a7c59ef7807c553958c7cf801971c84bf8470363687e284e308d1a5b",
-          "installedHash": "573ef124a7c59ef7807c553958c7cf801971c84bf8470363687e284e308d1a5b"
+          "sourceHash": "436337d5c504c1be4e07d7b2a343e89b5b583a0d6eb7b6590be692f0d1799d11",
+          "installedHash": "436337d5c504c1be4e07d7b2a343e89b5b583a0d6eb7b6590be692f0d1799d11"
         },
         {
           "source": "packages/ui-registry/checks/blocking-progress.page.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/checks/blocking-progress.page.tsx",
           "installed": "src/shared/ui/web-kit/checks/blocking-progress.page.tsx",
-          "sourceHash": "77c6f1f5a7335c4f8b009da1c86eb81ccaaaba8864c446bc003436f08b65275c",
-          "installedHash": "77c6f1f5a7335c4f8b009da1c86eb81ccaaaba8864c446bc003436f08b65275c"
+          "sourceHash": "91047c52f2d52ba80dc098187a2b25e7d057129f4c940b7298d4c0ce2ebae79f",
+          "installedHash": "91047c52f2d52ba80dc098187a2b25e7d057129f4c940b7298d4c0ce2ebae79f"
         },
         {
           "source": "packages/ui-registry/checks/blocking-progress.spec.ts",
@@ -170,27 +170,27 @@
     },
     {
       "name": "ui",
-      "artifactHash": "12c336cc62c41795ef596bbf87b7a58d3d742c6765253ea2231df2221302e58d",
+      "artifactHash": "7b29326a9173cc6c48ffa6f91519d300d3814351be89e1f1c9fe8084737a8f7f",
       "files": [
         {
           "source": "packages/ui-registry/src/ui/index.ts",
           "registryTarget": "~/src/shared/ui/web-kit/ui/index.ts",
           "installed": "src/shared/ui/web-kit/ui/index.ts",
-          "sourceHash": "612e0413aab2066ad3672e6f1f2c16e24c57817d13ca7b2a99945af62e536502",
-          "installedHash": "612e0413aab2066ad3672e6f1f2c16e24c57817d13ca7b2a99945af62e536502"
+          "sourceHash": "b754142ada6761c925028c95c63bd133be5df03e9b3739fefe2c266a927e635f",
+          "installedHash": "b754142ada6761c925028c95c63bd133be5df03e9b3739fefe2c266a927e635f"
         }
       ]
     },
     {
       "name": "form",
-      "artifactHash": "facea866fc74391b46cd0ef7169e4cd94c26c13d4c7dc7ca52cebcb10b8cf546",
+      "artifactHash": "1da6855a3a29fda0b2300b3fc09383ec344ebf003f7f7f5b3813c6f665872a41",
       "files": [
         {
           "source": "packages/ui-registry/src/form/ui.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/form/ui.tsx",
           "installed": "src/shared/ui/web-kit/form/ui.tsx",
-          "sourceHash": "d9b7b216c41cedf4b33a818662dd0ba6222382c3d003809466785f1fe1c4fbbe",
-          "installedHash": "6ca474940a676c5abce7e355b67717c355658c8c67c0a14429d8bb9257753a9b"
+          "sourceHash": "dfc1604b3130d9aba64bcc6c7a3cf5d98bd577fff4bc25586181216d92bafcd1",
+          "installedHash": "b70d4895167af23c071f0a0cb0e3be48f799fdb1271c94ad2d666c49bf114909"
         },
         {
           "source": "packages/ui-registry/src/form/field.tsx",
@@ -203,43 +203,43 @@
           "source": "packages/ui-registry/checks/form-complex.test.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/checks/form-complex.test.tsx",
           "installed": "src/shared/ui/web-kit/checks/form-complex.test.tsx",
-          "sourceHash": "36875e7dac8b843358f582ad073a2c5b19235a3b890a2a8b39dcc5ba1a949a34",
-          "installedHash": "36875e7dac8b843358f582ad073a2c5b19235a3b890a2a8b39dcc5ba1a949a34"
+          "sourceHash": "7d700346e199dff786d8b2781a2065496b1b46e84dded6ea9c375cf4158a6ec8",
+          "installedHash": "7d700346e199dff786d8b2781a2065496b1b46e84dded6ea9c375cf4158a6ec8"
         },
         {
           "source": "packages/ui-registry/checks/form-enter.test.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/checks/form-enter.test.tsx",
           "installed": "src/shared/ui/web-kit/checks/form-enter.test.tsx",
-          "sourceHash": "1145f2d4dbbb56dad1a33f1054d29995b72b370f2dee4e27a594c8a86884c3dc",
-          "installedHash": "1145f2d4dbbb56dad1a33f1054d29995b72b370f2dee4e27a594c8a86884c3dc"
+          "sourceHash": "4aa92742992499fc01f01cba16f43386f7a3f8ad5e1387ee1f3dd8bc9cd8fa60",
+          "installedHash": "4aa92742992499fc01f01cba16f43386f7a3f8ad5e1387ee1f3dd8bc9cd8fa60"
         },
         {
           "source": "packages/ui-registry/checks/form-sections.test.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/checks/form-sections.test.tsx",
           "installed": "src/shared/ui/web-kit/checks/form-sections.test.tsx",
-          "sourceHash": "a5ac76ae873aa69f371958c2d98884167c72d3ae1fd9b1da48e057d581200af0",
-          "installedHash": "a5ac76ae873aa69f371958c2d98884167c72d3ae1fd9b1da48e057d581200af0"
+          "sourceHash": "e7c946e2e7ef6694c33aa6590e529df5051b2a5e1c9f1cc31b6eb359ae7c2500",
+          "installedHash": "e7c946e2e7ef6694c33aa6590e529df5051b2a5e1c9f1cc31b6eb359ae7c2500"
         },
         {
           "source": "packages/ui-registry/checks/form-ui.test.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/checks/form-ui.test.tsx",
           "installed": "src/shared/ui/web-kit/checks/form-ui.test.tsx",
-          "sourceHash": "9f3466639dd50325831f2db32e35ef4c3c1e20e0e5f9b864f79845402fdacb35",
-          "installedHash": "9f3466639dd50325831f2db32e35ef4c3c1e20e0e5f9b864f79845402fdacb35"
+          "sourceHash": "3dd6a78bdf4fbcda8c92b366a08adb0fd409eb8936f4e4cb6952d26a30bc33b9",
+          "installedHash": "3dd6a78bdf4fbcda8c92b366a08adb0fd409eb8936f4e4cb6952d26a30bc33b9"
         },
         {
           "source": "packages/ui-registry/checks/form-workflows.test.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/checks/form-workflows.test.tsx",
           "installed": "src/shared/ui/web-kit/checks/form-workflows.test.tsx",
-          "sourceHash": "0ce331507227c25cf23d415f7338ed1fe3699a09ef116f67ae42e3ac99ffd83b",
-          "installedHash": "0ce331507227c25cf23d415f7338ed1fe3699a09ef116f67ae42e3ac99ffd83b"
+          "sourceHash": "992f3ca6dc8c055e057b52962ebf2cb2c6b3f8172200c2e8510377b2d181f540",
+          "installedHash": "992f3ca6dc8c055e057b52962ebf2cb2c6b3f8172200c2e8510377b2d181f540"
         },
         {
           "source": "packages/ui-registry/checks/form.page.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/checks/form.page.tsx",
           "installed": "src/shared/ui/web-kit/checks/form.page.tsx",
-          "sourceHash": "355e05581ac9406d9ea165ccbc2e3d18f427bb304b85c9ef6178e8d80e03212e",
-          "installedHash": "355e05581ac9406d9ea165ccbc2e3d18f427bb304b85c9ef6178e8d80e03212e"
+          "sourceHash": "8730187834d47cde1329011bf8607e0e4c1f63ea2de3425bc6be2f072493672c",
+          "installedHash": "8730187834d47cde1329011bf8607e0e4c1f63ea2de3425bc6be2f072493672c"
         },
         {
           "source": "packages/ui-registry/checks/form.spec.ts",
@@ -259,7 +259,7 @@
     },
     {
       "name": "list",
-      "artifactHash": "358b01b2520a1a26daef62bce649107eaa8c36d1f3b17e77782c67bdf84d1545",
+      "artifactHash": "bb1ec1ffe29d3db72ff75015f7acbb0a04149d7510165b579f1c80ecafe7bd47",
       "files": [
         {
           "source": "packages/ui-registry/src/list-ui.tsx",
@@ -272,8 +272,8 @@
           "source": "packages/ui-registry/checks/list-ui.test.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/checks/list-ui.test.tsx",
           "installed": "src/shared/ui/web-kit/checks/list-ui.test.tsx",
-          "sourceHash": "089af66f51fe8771b122a65aa608aa7ecc1159c63a5dece5d4e3b787cd047c2d",
-          "installedHash": "089af66f51fe8771b122a65aa608aa7ecc1159c63a5dece5d4e3b787cd047c2d"
+          "sourceHash": "a769be2e02a98d658de12ec8d754f4a175abb42d55db5ab69e05f5ddb69bd217",
+          "installedHash": "a769be2e02a98d658de12ec8d754f4a175abb42d55db5ab69e05f5ddb69bd217"
         }
       ]
     },

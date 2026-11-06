@@ -1,5 +1,5 @@
 // 파일 책임: list-ui 복사본의 공통 적합성 기준과 단언을 소유한다.
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -11,9 +11,11 @@ import { defineSearch, type SearchDefinition } from '../../search/fields';
 import type * as Contract2 from '../contracts/ui';
 import { useList, type ListPage } from '../../use-list';
 import { conformanceTitle, type ConformanceTarget } from '../target.mjs';
+import { dialogDefaultsWrapper, renderUnder, type DialogDefaultsParts } from '../copy-defaults';
 type ListColumn<T> = Contract0.ListColumn<T>;
 /** 소비처가 넘긴 실제 복사본으로 list-ui 보장 전체를 등록한다. */
-export function checkListUiConformance({ List, useListField, Pending }: { List: typeof Contract0.List; useListField: typeof Contract0.useListField; Pending: typeof Contract2.Pending }, target: ConformanceTarget) {
+export function checkListUiConformance({ List, useListField, Pending, ...copy }: { List: typeof Contract0.List; useListField: typeof Contract0.useListField; Pending: typeof Contract2.Pending } & DialogDefaultsParts, target: ConformanceTarget) {
+  const render = renderUnder(dialogDefaultsWrapper(copy));
   const it = baseIt;
   const title = (id: string, label: string) => conformanceTitle(id, target, label);
 // @vitest-environment jsdom

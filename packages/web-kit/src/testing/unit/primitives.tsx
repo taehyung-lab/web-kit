@@ -1,21 +1,44 @@
 // 파일 책임: 작은 표현 항목의 속성·포커스·오류 연결 적합성을 실제 복사본에서 검사한다.
-import { afterEach, it, expect } from 'vitest';
+import { afterEach, it, expect, vi } from 'vitest';
+import type { ReactNode } from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
 import { checkConfirmDialogAdapter, checkRetryFocusAdapter, type RetryAdapterProps } from '../adapters';
 import { conformanceTitle, type ConformanceTarget } from '../target.mjs';
+import { dialogDefaultsWrapper, type DialogDefaultsParts } from '../copy-defaults';
 import type * as Inputs from '../contracts/ui/inputs';
 import type * as Dialog from '../contracts/ui/dialog';
 import type * as Retry from '../contracts/ui/retry';
 import type * as PendingContract from '../contracts/ui/pending';
 import type * as Filter from '../contracts/search/filter-error';
 /** 확인창의 처음 초점과 저장 중 재실행·닫기 차단을 검사한다. */
-export function checkDialogConformance({ ConfirmDialog }: { ConfirmDialog: typeof Dialog.ConfirmDialog }, target: ConformanceTarget) {
+export function checkDialogConformance({ ConfirmDialog, ...copy }: { ConfirmDialog: typeof Dialog.ConfirmDialog } & DialogDefaultsParts, target: ConformanceTarget) {
+  const Root = dialogDefaultsWrapper(copy);
   afterEach(cleanup);
   it(conformanceTitle('dialog-unit', target, '확인창 진입과 저장 관문'), async () => {
-    const view = render(<ConfirmDialog open title="확인" onConfirm={() => undefined} onCancel={() => undefined} />);
+    const view = render(<ConfirmDialog open title="확인" onConfirm={() => undefined} onCancel={() => undefined} />, { wrapper: Root });
     expect(screen.getByRole('alertdialog').contains(document.activeElement)).toBe(true);
     view.unmount();
-    await checkConfirmDialogAdapter((props) => <ConfirmDialog {...props} title="확인" />, { confirm: '확인', cancel: '취소' });
+    await checkConfirmDialogAdapter((props) => <Root><ConfirmDialog {...props} title="확인" /></Root>, { confirm: '확인', cancel: '취소' });
+  });
+  // 2026-11-05 사용자 결정: 대화창 버튼 문구는 앱 맨 위 DialogDefaults 한 곳에서 받고, 공급이 없으면 바로 오류로 알린다.
+  it(conformanceTitle('dialog-defaults', target, '확인창 버튼·진행 문구는 앱 공급을 쓰고 화면 값이 그 창에서만 앞서며, 공급이 없으면 오류'), () => {
+    const labels = { close: 'Close', confirm: 'Proceed', cancel: 'Dismiss', pending: 'Working' };
+    const English = ({ children }: { readonly children: ReactNode }) => <copy.DialogDefaults labels={labels}>{children}</copy.DialogDefaults>;
+    const view = render(<ConfirmDialog open pending title="Delete?" onConfirm={() => undefined} onCancel={() => undefined} />, { wrapper: English });
+    expect(screen.getByRole('button', { name: 'Proceed' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Dismiss' })).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toContain('Working');
+    expect(document.body.textContent).not.toMatch(/[가-힣]/);
+    view.rerender(<ConfirmDialog open title="Delete?" cancelLabel="Keep" onConfirm={() => undefined} onCancel={() => undefined} />);
+    expect(screen.getByRole('button', { name: 'Keep' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Proceed' })).toBeTruthy();
+    view.unmount();
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      expect(() => render(<ConfirmDialog open title="Delete?" onConfirm={() => undefined} onCancel={() => undefined} />)).toThrow(/DialogDefaults/);
+    } finally {
+      errors.mockRestore();
+    }
   });
 }
 /** 재시도 버튼이 없어질 때의 초점과 외부 초점 보존을 검사한다. */

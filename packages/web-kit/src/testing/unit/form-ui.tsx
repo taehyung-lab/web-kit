@@ -1,16 +1,19 @@
 // 파일 책임: form-ui 복사본의 공통 적합성 기준과 단언을 소유한다.
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { createMemoryHistory, createRootRoute, createRoute, createRouter, Link, Outlet, RouterProvider } from '@tanstack/react-router';
 import { useState, type ReactNode } from 'react';
 import { afterEach, beforeAll, expect, it as baseIt, vi } from 'vitest';
 import { z } from 'zod';
 import { RequestFailure } from '../../failure';
 import { DiscardSaveAttempt, useSaveForm, type SaveFormOptions } from '../../form/save-form';
+import { createFormMessages } from '../../form/messages';
 import type * as Contract0 from '../contracts/form/ui';
 import { conformanceTitle, type ConformanceTarget } from '../target.mjs';
+import { formDefaultsWrapper, renderUnder, type FormDefaultsParts } from '../copy-defaults';
 
 /** 소비처가 넘긴 실제 복사본으로 form-ui 보장 전체를 등록한다. */
-export function checkFormUiConformance({ Form, FormGuard, useLeave }: { Form: typeof Contract0.Form; FormGuard: typeof Contract0.FormGuard; useLeave: typeof Contract0.useLeave }, target: ConformanceTarget) {
+export function checkFormUiConformance({ Form, FormGuard, useLeave, ...copy }: { Form: typeof Contract0.Form; FormGuard: typeof Contract0.FormGuard; useLeave: typeof Contract0.useLeave } & FormDefaultsParts, target: ConformanceTarget) {
+  const render = renderUnder(formDefaultsWrapper(copy));
   const it = baseIt;
   const title = (id: string, label: string) => conformanceTitle(id, target, label);
 // @vitest-environment jsdom
@@ -39,7 +42,7 @@ const F = Form.of<Values>();
 async function mount(node: () => ReactNode) {
   const root = createRootRoute({
     component: () => (
-      <FormGuard messages={{ cancel: { title: '작성을 취소할까요?' } }}>
+      <FormGuard messages={copy.defaultFormGuardMessages}>
         <Link to={'/done' as never}>다른 화면</Link>
         <Outlet />
       </FormGuard>
@@ -56,7 +59,7 @@ async function mount(node: () => ReactNode) {
 }
 
 /** 이 파일의 기본 화면: 이름·체크·연락처(조건부 필수)·저장·취소. */
-function Editor(props: Partial<SaveFormOptions<Values, z.output<typeof schema>>> & { readonly children?: ReactNode; readonly protect?: boolean }) {
+function Editor(props: Partial<Omit<SaveFormOptions<Values, z.output<typeof schema>>, 'confirm' | 'acknowledge' | 'secondary'>> & { readonly children?: ReactNode; readonly protect?: boolean }) {
   const editor = useSaveForm({ schema, source: { id: 1, values }, save: async () => undefined, ...props });
   return (
     <F editor={editor} protect={props.protect} renderFailure={(failure) => (failure instanceof RequestFailure && failure.kind === 'forbidden' ? null : undefined)}>
@@ -262,10 +265,9 @@ it(title('G069', 'F7 저장 완료 확인을 두 번 눌러도 다음 이동은 
   function Screen() {
     const editor = useSaveForm({ schema, source: { id: 1, values }, save: async () => undefined, acknowledge: true, onSaved });
     return (
-      <F editor={editor}>
+      <F editor={editor} saved={{ body: '저장했습니다.' }}>
         <F.Text name="name" label="이름" />
         <F.Submit />
-        <F.Saved>저장했습니다.</F.Saved>
       </F>
     );
   }
@@ -307,8 +309,8 @@ it(title('G070', 'F3 저장 뒤 완료 처리가 실패하면 저장을 다시 �
     const discarded = vi.fn(() => new DiscardSaveAttempt(new Error('시도 폐기')));
     function DiscardScreen() {
       const editor = useSaveForm({ schema, source: { id: 1, values }, save: discardedSave, acknowledge, onSaved: discarded, clearFailureOnEdit: () => true });
-      return <F editor={editor} protect={false} renderFailure={() => '시도 폐기'}>
-        <F.Text name="name" label="이름" /><F.Submit /><F.Failure /><F.Saved>저장했습니다.</F.Saved>
+      return <F editor={editor} protect={false} renderFailure={() => '시도 폐기'} saved={{ body: '저장했습니다.' }}>
+        <F.Text name="name" label="이름" /><F.Submit /><F.Failure />
       </F>;
     }
     await mount(() => <DiscardScreen />);
@@ -335,10 +337,9 @@ it(title('G071', 'F8 저장 확인창은 제출 값을 보이고, 저장 중에�
   function Screen() {
     const editor = useSaveForm({ schema, source: { id: 1, values }, save: () => promise, confirm: true });
     return (
-      <F editor={editor}>
+      <F editor={editor} confirm={{ confirmLabel: '저장하기', body: (v) => <p>{v.name}</p> }}>
         <F.Text name="name" label="이름" />
         <F.Submit>폼 저장</F.Submit>
-        <F.Confirm confirmLabel="저장하기">{(v) => <p>{v.name}</p>}</F.Confirm>
       </F>
     );
   }
@@ -362,9 +363,8 @@ it(title('G072', 'F8 확인창은 마지막 버튼의 Tab을 같은 이벤트 �
   function Screen() {
     const editor = useSaveForm({ schema, source: { id: 1, values }, save: async () => undefined, confirm: true });
     return (
-      <F editor={editor}>
+      <F editor={editor} confirm={{ confirmLabel: '저장하기' }}>
         <F.Submit>폼 저장</F.Submit>
-        <F.Confirm confirmLabel="저장하기" />
       </F>
     );
   }
@@ -650,6 +650,97 @@ it(title('G110', '칸·구역·폼 한 줄은 바깥 여백(margin) 클래스를
     const margins = Array.from(block.classList).filter((name) => /^-?m[trblxyse]?-/.test(name.split(':').pop()!));
     expect(margins, block.outerHTML.slice(0, 80)).toEqual([]);
     expect((block as HTMLElement).style.margin).toBe('');
+  }
+});
+
+// 2026-11-05 사용자 결정: 폼·대화창 기본 문구는 앱 맨 위 한 곳(FormDefaults·DialogDefaults)에서 받고, 화면이 준 값은 그 폼에서만 앞선다.
+it(title('G111', '앱 기본 문구만 공급한 영어 앱의 폼은 문구 prop 없이 그 문구를 보이고(번역 참조 해소·실패 문구 포함), 화면 값은 그 폼에서만 앞선다'), async () => {
+  const english: Contract0.FormMessages = {
+    saveFailed: 'Could not save.', completionFailed: 'Saved, but the next step failed.', retry: 'Retry', loading: 'Loading', optionsFailed: 'Could not load options.',
+    choose: 'Choose', submit: 'Save', cancel: 'Back', confirmTitle: 'Save this?', confirm: 'Save now', savedTitle: 'Saved.', savedConfirm: 'Done',
+    saving: 'Saving', removeFile: 'Remove file', count: (current, max) => `${current} of ${max}`, sectionErrors: (count) => `${count} errors`,
+    referenceTitle: (count) => `Used in ${count} places. Clean up?`, referenceConfirm: 'Clean up',
+  };
+  // 프로젝트의 번역 참조('i18n:' 표식)를 그 앱 언어로 해소한다. 무엇으로 번역할지는 프로젝트가 정한다.
+  const references = createFormMessages('i18n:');
+  const formatError = (errors: readonly unknown[]) =>
+    errors.map((error) => references.resolve(error, (key) => `Translated ${key}`)).find((text) => text !== undefined);
+  const EnglishApp = ({ children }: { readonly children: ReactNode }) => (
+    <copy.DialogDefaults labels={{ close: 'Close', confirm: 'OK', cancel: 'Dismiss', pending: 'Working' }}>
+      <copy.FormDefaults messages={english} formatError={formatError} renderFailure={(_failure, place) => (place === 'save' ? 'App could not save.' : undefined)}>
+        {children}
+      </copy.FormDefaults>
+    </copy.DialogDefaults>
+  );
+  const renderEnglish = renderUnder(EnglishApp);
+  const englishSchema = z.object({ name: z.string().min(1, references.encode('name-required')) });
+  const E = Form.of<z.input<typeof englishSchema>>();
+  const noKorean = () => {
+    expect(document.body.textContent).not.toMatch(/[가-힣]/);
+    expect(document.body.textContent).not.toContain('i18n:');
+  };
+  let fail = true;
+  const save = vi.fn(async () => {
+    if (fail) throw new Error('x');
+  });
+  /** 문구 prop이 없는 화면. override가 있으면 그 폼에서만 앱 기본값 대신 쓴다. */
+  function Screen({ override }: { readonly override?: boolean }) {
+    const editor = useSaveForm({ schema: englishSchema, source: { id: 1, values: { name: 'A' } }, save, confirm: true, acknowledge: true });
+    return (
+      <E editor={editor} protect={false} confirm={{}} saved={{}} {...(override ? { messages: { submit: 'Publish' }, renderFailure: () => undefined } : {})}>
+        <E.Text name="name" label="Name" />
+        <E.Failure />
+        <E.Submit />
+      </E>
+    );
+  }
+  renderEnglish(<Screen />);
+  fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: '' } });
+  await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Save' })));
+  expect(await screen.findByText('Translated name-required')).toBeTruthy();
+  noKorean();
+  fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: 'B' } });
+  await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Save' })));
+  const confirm = await screen.findByRole('alertdialog');
+  expect(confirm.textContent).toContain('Save this?');
+  expect(screen.getByRole('button', { name: 'Back' })).toBeTruthy();
+  noKorean();
+  await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Save now' })));
+  expect(await screen.findByText('App could not save.')).toBeTruthy();
+  noKorean();
+  fail = false;
+  await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Save' })));
+  await act(async () => fireEvent.click(await screen.findByRole('button', { name: 'Save now' })));
+  const saved = await screen.findByRole('alertdialog');
+  expect(saved.textContent).toContain('Saved.');
+  expect(screen.getByRole('button', { name: 'Done' })).toBeTruthy();
+  noKorean();
+  cleanup();
+  // 화면 값: messages는 키별로 앞서고(나머지는 앱 기본), renderFailure는 통째로 바뀐다(undefined면 앱 기본이 아니라 키트 문구 = 앱 messages.saveFailed).
+  fail = true;
+  renderEnglish(<Screen override />);
+  await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Publish' })));
+  expect((await screen.findByRole('alertdialog')).textContent).toContain('Save this?');
+  await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Save now' })));
+  expect(await screen.findByText('Could not save.')).toBeTruthy();
+  expect(screen.queryByText('App could not save.')).toBeNull();
+  noKorean();
+});
+
+it(title('G112', '앱 기본 문구 공급이 없으면 폼은 조용히 한국어로 그리지 않고 바로 오류로 알린다'), () => {
+  const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  try {
+    function Bare() {
+      const editor = useSaveForm({ schema, source: { id: 1, values }, save: async () => undefined });
+      return <F editor={editor} protect={false}><F.Submit /></F>;
+    }
+    // 폼 공급이 없음(대화창 공급만 있음)
+    expect(() => renderUnder(({ children }) => <copy.DialogDefaults labels={copy.defaultDialogLabels}>{children}</copy.DialogDefaults>)(<Bare />)).toThrow(/FormDefaults/);
+    cleanup();
+    // 대화창 공급이 없음(폼이 그리는 확인창이 대화창 부품을 쓴다)
+    expect(() => renderUnder(({ children }) => <copy.FormDefaults messages={copy.defaultFormMessages}>{children}</copy.FormDefaults>)(<Bare />)).toThrow(/DialogDefaults/);
+  } finally {
+    errors.mockRestore();
   }
 });
 

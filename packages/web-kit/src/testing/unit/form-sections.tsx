@@ -1,5 +1,5 @@
 // 파일 책임: form-sections 복사본의 공통 적합성 기준과 단언을 소유한다.
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { createMemoryHistory, createRootRoute, createRoute, createRouter, Outlet, RouterProvider } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 import { afterEach, beforeAll, expect, it as baseIt, vi } from 'vitest';
@@ -8,9 +8,11 @@ import { RequestFailure } from '../../failure';
 import { FormRejection, useSaveForm } from '../../form';
 import type * as Contract0 from '../contracts/form/ui';
 import { conformanceTitle, type ConformanceTarget } from '../target.mjs';
+import { formDefaultsWrapper, renderUnder, type FormDefaultsParts } from '../copy-defaults';
 
 /** 소비처가 넘긴 실제 복사본으로 form-sections 보장 전체를 등록한다. */
-export function checkFormSectionsConformance({ Form, FormGuard, FormSection }: { Form: typeof Contract0.Form; FormGuard: typeof Contract0.FormGuard; FormSection: typeof Contract0.FormSection }, target: ConformanceTarget) {
+export function checkFormSectionsConformance({ Form, FormGuard, FormSection, ...copy }: { Form: typeof Contract0.Form; FormGuard: typeof Contract0.FormGuard; FormSection: typeof Contract0.FormSection } & FormDefaultsParts, target: ConformanceTarget) {
+  const render = renderUnder(formDefaultsWrapper(copy));
   const it = baseIt;
   const title = (id: string, label: string) => conformanceTitle(id, target, label);
 // @vitest-environment jsdom
@@ -24,7 +26,7 @@ beforeAll(() => {
 });
 
 async function mount(node: () => ReactNode) {
-  const root = createRootRoute({ component: () => <FormGuard><Outlet /></FormGuard> });
+  const root = createRootRoute({ component: () => <FormGuard messages={copy.defaultFormGuardMessages}><Outlet /></FormGuard> });
   const page = createRoute({ getParentRoute: () => root, path: '/', component: node });
   const router = createRouter({ routeTree: root.addChildren([page]), history: createMemoryHistory({ initialEntries: ['/'] }) });
   await act(async () => {

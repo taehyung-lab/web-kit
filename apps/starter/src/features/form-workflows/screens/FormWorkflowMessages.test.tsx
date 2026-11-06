@@ -5,15 +5,15 @@ import { Form } from '@/shared/ui/web-kit/form/ui';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { formMessages, useFormCopy } from '@/shared/lib/form-messages';
+import { formMessages } from '@/shared/lib/form-messages';
+import { AppCopyDefaults } from '@/app/AppCopyDefaults';
 
 it('두 번째 저장의 전체 오류는 프로젝트 문구로 표시하고 언어 변경도 반영한다', async () => {
   const save = vi.fn(async () => undefined);
   const schema = z.object({ title: z.string() });
   const F = Form.of<z.input<typeof schema>>();
-  /** 공용 폼에 프로젝트 오류 번역 연결만 제공한다. */
+  /** 앱 기본 문구 공급(AppCopyDefaults) 아래의 공용 폼. 화면은 문구 연결을 따로 넘기지 않는다. */
   function Example() {
-    const copy = useFormCopy();
     const editor = useSaveForm({
       schema,
       source: { id: 1, values: { title: '' } },
@@ -24,13 +24,13 @@ it('두 번째 저장의 전체 오류는 프로젝트 문구로 표시하고 �
       },
     });
     return (
-      <F editor={editor} {...copy} protect={false}>
+      <F editor={editor} protect={false}>
         <F.Failure />
         <F.Submit mode="secondary">임시 저장</F.Submit>
       </F>
     );
   }
-  render(<Example />);
+  render(<Example />, { wrapper: AppCopyDefaults });
   await act(async () => fireEvent.click(screen.getByText('임시 저장')));
   expect(screen.getByRole('alert').textContent).toBe('선택한 항목을 다시 확인해 주세요.');
   expect(save).not.toHaveBeenCalled();

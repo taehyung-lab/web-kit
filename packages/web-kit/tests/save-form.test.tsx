@@ -4,7 +4,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { StandardSchemaV1 } from '@tanstack/react-form';
 import { afterEach, expect, it, vi } from 'vitest';
 import { RequestFailure } from '../src/failure';
-import { DiscardSaveAttempt, FormRejection, useSaveForm, type SaveFormOptions } from '../src/form/save-form';
+import { DiscardSaveAttempt, FormRejection, useSaveForm, type SaveFormEditor, type SaveFormOptions } from '../src/form/save-form';
 
 interface Values {
   readonly name: string;
@@ -729,7 +729,7 @@ it('완료 폐기는 진행 중 편집을 보존하며 대상 전환 뒤 늦은 
 
 it('S21 acknowledge면 저장 뒤 saved에서 멈추고, complete()를 두 번 불러도 onSaved는 한 번이다', async () => {
   const onSaved = vi.fn(() => new Promise<void>(() => undefined));
-  let editor!: ReturnType<typeof useSaveForm<Values, Output>>;
+  let editor!: SaveFormEditor<Values>;
   function AckScreen() {
     editor = useSaveForm({ schema, source: original, save: async () => undefined, onSaved, acknowledge: true });
     return <button onClick={() => void editor.submit()}>save</button>;

@@ -1,5 +1,5 @@
 // 파일 책임: form-complex 복사본의 공통 적합성 기준과 단언을 소유한다.
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { createMemoryHistory, createRootRoute, createRoute, createRouter, Outlet, RouterProvider } from '@tanstack/react-router';
 import { useState, type ReactNode } from 'react';
 import { afterEach, beforeAll, expect, it as baseIt, vi } from 'vitest';
@@ -8,9 +8,11 @@ import { RequestFailure } from '../../failure';
 import { FormRejection, useSaveForm, type FormFileValue } from '../../form';
 import type * as Contract0 from '../contracts/form/ui';
 import { conformanceTitle, type ConformanceTarget } from '../target.mjs';
+import { formDefaultsWrapper, renderUnder, type FormDefaultsParts } from '../copy-defaults';
 
 /** 소비처가 넘긴 실제 복사본으로 form-complex 보장 전체를 등록한다. */
-export function checkFormComplexConformance({ Form, FormGuard }: { Form: typeof Contract0.Form; FormGuard: typeof Contract0.FormGuard }, target: ConformanceTarget) {
+export function checkFormComplexConformance({ Form, FormGuard, ...copy }: { Form: typeof Contract0.Form; FormGuard: typeof Contract0.FormGuard } & FormDefaultsParts, target: ConformanceTarget) {
+  const render = renderUnder(formDefaultsWrapper(copy));
   const it = baseIt;
   const title = (id: string, label: string) => conformanceTitle(id, target, label);
 // @vitest-environment jsdom
@@ -24,7 +26,7 @@ beforeAll(() => {
 
 /** 실제 메모리 Router + FormGuard 위에 화면 하나를 올린다. */
 async function mount(node: () => ReactNode) {
-  const root = createRootRoute({ component: () => <FormGuard><Outlet /></FormGuard> });
+  const root = createRootRoute({ component: () => <FormGuard messages={copy.defaultFormGuardMessages}><Outlet /></FormGuard> });
   const page = createRoute({ getParentRoute: () => root, path: '/', component: node });
   const router = createRouter({ routeTree: root.addChildren([page]), history: createMemoryHistory({ initialEntries: ['/'] }) });
   await act(async () => {
@@ -445,9 +447,8 @@ it(title('G050', 'C9 저장 확인창으로 저장하는 동안에는 확인창 
   function Editor() {
     const editor = useSaveForm({ schema: outerSchema, source: { id: 1, values: { title: 'T', keys: '' } }, confirm: true, save: () => pending.promise });
     return (
-      <O editor={editor}>
+      <O editor={editor} confirm={{}}>
         <O.Submit />
-        <O.Confirm />
       </O>
     );
   }

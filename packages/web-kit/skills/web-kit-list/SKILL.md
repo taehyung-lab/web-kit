@@ -68,7 +68,7 @@ description: 목록 필터·기간 프리셋·키워드 칩·표·페이지 이�
 - `Result`는 조회 안 함·로딩·결과 없는 실패(재시도)·빈 결과를 그리고, 이전 결과를 보이는 중 실패하면 원인 · `messages.refreshFailed` 안내와 재시도를 위에 띄운다. 실패 문구는 `List renderFailure(failure, place)`가 고르고 null이면 그 자리에 아무것도 그리지 않는다(앱 경계가 이미 알린 401·403 등).
 - `Table`은 컬럼(`key`·`header`·`cell`·`sort`)·선택 칸(`selectable`·`rowLabel`)·행 이동(`onOpen`, 클릭·Enter, 행 안 버튼 제외)을 받는다. 50행부터 보이는 행만 그린다(`@tanstack/react-virtual` peer). 머리글 정렬은 `toggleSort`다.
 - `Total`은 이전 조건 결과를 보이는 동안 '…'이다. `Actions`는 그 동안 안의 쓰기 버튼을 통째로 잠근다.
-- `BulkAction`은 확인 당시 결과와 선택이 바뀌면 실행하지 않는다. 실패는 확인창에 남고 선택은 유지된다. 성공 ID 해석·업무 거절 조건은 소비자가 반환한다.
+- `BulkAction`은 registry `dialog`의 `ConfirmDialog`로 확인을 받으므로 앱 맨 위의 `DialogDefaults`가 필요하다([web-kit-form의 앱 기본 문구](../web-kit-form/SKILL.md#앱-기본-문구)). 확인 당시 결과와 선택이 바뀌면 실행하지 않는다. 실패는 확인창에 남고 선택은 유지된다. 성공 ID 해석·업무 거절 조건은 소비자가 반환한다.
 - `Download`는 `useListDownload` 결과를 받아 종류 선택·버튼·진행·실패 문구를 그린다.
 - 문구는 `messages`, 모양은 프로젝트 shadcn 테마 변수·`className`·복사본의 Tailwind 클래스로 바꾼다. 선택 칸(`Select`·기간 기준·검색어 대상·정렬·페이지 크기·다운로드 종류)은 shadcn Select, 체크는 shadcn Checkbox다.
 - `captureListReturn`/`resolveListReturn`은 목록 주소의 검색·hash를 보존하고 같은 목록 경로에서만 복귀한다. 앱 안 경로 판정은 루트 `safeAppPath`와 같다([web-kit-http](../web-kit-http/SKILL.md)). 조회 결과 출처(`isCurrent`)와는 다른 책임이다.
