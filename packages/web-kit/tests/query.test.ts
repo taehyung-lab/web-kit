@@ -41,7 +41,7 @@ describe('조회 재시도', () => {
     const fn = vi.fn(async () => {
       throw failure(kind);
     });
-    await queryClient.fetchQuery({ queryKey: [kind], queryFn: fn }).catch(() => undefined);
+    await queryClient.query({ queryKey: [kind], queryFn: fn }).catch(() => undefined);
     expect(fn).toHaveBeenCalledTimes(attempts);
   });
 
@@ -58,8 +58,8 @@ describe('조회 재시도', () => {
 describe('실패 알림', () => {
   it('최종 실패만 한 번 알리고 취소는 알리지 않는다', async () => {
     const { queryClient, notify } = client();
-    await queryClient.fetchQuery({ queryKey: ['a'], queryFn: async () => { throw failure('server-error'); } }).catch(() => undefined);
-    await queryClient.fetchQuery({ queryKey: ['b'], queryFn: async () => { throw failure('cancelled'); } }).catch(() => undefined);
+    await queryClient.query({ queryKey: ['a'], queryFn: async () => { throw failure('server-error'); } }).catch(() => undefined);
+    await queryClient.query({ queryKey: ['b'], queryFn: async () => { throw failure('cancelled'); } }).catch(() => undefined);
     expect(notify).toHaveBeenCalledTimes(1);
     expect(notify.mock.calls[0]?.[0]).toMatchObject({ kind: 'server-error' });
     expect(notify.mock.calls[0]?.[1]).toMatchObject({ kind: 'query', query: { queryKey: ['a'] } });
@@ -129,7 +129,7 @@ describe('세션 전환', () => {
     queryClient.setQueryData(['user'], { name: 'A' });
     const signals: AbortSignal[] = [];
     const inFlight = queryClient
-      .fetchQuery({ queryKey: ['slow'], queryFn: ({ signal }) => { signals.push(signal); return new Promise(() => undefined); } })
+      .query({ queryKey: ['slow'], queryFn: ({ signal }) => { signals.push(signal); return new Promise(() => undefined); } })
       .catch((error: unknown) => error);
     await vi.waitFor(() => expect(signals).toHaveLength(1));
     owner.end();

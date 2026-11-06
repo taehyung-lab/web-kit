@@ -234,7 +234,7 @@ it('L8c 확인은 필터 UI와 같은 Query 캐시를 읽는다(이미 받은 �
   const check = optionsCheck(fetchOptions);
   const fetchRows = vi.fn(async () => page('1'));
   client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
-  await client.fetchQuery(check.options({}));
+  await client.query(check.options({}));
   const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
   render(<Harness definition={makeDefinition({ check })} initial={{ code: 'A' }} fetchRows={fetchRows} />, { wrapper });
   await flush();

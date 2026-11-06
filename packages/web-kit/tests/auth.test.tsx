@@ -139,7 +139,7 @@ it('인증 hook 공개 결과는 종류별 실패 이름을 제공하고 공용 
   const { result } = renderHook(() => useAuthChallenge({ scope: 1, clock, codeLength: 6, verify: vi.fn(), onVerified: vi.fn() }));
   expect(Object.keys(result.current).sort()).toEqual([
     'remainingSeconds', 'challengeRemainingSeconds', 'resendRemainingSeconds', 'expired', 'codeExpired',
-    'canSubmit', 'canResend', 'resendable', 'pending', 'verifyFailure', 'resendFailure', 'invalidate', 'submit', 'resend',
+    'canSubmit', 'canResend', 'resendable', 'pending', 'verifyFailure', 'resendFailure', 'awaitingCompletion', 'invalidate', 'submit', 'resend',
   ].sort());
 });
 
@@ -229,4 +229,52 @@ it('재전송 완료도 무효화 뒤의 비동기 효과를 적용하지 않는
   act(() => view.result.current.invalidate());
   await act(async () => { later.resolve(); await pending; });
   expect(apply).not.toHaveBeenCalled();
+});
+
+it('완료가 실패하면 다음 제출은 코드를 다시 보내지 않고 완료만 다시 실행한다', async () => {
+  const clock = createServerClock({ key: 'retry-completion-clock' });
+  const verify = vi.fn(async () => 'token');
+  let attempts = 0;
+  const onVerified = vi.fn(async () => { attempts += 1; if (attempts === 1) throw new Error('profile'); });
+  const { result } = renderHook(() => useAuthChallenge({ scope: 1, clock, codeLength: 6, codeExpiresAt: 101000, verify, onVerified }));
+  await act(async () => { await result.current.submit('123456'); });
+  expect(result.current.verifyFailure).toEqual(new Error('profile'));
+  expect(result.current.awaitingCompletion).toBe(true);
+  // 코드 기한이 지나도 확인은 이미 성공했으므로 완료 다시 시도는 막지 않는다.
+  await act(async () => vi.advanceTimersByTimeAsync(2000));
+  expect(result.current.codeExpired).toBe(true);
+  expect(result.current.canSubmit).toBe(true);
+  await act(async () => { await result.current.submit(''); });
+  expect(verify).toHaveBeenCalledTimes(1);
+  expect(onVerified).toHaveBeenCalledTimes(2);
+  expect(onVerified).toHaveBeenLastCalledWith('token', expect.objectContaining({ isCurrent: expect.any(Function) }));
+  expect(result.current.verifyFailure).toBeUndefined();
+  expect(result.current.awaitingCompletion).toBe(false);
+});
+
+it.each(['invalidate', 'scope'] as const)('완료 실패 뒤 %s 하면 보관한 확인 결과를 버리고 다음 제출은 코드를 다시 확인한다', async (leave) => {
+  const clock = createServerClock({ key: 'drop-completion-clock' });
+  const verify = vi.fn(async () => 'token');
+  const onVerified = vi.fn(async () => { throw new Error('profile'); });
+  const view = renderHook(({ scope }) => useAuthChallenge({ scope, clock, codeLength: 6, verify, onVerified }), { initialProps: { scope: 'email' } });
+  await act(async () => { await view.result.current.submit('123456'); });
+  expect(view.result.current.awaitingCompletion).toBe(true);
+  if (leave === 'invalidate') act(() => view.result.current.invalidate());
+  else view.rerender({ scope: 'google' });
+  expect(view.result.current.awaitingCompletion).toBe(false);
+  await act(async () => { await view.result.current.submit('654321'); });
+  expect(verify).toHaveBeenCalledTimes(2);
+  expect(verify).toHaveBeenLastCalledWith('654321');
+});
+
+it('확인 요청 자체가 실패하면 완료 대기가 아니며 다음 제출은 코드를 다시 확인한다', async () => {
+  const clock = createServerClock({ key: 'verify-failure-clock' });
+  const verify = vi.fn().mockRejectedValueOnce(new Error('wrong')).mockResolvedValueOnce('token');
+  const onVerified = vi.fn();
+  const { result } = renderHook(() => useAuthChallenge({ scope: 1, clock, codeLength: 6, verify, onVerified }));
+  await act(async () => { await result.current.submit('111111'); });
+  expect(result.current.awaitingCompletion).toBe(false);
+  await act(async () => { await result.current.submit('222222'); });
+  expect(verify).toHaveBeenLastCalledWith('222222');
+  expect(onVerified).toHaveBeenCalledExactlyOnceWith('token', expect.anything());
 });
