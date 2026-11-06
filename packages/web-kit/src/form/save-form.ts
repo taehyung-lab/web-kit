@@ -16,6 +16,7 @@ import { flushSync } from 'react-dom';
 import { normalizeChoiceValue, type ChoiceNode, type ChoiceValue } from '../choice-binding';
 import { isRequestFailure, type FieldError } from '../failure';
 import { useBlockingProgress } from '../progress';
+import type { CompletionStep } from '../completion';
 import { fieldIsHidden, projectConditionalFields, useConditionalFields, type ConditionalField } from './conditional';
 import { followRows, rowMark } from './rows';
 import { revealFormSections } from './sections';
@@ -27,7 +28,7 @@ export interface SecondarySave<TInput, TOutput, TResult> {
   readonly save: (values: TOutput, submitted: TInput, step: SaveStep) => Promise<TResult>;
   readonly confirm?: boolean;
   readonly acknowledge?: boolean;
-  readonly onSaved?: (result: TResult) => unknown;
+  readonly onSaved?: (result: TResult, step: CompletionStep) => unknown;
 }
 
 export interface SaveFormOptions<
@@ -72,9 +73,10 @@ export interface SaveFormOptions<
    * 이 폼의 저장이 끝난 뒤 저장 함수의 결과로 한 번 실행한다(이동·알림). 늦은 결과에는 실행하지 않는다.
    * 끝날 때까지(Promise면 settle까지) 단계는 `saved`라 다시 저장할 수 없다. 실패하면 `completionFailure`가 되고
    * `complete()`가 이것만 다시 실행한다(저장 요청은 다시 나가지 않는다).
+   * 콜백 내부에서 추가 await 뒤 효과를 실행할 때는 두 번째 인자의 step.isCurrent()를 확인한다.
    * 업무상 이전 결과를 폐기하고 새 제출해도 안전하면 필요한 정리를 마친 뒤 `DiscardSaveAttempt`를 반환한다.
    */
-  readonly onSaved?: (result: TResult) => unknown;
+  readonly onSaved?: (result: TResult, step: CompletionStep) => unknown;
   /** true면 저장 성공 뒤 `saved`에서 멈추고, 사용자가 확인해 `complete()`를 부를 때 onSaved를 실행한다(저장 완료 확인창). */
   readonly acknowledge?: boolean;
   /**
@@ -225,7 +227,8 @@ export function useSaveForm<
   const primaryAction = useRef(options);
   latest.current = options;
   const { source } = options;
-  const [defaults, setDefaults] = useState(source.values);
+  // reset이 확정한 기본값을 다음 useForm 갱신에도 넘긴다. 입력 상태는 TanStack Form이 소유한다.
+  const defaults = useRef(source.values);
   const [baseline, setBaselineState] = useState(source.values);
   const baselineRef = useRef(source.values);
   const baselineMark = useRef(0);
@@ -254,11 +257,12 @@ export function useSaveForm<
   const decided = useRef(source.values);
   const pendingSave = useRef<((token: object) => Promise<void>) | undefined>(undefined);
   const completion = useRef<{ acknowledge?: boolean }>({});
+  const completingAttempt = useRef<object | undefined>(undefined);
   const [saveMode, setSaveMode] = useState<'primary' | 'secondary'>('primary');
   const focusTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   /** 저장이 성공해 완료 처리를 기다리는 결과. 완료 처리를 다시 시도할 때 같은 결과를 쓴다. */
   const savedResult = useRef<{
-    readonly complete: () => unknown;
+    readonly complete: (step: CompletionStep) => unknown;
     readonly identity: unknown;
     readonly baseline: TInput;
     readonly baselineMark: number;
@@ -302,7 +306,7 @@ export function useSaveForm<
   }
 
   const form = useForm({
-    defaultValues: defaults,
+    defaultValues: defaults.current,
     onSubmitMeta: undefined as object | undefined,
     validationLogic: revalidateLogic(),
     validators: { onDynamic: { '~standard': { ...options.schema['~standard'], validate: (input: unknown) => latest.current.schema['~standard'].validate(project(input as TInput)) } } },
@@ -478,7 +482,7 @@ export function useSaveForm<
     submitted: TInput,
     run: (step: SaveStep) => Promise<TActionResult>,
     mark: number,
-    onSaved?: (result: TActionResult) => unknown,
+    onSaved?: (result: TActionResult, step: CompletionStep) => unknown,
   ) {
     const current = () => isCurrent(token);
     if (!current()) return;
@@ -503,7 +507,7 @@ export function useSaveForm<
     const previous = { baseline: baselineRef.current, baselineMark: baselineMark.current, inputBeforeSaved: form.state.values };
     const replaceInput = evaluate(project(form.state.values), submitted);
     savedResult.current = {
-      complete: () => onSaved?.(result), identity: identity.current, ...previous,
+      complete: (step) => onSaved?.(result, step), identity: identity.current, ...previous,
       inputAfterSaved: replaceInput ? saved : form.state.values, submitted,
     };
     flushSync(() => {
@@ -522,19 +526,24 @@ export function useSaveForm<
     const pending = savedResult.current;
     const now = stageRef.current;
     if (pending === undefined || now.kind !== 'saved' || now.completing) return;
-    const stillHere = () => mounted.current && savedResult.current === pending && Object.is(identity.current, pending.identity);
+    const attempt = {};
+    completingAttempt.current = attempt;
+    const stillHere = () => mounted.current && completingAttempt.current === attempt &&
+      savedResult.current === pending && Object.is(identity.current, pending.identity);
     setStage({ kind: 'saved', completing: true });
     setCompletionRejection(undefined);
     let outcome: unknown;
     try {
-      outcome = await pending.complete();
+      outcome = await pending.complete({ isCurrent: stillHere });
     } catch (error: unknown) {
       if (!stillHere()) return;
+      completingAttempt.current = undefined;
       setStage({ kind: 'saved', completing: false });
       setCompletionRejection({ failure: error });
       return;
     }
     if (!stillHere()) return;
+    completingAttempt.current = undefined;
     savedResult.current = undefined;
     if (outcome instanceof DiscardSaveAttempt) {
       // 저장 결과 정규화만 되돌린다. 저장·완료 처리 중 사용자가 고친 입력은 그대로 둔다.
@@ -681,7 +690,7 @@ export function useSaveForm<
   });
 
   function replace(next: TInput) {
-    flushSync(() => setDefaults(next));
+    defaults.current = next;
     form.reset(next);
     setBaseline(next);
   }
