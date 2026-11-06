@@ -1,6 +1,5 @@
 // 파일 책임: 로그인 화면. 자격증명 거절(401)은 입력 아래 한 줄로, 그 밖의 실패는 실패 종류 문구로 보인다. 요청·세션·이동은 로그인 flow가 맡는다.
 import { failureCopyKey } from '@/shared/lib/failure-copy';
-import { useFieldMessage } from '@/shared/lib/form-messages';
 import { Form } from '@/shared/ui/web-kit/form/ui';
 import { useTranslation } from 'react-i18next';
 import { useLoginFlow } from '../flows/use-login-flow';
@@ -20,7 +19,6 @@ export function LoginScreen({
   readonly redirect: string | undefined;
 }) {
   const { t } = useTranslation();
-  const message = useFieldMessage();
   const { editor } = useLoginFlow({ redirect });
 
   return (
@@ -32,7 +30,7 @@ export function LoginScreen({
             {notice}
           </p>
         )}
-        <Form editor={editor} protect={false} formatError={message} renderFailure={(failure) => t(loginFailureCopyKey(failure) ?? failureCopyKey(failure))}>
+        <Form editor={editor} protect={false} renderFailure={(failure) => t(loginFailureCopyKey(failure) ?? failureCopyKey(failure))}>
           <F.Text name="loginId" label={t('auth.loginId')} autoFocus autoComplete="username" />
           <F.Text name="password" label={t('auth.password')} type="password" autoComplete="current-password" />
           <F.Failure />

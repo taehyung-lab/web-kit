@@ -7,7 +7,7 @@
 
 1. 소비 앱의 폴더 책임과 import 방향을 키트의 사용 계약으로 배포한다. 앱은 app(조립)·runtime(실행 기반)·routes·생성 코드·features·shared로, feature는 api·model(순수)·state·flows·screens·i18n.ts·public.ts로 나눈다.
 2. 적용 범위: starter와 구조 계약을 채택한 앱은 필수, 키트 일부만 쓰는 앱은 채택하지 않을 수 있다. 채택한 앱은 옮긴 파일을 바로 엄격하게 적용하고 미이전 파일만 파일·규칙·이유를 적은 예외로 둔다.
-3. route는 URL 폴더와 정해진 파일 이름(index·new·$id/edit·route·$)을 쓰고, 기존 제품 URL 보존이 이름 관례보다 우선한다. 로그인 전 화면은 `_public` 묶음에서 이미 로그인한 경우의 판정을 한 곳에 둔다. 골격이 다르면 별도 묶음, 같은 화면의 여러 URL은 route가 문맥만 넘기고, 골격 안 없는 경로는 `_app/$.tsx`. route 안 검사 파일과 기본 loader는 두지 않는다.
+3. route는 URL 폴더와 정해진 파일 이름(index·new·$id/edit·route·$)을 쓰고, 기존 제품 URL 보존이 이름 관례보다 우선한다. 로그인 전 화면은 `_public` 묶음에서 이미 로그인한 경우의 판정을 한 곳에 둔다. 골격이 다르면 별도 묶음, 같은 화면의 여러 URL은 route가 문맥만 넘기고, 골격 안 없는 경로는 로그인 뒤 묶음의 `$.tsx`. 묶음 이름은 키트가 정하지 않고 프로젝트가 역할에 맞게 정하며(starter는 `_app`), 생성기는 `web-kit.structure.json`의 `screenGroup`으로 받는다(2026-11-06 결정: 키트가 폴더 이름을 강제하지 않는다). route 안 검사 파일과 기본 loader는 두지 않는다.
 4. 강제 장치는 개발 도구로 분리해 같은 패키지의 선택 입구 `@boosterlab/web-kit/structure`(ESLint preset)와 bin `web-kit-structure`·`web-kit-new`로 배포한다. eslint·typescript·typescript-eslint는 선택 peer다. 별도 패키지로 나누지 않는다.
 5. `web-kit-check`는 구조 결과를 UI 적합성 결과와 따로 보이고 하나의 통과로 합치지 않는다. 구조 통과와 제품 동작 보존은 따로 센다.
 6. 골격 생성기는 완료를 만들지 않는다(지어낸 성공 응답·건너뛴 검사·통과용 검사 없음, 미완성 자리는 typecheck 실패).

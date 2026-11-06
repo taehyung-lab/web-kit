@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -80,6 +80,31 @@ test('내용이 다른 화면 파일이 있으면 아무 파일도 쓰지 않고
   assert.match(conflict.stderr, /충돌 src\/features\/invoices\/screens\/InvoiceCreateScreen\.tsx/);
   assert.equal(readFileSync(screen, 'utf8'), 'export const mine = 1;\n');
   assert.equal(existsSync(join(dir, 'src/features/invoices/flows/use-invoice-create.ts')), false, '충돌이 있으면 다른 파일도 쓰지 않는다');
+}));
+
+test('묶음 이름은 프로젝트가 정한다: --group은 설정보다 앞서고, 둘 다 없으면 만들지 않는다', () => project(({ dir, cli }) => {
+  mkdirSync(join(dir, 'src/routes/_staff'), { recursive: true });
+  writeFileSync(join(dir, 'src/routes/_staff/route.tsx'), 'export const Route = { component: () => null };\n');
+  const chosen = cli('--feature', 'invoices', '--kind', 'list', '--url', '/invoices', '--group', '_staff');
+  assert.equal(chosen.status, 0, chosen.stderr);
+  assert.ok(readFileSync(join(dir, 'src/routes/_staff/invoices/index.tsx'), 'utf8').includes("createFileRoute('/_staff/invoices/')"));
+
+  const config = join(dir, 'web-kit.structure.json');
+  const { screenGroup: _, ...withoutGroup } = JSON.parse(readFileSync(config, 'utf8'));
+  writeFileSync(config, JSON.stringify(withoutGroup));
+  const before = files(dir);
+  const missing = cli('--feature', 'orders', '--kind', 'list', '--url', '/orders');
+  assert.equal(missing.status, 1);
+  assert.match(missing.stderr, /route 묶음을 정하세요/);
+  assert.deepEqual(files(dir), before);
+}));
+
+test('진입 판정(route.tsx)이 없는 묶음에는 화면을 만들지 않는다', () => project(({ dir, cli }) => {
+  const before = files(dir);
+  const result = cli('--feature', 'invoices', '--kind', 'list', '--url', '/invoices', '--group', '_authenticated');
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /route 묶음 _authenticated이 없습니다/);
+  assert.deepEqual(files(dir), before);
 }));
 
 for (const [args, message] of [

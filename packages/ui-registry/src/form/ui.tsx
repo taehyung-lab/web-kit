@@ -1,6 +1,7 @@
 // 파일 책임: 폼 기본 UI의 묶음 부품(Form.*)과 앱에 한 번 두는 이탈 보호(FormGuard).
 // 각 부품은 같은 편집 상태(useSaveForm 결과)를 context로 읽어서, 칸·버튼·오류 줄을 어디에 두어도 저장·검증·focus 연결을 다시 쓰지 않는다.
 // 저장 수명은 useSaveForm이, 이탈 판정은 createFormNavigation이 소유하고 여기는 표시와 사용자 입력 연결만 맡는다.
+// 폼 기본 문구·칸 오류 해소·실패 문구는 앱 맨 위의 FormDefaults 한 곳에서 받고, 화면이 준 값은 그 폼에서만 앞선다.
 import { FormGuardProvider, FormDialogScopeProvider, useFormGuardBinding, useFormRootBinding, useFormFieldBinding, useFormChoiceBinding, formTextBinding, useOptionsRetryFocus, useFormCancel, useFormDialogScope, useFormConfirmBinding, useFormSavedBinding, FormBindingProvider, useFormBinding, useFormSubmitBinding, formFileBinding } from '@boosterlab/web-kit/form';
 import { Choice as ChoiceInput, type ChoiceProps } from '../ui/choice';
 import type { NavigateOptions } from '@tanstack/react-router';
@@ -31,38 +32,39 @@ import { useFormSection } from '@boosterlab/web-kit/form';
 
 // ─── 이탈 보호 ───────────────────────────────────────────────────────────────
 
-const defaultGuardMessages = {
+/** 이탈 확인창 한 종류의 문구. keep은 머무르는 버튼이다. */
+export interface FormGuardReasonMessages {
+  readonly title: string;
+  readonly description: string;
+  readonly confirm: string;
+  readonly keep: string;
+}
+/** 이탈 보호 문구 전체. navigate는 Router·브라우저 이탈, cancel은 취소 버튼, navigationFailed는 확인 뒤 이동 실패 안내다. */
+export interface FormGuardMessages {
+  readonly navigate: FormGuardReasonMessages;
+  readonly cancel: FormGuardReasonMessages;
+  readonly navigationFailed: string;
+}
+/** 키트가 제공하는 한국어 이탈 문구. 한국어 앱은 이 값을 FormGuard에 그대로 넘긴다. */
+export const defaultFormGuardMessages: FormGuardMessages = {
   navigate: { title: '입력을 버리고 이동할까요?', description: '저장하지 않은 변경이 있습니다.', confirm: '이동', keep: '계속 편집' },
   cancel: { title: '작성을 취소할까요?', description: '입력한 내용은 저장되지 않습니다.', confirm: '취소하기', keep: '계속 작성' },
   navigationFailed: '이동하지 못했습니다. 다시 시도해 주세요.',
-};
-export type FormGuardMessages = {
-  readonly navigate: typeof defaultGuardMessages.navigate;
-  readonly cancel: typeof defaultGuardMessages.cancel;
-  readonly navigationFailed: string;
 };
 
 /**
  * 앱(Router 안)에 한 번 둔다. 등록된 폼 중 하나라도 입력이 기준선과 다르면 Router 이동·브라우저 이탈을 한 번 묻고,
  * 저장 중이면 묻지 않고 거부한다. 확인창은 하나뿐이며 문구는 까닭(이동/취소 버튼)별 값이다.
+ * 문구는 전체 집합을 받는다(빠진 문구를 다른 언어로 채우지 않는다).
  */
 export function FormGuard({
   children,
-  messages,
+  messages: copy,
 }: {
   readonly children: ReactNode;
-  readonly messages?: {
-    readonly navigate?: Partial<FormGuardMessages['navigate']>;
-    readonly cancel?: Partial<FormGuardMessages['cancel']>;
-    readonly navigationFailed?: string;
-  };
+  readonly messages: FormGuardMessages;
 }) {
   const owner = useFormGuardBinding();
-  const copy = {
-    navigate: { ...defaultGuardMessages.navigate, ...messages?.navigate },
-    cancel: { ...defaultGuardMessages.cancel, ...messages?.cancel },
-    navigationFailed: messages?.navigationFailed ?? defaultGuardMessages.navigationFailed,
-  };
   const text = copy[owner.reason ?? 'navigate'];
   return (
     <FormGuardProvider binding={owner}>
@@ -95,7 +97,34 @@ export { useLeave } from '@boosterlab/web-kit/form';
 
 // ─── 폼 ─────────────────────────────────────────────────────────────────────
 
-const defaultFormMessages = {
+/** 폼 기본 문구 전체. 키트에 문구가 늘면 이 타입이 늘어 FormDefaults에 넘기는 값의 타입 검사가 실패한다(빠진 문구를 조용히 채우지 않는다). */
+export interface FormMessages {
+  readonly saveFailed: string;
+  readonly completionFailed: string;
+  readonly retry: string;
+  readonly loading: string;
+  readonly optionsFailed: string;
+  readonly choose: string;
+  readonly submit: string;
+  readonly cancel: string;
+  readonly confirmTitle: string;
+  readonly confirm: string;
+  readonly savedTitle: string;
+  readonly savedConfirm: string;
+  /** 저장 중 진행 표시를 화면 낭독기가 읽는 문구. */
+  readonly saving: string;
+  readonly removeFile: string;
+  readonly count: (current: number, max: number) => string;
+  /** 접힌 구역 머리글의 오류 수를 화면 낭독기가 읽는 문구. */
+  readonly sectionErrors: (count: number) => string;
+  /** 참조 정리 확인창 제목(끊기는 참조 수를 받는다). */
+  readonly referenceTitle: (count: number) => string;
+  /** 참조 정리 확인창의 진행 버튼. */
+  readonly referenceConfirm: string;
+}
+
+/** 키트가 제공하는 한국어 폼 문구. 한국어 앱은 이 값을 FormDefaults에 그대로 넘긴다(공급이 없으면 한국어로 떨어지지 않고 오류가 난다). */
+export const defaultFormMessages: FormMessages = {
   saveFailed: '저장하지 못했습니다. 입력을 확인해 주세요.',
   completionFailed: '저장은 완료됐지만 다음 작업을 진행하지 못했습니다.',
   retry: '다시 시도',
@@ -112,16 +141,41 @@ const defaultFormMessages = {
   removeFile: '파일 삭제',
   count: (current: number, max: number) => `${current}/${max}`,
   sectionErrors: (count: number) => `오류 ${count}개`,
-};
-export type FormMessages = typeof defaultFormMessages & {
-  readonly referenceTitle?: (count: number) => string;
-  readonly referenceConfirm?: string;
+  referenceTitle: (count: number) => `${count}곳에서 쓰고 있습니다. 함께 정리할까요?`,
+  referenceConfirm: '함께 정리',
 };
 
 /** 실패가 보이는 자리. save는 저장 실패 한 줄, completion은 저장 뒤 완료 처리 실패, options는 선택지 조회 실패다. */
 export type FormFailurePlace = 'save' | 'completion' | 'options';
 /** 실패 문구. undefined면 키트 기본 문구, null이면 그 자리에 아무것도 그리지 않는다(앱 경계가 이미 알린 실패 등). */
 export type RenderFormFailure = (failure: unknown, place: FormFailurePlace) => ReactNode | null | undefined;
+
+/** 칸 오류 값(문자열·번역 참조 등)을 표시 문구로 바꾼다. undefined면 그 칸에 문구를 그리지 않는다. */
+export type FormatFieldError = (errors: readonly unknown[]) => string | undefined;
+
+/** 앱 기본값. messages는 전체 집합이고, formatError·renderFailure는 없으면 키트 동작(첫 문자열·키트 문구)이다. */
+export interface FormDefaultsValue {
+  readonly messages: FormMessages;
+  readonly formatError?: FormatFieldError;
+  readonly renderFailure?: RenderFormFailure;
+}
+const FormDefaultsContext = createContext<FormDefaultsValue | undefined>(undefined);
+
+/**
+ * 앱 맨 위에 한 번 두고 폼 기본 문구 전체·칸 오류 해소·실패 문구를 넘긴다. 이 아래 모든 `<Form>`이 이 값을 쓴다.
+ * 화면의 `<Form>`이 준 messages는 그 폼에서만 키별로 앞서고, formatError·renderFailure는 그 폼에서 통째로 바뀐다.
+ * 폼의 확인창은 대화창 부품을 쓰므로 DialogDefaults도 함께 둔다.
+ */
+export function FormDefaults({ children, ...value }: FormDefaultsValue & { readonly children: ReactNode }) {
+  return <FormDefaultsContext.Provider value={value}>{children}</FormDefaultsContext.Provider>;
+}
+
+/** 앱 기본값을 읽는다. 공급이 없으면 조용히 다른 언어로 그리지 않고 바로 오류로 알린다. */
+function useFormDefaults(): FormDefaultsValue {
+  const value = useContext(FormDefaultsContext);
+  if (value === undefined) throw new Error('<Form> requires <FormDefaults messages> above it');
+  return value;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 부품은 값 타입을 모르고 이름으로만 접근한다.
 type AnyEditor = SaveFormEditor<any, any>;
@@ -139,31 +193,59 @@ function useFormContext() {
   return { ...value, ...useFormBinding() };
 }
 
+/** 저장 확인창의 내용. 본문(body)은 제출한 값(확인 뒤 그대로 저장할 값)을 받는다. 없는 항목은 폼 문구(confirmTitle·confirm·cancel)다. */
+export interface FormConfirmContent<V> {
+  readonly title?: ReactNode;
+  readonly confirmLabel?: string;
+  readonly cancelLabel?: string;
+  readonly body?: (values: V) => ReactNode;
+}
+/** 저장 완료 확인창의 내용. 없는 항목은 폼 문구(savedTitle·savedConfirm)다. */
+export interface FormSavedContent {
+  readonly title?: ReactNode;
+  readonly confirmLabel?: string;
+  readonly body?: ReactNode;
+}
+
+type StepsOf<E extends AnyEditor> = NonNullable<E['__steps']>;
+/**
+ * editor의 확인 단계 표식으로 확인창 prop을 정한다. 저장 확인(confirm)이 있을 수 있으면 `confirm`이, 저장 완료 확인(acknowledge)이 있을 수 있으면
+ * `saved`가 필수이고, 없다고 선언한 폼에는 넣을 수 없다. 확인창을 잊어 저장이 확인 대기에 멈추거나 쓰지 않는 창을 두는 일을 컴파일 때 막는다.
+ */
+type FormStepProps<E extends AnyEditor> = (true extends StepsOf<E>['confirm']
+  ? { readonly confirm: FormConfirmContent<E['baseline']> }
+  : { readonly confirm?: never }) &
+  (true extends StepsOf<E>['acknowledge'] ? { readonly saved: FormSavedContent } : { readonly saved?: never });
+
+/** `<Form>`의 props. editor의 확인 단계에 따라 confirm·saved가 필수·금지로 갈린다. */
+export type FormProps<E extends AnyEditor> = {
+  readonly editor: E;
+  readonly protect?: boolean;
+  /** 이 폼에서만 앱 기본 문구를 키별로 덮는다. */
+  readonly messages?: Partial<FormMessages>;
+  /** 이 폼에서만 앱 기본 실패 문구를 바꾼다. */
+  readonly renderFailure?: RenderFormFailure;
+  /** 이 폼에서만 칸 오류 값을 표시 문구로 바꾸는 방법을 바꾼다(번역 참조 해소 등). 앱 기본도 없으면 첫 문자열. */
+  readonly formatError?: FormatFieldError;
+  readonly children: ReactNode;
+} & FormStepProps<E> &
+  Omit<FormHTMLAttributes<HTMLFormElement>, 'onSubmit' | 'noValidate' | 'children'>;
+
 /**
  * 폼 하나. form 요소(브라우저 검증 끔·제출 이벤트를 이 폼에서 멈춤)와 이탈 보호 등록을 맡고, 배치는 children이 정한다.
+ * 저장 확인창·저장 완료 확인창·참조 정리 확인창은 Form이 그린다(화면이 따로 배치하지 않는다).
  * protect={false}는 로그인처럼 이탈을 묻지 않는 제품 예외에만 쓴다.
  */
-function FormRoot({
-  editor,
-  protect = true,
-  messages,
-  renderFailure,
-  formatError,
-  children,
-  ...formProps
-}: {
-  readonly editor: AnyEditor;
-  readonly protect?: boolean;
-  readonly messages?: Partial<FormMessages>;
-  readonly renderFailure?: RenderFormFailure;
-  /** 칸 오류 값을 표시 문구로 바꾼다(번역 참조 해소 등). 없으면 첫 문자열. */
-  readonly formatError?: (errors: readonly unknown[]) => string | undefined;
-  readonly children: ReactNode;
-} & Omit<FormHTMLAttributes<HTMLFormElement>, 'onSubmit' | 'noValidate' | 'children'>) {
-  const { submitOrigin, formProps: binding, formatError: resolvedFormatError } = useFormRootBinding(editor, protect, formatError);
+function FormRoot<E extends AnyEditor>(props: FormProps<E>) {
+  const { editor, protect = true, messages, renderFailure, formatError, children, confirm, saved, ...formProps } = props as FormProps<AnyEditor> & {
+    readonly confirm?: FormConfirmContent<unknown>;
+    readonly saved?: FormSavedContent;
+  };
+  const defaults = useFormDefaults();
+  const { submitOrigin, formProps: binding, formatError: resolvedFormatError } = useFormRootBinding(editor, protect, formatError ?? defaults.formatError);
   const value: FormContextValue = {
-    copy: { ...defaultFormMessages, ...messages },
-    renderFailure: renderFailure ?? (() => undefined),
+    copy: { ...defaults.messages, ...messages },
+    renderFailure: renderFailure ?? defaults.renderFailure ?? (() => undefined),
     formatError: resolvedFormatError,
   };
   return (
@@ -177,11 +259,8 @@ function FormRoot({
       </form>
       <ConfirmDialog
         open={editor.referenceChange !== undefined}
-        title={
-          value.copy.referenceTitle?.(editor.referenceChange?.count ?? 0) ??
-          `${editor.referenceChange?.count ?? 0}곳에서 쓰고 있습니다. 함께 정리할까요?`
-        }
-        confirmLabel={value.copy.referenceConfirm ?? '함께 정리'}
+        title={value.copy.referenceTitle(editor.referenceChange?.count ?? 0)}
+        confirmLabel={value.copy.referenceConfirm}
         cancelLabel={value.copy.cancel}
         onConfirm={() => editor.referenceChange?.confirm()}
         onCancel={() => editor.referenceChange?.cancel()}
@@ -191,6 +270,8 @@ function FormRoot({
           {value.formatError([editor.referenceFailure]) ?? editor.referenceFailure}
         </p>
       )}
+      <Confirm {...confirm} />
+      <Saved {...saved} />
     </FormContext.Provider></FormBindingProvider>
   );
 }
@@ -815,21 +896,10 @@ function Cancel({
 }
 
 /**
- * 저장 전 확인창. useSaveForm({ confirm: true })일 때 확인 대기·저장 중에 열리고, 보여 준 값으로 저장한다.
+ * 저장 전 확인창(Form이 그린다). useSaveForm({ confirm: true })일 때 확인 대기·저장 중에 열리고, 보여 준 값으로 저장한다.
  * 등록·수정 폼(progress)은 확인하면 닫히고 화면 전체 진행 덮개가 저장 중을 맡는다(확인창 → 덮개 → 완료 창 순서).
  */
-function Confirm({
-  title,
-  confirmLabel,
-  cancelLabel,
-  children,
-}: {
-  readonly title?: ReactNode;
-  readonly confirmLabel?: string;
-  readonly cancelLabel?: string;
-  /** 확인창 본문. 제출한 값을 받는다. */
-  readonly children?: (values: never) => ReactNode;
-}) {
+function Confirm({ title, confirmLabel, cancelLabel, body }: FormConfirmContent<unknown>) {
   const { editor, copy, submitOrigin } = useFormContext();
   const { open, stage } = useFormConfirmBinding(editor);
   return (
@@ -844,24 +914,16 @@ function Confirm({
       onConfirm={() => void editor.confirm()}
       onCancel={editor.cancel}
     >
-      {open && 'values' in stage ? children?.(stage.values as never) : null}
+      {open && 'values' in stage ? body?.(stage.values) : null}
     </ConfirmDialog>
   );
 }
 
 /**
- * 저장 완료 확인창. useSaveForm({ acknowledge: true })일 때 저장 뒤 열리고, 확인하면 완료 처리(onSaved, 보통 이동)를 한 번 실행한다.
+ * 저장 완료 확인창(Form이 그린다). useSaveForm({ acknowledge: true })일 때 저장 뒤 열리고, 확인하면 완료 처리(onSaved, 보통 이동)를 한 번 실행한다.
  * 완료 처리가 실패하면 창 안에 알리고 확인이 완료 처리만 다시 한다(저장 요청은 다시 나가지 않는다).
  */
-function Saved({
-  title,
-  confirmLabel,
-  children,
-}: {
-  readonly title?: ReactNode;
-  readonly confirmLabel?: string;
-  readonly children?: ReactNode;
-}) {
+function Saved({ title, confirmLabel, body }: FormSavedContent) {
   const { editor, copy, renderFailure } = useFormContext();
   const { attempt } = useFormSavedBinding(editor);
   const failure = editor.completionFailure === undefined ? undefined : renderFailure(editor.completionFailure, 'completion');
@@ -876,7 +938,7 @@ function Saved({
       confirmLabel={confirmLabel ?? copy.savedConfirm}
       onConfirm={() => void editor.complete()}
     >
-      {children}
+      {body}
       {editor.completionFailure !== undefined && failure !== null ? (
         <p role="alert" className={errorClass}>
           {failure ?? copy.completionFailed}
@@ -939,7 +1001,7 @@ const failureClass = 'rounded-lg border border-destructive/40 px-3 py-2 text-sm 
 const lockedClass = 'aria-disabled:cursor-default aria-disabled:opacity-50';
 
 /**
- * 폼 묶음 부품. `<Form editor={useSaveForm(...)}>` 안에 부품을 원하는 배치로 둔다.
+ * 폼 묶음 부품. `<Form editor={useSaveForm(...)}>` 안에 부품을 원하는 배치로 둔다. 확인창 내용은 `confirm`·`saved` prop으로 준다(confirm 본문의 값 타입은 editor에서 온다).
  * 칸 이름을 값 타입으로 좁히려면 `const F = Form.of<Values>()`로 같은 부품을 타입만 바꿔 쓴다.
  */
 export const Form = Object.assign(FormRoot, {
@@ -955,8 +1017,6 @@ export const Form = Object.assign(FormRoot, {
   Failure,
   Submit,
   Cancel,
-  Confirm,
-  Saved,
   Dialog: FormDialog,
   of: <T,>() => Form as unknown as TypedForm<T>,
 });
@@ -997,8 +1057,6 @@ export type TypedForm<T> = typeof FormRoot & {
   readonly Failure: typeof Failure;
   readonly Submit: typeof Submit;
   readonly Cancel: typeof Cancel;
-  readonly Confirm: (props: Omit<PropsOf<typeof Confirm>, 'children'> & { readonly children?: (values: T) => ReactNode }) => ReactNode;
-  readonly Saved: typeof Saved;
   readonly Dialog: typeof FormDialog;
 };
 

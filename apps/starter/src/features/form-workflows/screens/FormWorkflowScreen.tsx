@@ -2,7 +2,6 @@
 import { Button } from '@/shared/ui/button';
 import { useTranslation } from 'react-i18next';
 import { Form } from '@/shared/ui/web-kit/form/ui';
-import { useFormCopy } from '@/shared/lib/form-messages';
 import { useWorkflowForm } from '../flows/use-workflow-form';
 import type { WorkflowValues } from '../model/forms/workflow-form';
 
@@ -11,7 +10,6 @@ const F = Form.of<WorkflowValues>();
 /** 관계·검증·문구만 예제가 정하고 확인·정리·잠금·변경 감지는 키트가 처리한다. */
 export function FormWorkflowScreen() {
   const { t } = useTranslation();
-  const copy = useFormCopy();
   const { editor, notice } = useWorkflowForm();
   return (
     <div className="flex flex-col gap-5">
@@ -19,9 +17,7 @@ export function FormWorkflowScreen() {
       <p>{t('workflows.description')}</p>
       <F
         editor={editor}
-        {...copy}
         messages={{
-          ...copy.messages,
           referenceTitle: (count) => t('workflows.referenceTitle', { count }),
           referenceConfirm: t('workflows.clear'),
         }}

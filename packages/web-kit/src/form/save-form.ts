@@ -177,6 +177,25 @@ export function formFieldControlId(formId: string, field: string): string {
 }
 
 /**
+ * 저장 확인창(confirm)·저장 완료 확인창(acknowledge)을 쓰는지 타입으로 남긴 표식.
+ * 값이 true면 그 단계가 있을 수 있다는 뜻이라 registry `<Form>`이 그 창의 내용(prop)을 필수로 받고, false면 받지 않는다.
+ */
+export interface SaveSteps {
+  readonly confirm: boolean;
+  readonly acknowledge: boolean;
+}
+
+/** useSaveForm이 confirm·acknowledge의 리터럴 값을 읽어 내기 위한 선언 모양. 기본·두 번째 저장 어느 쪽에서든 켜면 그 단계가 있다. */
+type SaveStepDeclarations<TConfirm, TAcknowledge, TSecondaryConfirm, TSecondaryAcknowledge> = {
+  readonly confirm?: TConfirm;
+  readonly acknowledge?: TAcknowledge;
+  readonly secondary?: { readonly confirm?: TSecondaryConfirm; readonly acknowledge?: TSecondaryAcknowledge };
+};
+
+/** 리터럴 true나 값을 미리 알 수 없는 boolean이면 "있을 수 있음"(true), 생략·false·undefined면 false. */
+type StepMayExist<T> = true extends T ? true : false;
+
+/**
  * 제출·확인·저장 수명을 소유한다. 실패는 분류하지 않고 그대로 failure로 둔다(취소만 제외).
  * 성공하면 저장 결과가 기준선이 되고, 저장 중 입력이 바뀌지 않았을 때만 입력에도 반영한다.
  * 늦은 결과는 고정한 레코드·폼 수명이 같을 때만 반영한다.
@@ -187,9 +206,21 @@ export function useSaveForm<
   TResult = { readonly saved?: TInput } | void,
   TSecondaryOutput = TInput,
   TSecondaryResult = TResult,
+  TConfirm extends boolean | undefined = undefined,
+  TAcknowledge extends boolean | undefined = undefined,
+  TSecondaryConfirm extends boolean | undefined = undefined,
+  TSecondaryAcknowledge extends boolean | undefined = undefined,
 >(
-  options: SaveFormOptions<TInput, TOutput, TResult, TSecondaryOutput, TSecondaryResult>,
-): SaveFormEditor<TInput, TResult | TSecondaryResult> {
+  options: SaveFormOptions<TInput, TOutput, TResult, TSecondaryOutput, TSecondaryResult> &
+    SaveStepDeclarations<TConfirm, TAcknowledge, TSecondaryConfirm, TSecondaryAcknowledge>,
+): SaveFormEditor<
+  TInput,
+  TResult | TSecondaryResult,
+  {
+    readonly confirm: StepMayExist<TConfirm | TSecondaryConfirm>;
+    readonly acknowledge: StepMayExist<TAcknowledge | TSecondaryAcknowledge>;
+  }
+> {
   const latest = useRef(options);
   const primaryAction = useRef(options);
   latest.current = options;
@@ -727,7 +758,7 @@ export function useSaveForm<
 }
 
 /** useSaveForm이 돌려주는 편집 상태. `/form/ui`의 `<Form editor>`가 이 모양을 읽는다. */
-export interface SaveFormEditor<TInput, TResult = unknown> {
+export interface SaveFormEditor<TInput, TResult = unknown, TSteps extends SaveSteps = SaveSteps> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 검증기 타입 인자 12개는 화면이 알 필요가 없다.
   readonly form: ReactFormExtendedApi<TInput, any, any, any, any, any, any, any, any, any, any, any>;
   /** 편집 대상 식별(source.id). 바뀌면 진행 중이던 이탈 허가가 무효가 된다. */
@@ -762,4 +793,6 @@ export interface SaveFormEditor<TInput, TResult = unknown> {
   readonly complete: () => Promise<void>;
   /** 타입 위치만 쓰는 표식. 저장 결과 타입을 부품까지 잇는다. */
   readonly __result?: TResult;
+  /** 타입 위치만 쓰는 표식. 저장 확인창·완료 확인창이 있을 수 있는지를 registry `<Form>`의 필수 prop까지 잇는다. 실행 값은 없다. */
+  readonly __steps?: TSteps;
 }

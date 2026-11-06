@@ -6,6 +6,8 @@ import { createHttp, springEnvelope } from '@boosterlab/web-kit/http';
 import type { AxiosAdapter } from 'axios';
 import { createStarterIdle } from '@/runtime/session-idle';
 import { SessionWarning } from './SessionWarning';
+import { AppCopyDefaults } from '../AppCopyDefaults';
+import '../i18n';
 
 const dispose: Array<() => void> = [];
 afterEach(() => { cleanup(); for (const fn of dispose.splice(0)) fn(); vi.restoreAllMocks(); vi.useRealTimers(); });
@@ -35,7 +37,7 @@ it('S9: 연장 요청이 자기 응답 마감을 전역 표본 없이 전달한�
 it('S8: 닫기→tick→문서 재표시→경고 탈출·재진입→계정 교체의 화면 결과', async () => {
   const { idle, session } = fixture();
   idle.setProvisionalDeadline(session.current()!.sessionId, 100_900);
-  render(<SessionWarning idle={idle} />);
+  render(<SessionWarning idle={idle} />, { wrapper: AppCopyDefaults });
   expect(screen.getByRole('dialog')).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: '닫기' }));
   await act(async () => { await vi.advanceTimersByTimeAsync(100); });

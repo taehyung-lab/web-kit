@@ -4,7 +4,6 @@ import { Record } from '@/shared/ui/web-kit/detail-ui';
 import { Form } from '@/shared/ui/web-kit/form/ui';
 import { useTranslation } from 'react-i18next';
 import { failureCopyKey } from '@/shared/lib/failure-copy';
-import { useFormCopy } from '@/shared/lib/form-messages';
 import { useProductEdit, useProductEditSource } from '../flows/use-product-edit';
 import type { ProductFormValues } from '../model/forms/product-form';
 import type { Product } from '../model/product';
@@ -41,14 +40,14 @@ export function ProductEditScreen({ productId, onBack }: { readonly productId: s
 /** 저장 확인에는 키트가 고정한 제출 값만 표시한다. 저장하면 상세로 간다. */
 function ProductEditForm({ product }: { readonly product: Product }) {
   const { t } = useTranslation();
-  const copy = useFormCopy();
   const { editor, categories } = useProductEdit(product);
   const detail = { to: '/products/$productId' as const, params: { productId: product.id } };
   return (
-    <F editor={editor} {...copy}>
-      <ProductFields submitLabel={t('products.form.submitEdit')} cancelTo={detail} categories={categories} />
-      <F.Confirm title={t('products.form.confirmTitle')}>
-        {(submitted) => (
+    <F
+      editor={editor}
+      confirm={{
+        title: t('products.form.confirmTitle'),
+        body: (submitted) => (
           <>
             <p>{t('products.form.confirmBody')}</p>
             <dl>
@@ -60,8 +59,10 @@ function ProductEditForm({ product }: { readonly product: Product }) {
               <dd>{submitted.price}</dd>
             </dl>
           </>
-        )}
-      </F.Confirm>
+        ),
+      }}
+    >
+      <ProductFields submitLabel={t('products.form.submitEdit')} cancelTo={detail} categories={categories} />
     </F>
   );
 }

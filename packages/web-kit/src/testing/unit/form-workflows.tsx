@@ -1,5 +1,5 @@
 // 파일 책임: form-workflows 복사본의 공통 적합성 기준과 단언을 소유한다.
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it as baseIt, vi } from 'vitest';
 import { z } from 'zod';
 import type * as Contract0 from '../contracts/form/ui';
@@ -8,9 +8,11 @@ import { useSaveForm, type SaveFormEditor } from '../../form/save-form';
 import { moveRow, appendRow } from '../../form/rows';
 import type { FormReference } from '../../form/references';
 import { conformanceTitle, type ConformanceTarget } from '../target.mjs';
+import { formDefaultsWrapper, renderUnder, type FormDefaultsParts } from '../copy-defaults';
 
 /** 소비처가 넘긴 실제 복사본으로 form-workflows 보장 전체를 등록한다. */
-export function checkFormWorkflowsConformance({ Form }: { Form: typeof Contract0.Form }, target: ConformanceTarget) {
+export function checkFormWorkflowsConformance({ Form, ...copy }: { Form: typeof Contract0.Form } & FormDefaultsParts, target: ConformanceTarget) {
+  const render = renderUnder(formDefaultsWrapper(copy));
   const it = baseIt;
   const title = (id: string, label: string) => conformanceTitle(id, target, label);
 // @vitest-environment jsdom
@@ -141,7 +143,7 @@ function Example({
   });
   editor = current;
   return (
-    <F editor={current} protect={false}>
+    <F editor={current} protect={false} confirm={{}}>
       <F.Text name="title" label="제목" />
       <F.Text name="code" label="코드" />
       <F.Array name="sources">
@@ -169,7 +171,6 @@ function Example({
       <F.Failure />
       <F.Submit>정식 저장</F.Submit>
       <F.Submit mode="secondary">임시 저장</F.Submit>
-      <F.Confirm />
       <output data-testid="dirty">{String(current.isDirty)}</output>
     </F>
   );
@@ -339,14 +340,15 @@ it(title('G088', '체크 해제도 같은 확인을 거쳐 참조를 정리한�
   let current!: SaveFormEditor<z.input<typeof schema>>;
   /** 체크로 제공되는 원본과 그 원본을 고른 칸을 연결한다. */
   function CheckboxSource() {
-    current = useSaveForm({
+    const next = useSaveForm({
       schema,
       source: { id: 1, values: { enabled: true, selected: 'x' } },
       save: async () => undefined,
       references: [{ source: (v) => (v.enabled ? ['x'] : []), fields: () => ['selected'], message: '원본 필요' }],
     });
+    current = next;
     return (
-      <C editor={current} protect={false}>
+      <C editor={next} protect={false}>
         <C.Checkbox name="enabled" label="원본 사용" />
         <C.Text name="selected" label="참조" />
       </C>
@@ -400,7 +402,7 @@ it(title('G090', '다른 응답을 반환하는 두 저장의 완료 처리는 �
     });
     editor = current;
     return (
-      <F editor={current} protect={false}>
+      <F editor={current} protect={false} confirm={{}} saved={{}}>
         <F.Submit mode="secondary">임시 저장</F.Submit>
       </F>
     );
@@ -429,14 +431,15 @@ afterEach(() => { cleanup(); save.mockClear(); });
 
 /** 조건은 폼 정의 한 곳에만 두고 칸은 같은 선언을 읽어 표시한다. */
 function Example({ detail = '10', visible }: { detail?: string; visible?: boolean }) {
-  editor = useSaveForm({
+  const current = useSaveForm({
     schema,
     source: { id: 1, values: { enabled: true, detail } },
     conditionalFields: (values: Values) => [{ field: 'detail', visible: visible ?? showDetail(values), emptyValue: '' }],
     save,
     fieldError: (error) => ({ field: error.field as 'detail', message: '서버 거절' }),
   });
-  return <F editor={editor} protect={false}>
+  editor = current;
+  return <F editor={current} protect={false}>
     <F.Checkbox name="enabled" label="사용" />
     <F.Text name="detail" label="내용" />
     <F.Submit>저장</F.Submit>
@@ -531,13 +534,14 @@ it(title('form-conditional-8', 'F6 줄 이동과 새 줄의 숨김→보임은 �
   let rowsEditor: SaveFormEditor<Rows>;
   /** 줄마다 같은 선언 한 곳에서 조건을 계산한다. */
   function RowsExample() {
-    rowsEditor = useSaveForm({
+    const current = useSaveForm({
       schema: rowSchema,
       source: { id: 1, values: { rows: [{ key: 'a', enabled: true, detail: 'A' }, { key: 'b', enabled: true, detail: 'B' }] } },
       conditionalFields: (values) => values.rows.map((row, index) => ({ field: `rows[${index}].detail` as const, visible: row.enabled, emptyValue: '' })),
       save: rowSave,
     });
-    return <R editor={rowsEditor} protect={false}><R.Array name="rows">{(rows) => rows.items.map((row, index) => <div key={row.key}>
+    rowsEditor = current;
+    return <R editor={current} protect={false}><R.Array name="rows">{(rows) => rows.items.map((row, index) => <div key={row.key}>
       <R.Checkbox name={`rows[${index}].enabled`} label={`사용 ${row.key}`} />
       <R.Text name={`rows[${index}].detail`} label={`내용 ${row.key}`} />
     </div>)}</R.Array></R>;

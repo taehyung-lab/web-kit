@@ -13,7 +13,7 @@ description: 등록·수정·대화창 폼의 저장·저장 뒤 추가 작업·
 
 실제 조립 예: [apps/starter/src/features/products/screens/ProductForm.tsx](../../references/apps/starter/src/features/products/screens/ProductForm.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-registry `form`의 `FormGuard`를 앱(Router 안)에 한 번 둔다. 복사본은 `/form`의 `useFormGuardBinding`과 `FormGuardProvider`, `useFormRootBinding`과 `FormBindingProvider`로 연결한다. 화면의 flow가 `const editor = useSaveForm({...})`를 만들어 돌려주고([등록 flow](../../references/apps/starter/src/features/products/flows/use-product-create.ts.txt)), 화면은 `<Form editor={editor}>` 안에 부품을 원하는 배치로 둔다. 각 부품은 같은 편집 상태를 context로 읽어서, 칸·버튼·오류 줄의 위치를 바꿔도 저장·검증·focus 연결을 다시 쓰지 않는다. 칸 이름을 값 타입으로 좁히려면 `const F = Form.of<Values>()`로 같은 부품을 쓴다.
+앱 맨 위 한 곳에 registry `dialog`의 `DialogDefaults labels`와 registry `form`의 `FormDefaults`(`messages`·선택 `formatError`·`renderFailure`)를 두고, `FormGuard messages`를 앱(Router 안)에 한 번 둔다(아래 「앱 기본 문구」). 복사본은 `/form`의 `useFormGuardBinding`과 `FormGuardProvider`, `useFormRootBinding`과 `FormBindingProvider`로 연결한다. 화면의 flow가 `const editor = useSaveForm({...})`를 만들어 돌려주고([등록 flow](../../references/apps/starter/src/features/products/flows/use-product-create.ts.txt)), 화면은 `<Form editor={editor}>` 안에 부품을 원하는 배치로 둔다. 각 부품은 같은 편집 상태를 context로 읽어서, 칸·버튼·오류 줄의 위치를 바꿔도 저장·검증·focus 연결을 다시 쓰지 않는다. 칸 이름을 값 타입으로 좁히려면 `const F = Form.of<Values>()`로 같은 부품을 쓴다.
 
 - 칸: `Form.Text`·`TextArea`·`Select`·`Checkbox`·`File`·`Array`. 입력을 프로젝트 부품으로 바꿀 때는 `Form.Field`의 render 함수가 받는 `control`(id·aria·value·change·blur)을 그 입력에 건다. 값·검증·오류 표시·첫 오류 focus는 그대로 남는다.
 - 필수 표시(별표·`aria-required`)의 출처는 schema 하나다. 칸마다 `required`를 적지 않는다. 키트는 지금 값에서 그 칸만 비운 값(문자열 '', 목록 [], 체크 false, 파일 비어 있음)을 schema로 검증해 그 칸에 오류가 나면 필수로 본다(`editor.isRequired`). 그래서 다른 칸 값에 따른 조건부 필수도 같은 규칙에서 나온다. 단, 그런 규칙은 다른 칸 오류가 있어도 돌게 쓴다(zod 4: 객체 `superRefine(fn, { when: () => true })`). 기본값이면 다른 칸이 비어 있는 동안 규칙이 건너뛰어져 별표가 빠진다.
@@ -28,12 +28,26 @@ registry `form`의 `FormGuard`를 앱(Router 안)에 한 번 둔다. 복사본�
   - 선언하지 않은 폼(로그인·대화창 폼)은 덮개 없이 저장 요청·완료 처리 중 버튼 바로 뒤에 진행 표시(`Pending`, 문구 `messages.saving`은 화면 낭독기용)가 선다.
   - 저장 함수가 저장 도중 사용자에게 묻는다면(예: 지워질 회차 확인) 그 물음을 `save`의 세 번째 인자 `step.waitForUser(물음)`으로 감싼다. 묻는 동안 덮개가 내려가고 답한 뒤 저장이 이어지면 다시 덮는다. 감싸지 않으면 물음 창 뒤에 "수정 중" 덮개가 남는다.
 - `Form.Cancel to={...}`: 입력이 있으면 취소 문구로 한 번 묻고 이동한다. `Form.Dialog` 안이면 그 대화창을 닫는다. 저장 중이면 아무것도 하지 않는다.
-- `Form.Confirm`: `useSaveForm({ confirm: true })`의 저장 전 확인창. 제출한 값(snapshot)을 children에 주고 그 값으로 저장한다. 덮개를 선언한 폼은 확인하면 닫히고 덮개가 저장 중을 맡는다(확인창 → 덮개 → 완료 창). 선언하지 않은 폼은 저장 중에 닫히지 않고 확인 버튼 옆에 진행 표시를 둔다.
-- `Form.Saved`: `useSaveForm({ acknowledge: true })`의 저장 완료 확인창. 확인이 `onSaved`(보통 이동)를 한 번 실행한다. Esc·바깥 클릭으로 닫히지 않는다.
+- 저장 확인창: `useSaveForm({ confirm: true })`(또는 `secondary`의 `confirm`)의 저장 전 확인창은 `<Form>`이 그리고, 내용은 `<Form confirm={{ title?, confirmLabel?, cancelLabel?, body?: (values) => … }}>`로 준다. `body`는 제출한 값(snapshot)을 받고 그 값으로 저장한다. 덮개를 선언한 폼은 확인하면 닫히고 덮개가 저장 중을 맡는다(확인창 → 덮개 → 완료 창). 선언하지 않은 폼은 저장 중에 닫히지 않고 확인 버튼 옆에 진행 표시를 둔다.
+- 저장 완료 확인창: `useSaveForm({ acknowledge: true })`(또는 `secondary`의 `acknowledge`)의 완료 확인창도 `<Form>`이 그리고, 내용은 `saved={{ title?, confirmLabel?, body? }}`로 준다. 확인이 `onSaved`(보통 이동)를 한 번 실행한다. Esc·바깥 클릭으로 닫히지 않는다.
+- 확인창 내용은 타입으로 강제한다. `useSaveForm`이 돌려주는 editor 타입이 confirm·acknowledge 선언(기본·두 번째 저장 어느 쪽이든)을 표식으로 담아, 켠 단계의 `confirm`·`saved` prop이 없으면 타입 오류, 끈(생략·`false`) 폼에 넣어도 타입 오류다. 값을 미리 알 수 없는 `boolean`은 켤 수 있는 것으로 보고 prop을 요구한다. 확인창 부품을 화면에 따로 배치하지 않는다(`Form.Confirm`·`Form.Saved`는 없다). `useSaveForm`에 타입 인자를 직접 적으면 표식을 추론하지 못하므로 적지 않는다. editor를 다른 부품에 넘길 때도 `SaveFormEditor<V>`처럼 표식 없이 적으면 두 확인창 prop을 모두 요구하므로, `ReturnType<typeof useXxx>`처럼 만든 쪽의 타입을 그대로 넘긴다.
 - Enter: 폼에서 Enter는 기본적으로 제출(저장 버튼 클릭)이다. 단, 폼 안에서 입력한 값을 [추가] 버튼이 목록에 넣는 입력칸(제목 입력 + [추가]로 목록에 넣는 칸 등)에서는 Enter가 제출 대신 [추가] 클릭으로 동작한다. 줄마다 자기 칸이고 [추가]가 빈 줄만 더하는 배열 줄 입력(등급명·회차 날짜 등)은 일반 칸이라 Enter가 폼 제출이다. 모달 안 입력칸의 Enter는 그 모달의 확인(모달 폼 제출)이며 바깥 폼은 제출되지 않는다. 키트에서: 일반 칸은 `Form.Submit`이 있는 `<Form>`이 받으므로 칸에서 Enter를 막지 않는다. 값을 목록에 넣는 [추가] 칸은 `onKeyDown={rows.enterAdds(add)}`. 목록 검색어 칸의 키 연결은 [web-kit-list](../web-kit-list/SKILL.md)를 따른다(기본 복사본은 Enter = 추가 후 검색). 모달은 `Form.Dialog` 안에 자기 `<Form>`과 `Form.Submit`을 둔다.
 - `Form.Dialog`: 대화창 안 하위 폼(자기 `useSaveForm`). 안쪽 제출(버튼·Enter)은 안쪽만 검증·저장하고 바깥 폼의 저장·검증 오류·확인창을 건드리지 않는다. 바깥에 오류가 있어도 안쪽 제출은 막히지 않는다. 닫기·취소는 그 안의 폼만 보고 묻는다(바깥이 dirty여도 바깥 이탈 확인은 뜨지 않는다). 하위 결과를 바깥 값에 넣으면 바깥이 dirty가 되어 이후 이탈은 바깥 기준으로 묻는다. 입력이 있어도 묻지 않고 닫는 대화창은 안쪽을 `<Form protect={false}>`로 둔다.
 - 이탈: `FormGuard`가 등록된 폼 중 하나라도 입력이 기준선과 다르면 Router 이동·브라우저 이탈을 한 번 묻고, 저장 중이면 묻지 않고 막는다. 저장 성공 뒤 이동은 묻지 않는다. Router를 거치지 않는 이탈(같은 메뉴 다시 누르기)은 `useLeave()(run, reason)`로 같은 판정을 받는다. 확인 뒤 `run`이 이동하면 `ignoreBlocker: true`로 이동한다. 로그인 같은 제품 예외만 `<Form protect={false}>`. 이 값은 해당 폼의 보호 등록 자체를 제외하므로 변경 경고와 저장 중 Router·브라우저 이탈 차단이 함께 빠진다. 검증·중복 제출 잠금·기준선 처리는 남고 `Form.Cancel`의 진행 중 잠금도 유지된다. 기존 등록 화면의 보호 정책을 이 예시만으로 바꾸지 않는다.
-- 문구는 `FormGuard messages`(까닭별: navigate·cancel)·`Form messages`·`formatError`(칸 오류 값 → 문구)·`renderFailure(failure, place)`(place: save·completion·options, `null`이면 그 자리에 그리지 않음), 모양은 프로젝트 shadcn 테마 변수와 복사본의 Tailwind 클래스로 바꾼다(키트 스타일시트는 없다). 새 화면마다 Field·이탈 확인·확인창을 다시 만들지 않는다.
+- 문구는 앱 기본(`FormDefaults`·`DialogDefaults`·`FormGuard messages`(까닭별: navigate·cancel))이 한 번 주고, 화면의 `<Form messages>`는 그 폼에서만 키별로 덮으며 `formatError`(칸 오류 값 → 문구)·`renderFailure(failure, place)`(place: save·completion·options, `undefined`면 키트 문구, `null`이면 그 자리에 그리지 않음)는 그 폼에서 통째로 바꾼다. 모양은 프로젝트 shadcn 테마 변수와 복사본의 Tailwind 클래스로 바꾼다(키트 스타일시트는 없다). 새 화면마다 Field·이탈 확인·확인창을 다시 만들지 않는다.
+
+## 앱 기본 문구
+
+실제 조립 예: [apps/starter/src/app/AppCopyDefaults.tsx](../../references/apps/starter/src/app/AppCopyDefaults.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+
+폼·대화창 기본 문구는 키트가 아니라 앱이 정한다. 앱 맨 위(대화창·폼을 그리는 모든 화면의 바깥, 보통 i18n Provider 안) 한 곳에 둔다.
+
+- `DialogDefaults labels={{ close, confirm, cancel, pending }}`: 이 아래 `Dialog`·`ConfirmDialog`·`AlertDialog`(폼·목록 일괄 작업·이탈 확인이 그리는 창 포함)의 기본 버튼·진행 문구. 창에 준 `closeLabel`·`confirmLabel`·`cancelLabel`·`pendingLabel`이 그 창에서만 앞선다. 폼 없이 대화창만 설치한 앱도 이것만 둔다.
+- `FormDefaults messages formatError? renderFailure?`: 이 아래 모든 `<Form>`의 문구(`FormMessages` 전체)·칸 오류 해소·실패 문구. `formatError`가 없으면 첫 문자열 오류, `renderFailure`가 없으면 키트 문구(`messages.saveFailed` 등)다. 폼의 확인창도 대화창 부품이므로 `DialogDefaults`도 함께 둔다.
+- `FormGuard messages`: 이탈 확인 문구 전체(`navigate`·`cancel`·`navigationFailed`).
+- 문구 집합은 모두 전체를 받는다(참조 정리 확인창 `referenceTitle(count)`·`referenceConfirm` 포함). 키트에 문구가 늘면 소비 앱 타입 검사가 실패하므로 빠진 문구가 조용히 다른 언어로 보이지 않는다. 한국어 앱은 복사본이 내보내는 `defaultFormMessages`·`defaultDialogLabels`·`defaultFormGuardMessages`를 그대로 넘긴다.
+- 공급이 없으면 `<Form>`·대화창이 렌더할 때 바로 오류가 난다(`requires <FormDefaults messages>`·`requires <DialogDefaults labels>`). 단위 시험에서 부품만 그릴 때도 같은 공급으로 감싼다.
+- 화면마다 문구·`formatError`·`renderFailure`를 넘기는 연결을 따로 만들지 않는다. 그 화면만 다른 값이 필요할 때만 그 `<Form>`에 준다.
 
 ## 화면 전체 진행 덮개
 
@@ -67,12 +81,12 @@ headless는 화면 배치 없이 상태와 연결 함수만 쓰는 방식이다.
 - `source { id, values }`: 원본을 폼 값으로 바꾼 것. 등록 화면이면 기본값이다.
 - `save(values, submitted)`: 서버가 저장 결과를 주면 폼 값으로 바꿔 `{ saved }`로 돌려준다. 요청 전에 화면 절차가 거절하면(먼저 조회가 필요한 검사·업로드 실패·확인창 취소) `throw new FormRejection(칸 목록 [{ field, message }], root?)`. 키트가 서버 필드 오류와 같은 길로 처리하므로(아래 「실패」) 화면이 칸에 오류를 직접 붙이거나 구역을 열거나 포커스를 예약하지 않는다.
 - 필요할 때만 선언하는 것:
-  - `confirm`
+  - `confirm`: 유효한 제출을 확인 대기로 보낸다. 켜면 `<Form confirm>` 내용이 필수다(위 「저장 확인창」).
   - `fieldError`: 서버 필드를 폼 경로와 문구로 바꾼다. 돌려준 경로는 제출 때 기준이고, 그 뒤 줄 작업은 키트가 따라간다.
   - `reveal(fields)`: 키트 구역(`Form.Section fields`·`FormSection`)이 아닌 프로젝트 고유의 접힌 영역(탭 등)을 오류 포커스 전에 연다. 거절마다(클라이언트 검증 실패·서버 필드 오류 도착(늦은 도착 포함)·`FormRejection`) 실패 칸 목록으로 한 번 불린다. 제출 횟수를 세어 열지 않는다. 키트 구역은 스스로 열린다.
   - `onSaved(result)`: 이동·알림·추가 요청. 저장 함수가 돌려준 값을 그대로 받는다(등록 뒤 새 id 등). Promise를 반환해 후속 완료까지 잠금을 유지한다. 일반 오류를 던지면 `completionFailure`이며 `Form.Failure`의 재시도(또는 `complete()`)는 저장 없이 후속만 다시 실행한다. 이미 시작한 프로젝트 async 함수 안의 추가 부수효과 취소와 여러 후속 요청 중 일부 성공의 중복 방지는 프로젝트가 책임진다.
   - 완료 과정에서 업무상 이전 결과가 무효가 됐다면 프로젝트가 정리를 끝내고 **새 저장 요청이 안전할 때만** `return new DiscardSaveAttempt(reason)`(`/form`)을 쓴다. 예: 세션을 끝낸 로그인 취소. 키트는 완료 결과를 버리고 이전 기준선을 복원하며 현재 입력을 보존해 `idle`로 돌린다. 저장 성공으로 반영한 정규화만 되돌리고 진행 중 편집은 보존한다. `reason`은 `completionFailure`와 `renderFailure(reason, 'completion')`으로 안내하되 완료 재시도 버튼·저장 완료 확인창은 닫는다. 자동 제출하지 않으며 사용자가 새로 제출한다. `clearFailureOnEdit(reason)`이 true면 제출 입력과 달라진 동안 안내를 숨기고 새 제출 때 지운다. source.id를 바꿔 폼을 새로 만들거나 폼 잠금을 직접 풀지 않는다. 정리가 실패하면 일반 오류를 던져 완료만 다시 시도한다.
-  - `acknowledge`: 저장 뒤 사용자 확인(`complete()`)을 기다린 다음 `onSaved`를 실행한다.
+  - `acknowledge`: 저장 뒤 사용자 확인(`complete()`)을 기다린 다음 `onSaved`를 실행한다. 켜면 `<Form saved>` 내용이 필수다.
 - 입력 control의 id는 `fieldId(name)`을 쓰고, 같은 id를 `FieldFrame`에 넘긴다. 체크 트리(`CheckboxTree`)는 그 id를 `id`로 받으며, 검증 오류의 focus가 그 그룹으로 온다.
 - 줄을 추가·삭제하는 입력은 아래 「줄 추가·삭제 입력」을 따른다.
 
@@ -170,7 +184,7 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 
 실제 조립 예: [apps/starter/src/features/form-workflows/screens/FormWorkflowScreen.tsx](../../references/apps/starter/src/features/form-workflows/screens/FormWorkflowScreen.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-`useSaveForm({ schema, save, secondary: { schema: draftSchema, save: saveDraft, onSaved } })`로 임시저장처럼 다른 검증을 선언하고 `<Form.Submit mode="secondary">임시 저장</Form.Submit>`으로 실행한다. `secondary`의 schema 출력 타입은 해당 save에 추론된다. 두 저장은 제출 잠금·오류 처리·기준선·이탈 보호를 공유한다. 기본 저장의 필수 오류가 남아 있어도 두 번째 검증이 통과하면 저장할 수 있다. 두 번째 동작의 `confirm`·`acknowledge`·`onSaved`는 기본 동작에서 상속하지 않는다. 확인창은 기존 `Form.Confirm`, 완료 확인은 `Form.Saved`를 쓴다. 실제 필수 칸·요청·성공 뒤 이동은 프로젝트 서버 계약으로 정한다.
+`useSaveForm({ schema, save, secondary: { schema: draftSchema, save: saveDraft, onSaved } })`로 임시저장처럼 다른 검증을 선언하고 `<Form.Submit mode="secondary">임시 저장</Form.Submit>`으로 실행한다. `secondary`의 schema 출력 타입은 해당 save에 추론된다. 두 저장은 제출 잠금·오류 처리·기준선·이탈 보호를 공유한다. 기본 저장의 필수 오류가 남아 있어도 두 번째 검증이 통과하면 저장할 수 있다. 두 번째 동작의 `confirm`·`acknowledge`·`onSaved`는 기본 동작에서 상속하지 않는다. 확인창·완료 확인창 내용은 같은 `<Form>`의 `confirm`·`saved` prop으로 준다(두 저장 중 하나라도 켜면 필수). 실제 필수 칸·요청·성공 뒤 이동은 프로젝트 서버 계약으로 정한다.
 
 ## 폼 안 원본과 참조
 
@@ -184,7 +198,7 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 
 키트 `Form.Field`의 `change`, 입력 부품, `Form.Array`와 공개 줄 작업은 이 경로를 쓴다. 직접 값을 변경하는 자체 입력은 `requestFormChange(form, 변경후전체값, accepted => 값반영)`을 사용한다. `writeFormValues`는 허용된 전체 값 중 바뀐 루트 칸만 반영하는 도우미다. raw TanStack 값 변경은 확인 절차를 우회하지만 두 저장의 최종 참조 검사에서는 거절된다. 관계 선언을 바꾸는 것은 프로젝트 정책 변경이며 원본·관계 함수는 값을 수정하지 않는 순수 함수로 제공한다.
 
-확인 중 값이 한 번이라도 달라지거나 편집 대상이 바뀌거나 폼이 내려가면 이전 확인은 취소된다. 저장·저장 확인 중에는 참조 정리 확인이 필요한 새 변경을 시작하지 않는다. 관계가 없는 기존 입력 변경과 늦은 응답 보호는 유지한다. 확인 문구는 `Form`의 `messages.referenceTitle(count)`·`referenceConfirm`, 거절 문구는 관계의 `message`로 준다.
+확인 중 값이 한 번이라도 달라지거나 편집 대상이 바뀌거나 폼이 내려가면 이전 확인은 취소된다. 저장·저장 확인 중에는 참조 정리 확인이 필요한 새 변경을 시작하지 않는다. 관계가 없는 기존 입력 변경과 늦은 응답 보호는 유지한다. 확인 문구는 앱 기본 `FormDefaults messages`의 `referenceTitle(count)`·`referenceConfirm`(그 폼만 다르면 `<Form messages>`), 거절 문구는 관계의 `message`로 준다.
 
 
 ## 조건부로 숨기는 칸

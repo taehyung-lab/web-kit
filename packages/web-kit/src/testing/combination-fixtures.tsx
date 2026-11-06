@@ -4,8 +4,10 @@ import { RequestFailure } from '../failure';
 import { z } from 'zod';
 import type * as ProgressContract from './contracts/ui/blocking-progress';
 import type * as FormContract from './contracts/form/ui';
+import { formDefaultsWrapper, type FormDefaultsParts } from './copy-defaults';
 /** 실제 폼의 서버 오류가 실제 덮개 종료 뒤 초점을 받는지 관찰한다. */
-export function createFormProgressConformancePage({ Form, BlockingProgress }: { Form: typeof FormContract.Form; BlockingProgress: typeof ProgressContract.BlockingProgress }) {
+export function createFormProgressConformancePage({ Form, BlockingProgress, ...copy }: { Form: typeof FormContract.Form; BlockingProgress: typeof ProgressContract.BlockingProgress } & FormDefaultsParts) {
+  const Root = formDefaultsWrapper(copy);
   /** 서버 오류가 덮개 정리 뒤 실제 첫 오류 칸으로 이동하는지 관찰한다. */
   function ErrorForm() {
     const schema = z.object({ name: z.string() });
@@ -17,5 +19,5 @@ export function createFormProgressConformancePage({ Form, BlockingProgress }: { 
     return <F editor={editor} protect={false}><F.Text name="name" label="오류 칸" /><F.Submit>시작</F.Submit><button type="button">본문 작업</button><output aria-label="작업 횟수">0</output></F>;
   }
   /** 같은 소비 복사본을 폼과 덮개에 전달한다. */
-  return function FormProgressConformancePage() { return <BlockingProgress messages={{ loading: '조회 중', create: '등록 중', edit: '수정 중', delete: '삭제 중' }}><ErrorForm /></BlockingProgress>; };
+  return function FormProgressConformancePage() { return <Root><BlockingProgress messages={{ loading: '조회 중', create: '등록 중', edit: '수정 중', delete: '삭제 중' }}><ErrorForm /></BlockingProgress></Root>; };
 }

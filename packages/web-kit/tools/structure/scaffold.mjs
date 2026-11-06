@@ -313,14 +313,20 @@ function ${E}EditRoute() {
  * 골격을 만든다. 같은 내용의 파일은 그대로 두고(다시 실행해도 같다), 다른 내용의 화면 파일이 있으면 아무것도 쓰지 않고 실패한다.
  * 반환: { created, reused, unchanged, conflicts, markers, dryRun }
  */
-export function scaffoldScreen({ root, configFile, feature, kind, url, entity, group = '_app', dryRun = false }) {
+export function scaffoldScreen({ root, configFile, feature, kind, url, entity, group: groupOption, dryRun = false }) {
   const config = loadStructureConfig(root, configFile);
+  // 묶음 이름은 키트가 정하지 않는다. --group이 없으면 프로젝트 설정(screenGroup)을 쓰고, 둘 다 없으면 만들지 않는다.
+  const group = groupOption ?? config.screenGroup;
+  if (group === undefined) throw new Error('새 화면을 넣을 route 묶음을 정하세요: --group <_묶음> 또는 web-kit.structure.json의 "screenGroup"');
   if (!KINDS.includes(kind)) throw new Error(`--kind는 ${KINDS.join('|')} 중 하나여야 합니다`);
   if (typeof feature !== 'string' || !/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(feature)) throw new Error('--feature는 kebab-case 도메인 이름이어야 합니다(예: orders)');
   const name = entity ?? (feature.length > 3 && feature.endsWith('s') && !feature.endsWith('ss') ? feature.slice(0, -1) : feature);
   if (!/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(name)) throw new Error('--entity는 kebab-case 이름이어야 합니다(예: order)');
   if ([feature, name].some((value) => VAGUE_NAMES.includes(value))) throw new Error('포괄 이름(utils·helpers·constants 등)으로 만들 수 없습니다');
-  if (!/^_[a-z][a-z0-9-]*$/.test(group)) throw new Error('--group은 _로 시작하는 route 묶음 이름이어야 합니다(예: _app)');
+  if (!/^_[a-z][a-z0-9-]*$/.test(group)) throw new Error('--group은 _로 시작하는 route 묶음 이름이어야 합니다(예: _authenticated)');
+  // 묶음의 진입 판정·골격은 그 묶음의 route.tsx에 있다. 없는 묶음에 화면을 만들면 진입 판정 없는 화면이 생기므로 거절한다.
+  if (!existsSync(join(config.root, config.routes, group, 'route.tsx')))
+    throw new Error(`route 묶음 ${group}이 없습니다: 진입 판정·골격을 둔 ${config.routes}/${group}/route.tsx가 있는 묶음에만 화면을 만듭니다`);
   const files = plan({ config, feature, entity: name, kind, url, group });
   const result = { created: [], reused: [], unchanged: [], conflicts: [], markers: 0, dryRun };
   for (const file of files) {
