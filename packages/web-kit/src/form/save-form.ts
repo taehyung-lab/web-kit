@@ -270,8 +270,8 @@ export function useSaveForm<
     readonly inputAfterSaved: TInput;
     readonly submitted: TInput;
   } | undefined>(undefined);
-  /** 저장 도중 사용자에게 묻고 있는 물음 수. 0보다 크면 진행 덮개를 내린다. */
-  const [asking, setAsking] = useState(0);
+  /** 질문 수는 제출에 귀속한다. 이전 제출의 질문은 현재 저장의 덮개를 바꾸지 않는다. */
+  const [asking, setAsking] = useState<{ readonly token: object; readonly count: number } | undefined>(undefined);
 
   const choices = useRef(new Map<string, { token: object; nodes: readonly ChoiceNode[] }>());
   const [, updateChoices] = useState(0);
@@ -466,13 +466,14 @@ export function useSaveForm<
     return true;
   }
 
-  /** 물음이 끝날 때까지 덮개를 내린다. 폼이 내려간 뒤 끝난 물음은 상태를 건드리지 않는다. */
-  async function waitForUser<T>(question: Promise<T>): Promise<T> {
-    setAsking((count) => count + 1);
+  /** 현재 제출의 물음만 덮개를 내린다. 늦게 시작하거나 끝난 이전 물음은 새 제출과 섞지 않는다. */
+  async function waitForUser<T>(token: object, question: Promise<T>): Promise<T> {
+    if (!isCurrent(token)) return await question;
+    setAsking((previous) => ({ token, count: previous?.token === token ? previous.count + 1 : 1 }));
     try {
       return await question;
     } finally {
-      if (mounted.current) setAsking((count) => count - 1);
+      if (isCurrent(token)) setAsking((previous) => previous?.token === token ? { token, count: previous.count - 1 } : previous);
     }
   }
 
@@ -489,7 +490,7 @@ export function useSaveForm<
     setStage({ kind: 'saving', values: submitted });
     let result: TActionResult;
     try {
-      result = await run({ waitForUser });
+      result = await run({ waitForUser: (question) => waitForUser(token, question) });
     } catch (error: unknown) {
       if (!current()) return;
       setStage({ kind: 'idle' });
@@ -704,8 +705,9 @@ export function useSaveForm<
   }, []);
 
   // 등록·수정 폼의 저장(완료 창이 없으면 완료 처리까지)을 진행 덮개에 알린다. 사용자에게 묻는 동안은 내린다.
+  const waitingForUser = asking?.token === submission.current && (asking?.count ?? 0) > 0;
   const blocking =
-    (stage.kind === 'saving' && asking === 0) || (stage.kind === 'saved' && stage.completing && completion.current.acknowledge !== true);
+    (stage.kind === 'saving' && !waitingForUser) || (stage.kind === 'saved' && stage.completing && completion.current.acknowledge !== true);
   useBlockingProgress(options.progress ?? 'create', options.progress !== undefined && blocking);
 
   // 입력을 고치면 지우기로 한 실패는 지금 입력이 제출 때 입력과 달라진 동안 보이지 않는다.

@@ -1,5 +1,5 @@
 // 파일 책임: 소비처 UI를 주입받아 실제 브라우저에서 공통 보장을 관찰하는 검사 전용 화면을 만든다.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSaveForm } from '../form';
 import { RequestFailure } from '../failure';
 import { createBrowserHistory, createRootRoute, createRoute, createRouter, Outlet, RouterProvider } from '@tanstack/react-router';
@@ -83,8 +83,14 @@ export function createFormConformancePage({ Form, FormGuard, Choice, ...copy }: 
     const [innerCount, setInnerCount] = useState(0);
     const [open, setOpen] = useState(false);
     const [draft, setDraft] = useState('tag');
-    const editor = useSaveForm({ schema, source: { id: 1, values: { title: 'outer', tags: [] } }, save: async () => setCount((n) => n + 1) });
-    return <><output aria-label="바깥 저장">{count}</output><output aria-label="안쪽 저장">{innerCount}</output><F editor={editor} protect={new URLSearchParams(location.search).get('protect') === 'true'}><F.Text name="title" label="제목" />
+    const finishSave = useRef<(() => void) | undefined>(undefined);
+    const pending = new URLSearchParams(location.search).get('pending') === 'true';
+    const editor = useSaveForm({ schema, source: { id: 1, values: { title: 'outer', tags: [] } }, save: async () => {
+      setCount((n) => n + 1);
+      // 실제 키보드·클릭을 반복할 동안 저장을 대기시킨다. 시간 지연에 기대지 않는다.
+      if (pending) await new Promise<void>((resolve) => { finishSave.current = resolve; });
+    } });
+    return <>{pending && <button type="button" onClick={() => finishSave.current?.()}>저장 끝내기</button>}<output aria-label="바깥 저장">{count}</output><output aria-label="안쪽 저장">{innerCount}</output><F editor={editor} protect={new URLSearchParams(location.search).get('protect') === 'true'}><F.Text name="title" label="제목" />
       <F.Array name="tags">{(rows) => {
         const add = () => { rows.append({ value: draft }); setDraft(''); };
         return <><input aria-label="추가 입력" value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={rows.enterAdds(add)} /><button type="button" onClick={add}>추가</button><output aria-label="줄 수">{rows.items.length}</output></>;

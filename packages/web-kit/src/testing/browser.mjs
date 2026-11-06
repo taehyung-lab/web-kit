@@ -117,6 +117,26 @@ export function checkFormBrowser({ url, target }) {
         await expect(page.getByLabel('줄 수')).toHaveText('1');
         await expect(page.getByLabel('바깥 저장')).toHaveText('0');
     });
+    test(conformanceTitle('B-enter', target, '저장 중 버튼 클릭·버튼 Enter·입력 Enter는 중복 저장하지 않는다'), async ({ page }) => {
+        await page.goto(url + '?pending=true');
+        const input = page.getByRole('textbox', { name: '제목', exact: true });
+        const submit = page.getByRole('button', { name: '저장', exact: true });
+        await input.press('Enter');
+        await expect(page.getByLabel('바깥 저장')).toHaveText('1');
+        await expect(submit).toHaveAttribute('aria-disabled', 'true');
+        // Playwright의 disabled 대기를 건너뛰고 실제 마우스 클릭을 보내 방어 동작을 확인한다.
+        await submit.click({ force: true });
+        await submit.press('Enter');
+        await input.press('Enter');
+        await input.press('Enter');
+        await expect(page.getByLabel('바깥 저장')).toHaveText('1');
+        await page.getByRole('button', { name: '저장 끝내기' }).click();
+        await expect(submit).not.toHaveAttribute('aria-disabled', 'true');
+        await input.press('Enter');
+        await expect(page.getByLabel('바깥 저장')).toHaveText('2');
+        await page.getByRole('button', { name: '저장 끝내기' }).click();
+        await expect(submit).not.toHaveAttribute('aria-disabled', 'true');
+    });
     test(conformanceTitle('B-enter-inner', target, '하위 Enter는 안쪽만 저장하고 선택 포털은 동작한다'), async ({ page }) => {
         await page.goto(url);
         await page.getByRole('button', { name: '안쪽 열기' }).click();

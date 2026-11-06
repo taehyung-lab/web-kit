@@ -1,13 +1,13 @@
 // 파일 책임: progress-form.tsx 조합이 소비 복사본에서 내는 화면 결과를 검사한다.
 import { act, cleanup, fireEvent, screen, waitFor, } from '@testing-library/react';
 import { type ReactNode } from 'react';
-import { afterEach, expect, it as baseIt } from 'vitest';
+import { afterEach, expect, it as baseIt, vi } from 'vitest';
 import type * as Contract1 from '../contracts/ui/blocking-progress';
 import { conformanceTitle, type ConformanceTarget } from '../target.mjs';
 import { formDefaultsWrapper, renderUnder, type FormDefaultsParts } from '../copy-defaults';
 import { z } from 'zod';
 import { RequestFailure } from '../../failure';
-import { useSaveForm, type SaveFormOptions } from '../../form/save-form';
+import { useSaveForm, type SaveFormOptions, type SaveStep } from '../../form/save-form';
 import type * as Contract0 from '../contracts/form/ui';
 
 /** 필요한 기능의 실제 복사본으로 해당 검사만 등록한다. */
@@ -173,6 +173,71 @@ it(title('G005', 'P5 저장 절차가 사용자에게 묻는 동안(waitForUser)
   expect(body().hasAttribute('inert')).toBe(false);
   await act(async () => answer.resolve(true));
   expect(overlayOpen()).toBe(true);
+  await act(async () => request.resolve(undefined));
+  expect(overlayOpen()).toBe(false);
+});
+
+/** 클릭과 Enter의 암묵 제출이 도달하는 submit 이벤트 모두 저장 잠금을 지켜야 한다. */
+async function expectSaveLocked(save: ReturnType<typeof vi.fn>) {
+  const button = screen.getByRole('button', { name: '저장', hidden: true });
+  expect(button.getAttribute('aria-disabled')).toBe('true');
+  await act(async () => {
+    fireEvent.click(button);
+    fireEvent.submit(button.closest('form')!);
+  });
+  expect(save).toHaveBeenCalledTimes(1);
+}
+
+for (const answerKind of ['resolve', 'reject'] as const) {
+  it(title('G005', `대상 교체 뒤 이전 질문의 ${answerKind}는 새 저장 덮개와 버튼 잠금을 바꾸지 않는다`), async () => {
+    const answer = deferred<boolean>();
+    const request = deferred<undefined>();
+    const saveA = vi.fn(async (_values: Values, _submitted: Values, step: SaveStep) => { await step.waitForUser(answer.promise); });
+    const saveB = vi.fn(() => request.promise);
+    const view = render(<Host><Editor progress="edit" source={{ id: 'A', values: { name: 'A' } }} save={saveA} /></Host>);
+    fireEvent.click(screen.getByRole('button', { name: '저장' }));
+    await waitFor(() => expect(saveA).toHaveBeenCalledTimes(1));
+    expect(overlayOpen()).toBe(false);
+    await expectSaveLocked(saveA);
+    view.rerender(<Host><Editor progress="edit" source={{ id: 'B', values: { name: 'B' } }} save={saveB} /></Host>);
+    fireEvent.click(screen.getByRole('button', { name: '저장' }));
+    await waitFor(() => expect(saveB).toHaveBeenCalledTimes(1));
+    expect(overlayOpen()).toBe(true);
+    expect(body().hasAttribute('inert')).toBe(true);
+    await expectSaveLocked(saveB);
+    await act(async () => { if (answerKind === 'resolve') answer.resolve(true); else answer.reject(new Error('이전 질문 취소')); });
+    expect(overlayOpen()).toBe(true);
+    await expectSaveLocked(saveB);
+    await act(async () => request.resolve(undefined));
+    expect(overlayOpen()).toBe(false);
+    expect(screen.getByRole('button', { name: '저장' }).getAttribute('aria-disabled')).not.toBe('true');
+  });
+}
+
+it(title('G005', '새 대상의 여러 질문은 모두 끝나야 덮개를 복구하고 이전 질문의 종료는 섞이지 않는다'), async () => {
+  const oldAnswer = deferred<boolean>();
+  const first = deferred<boolean>();
+  const second = deferred<boolean>();
+  const request = deferred<undefined>();
+  const saveA = vi.fn(async (_values: Values, _submitted: Values, step: SaveStep) => { await step.waitForUser(oldAnswer.promise); });
+  const saveB = vi.fn(async (_values: Values, _submitted: Values, step: SaveStep) => {
+    await Promise.all([step.waitForUser(first.promise), step.waitForUser(second.promise)]);
+    return request.promise;
+  });
+  const view = render(<Host><Editor progress="edit" source={{ id: 'A', values: { name: 'A' } }} save={saveA} /></Host>);
+  fireEvent.click(screen.getByRole('button', { name: '저장' }));
+  await waitFor(() => expect(saveA).toHaveBeenCalledTimes(1));
+  view.rerender(<Host><Editor progress="edit" source={{ id: 'B', values: { name: 'B' } }} save={saveB} /></Host>);
+  fireEvent.click(screen.getByRole('button', { name: '저장' }));
+  await waitFor(() => expect(saveB).toHaveBeenCalledTimes(1));
+  await act(async () => oldAnswer.resolve(true));
+  expect(overlayOpen()).toBe(false);
+  await act(async () => first.resolve(true));
+  expect(overlayOpen()).toBe(false);
+  await expectSaveLocked(saveB);
+  await act(async () => second.resolve(true));
+  expect(overlayOpen()).toBe(true);
+  await expectSaveLocked(saveB);
   await act(async () => request.resolve(undefined));
   expect(overlayOpen()).toBe(false);
 });
