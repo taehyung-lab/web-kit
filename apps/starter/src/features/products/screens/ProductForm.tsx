@@ -1,6 +1,6 @@
 // 파일 책임: 상품 필드·배치·옵션의 업무 값을 선언한다. 입력·검증·오류 연결은 키트 Form 부품이 맡는다.
 import { Button } from '@/shared/ui/button';
-import { Form } from '@/shared/ui/web-kit/form/ui';
+import { Form } from '@/shared/ui/web-kit/form/form';
 import { useTranslation } from 'react-i18next';
 import { useFieldMessage } from '@/shared/lib/form-messages';
 import type { CategoryOptions } from '../flows/use-category-options';

@@ -1,5 +1,5 @@
 // 파일 책임: 상품 결과 열의 제목·표시·정렬 연결을 선언한다.
-import type { ListColumn } from '@/shared/ui/web-kit/list-ui';
+import type { ListColumn } from '@/shared/ui/web-kit/list';
 import { useTranslation } from 'react-i18next';
 import type { ProductSummary } from '../model/product';
 import { formatDate, formatPrice } from './format';

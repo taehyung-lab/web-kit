@@ -1,6 +1,6 @@
 // 파일 책임: 상품 목록의 제목·필터·작업·결과를 배치하고 route가 준 이동을 연결한다. 목록 상태 조립은 목록 flow가 맡는다.
 import { Button } from '@/shared/ui/button';
-import { ListProvider, ListResult, ResultTable, Pagination } from '@/shared/ui/web-kit/list-ui';
+import { ListProvider, ListResult, ResultTable, Pagination } from '@/shared/ui/web-kit/list';
 import type { UrlSearch } from '@boosterlab/web-kit/search';
 import { useTranslation } from 'react-i18next';
 import { useProductList } from '../flows/use-product-list';

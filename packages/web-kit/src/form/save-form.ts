@@ -768,7 +768,7 @@ export function useSaveForm<
   };
 }
 
-/** useSaveForm이 돌려주는 편집 상태. `/form/ui`의 `<Form editor>`가 이 모양을 읽는다. */
+/** useSaveForm이 돌려주는 편집 상태. `registry form`의 `<Form editor>`가 이 모양을 읽는다. */
 export interface SaveFormEditor<TInput, TResult = unknown, TSteps extends SaveSteps = SaveSteps> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 검증기 타입 인자 12개는 화면이 알 필요가 없다.
   readonly form: ReactFormExtendedApi<TInput, any, any, any, any, any, any, any, any, any, any, any>;

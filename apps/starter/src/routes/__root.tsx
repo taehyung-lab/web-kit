@@ -1,5 +1,5 @@
 // 파일 책임: route 트리의 뿌리. 앱 전체의 이탈 보호 하나를 둔다. 오류·없음 화면은 router 기본값이 맡는다.
-import { FormGuard } from '@/shared/ui/web-kit/form/ui';
+import { FormGuard } from '@/shared/ui/web-kit/form/form';
 import { useTranslation } from 'react-i18next';
 import { createRootRoute, Outlet } from '@tanstack/react-router';
 

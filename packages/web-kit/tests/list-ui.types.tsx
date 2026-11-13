@@ -1,5 +1,5 @@
 // 파일 책임: 선언과 목록 UI 연결의 이름·종류·문구 누락을 컴파일 때 거부한다.
-import { List } from '../../ui-registry/src/list-ui';
+import { List } from '../../ui-registry/src/list';
 import { arrayKeywordCodec, definePolicy, listSearch, keywords, choices, dateRange, paging, sort } from '../src/search';
 const declaration = listSearch({
   policy: definePolicy({ keys: { page: 'page', pageSize: 'size', sort: 'sort', order: 'order' }, paging: { sizes: [20], defaultSize: 20 }, sortFirst: 'desc', keywords: { codec: arrayKeywordCodec, pending: 'include' }, choices: { format: 'array' }, dateRange: { entry: 'paired', keys: { type: 'type', from: 'from', to: 'to' } } }),

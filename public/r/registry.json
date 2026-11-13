@@ -252,9 +252,9 @@
       ],
       "files": [
         {
-          "path": "packages/ui-registry/src/form/ui.tsx",
+          "path": "packages/ui-registry/src/form/form.tsx",
           "type": "registry:file",
-          "target": "~/src/shared/ui/web-kit/form/ui.tsx"
+          "target": "~/src/shared/ui/web-kit/form/form.tsx"
         },
         {
           "path": "packages/ui-registry/src/form/field.tsx",
@@ -334,9 +334,9 @@
       ],
       "files": [
         {
-          "path": "packages/ui-registry/src/list-ui.tsx",
+          "path": "packages/ui-registry/src/list.tsx",
           "type": "registry:file",
-          "target": "~/src/shared/ui/web-kit/list-ui.tsx"
+          "target": "~/src/shared/ui/web-kit/list.tsx"
         },
         {
           "path": "packages/ui-registry/checks/list-ui.test.tsx",
@@ -366,9 +366,9 @@
       ],
       "files": [
         {
-          "path": "packages/ui-registry/src/detail-ui.tsx",
+          "path": "packages/ui-registry/src/detail.tsx",
           "type": "registry:file",
-          "target": "~/src/shared/ui/web-kit/detail-ui.tsx"
+          "target": "~/src/shared/ui/web-kit/detail.tsx"
         },
         {
           "path": "packages/ui-registry/checks/record-ui.test.tsx",

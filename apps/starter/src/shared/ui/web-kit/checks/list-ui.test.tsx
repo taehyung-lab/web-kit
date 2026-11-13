@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // 파일 책임: 설치한 UI 복사본을 키트의 공통 단위 검사에 연결하고, 복사본의 앱 기본값·표시 입구를 확인한다.
-import { List, ListDefaults, useListField, type RenderFailure } from '../list-ui';
+import { List, ListDefaults, useListField, type RenderFailure } from '../list';
 import { Pending } from '../ui/pending';
 import { DialogDefaults, defaultDialogLabels } from '../ui/dialog';
 import { checkListUiConformance } from '@boosterlab/web-kit/testing/unit/list';

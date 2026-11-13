@@ -1,5 +1,5 @@
 // 파일 책임: 회원 목록 화면. 필터를 왼쪽에 두는 배치와 값 하나를 골라 바꾸는 일괄 작업 예시다. 목록 상태 조립은 회원 목록 flow가 맡는다.
-import { ListProvider, ResultTotal, SortSelect, PageSize, ListResult, ResultTable, Pagination, BulkSelectAction } from '@/shared/ui/web-kit/list-ui';
+import { ListProvider, ResultTotal, SortSelect, PageSize, ListResult, ResultTable, Pagination, BulkSelectAction } from '@/shared/ui/web-kit/list';
 import type { UrlSearch } from '@boosterlab/web-kit/search';
 import { useTranslation } from 'react-i18next';
 import { useMemberList } from '../flows/use-member-list';

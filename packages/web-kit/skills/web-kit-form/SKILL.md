@@ -50,7 +50,7 @@ description: 등록·수정·대화창 폼의 저장·저장 뒤 추가 작업·
 - `DialogDefaults labels={{ close, confirm, cancel, pending }}`: 이 아래 `Dialog`·`ConfirmDialog`·`AlertDialog`(폼·목록 일괄 작업·이탈 확인이 그리는 창 포함)의 기본 버튼·진행 문구. 창에 준 `closeLabel`·`confirmLabel`·`cancelLabel`·`pendingLabel`이 그 창에서만 앞선다. 폼 없이 대화창만 설치한 앱도 이것만 둔다.
 - `FormDefaults messages formatError? renderFailure?`: 이 아래 모든 `<Form>`의 문구(`FormMessages` 전체)·칸 오류 해소·실패 문구. `formatError`가 없으면 첫 문자열 오류, `renderFailure`가 없으면 키트 문구(`messages.saveFailed` 등)다. 폼의 확인창도 대화창 부품이므로 `DialogDefaults`도 함께 둔다.
 - `FormGuard messages`: 이탈 확인 문구 전체(`navigate`·`cancel`·`navigationFailed`).
-- 목록·상세의 앱 기본값은 registry `list`의 `ListDefaults`([web-kit-list](../web-kit-list/SKILL.md))·registry `record`의 `RecordDefaults`([web-kit-record](../web-kit-record/SKILL.md))로 같은 자리에 둔다. 이 둘은 일부 문구만 받아도 되며 빠진 키는 키트 기본(한국어) 문구다. 다른 언어 앱은 화면에 보이는 키를 모두 준다.
+- 목록·상세의 앱 기본값은 registry `list`의 `ListDefaults`([web-kit-list](../web-kit-list/SKILL.md))·registry `record`의 `DetailDefaults`([web-kit-record](../web-kit-record/SKILL.md))로 같은 자리에 둔다. 이 둘은 일부 문구만 받아도 되며 빠진 키는 키트 기본(한국어) 문구다. 다른 언어 앱은 화면에 보이는 키를 모두 준다.
 - 문구 집합은 모두 전체를 받는다(참조 정리 확인창 `referenceTitle(count)`·`referenceConfirm` 포함). 키트에 문구가 늘면 소비 앱 타입 검사가 실패하므로 빠진 문구가 조용히 다른 언어로 보이지 않는다. 한국어 앱은 복사본이 내보내는 `defaultFormMessages`·`defaultDialogLabels`·`defaultFormGuardMessages`를 그대로 넘긴다.
 - 공급이 없으면 `<Form>`·대화창이 렌더할 때 바로 오류가 난다(`requires <FormDefaults messages>`·`requires <DialogDefaults labels>`). 단위 시험에서 부품만 그릴 때도 같은 공급으로 감싼다.
 - 화면마다 문구·`formatError`·`renderFailure`를 넘기는 연결을 따로 만들지 않는다. 그 화면만 다른 값이 필요할 때만 그 `<Form>`에 준다.
@@ -75,7 +75,7 @@ registry `blocking-progress`의 `BlockingProgress messages={{ loading, create, e
 
 ## headless 연결
 
-실제 조립 예: [apps/starter/src/shared/ui/web-kit/form/ui.tsx](../../references/apps/starter/src/shared/ui/web-kit/form/ui.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/shared/ui/web-kit/form/form.tsx](../../references/apps/starter/src/shared/ui/web-kit/form/form.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 headless는 화면 배치 없이 상태와 연결 함수만 쓰는 방식이다. 특수 표현도 `/form`의 `useFormRootBinding`·`useFormFieldBinding`·`useFormDialogScope`·`useFormCancel`과 Provider를 사용한다. ref는 실제 요소를 가리키는 참조이고 반환된 이벤트·속성과 함께 해당 요소에 연결한다. 제출·참조 확인·값 적용·오류 focus 순서를 복사본에서 다시 만들지 않는다. registry 폼은 이 연결을 이미 포함한다.
 

@@ -1,5 +1,5 @@
 // 파일 책임: 약관 등록 예시 화면. 칸 배치와 확인·완료 문구를 그린다. 저장 흐름은 등록 flow가 맡는다. 취소는 상품 목록으로 간다.
-import { Form } from '@/shared/ui/web-kit/form/ui';
+import { Form } from '@/shared/ui/web-kit/form/form';
 import { useTranslation } from 'react-i18next';
 import { useTermsCreate } from '../flows/use-terms-create';
 import { TERMS_STATUSES, type TermsFormInput } from '../model/forms/terms-form';

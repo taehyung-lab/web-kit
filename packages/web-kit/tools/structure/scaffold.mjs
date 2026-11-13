@@ -146,7 +146,7 @@ export function ${E}ListScreen({
   readonly navigate: (next: UrlSearch, options: { readonly replace: boolean }) => void;
 }) {
   const { list } = use${E}List({ search, navigate });
-  // TODO(web-kit-new): 제목·필터·결과 표·페이지 이동을 registry list-ui로 배치한다(web-kit-list 「registry 표시」). 채우기 전에는 typecheck가 실패한다.
+  // TODO(web-kit-new): 제목·필터·결과 표·페이지 이동을 registry list로 배치한다(web-kit-list 「registry 표시」). 채우기 전에는 typecheck가 실패한다.
   return <${TODO_MARKER}list_layout list={list} />;
 }
 ` }, {
@@ -177,7 +177,7 @@ export function use${E}Detail(${id}: string) {
 
 export function ${E}DetailScreen({ ${id} }: { readonly ${id}: string }) {
   const state = use${E}Detail(${id});
-  // TODO(web-kit-new): registry record의 Record로 대기·없음·실패·내용을 그린다(web-kit-record). 채우기 전에는 typecheck가 실패한다.
+  // TODO(web-kit-new): registry record의 Detail로 대기·없음·실패·내용을 그린다(web-kit-record). 채우기 전에는 typecheck가 실패한다.
   return <${TODO_MARKER}detail_layout state={state} />;
 }
 ` }, {
@@ -228,7 +228,7 @@ export function use${E}Create() {
 
 export function ${E}CreateScreen() {
   const { editor } = use${E}Create();
-  // TODO(web-kit-new): registry form/ui의 Form·칸으로 필드를 배치한다(web-kit-form). 채우기 전에는 typecheck가 실패한다.
+  // TODO(web-kit-new): registry form/form의 Form·칸으로 필드를 배치한다(web-kit-form). 채우기 전에는 typecheck가 실패한다.
   return <${TODO_MARKER}form_layout editor={editor} />;
 }
 ` }, {
@@ -284,13 +284,13 @@ import type { ${E} } from '../model/${entity}';
 
 export function ${E}EditScreen({ ${id} }: { readonly ${id}: string }) {
   const state = use${E}EditSource(${id});
-  // TODO(web-kit-new): registry record의 Record로 원본 상태를 그리고 준비되면 수정 폼을 그린다(web-kit-record·web-kit-form). 채우기 전에는 typecheck가 실패한다.
+  // TODO(web-kit-new): registry record의 Detail로 원본 상태를 그리고 준비되면 수정 폼을 그린다(web-kit-record·web-kit-form). 채우기 전에는 typecheck가 실패한다.
   return <${TODO_MARKER}edit_layout state={state} renderForm={(record: ${E}) => <${E}EditForm record={record} />} />;
 }
 
 function ${E}EditForm({ record }: { readonly record: ${E} }) {
   const { editor } = use${E}Edit(record);
-  // TODO(web-kit-new): registry form/ui의 Form·칸으로 필드를 배치한다(web-kit-form). 채우기 전에는 typecheck가 실패한다.
+  // TODO(web-kit-new): registry form/form의 Form·칸으로 필드를 배치한다(web-kit-form). 채우기 전에는 typecheck가 실패한다.
   return <${TODO_MARKER}form_layout editor={editor} />;
 }
 ` }, {

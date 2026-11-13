@@ -27,7 +27,7 @@ pnpm add @boosterlab/web-kit@file:vendor/boosterlab-web-kit.tgz
 | 위치 | 내용 | 출처 |
 |---|---|---|
 | `src/shared/ui/<부품>.tsx` (예: `button.tsx`·`select.tsx`) | shadcn 기본 부품 | shadcn 공식 registry(키트 항목의 `registryDependencies`로 함께 설치) |
-| `src/shared/ui/web-kit/…` | 키트 묶음 부품(Form·List·Record·Dialog·Choice…)과 검사 연결 | `@web-kit` registry |
+| `src/shared/ui/web-kit/…` | 키트 묶음 부품(Form·List·Detail·Dialog·Choice…)과 검사 연결 | `@web-kit` registry |
 
 4. shadcn 4.19.1 CLI로 필요한 항목을 먼저 확인한 뒤 설치한다. 항목은 검사 도구(vitest·Testing Library·Playwright)를 정확한 버전의 devDependencies로 설치해 기존 버전을 바꿀 수 있으므로, `shadcn add --dry-run`으로 바뀔 의존 버전과 lockfile 영향을 먼저 확인한다. 기존 프로젝트는 자기 변경과 차이를 확인한다. `--overwrite`를 갱신 기본값으로 쓰지 않는다.
 
@@ -36,7 +36,7 @@ pnpm dlx shadcn@4.19.1 add @web-kit/form --dry-run
 pnpm dlx shadcn@4.19.1 add @web-kit/form
 ```
 
-항목의 npm·registry 의존과 단위/브라우저 검사 연결 파일도 함께 설치한다. 항목이 쓰는 shadcn 기본 부품은 shadcn 공식 registry에서 받아 오므로 네트워크가 필요하고, 이미 있는 기본 부품 파일은 덮어쓰기 여부를 묻는다(프로젝트가 고친 부품은 덮어쓰지 않는다). 키트 UI는 `src/shared/ui/web-kit`에 생긴다. 별도 스타일시트는 없으며 앱의 테마 CSS 하나가 모양을 정한다. 예: `@/shared/ui/web-kit/form/ui`의 Form, `@boosterlab/web-kit/form`의 useSaveForm, 화면의 버튼은 `@/shared/ui/button`의 Button.
+항목의 npm·registry 의존과 단위/브라우저 검사 연결 파일도 함께 설치한다. 항목이 쓰는 shadcn 기본 부품은 shadcn 공식 registry에서 받아 오므로 네트워크가 필요하고, 이미 있는 기본 부품 파일은 덮어쓰기 여부를 묻는다(프로젝트가 고친 부품은 덮어쓰지 않는다). 키트 UI는 `src/shared/ui/web-kit`에 생긴다. 별도 스타일시트는 없으며 앱의 테마 CSS 하나가 모양을 정한다. 예: `@/shared/ui/web-kit/form/form`의 Form, `@boosterlab/web-kit/form`의 useSaveForm, 화면의 버튼은 `@/shared/ui/button`의 Button.
 
 5. 설치한 버전과 같은 키트 checkout을 지정해 공통 도구로 설치 직후 기록을 만든다. 선택 항목의 내부 의존은 자동으로 포함한다. 원본 정의·빌드 JSON·설치 파일이 맞지 않으면 기록하지 않는다.
 
@@ -44,7 +44,7 @@ pnpm dlx shadcn@4.19.1 add @web-kit/form
 pnpm exec web-kit-registry record --source /path/to/same-version-web-kit --items form
 ```
 
-프로젝트 루트에서 실행하며 다른 폴더는 `--project apps/admin`으로 지정한다. 원본과 다른 위치로 설치했다면 `--paths paths.json`을 준다. 경로표는 `{"packages/ui-registry/src/form/ui.tsx":"src/components/form.tsx"}`처럼 원본→프로젝트 상대 경로다. 실제 설치 위치가 바뀐 파일을 모두 적는다. 설치 파일을 덮어쓰거나 의존성을 설치하지 않는다.
+프로젝트 루트에서 실행하며 다른 폴더는 `--project apps/admin`으로 지정한다. 원본과 다른 위치로 설치했다면 `--paths paths.json`을 준다. 경로표는 `{"packages/ui-registry/src/form/form.tsx":"src/components/form.tsx"}`처럼 원본→프로젝트 상대 경로다. 실제 설치 위치가 바뀐 파일을 모두 적는다. 설치 파일을 덮어쓰거나 의존성을 설치하지 않는다.
 
 기록은 프로젝트 루트의 `registry-installation.json`이며 패키지 버전·원본 commit·원본/설치 SHA-256 지문(내용이 같은지 비교하는 값)·CLI 버전·components 설정 지문을 담는다. shadcn은 위의 4.19.1을 사용한다. CLI가 import를 변환하므로 원본과 설치 지문은 별도로 계산한다. `sourceWorkingTree`가 modified면 commit만으로 원본을 식별할 수 없으므로 원본 파일 지문도 보존한다. 같은 버전의 다른 내용으로 정식 재발행하지 않는다. [실제 설치 기록](../references/apps/starter/registry-installation.json)을 참고한다.
 

@@ -1,6 +1,6 @@
 /** 기본 필드의 이름·값 종류를 컴파일 단계에서 검사한다. */
 import { z } from 'zod';
-import { Form, FormDefaults, FormGuard, defaultFormGuardMessages, defaultFormMessages, type FormMessages } from '../../ui-registry/src/form/ui';
+import { Form, FormDefaults, FormGuard, defaultFormGuardMessages, defaultFormMessages, type FormMessages } from '../../ui-registry/src/form/form';
 import { DialogDefaults, defaultDialogLabels } from '../../ui-registry/src/ui/dialog';
 import { useSaveForm, type ConditionalField } from '../src/form';
 /** 타입 검사 전용 소비 예이며 런타임에서 호출하지 않는다. */

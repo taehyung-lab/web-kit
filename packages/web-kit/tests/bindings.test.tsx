@@ -6,7 +6,7 @@ import { useState, type ReactNode } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { ListProvider, useListModel, useList, type ListModel } from '../src/list';
-import { List, type ListColumn } from '../../ui-registry/src/list-ui';
+import { List, type ListColumn } from '../../ui-registry/src/list';
 import { defineSearch } from '../src/search';
 import { useDialogBinding, useConfirmBinding, useAcknowledgeBinding, useBlockingProgressBinding, BlockingProgressProvider, useBlockingProgress } from '../src/confirmation';
 import { useRetryFocus } from '../src/record';

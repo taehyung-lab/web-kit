@@ -10,21 +10,21 @@ declare const defaultMessages: {
     empty: string;
     historyEmpty: string;
 };
-export type RecordMessages = typeof defaultMessages;
+export type DetailMessages = typeof defaultMessages;
 /** 실패가 보이는 자리. load는 내용 없는 실패, missing은 없음·이 조회의 거부, refresh는 내용을 보이는 중 재조회 실패다. */
-export type RecordFailurePlace = 'load' | 'missing' | 'refresh';
+export type DetailFailurePlace = 'load' | 'missing' | 'refresh';
 /** 실패 문구. undefined면 키트 기본 문구, null이면 그 자리에 아무것도 그리지 않는다(앱 경계가 이미 알린 401·403 등). */
-export type RenderRecordFailure = (failure: unknown, place: RecordFailurePlace) => ReactNode | null | undefined;
+export type RenderDetailFailure = (failure: unknown, place: DetailFailurePlace) => ReactNode | null | undefined;
 /**
  * 단건 하나의 상태를 그린다. 준비됨일 때만 children(data)을 그리고, 식별 전환·없음·실패는 useRecord 판정을 그대로 따른다.
  * missing은 없음 안내(무엇이 없는지와 돌아갈 길)다. 재조회 실패는 내용을 지우지 않고 위에 알린다.
  */
-declare function RecordRoot<T>({ state, children, missing, renderFailure, messages, }: {
+declare function DetailRoot<T>({ state, children, missing, renderFailure, messages, }: {
     readonly state: RecordState<T>;
     readonly children: (data: T) => ReactNode;
     readonly missing?: ReactNode;
-    readonly renderFailure?: RenderRecordFailure;
-    readonly messages?: Partial<RecordMessages>;
+    readonly renderFailure?: RenderDetailFailure;
+    readonly messages?: Partial<DetailMessages>;
 }): import("react").JSX.Element;
 /** 라벨·값 항목들의 묶음(dl). */
 declare function Fields({ children, className }: {
@@ -54,8 +54,8 @@ declare function History({ entries, labels, empty, }: {
     };
     readonly empty?: ReactNode;
 }): import("react").JSX.Element;
-/** 상세 묶음 부품. `<Record state={useRecord(...)}>{(data) => <Record.Fields>…</Record.Fields>}</Record>` */
-export declare const Record: typeof RecordRoot & {
+/** 상세 묶음 부품. `<Detail state={useRecord(...)}>{(data) => <Detail.Fields>…</Detail.Fields>}</Detail>` */
+export declare const Detail: typeof DetailRoot & {
     Fields: typeof Fields;
     Field: typeof Field;
     History: typeof History;
