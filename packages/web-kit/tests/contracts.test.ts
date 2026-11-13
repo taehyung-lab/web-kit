@@ -44,7 +44,7 @@ it('자식 하나 선택은 부모 mixed이며 클릭은 모두 선택하고 명
   expect(selection.checked(['a1', 'a2'])).toBe(false);
   expect(selection.mixed(['a1', 'a2'])).toBe(true);
   expect(selection.set(['a1', 'a2'], !selection.checked(['a1', 'a2']))).toEqual(['a1', 'a2', 'b']);
-  expect(selection.checked(selection.all, true)).toBe(false);
+  expect(selection.checked(selection.all)).toBe(false);
   expect(selection.set(['a1', 'a2'], false)).toEqual(['b']);
   expect(selection.set(selection.all, true)).toEqual(['a1', 'a2', 'b']);
 });

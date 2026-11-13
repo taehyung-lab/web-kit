@@ -186,7 +186,7 @@ export function createSession<C extends Credentials>({
         acceptStored(latest);
         throw cancelled();
       }
-      if (isRequestFailure(error) && (error.status === 401 || error.endsSession)) {
+      if (isRequestFailure(error) && error.rejectsAuthentication) {
         endBy('server', error.endsSession ? error : (origin ?? error));
         throw cancelled();
       }

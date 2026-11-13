@@ -35,12 +35,12 @@ description: 상세·수정 원본 같은 단건 조회의 대기·없음·실�
 
 실제 조립 예: [apps/starter/src/features/products/screens/ProductDetailScreen.tsx](../../references/apps/starter/src/features/products/screens/ProductDetailScreen.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-registry `record`의 `<Record state={useRecord(...)}>{(data) => …}</Record>`로 준비됨일 때만 내용을 그린다. 대기·없음·실패(다시 시도, 버튼이 사라지면 내용으로 focus)·재조회 실패(내용을 둔 채 알림과 다시 시도)는 복사본이 그리고 재시도 포커스 수명은 `/record`의 `useRetryFocus`가 맡는다. 없음 안내(무엇이 없는지·돌아갈 길)는 `missing` 값이다. 실패 문구는 `renderFailure(failure, place)`(place: load·missing·refresh)로 정하고, `null`이면 그 자리에 그리지 않는다(앱 경계가 이미 알린 401·403 등). 문구는 `messages`.
+registry `record`의 `<Detail state={useRecord(...)}>{(data) => …}</Detail>`로 준비됨일 때만 내용을 그린다. 대기·없음·실패(다시 시도, 버튼이 사라지면 내용으로 focus)·재조회 실패(내용을 둔 채 알림과 다시 시도)는 복사본이 그리고 재시도 포커스 수명은 `/record`의 `useRetryFocus`가 맡는다. 없음 안내(무엇이 없는지·돌아갈 길)는 `missing` 값이다. 실패 문구는 `renderFailure(failure, place)`(place: load·missing·refresh)로 정하고, `null`이면 그 자리에 그리지 않는다(앱 경계가 이미 알린 401·403 등). 문구는 `messages`.
 
-앱 맨 위에 `RecordDefaults messages? renderFailure?`를 한 번 두면 모든 상세의 공용 문구·실패 문구가 된다(언어가 바뀌면 새 값으로 다시 그린다). 문구는 키트 기본 → `RecordDefaults`(안쪽이 바깥 위) → `<Record messages>` 순으로 키별로 덮고, 값이 `undefined`인 키는 덮지 않는다. `renderFailure`는 가까운 단계부터 묻고 `undefined`면 다음 단계(바깥 `RecordDefaults` → 키트 기본 문구)로 넘긴다. `null`은 그리지 않고 `''`은 그 단계의 답이다. `Record` 밖에 둔 `Record.Field`·`Record.History`도 앱 기본값을 쓴다.
+앱 맨 위에 `DetailDefaults messages? renderFailure?`를 한 번 두면 모든 상세의 공용 문구·실패 문구가 된다(언어가 바뀌면 새 값으로 다시 그린다). 문구는 키트 기본 → `DetailDefaults`(안쪽이 바깥 위) → `<Detail messages>` 순으로 키별로 덮고, 값이 `undefined`인 키는 덮지 않는다. `renderFailure`는 가까운 단계부터 묻고 `undefined`면 다음 단계(바깥 `DetailDefaults` → 키트 기본 문구)로 넘긴다. `null`은 그리지 않고 `''`은 그 단계의 답이다. `Detail` 밖에 둔 `Detail.Field`·`Detail.History`도 앱 기본값을 쓴다.
 
-- `Record.Fields`·`Record.Field label`: 라벨·값 목록. null·undefined·''·false만 빈 값 표시(`messages.empty`, 기본 '-')이고 0은 그대로다.
-- `Record.History entries labels empty headerClassName?`: 일시·변경 내용·담당자 표(`headerClassName`은 머리글 표면). 항목은 프로젝트가 서버 어휘를 해석하고 일시를 표시 형식으로 써서 넘긴다. 0건이면 빈 문구.
+- `Detail.Fields`·`Detail.Field label`: 라벨·값 목록. null·undefined·''·false만 빈 값 표시(`messages.empty`, 기본 '-')이고 0은 그대로다.
+- `Detail.History entries labels empty headerClassName?`: 일시·변경 내용·담당자 표(`headerClassName`은 머리글 표면). 항목은 프로젝트가 서버 어휘를 해석하고 일시를 표시 형식으로 써서 넘긴다. 0건이면 빈 문구.
 - 서버 DTO나 업무 action을 키트가 해석하지 않는다.
 
 `maskText`에는 노출할 앞/뒤 문자 수를 명시한다. 유니코드 문자를 보존하며 이름·전화·권한별 노출 기준을 추측하지 않는다.

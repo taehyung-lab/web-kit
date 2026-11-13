@@ -11,7 +11,8 @@
 
 | import | 키트가 보장하는 것 | 프로젝트가 넘기는 것 |
 |---|---|---|
-| `.` / `/failure` | 실패 12종, 결과 코드 표, 봉투 해석, 앱 안 이동 주소 판정(`safeAppPath`) | 서버 enum의 결과 코드 행, 이동에서 제외할 경로 |
+| `/failure` | 실패 12종, 결과 코드 표, 봉투 해석, 인증 거절 판정(`RequestFailure.rejectsAuthentication`) | 서버 enum의 결과 코드 행 |
+| `.`(루트) | 앱 안 이동 주소 판정(`safeAppPath`), 날짜·기간·트리 선택 같은 순수 계산 | 이동에서 제외할 경로 |
 | `/session` | 세대, 시작·종료와 종료 순서(정리 → 안내 → 서버 로그아웃), 다른 탭 변경, 재발급 단일 비행(Web Locks), 재발급 응답 전용 종료 표 적용 | 저장 adapter·재발급·서버 로그아웃 호출, 선택 재발급 종료 표(`reissueEnd`) |
 | `/session/idle` | 서버 시계·HTTP `Date` 시계 차이(`clockOffsetFromDate`)·세션별 마감·탭 병합·만료·멈춤/재개 장치 | 명시 마감·0초 필수 선택·선택 활동 부착과 간격·선택 재개 유예·경고 UI([web-kit-http](../skills/web-kit-http/SKILL.md)) |
 | `/auth` + registry `auth` | 코드 기한·종류별 단일 요청·늦은 응답 격리, 입력 오류·만료·재전송 표현 | 공유 시계·기한·자리수·서버 요청·성공 처리·문구 |

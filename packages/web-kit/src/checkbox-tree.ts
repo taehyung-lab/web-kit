@@ -23,7 +23,7 @@ export function checkboxTreeSelection<T extends string>(
   const selected = new Set(values);
   return {
     all,
-    checked: (targets: readonly T[], _requireAll = false) => {
+    checked: (targets: readonly T[]) => {
       const count = targets.filter((value) => selected.has(value)).length;
       return count > 0 && count === targets.length;
     },
