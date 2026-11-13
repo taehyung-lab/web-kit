@@ -347,6 +347,9 @@ it(title('G098', '제한 없음은 전체 체크로 보이고 일부 해제를 �
   fireEvent.click(screen.getByRole('checkbox', { name: 'A' }));
   fireEvent.click(screen.getByRole('button', { name: '검색' }));
   await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ tags: ['b'] })));
+  // 남은 하나(B)는 해제되지 않는다.
+  fireEvent.click(screen.getByRole('checkbox', { name: 'B' }));
+  expect(checked(screen.getByRole('checkbox', { name: 'B' }))).toBe(true);
   fireEvent.click(screen.getByRole('checkbox', { name: 'A' }));
   expect(checked(screen.getByRole('checkbox', { name: 'A' }))).toBe(true);
   expect(model.draft.tags).toEqual([]);
@@ -668,6 +671,13 @@ it.each(['vertical', 'dropdown'] as const)(title('list-choice-all', 'List.Choice
   fireEvent.click(screen.getByRole('checkbox', { name: '전체' }));
   await waitFor(() => expect(model.draft.tags).toEqual([]));
   for (const name of ['전체', 'Alpha', 'Beta', 'Gamma']) expect(state(name)).toBe('true');
+  // 하나만 남기면 마지막 하나는 해제되지 않는다: 일반 평면 체크와 같은 "최소 하나".
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Beta' }));
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Gamma' }));
+  await waitFor(() => expect(model.draft.tags).toEqual(['a']));
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Alpha' }));
+  expect(model.draft.tags).toEqual(['a']);
+  expect(state('Alpha')).toBe('true');
 });
 
 it(title('list-choice-status', '선택지 지연·실패에는 URL·초안을 보존하고 재시도 성공 뒤 검색에서 정리한다'), async () => {

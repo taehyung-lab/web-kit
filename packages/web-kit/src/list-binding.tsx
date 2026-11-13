@@ -3,7 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { activateTableRow } from './row-activation';
 import { useQuery } from '@tanstack/react-query';
 import type { DownloadBlock, DownloadKind, DownloadState } from './list-download';
-import { calendarDate, normalizeFilterSelection, shiftCalendarDate, viewFilterSelection, type Keyword, type PeriodPreset } from './search/interactions';
+import { calendarDate, commitFilterSelection, shiftCalendarDate, viewFilterSelection, type Keyword, type PeriodPreset } from './search/interactions';
 import { normalizeChoiceValue, type ChoiceNode, type ChoiceValue } from './choice-binding';
 import { sameSearchValue } from './search/fields';
 import { treeLeaves } from './checkbox-tree';
@@ -198,18 +198,19 @@ export function useListChoiceBinding(model: ListModel, searchName: string, nodes
 }
 
 /**
- * 목록 필터의 다중 선택 값 규칙: 비면 제한 없음이라 전체가 체크로 보이고, 모두 고르거나 전체를 지우면 다시 비운다.
+ * 목록 필터의 다중 선택 값 규칙: 비면 제한 없음이라 전체가 체크로 보이고, 모두 고르면 다시 비운다.
+ * 아무것도 체크되지 않은 상태는 없다: 마지막 하나를 해제하거나 전체를 지우는 변경은 무시한다.
  * 단일·서버 검색(선택지 전체를 모름)·필수 칸은 값을 그대로 쓴다.
  */
 export function listChoiceValue(choices: readonly ChoiceNode[], rule: { readonly multiple?: boolean; readonly search?: unknown; readonly required?: boolean }) {
   if (rule.multiple !== true || rule.search !== undefined || rule.required === true) {
-    return { view: (value: ChoiceValue): ChoiceValue => value, commit: (next: ChoiceValue): ChoiceValue => next };
+    return { view: (value: ChoiceValue): ChoiceValue => value, commit: (next: ChoiceValue, _current: ChoiceValue): ChoiceValue => next };
   }
   const leaves = treeLeaves(choices);
   const asList = (value: ChoiceValue): readonly string[] => (Array.isArray(value) ? value : typeof value === 'string' ? [value] : []);
   return {
     view: (value: ChoiceValue): ChoiceValue => viewFilterSelection(asList(value), leaves),
-    commit: (next: ChoiceValue): ChoiceValue => normalizeFilterSelection(asList(next), leaves),
+    commit: (next: ChoiceValue, current: ChoiceValue): ChoiceValue => commitFilterSelection(asList(next), asList(current), leaves),
   };
 }
 
@@ -218,7 +219,7 @@ export function useListMultiChoiceBinding(name: string, values: readonly string[
   const field = useListField<readonly string[]>(name, name, model);
   const selected = field.value ?? [];
   const effective = viewFilterSelection(selected, values);
-  const set = (next: readonly string[]) => field.set(normalizeFilterSelection(next, values));
+  const set = (next: readonly string[]) => field.set(commitFilterSelection(next, selected, values));
   return { effective, set, toggle: (value: string, on: boolean) => set(on ? [...effective, value] : effective.filter((item) => item !== value)) };
 }
 

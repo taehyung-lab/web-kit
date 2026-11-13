@@ -221,7 +221,7 @@ function Choice({ model: explicitModel, name, searchName = name, nodes, ...props
   const rule = listChoiceValue(choices, { multiple: props.multiple, search: props.search, required: field.required });
   return <div className="grid content-start gap-2">
     <Label htmlFor={id}>{props.label}{field.required && <RequiredMark />}</Label>
-    <ChoiceInput {...props} id={id} nodes={choices} value={rule.view(field.value)} onValueChange={(next) => field.set(rule.commit(next))} aria-required={field.required} aria-invalid={message !== undefined} aria-describedby={message === undefined ? undefined : `${id}-error`} />
+    <ChoiceInput {...props} id={id} nodes={choices} value={rule.view(field.value)} onValueChange={(next) => field.set(rule.commit(next, field.value))} aria-required={field.required} aria-invalid={message !== undefined} aria-describedby={message === undefined ? undefined : `${id}-error`} />
     {check !== undefined && options.isFetching && <span role="status" className="text-sm text-muted-foreground">{copy.loading}</span>}
     {check !== undefined && options.isError && <span role="alert" className="flex items-center gap-2 text-sm text-destructive">{copy.fieldOptionsFailed}<Button type="button" variant="outline" size="sm" onClick={() => void options.refetch()}>{copy.retry}</Button></span>}
     {message !== undefined && <FieldMessage id={`${id}-error`}>{message}</FieldMessage>}
