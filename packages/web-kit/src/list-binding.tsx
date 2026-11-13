@@ -188,13 +188,16 @@ export function useBulkConfirmation<T, V = undefined>({ model, run, check, value
 }
 
 /** 선택지 조회를 검색 정의의 부모 값과 동일한 조건으로 연결한다. */
-export function useListChoiceBinding(model: ListModel, searchName: string, nodes?: readonly ChoiceNode[]) {
+export function useListChoiceBinding(model: ListModel, searchName: string, nodes?: readonly ChoiceNode[], serverSearch = false) {
   const id = useId();
   const check = model.checks?.[searchName];
   const parents = Object.fromEntries((check?.parents ?? []).map((parent) => [parent, (model.draftSearch ?? model.draft as Record<string, unknown>)[parent]]));
   const options = useQuery(check === undefined ? { queryKey: ['web-kit-no-options', id], enabled: false, queryFn: () => [] } : check.options(parents));
   const choices = nodes ?? (options.data === undefined ? [] : check?.tree?.(options.data) ?? []);
-  return { check, options, choices };
+  // 값 정리(트리 밖 값 제거)는 전체 선택지가 준비됐을 때만 한다: 서버 검색이 아니고, 조회 중·실패가 아니다.
+  const optionsReady = check === undefined ? nodes !== undefined : options.isSuccess && !options.isFetching && !options.isError;
+  const ready = !serverSearch && optionsReady ? choices : undefined;
+  return { check, options, choices, ready };
 }
 
 /**
@@ -218,8 +221,10 @@ export function listChoiceValue(choices: readonly ChoiceNode[], rule: { readonly
 export function useListMultiChoiceBinding(name: string, values: readonly string[], model?: ListModel) {
   const field = useListField<readonly string[]>(name, name, model);
   const selected = field.value ?? [];
-  const effective = viewFilterSelection(selected, values);
-  const set = (next: readonly string[]) => field.set(commitFilterSelection(next, selected, values));
+  // 트리 선택(List.Choice)과 같은 규칙: 필수 칸은 값을 그대로, 아니면 빈 값=전체와 마지막 하나 유지.
+  const rule = listChoiceValue(values.map((value) => ({ value, label: value })), { multiple: true, required: field.required });
+  const effective = (rule.view(selected) as readonly string[]).filter((value) => values.includes(value));
+  const set = (next: readonly string[]) => field.set(rule.commit(next, selected) as readonly string[]);
   return { effective, set, toggle: (value: string, on: boolean) => set(on ? [...effective, value] : effective.filter((item) => item !== value)) };
 }
 

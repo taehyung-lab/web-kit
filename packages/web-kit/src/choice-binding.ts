@@ -1,6 +1,6 @@
 // 파일 책임: 선택 검색 수명과 leaf 선택·이름 보존·잠금 연결을 제공한다.
 import { useEffect, useRef, useState, useId } from 'react';
-import { checkboxTreeSelection, treeLeafNodes, type CheckboxTreeNode } from './checkbox-tree';
+import { checkboxTreeSelection, toggleWithin, treeLeafNodes, type CheckboxTreeNode } from './checkbox-tree';
 export type ChoiceNode = CheckboxTreeNode;
 export type ChoiceValue = string | readonly string[] | undefined;
 export interface ChoiceBindingOptions {
@@ -30,7 +30,9 @@ export interface ChoiceBindingOptions {
 /** 전체 선택지에서 찾을 수 있는 값만 표시·제출에 사용한다. 서버 검색 결과에는 적용하지 않는다. */
 export function normalizeChoiceValue(value: ChoiceValue, nodes: readonly ChoiceNode[]): ChoiceValue {
   const allowed = new Set(treeLeafNodes(nodes).map((node) => node.value));
-  return Array.isArray(value) ? value.filter((id) => allowed.has(id)) : typeof value === 'string' && (value === '' || allowed.has(value)) ? value : undefined;
+  if (Array.isArray(value)) return value.filter((id) => allowed.has(id));
+  if (typeof value !== 'string') return undefined;
+  return value === '' || allowed.has(value) ? value : undefined;
 }
 
 /** 입력 정지 뒤 검색하고 취소를 무시하는 서버의 늦은 응답도 버린다. */
@@ -101,13 +103,19 @@ export function useChoiceBinding(props: ChoiceBindingOptions) {
   /** 부모의 일부 선택은 전체 선택으로 바꾼다. */
   function toggle(targets: readonly string[]) {
     const next = selection.set(targets, !selection.checked(targets));
-    select(props.search === undefined ? next : [...next, ...selected.filter((id) => !selection.all.includes(id))]);
+    // 서버 검색이면 선택지 전체를 모르므로, 전체 선택지 밖에서 이미 고른 값은 그대로 둔다.
+    const keptOutside = props.search === undefined ? [] : selected.filter((id) => !selection.all.includes(id));
+    select([...next, ...keptOutside]);
   }
   /** 서버 검색 결과의 그룹처럼 선택지 전체의 일부인 leaf를 한꺼번에 켜거나 끈다. 이미 고른 다른 값은 건드리지 않는다. */
   function toggleGroup(targets: readonly string[]) {
     if (props.search === undefined) return toggle(targets);
-    const every = targets.every((value) => selected.includes(value));
-    select(every ? selected.filter((value) => !targets.includes(value)) : [...selected, ...targets.filter((value) => !selected.includes(value))]);
+    select(toggleWithin(selected, targets));
   }
-  return { id, text, setText, result, selected, names, summary, control, selection, toggle, toggleGroup, select };
+  /** 지금 보이는 결과(서버 검색이면 일부) 안에서 한 그룹의 체크·일부 선택 표시. */
+  const shown = checkboxTreeSelection(result.nodes, selected);
+  function groupState(targets: readonly string[]) {
+    return { checked: shown.checked(targets), mixed: shown.mixed(targets) };
+  }
+  return { id, text, setText, result, selected, names, summary, control, selection, toggle, toggleGroup, groupState, select };
 }

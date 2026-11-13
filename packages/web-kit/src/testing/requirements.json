@@ -214,6 +214,7 @@
       "list-search-lock",
       "list-choice-prune",
       "list-choice-all",
+      "list-multiselect-required",
       "list-choice-status",
       "list-choice-search",
       "keyword-separators"

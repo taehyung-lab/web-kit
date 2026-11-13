@@ -215,8 +215,8 @@ function Choice({ model: explicitModel, name, searchName = name, nodes, ...props
   const field = useListField<ChoiceProps['value']>(name, searchName, explicitModel);
   const { model, copy } = useListContext(explicitModel);
   const id = useId();
-  const { check, options, choices } = useListChoiceBinding(model, searchName, nodes);
-  useListChoiceNormalization(model, name, props.search === undefined && (check === undefined ? nodes !== undefined : options.isSuccess && !options.isFetching && !options.isError) ? choices : undefined);
+  const { check, options, choices, ready } = useListChoiceBinding(model, searchName, nodes, props.search !== undefined);
+  useListChoiceNormalization(model, name, ready);
   const message = field.issues[0]?.message;
   const rule = listChoiceValue(choices, { multiple: props.multiple, search: props.search, required: field.required });
   return <div className="grid content-start gap-2">

@@ -5,9 +5,11 @@ import * as form from '../src/form';
 import * as list from '../src/list';
 import * as dialog from '../src/confirmation';
 import * as choice from '../src/choice-binding';
+import * as search from '../src/search';
 import * as auth from '../src/auth';
-const entries = { core, form, list, dialog, choice, auth };
+const entries = { core, form, list, dialog, choice, auth, search };
 const expected = {
+  "search": ["addKeyword", "arrayKeywordCodec", "calendarDate", "choices", "commitFilterSelection", "connectSearch", "dateRange", "definePolicy", "defineSearch", "keywords", "listSearch", "nextSort", "normalizeFilterSelection", "paging", "sameSearchValue", "shiftCalendarDate", "sort", "viewFilterSelection"],
   "auth": ["createAuthChallengeStore", "getAuthTiming", "isAuthCode", "remainingAuthSeconds", "useAuthChallenge"],
   "choice": ["normalizeChoiceValue", "useChoiceBinding"],
   "core": [
@@ -21,6 +23,7 @@ const expected = {
     "serializeFlatListParams",
     "serializeSpringParams",
     "toRequestFailure",
+    "toggleWithin",
     "treeLeafNodes",
     "treeLeaves",
     "validateDateRange"
@@ -96,7 +99,7 @@ const expected = {
     "useDialogBinding"
   ]
 };
-it.each(['core', 'form', 'list', 'dialog', 'choice', 'auth'] as const)('%s 공개 이름은 승인된 목록과 정확히 같다', (name) => {
+it.each(['core', 'form', 'list', 'dialog', 'choice', 'auth', 'search'] as const)('%s 공개 이름은 승인된 목록과 정확히 같다', (name) => {
   expect(Object.keys(entries[name]).sort()).toEqual(expected[name]);
 });
 

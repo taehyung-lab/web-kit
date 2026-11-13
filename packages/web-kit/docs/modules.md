@@ -32,6 +32,18 @@
 | `/structure`(개발 도구) · bin `web-kit-structure`·`web-kit-new` | 실제 import 대상을 해소한 구조 역할 판정(ESLint 규칙), 구조 결과, 완료를 만들지 않는 화면 골격 | `web-kit.structure.json`의 경로·별칭·생성 코드·예외. 선택 peer `eslint`·`typescript`·`typescript-eslint` |
 | `/testing/session` | 저장 실패·다른 탭 변경·종료의 adapter 검사(React/Form import 없음) | 자기 저장 adapter와 격리된 검사 환경 |
 
+### 선택 규칙(전체·부모·자식·빈 선택)을 쓰려면
+
+같은 값 모델(저장하는 것은 맨 아래 leaf 값 목록, 부모·전체 표시는 계산)을 UI마다 다른 의미로 쓴다. 필터의 빈 선택=전체와 폼의 명시 선택은 합치지 않는다([결정 0006](../references/docs/decisions/0006-list-choice-permission.md)).
+
+| 하려는 일 | import | registry 항목 |
+|---|---|---|
+| 체크 트리: 전체·부모 삼상태·자식 (명시 선택) | 루트 `checkboxTreeSelection`·`treeLeaves` | `checkbox-tree` 또는 `choice` |
+| 선택지 일부만 보일 때(서버 검색) 한 그룹 토글, 다른 선택 보존 | 루트 `toggleWithin` | `choice`(검색 모양) |
+| 목록 필터: 비면 전체로 보이고 마지막 하나는 해제되지 않음 | `/search` `viewFilterSelection`·`commitFilterSelection`, `/list` `listChoiceValue` | `list` |
+| 선택 칸 5가지 모양 + 서버 검색 + 그룹 | `/choice` `useChoiceBinding` | `choice` |
+| 등록·수정 폼의 선택 칸 (빈 값=미선택, 필수는 저장 때 오류) | `/form` | `form` + `choice` |
+
 고정 `options`와 서버 `check` 중 무엇을 쓸지는 [목록 선택지 연결](../skills/web-kit-list/SKILL.md#고정-선택지와-서버-선택지-고르기)에서 고른다. 서버 선택지는 기존 `ChoiceFilter`가 조회 상태와 URL 확인을 함께 연결한다.
 
 React·ReactDOM은 필수 peer(소비 앱이 설치하는 동료 라이브러리)이고 TanStack·axios와 검사 러너는 선택 설치다. 각 책임에서 쓰는 의존은 package.json을 따른다. Base UI는 패키지 peer가 아니라 registry 항목 의존이며 react-virtual은 `/list`의 가상 행 hook 때문에 남는다. 설치하지 않은 선택 기능은 "검사하지 않음"으로 기록한다. 루트가 React를 import하지 않는 것과 React 없는 독립 패키지는 다르다.

@@ -86,7 +86,7 @@ function leafGroups(nodes: readonly ChoiceNode[]): LeafGroup[] {
 /** 같은 leaf 값 모델을 모든 모양에서 사용한다. 가지 ID는 저장하지 않는다. */
 export function Choice(props: ChoiceProps) {
   const { nodes, multiple = false, appearance = 'dropdown', disabled, label } = props;
-  const { id, text, setText, result, selected, names, summary, control, selection, toggle, toggleGroup, select } = useChoiceBinding(props);
+  const { id, text, setText, result, selected, names, summary, control, selection, toggle, toggleGroup, groupState, select } = useChoiceBinding(props);
   /** 다중 가지는 삼상태, 단일 가지는 제목으로만 보여 준다. */
   function branch(node: ChoiceNode, key: number): ReactNode {
     const targets = node.children === undefined ? [node.value] : treeLeaves(node.children);
@@ -198,16 +198,15 @@ export function Choice(props: ChoiceProps) {
               ? (group: LeafGroup) => (
                   <ComboboxGroup key={`${group.heads.map((head) => head.label).join('/')}:${group.items[0]?.value ?? ''}`} items={group.items}>
                     {group.heads.map((head) => {
-                      const every = head.targets.length > 0 && head.targets.every((value) => selected.includes(value));
-                      const some = head.targets.some((value) => selected.includes(value));
+                      const state = groupState(head.targets);
                       return (
                         <ComboboxLabel key={`${head.depth}:${head.label}`} className="flex items-center gap-2" style={{ paddingInlineStart: `${head.depth}rem` }}>
                           {multiple && (
                             <MixedCheckbox
                               aria-label={head.label}
                               disabled={disabled}
-                              checked={every}
-                              indeterminate={some && !every}
+                              checked={state.checked}
+                              indeterminate={state.mixed}
                               onCheckedChange={() => toggleGroup(head.targets)}
                             />
                           )}

@@ -680,6 +680,19 @@ it.each(['vertical', 'dropdown'] as const)(title('list-choice-all', 'List.Choice
   expect(state('Alpha')).toBe('true');
 });
 
+it(title('list-multiselect-required', '필수인 평면 다중 선택은 비면 미선택으로 보이고 모두 고르면 값을 접지 않는다(필수 List.Choice와 같다)'), async () => {
+  const def = defineSearch({ fields: { ...definition.fields, tags: { ...definition.fields.tags, required: { message: '분류를 고르세요.' } } } });
+  mount(() => <List.Filter>
+    <List.MultiSelect name="tags" label="태그" options={[{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }]} />
+  </List.Filter>, { def, initial: { tags: [] } });
+  expect(checked(screen.getByRole('checkbox', { name: 'A' }))).toBe(false);
+  expect(checked(screen.getByRole('checkbox', { name: 'B' }))).toBe(false);
+  fireEvent.click(screen.getByRole('checkbox', { name: 'A' }));
+  await waitFor(() => expect(model.draft.tags).toEqual(['a']));
+  fireEvent.click(screen.getByRole('checkbox', { name: 'B' }));
+  await waitFor(() => expect(model.draft.tags).toEqual(['a', 'b']));
+});
+
 it(title('list-choice-status', '선택지 지연·실패에는 URL·초안을 보존하고 재시도 성공 뒤 검색에서 정리한다'), async () => {
   let resolve!: (values: string[]) => void;
   let reject!: (reason: Error) => void;

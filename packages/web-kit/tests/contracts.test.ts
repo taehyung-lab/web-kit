@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { serializeFlatListParams, serializeSpringParams } from '../src/api';
 import { createFormMessages } from '../src/form';
-import { checkboxTreeSelection } from '../src/checkbox-tree';
+import { checkboxTreeSelection, toggleWithin } from '../src/checkbox-tree';
 import { validateDateRange } from '../src/date-range';
 
 describe('query 문자열', () => {
@@ -65,4 +65,12 @@ it('K5 트리 밖 저장값은 다음 전체 선택값에서 뺀다', () => {
   const selection = checkboxTreeSelection(nodes, ['x', 'b', 'y', 'a']);
   expect(selection.set(['c'], true)).toEqual(['a', 'b', 'c']);
   expect(selection.set(['a', 'b'], false)).toEqual([]);
+});
+
+// 서버 검색처럼 선택지 일부만 보일 때: 보이는 그룹만 켜고 끄며 이미 고른 다른 값은 보존한다.
+it('toggleWithin: 대상이 모두 선택돼 있으면 끄고 아니면 켜며 대상 밖 선택은 그대로 둔다', () => {
+  expect(toggleWithin(['a', 'x'], ['b', 'c'])).toEqual(['a', 'x', 'b', 'c']);
+  expect(toggleWithin(['a', 'x', 'b', 'c'], ['b', 'c'])).toEqual(['a', 'x']);
+  expect(toggleWithin(['a', 'x', 'b'], ['b', 'c'])).toEqual(['a', 'x', 'b', 'c']);
+  expect(toggleWithin(['a'], [])).toEqual(['a']);
 });
