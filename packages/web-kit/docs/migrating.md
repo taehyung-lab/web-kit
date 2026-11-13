@@ -1,6 +1,6 @@
 # 시험판에서 옮겨 오기
 
-5.0.0 첫 정식 기준으로 옮길 때는 사용하던 시험판에 따라 다음 연결을 함께 이전한다. 현재 검사용 후보는 6.0.0-rc.1이다. 조건부 칸은 web-kit-form의 같은 조건 함수·schema·빈 값 선언을 함께 연결한다.
+5.0.0 첫 정식 기준으로 옮길 때는 사용하던 시험판에 따라 다음 연결을 함께 이전한다. 현재 검사용 후보는 6.0.0-rc.2이다. 조건부 칸은 web-kit-form의 같은 조건 함수·schema·빈 값 선언을 함께 연결한다.
 
 - **목록 선택 칸의 전체 규칙·검색 그룹·선택 칸 정리(rc.6 → rc.7, 복사본 교정 필요: `list`·`choice`·`form`):** ① 다중이고 필수가 아니며 서버 검색이 아닌 `List.Choice`는 비면 전체가 체크로 보이고, 모든 선택지를 고르면 `[]`로 접힌다(이전에는 모두 고르면 모든 값이 배열로 남고 비면 아무것도 체크되지 않았다). 아무것도 체크되지 않은 상태는 없다: 마지막 하나를 해제하거나 전체를 지우는 변경은 무시한다. 평면 `MultiSelect`도 같다(이전에는 마지막 하나를 해제하면 전체가 체크됐다). 새 공개 이름 `commitFilterSelection`(`/search`)·`toggleWithin`(루트). 필수인 평면 `MultiSelect`는 이제 필수 `List.Choice`와 같다: 빈 값이 전체가 아니라 미선택으로 보이고 모두 고르면 값을 접지 않는다(이전에는 필수여도 빈 값이 전체로 보였다). `useListChoiceBinding`은 네 번째 인자(서버 검색 여부)와 반환 `ready`(값 정리를 해도 되는 선택지)를 더했고, `useChoiceBinding`은 `groupState`를 더했다. 프로젝트가 "모두 고름" 배열을 구별해 쓰고 있었다면 확인한다. 기존 필수 `List.Choice`와 단일 선택, 서버 검색은 이전과 같다. ② `Choice`의 `appearance="search"`가 가지가 있는 선택지를 그룹 제목과 그룹 체크로 보인다(가지 체크는 그 아래 중첩된 가지까지 모든 leaf를 켜고 끄며, 서버 검색이면 지금 결과의 leaf만 바꾸고 이미 고른 다른 값은 보존한다). ③ `Form.Choice`는 선택지 재시도에 성공하면 준비된 입력으로 포커스를 돌려준다(`Form.Select`와 같다). ④ `ChoiceProps`는 `/choice`의 `ChoiceBindingOptions`에 `appearance`만 더한 타입이다(구조는 같다). ⑤ `Choice`·`Select`의 선택지 지연·실패 자리는 같은 부품을 쓴다(모양은 같다). 새 공개 이름은 `listChoiceValue`(`/list`)와 `viewFilterSelection`(`/search`)이다. 복사본을 직접 고친 프로젝트는 이전/새 원본 차이를 비교해 교정한다.
 - **스킬 이름 정정과 작은 정리(rc.5 → rc.6, 복사본 교정 필요: `CheckboxTree` 한 파일):** `web-kit-record` 스킬이 안내하던 `Record`·`RecordDefaults`를 실제 공개 이름 `Detail`·`DetailDefaults`로 바로잡았다(코드는 rc.5에서 이미 바뀌었다). `checkboxTreeSelection(...).checked`의 쓰이지 않던 둘째 인자(`requireAll`)를 없앴으므로 직접 호출하며 둘째 인자를 넘기던 코드는 인자를 지운다. `CheckboxTree` 복사본도 같은 인자를 넘기지 않게 바꿨다(동작은 같다). `RequestFailure.rejectsAuthentication`이 더해졌다(401이거나 결과 코드 표가 세션 종료를 정한 실패). 키트 안의 세 곳이 따로 쓰던 같은 식을 이 한 곳으로 모았고 동작은 같다.
@@ -66,7 +66,7 @@
 
 ## 6.0.0 후보: 읽기 쉬운 feature 구조
 
-구조 계약을 채택한 소비 앱은 파일·import와 구조 검사기를 함께 옮긴다. runtime API와 registry UI는 그대로다. 패키지만 올리면 기존 구조는 검사에 실패하므로 소비 소스 교정이 필요하다.
+구조 계약을 채택한 소비 앱은 파일·import와 구조 검사기를 함께 옮긴다. runtime API는 그대로다. 패키지만 올리면 기존 구조는 검사에 실패하므로 소비 소스 교정이 필요하다.
 
 | 이전 자리 | 새 자리 |
 |---|---|
@@ -79,6 +79,10 @@
 | feature `i18n.ts` | feature `messages.ts` |
 
 루트 `permissions.ts`는 실행 연결이므로 storage로 검사한다. `public.ts`와 앱 루트 app·runtime·routes·features·shared는 유지한다. app 문구 등록과 runtime i18n 인스턴스 이름도 유지한다. 기존 Page 이름과 겹치는 부분 부품은 역할을 드러내는 Section·Layout 등으로 구분한다. pages 안에는 그 페이지의 필터·표·표시 도우미를 함께 둘 수 있다. 예외나 규칙 비활성화로 옮기기를 대신하지 않는다. 새 역할의 import·순수성·JSX 경계는 [구조 계약](../skills/web-kit-structure/SKILL.md)이 정본이다.
+
+## 폼·목록 UI 내부 파일 정리
+
+폼·목록 복사본 교정이 필요하다. `form/form.tsx`와 `list.tsx`의 공개 입구·내보내기·동작은 유지하고, 실제 입력·표·저장 동작 등 역할을 형제 파일로 옮겼다. registry `form`과 `list` 항목의 새 파일도 함께 설치해야 하며 입구 파일만 교체하면 import가 해소되지 않는다. 기존/새 원본과 프로젝트 수정본을 비교해 테마·배치 변경을 보존한다. 패키지 내부 세션·목록 파일 이동은 공개 subpath가 같으므로 소비 앱 import를 바꿀 필요가 없다.
 
 ## 구조 계약 채택
 

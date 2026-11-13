@@ -1,5 +1,5 @@
 // 파일 책임: 목록 복귀 주소를 보존하되 소비자가 정한 목록 경로 밖으로 돌아가지 않는다.
-import { safeAppPath } from './app-path';
+import { safeAppPath } from '../app-path';
 
 export interface ListReturnContext {
   readonly href: string;

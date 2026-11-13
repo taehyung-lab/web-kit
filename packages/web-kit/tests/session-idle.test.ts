@@ -5,9 +5,9 @@ import { QueryClient } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RequestFailure } from '../src/failure';
 import { createQueryClient } from '../src/query';
-import { createSession, type SessionChange, type SessionStore, type StoredSession } from '../src/session';
-import { attachSessionActivity } from '../src/session-activity';
-import { createIdleTimer, type ServerTimeSample } from '../src/session-idle';
+import { createSession, type SessionChange, type SessionStore, type StoredSession } from '../src/session/session';
+import { attachSessionActivity } from '../src/session/session-activity';
+import { createIdleTimer, type ServerTimeSample } from '../src/session/session-idle';
 
 interface Creds {
   readonly accessToken: string;

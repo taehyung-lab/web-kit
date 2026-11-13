@@ -3,13 +3,13 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { activateTableRow } from './row-activation';
 import { useQuery } from '@tanstack/react-query';
 import type { DownloadBlock, DownloadKind, DownloadState } from './list-download';
-import { calendarDate, commitFilterSelection, shiftCalendarDate, viewFilterSelection, type Keyword, type PeriodPreset } from './search/interactions';
-import { normalizeChoiceValue, type ChoiceNode, type ChoiceValue } from './choice-binding';
-import { sameSearchValue } from './search/fields';
-import { treeLeaves } from './checkbox-tree';
+import { calendarDate, commitFilterSelection, shiftCalendarDate, viewFilterSelection, type Keyword, type PeriodPreset } from '../search/interactions';
+import { normalizeChoiceValue, type ChoiceNode, type ChoiceValue } from '../choice-binding';
+import { sameSearchValue } from '../search/fields';
+import { treeLeaves } from '../checkbox-tree';
 import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode, type FormEvent, type KeyboardEvent, type MouseEvent, type RefObject } from 'react';
-import type { FieldCheck, ViewKeys } from './search/fields';
-import type { SearchMeta, SearchMetaEntry } from './search/list-search';
+import type { FieldCheck, ViewKeys } from '../search/fields';
+import type { SearchMeta, SearchMetaEntry } from '../search/list-search';
 import type { DraftIssue, KeywordInput, ListStatus } from './use-list';
 
 /** 기본 UI가 읽는 목록 상태(useList 결과와 같은 모양). */

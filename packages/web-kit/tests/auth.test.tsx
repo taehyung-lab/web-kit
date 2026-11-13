@@ -3,8 +3,8 @@
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { createAuthChallengeStore, getAuthTiming, isAuthCode, remainingAuthSeconds, useAuthChallenge } from '../src/auth';
-import { createIdleTimer, createServerClock } from '../src/session-idle';
-import { createSession } from '../src/session';
+import { createIdleTimer, createServerClock } from '../src/session/session-idle';
+import { createSession } from '../src/session/session';
 
 /** 지연 응답을 직접 완료하여 경합 순서를 검사한다. */
 function deferred<T>() {

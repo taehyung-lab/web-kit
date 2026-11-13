@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 // 파일 책임: 세션 책임 분리 S1–S7의 시간·탭·저장 순서와 반례를 실제 공개 상태로 관찰한다.
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { createIdleTimer, createServerClock, type IdlePolicy, type ServerTimeSample } from '../src/session-idle';
-import { attachSessionActivity } from '../src/session-activity';
-import { createSession, type SessionStore, type StoredSession } from '../src/session';
+import { createIdleTimer, createServerClock, type IdlePolicy, type ServerTimeSample } from '../src/session/session-idle';
+import { attachSessionActivity } from '../src/session/session-activity';
+import { createSession, type SessionStore, type StoredSession } from '../src/session/session';
 import { RequestFailure } from '../src/failure';
 
 type Creds = { accessToken: string };

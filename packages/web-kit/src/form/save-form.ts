@@ -47,7 +47,7 @@ export interface SaveFormOptions<
   readonly schema: StandardSchemaV1<TInput, TOutput>;
   /** 편집 대상. 등록이면 기본값. id가 바뀌면 새 폼, 같은 id의 새 values는 원본 재도착이다. */
   readonly source: { readonly id: unknown; readonly values: TInput };
-  /** true면 유효한 제출이 확인 대기로 가고 confirm()이 같은 S로 저장한다. */
+  /** true면 유효한 제출이 확인 대기로 가고 confirm()이 확인 대기 중인 제출 값으로 저장한다. */
   readonly confirm?: boolean;
   /**
    * 저장 작업. 서버가 저장 결과를 주면 폼 값으로 바꿔 saved로 돌려준다(없으면 제출한 S가 저장 결과다).

@@ -4,10 +4,11 @@ web-kit은 React·TanStack(Query·Router·Form) 위에서 관리자 웹의 공�
 
 React 19·TanStack·zod 4·axios/orval을 쓰는 관리자 웹의 공용 키트다. 공통 상태와 처리 순서는 패키지가, 화면 배치와 업무·서버 정책은 프로젝트가 맡는다. UI는 registry(복사할 화면 소스와 검사 연결 묶음)로 설치해 프로젝트가 소유한다.
 
-패키지는 `@boosterlab/web-kit`, 현재 버전은 `6.0.0-rc.1`(미발행 후보)이다. 정확한 공개 입구·의존 버전은 [package.json](package.json), 동작 보장은 같은 버전의 스킬이 정본이다.
+패키지는 `@boosterlab/web-kit`, 현재 버전은 `6.0.0-rc.2`(미발행 후보)이다. 정확한 공개 입구·의존 버전은 [package.json](package.json), 동작 보장은 같은 버전의 스킬이 정본이다.
 
 ## 구조
 
+- 구현을 찾을 때 세션 저장·만료·활동 처리는 `src/session/`, 목록 조회·선택·다운로드는 `src/list/`, 폼 저장·검증은 `src/form/`, URL 검색 조건은 `src/search/`에서 시작한다. 각 공개 import 주소는 유지하며 내부 파일 위치와 구분한다.
 - **core**는 외부 상태나 실행 없이 입력만으로 결과를 정하는 순수 규칙(날짜 경계·기간·실패·선택 계산)이며 루트 `.`로 공개한다.
 - **책임별 입구**는 `/form`·`/list`처럼 필요한 상태·hook·Provider만 선택해 쓴다.
 - **UI 복사본**은 프로젝트가 배치·디자인을 바꾸고 공통 hook의 상태·이벤트를 연결한다.

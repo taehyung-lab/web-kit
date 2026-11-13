@@ -3,11 +3,11 @@
 // 행 선택·일괄 작업 수명을 소유한다. 화면 부품을 바꾸거나 숨겨도 검색 직전 보장이 남도록 UI가 아닌 여기서 한다.
 import { hashKey, useQueries, useQuery, type QueryKey, type UseQueryOptions } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { isRequestFailure, RequestFailure } from './failure';
-import { useBlockingProgress } from './progress';
-import { validateDateRange } from './date-range';
-import { sameSearchValue, type FullSearch, type SearchDefinition, type SearchField, type UrlSearch } from './search/fields';
-import { addKeyword, nextSort, type Keyword } from './search/interactions';
+import { isRequestFailure, RequestFailure } from '../failure';
+import { useBlockingProgress } from '../progress';
+import { validateDateRange } from '../date-range';
+import { sameSearchValue, type FullSearch, type SearchDefinition, type SearchField, type UrlSearch } from '../search/fields';
+import { addKeyword, nextSort, type Keyword } from '../search/interactions';
 
 type AnyFields = Record<string, SearchField<any>>;
 
@@ -102,13 +102,13 @@ export interface KeywordInput {
 type PendingKeywords = Readonly<Record<string, { readonly choice: string; readonly text: string }>>;
 
 /** 선택지 확인 하나의 판정. kept는 배열 값 중 선택지에 있는 항목이다. */
-type Judged = {
+type OptionValidationResult = {
   readonly field: string;
   readonly key: string;
   readonly status: 'running' | 'valid' | 'invalid' | 'failed';
   readonly failure?: unknown;
   readonly refetch?: () => Promise<unknown>;
-  readonly kept?: readonly unknown[];
+  readonly validSelectedValues?: readonly unknown[];
 };
 
 /** 확인할 값이 없는(빈) 필드는 확인하지 않는다. */
@@ -175,7 +175,7 @@ export function useList<
     return [{ field, check: spec.check, parents, key: JSON.stringify([field, values[field], parents]) }];
   });
   const optionResults = useQueries({ queries: checked.map((item) => item.check.options(item.parents) as UseQueryOptions) });
-  const judged: readonly Judged[] = checked.map((item, index) => {
+  const optionValidationResults: readonly OptionValidationResult[] = checked.map((item, index) => {
     const result = optionResults[index]!;
     if (result.data === undefined)
       return {
@@ -189,24 +189,24 @@ export function useList<
     const listed = (one: unknown) => allowed.some((option) => sameSearchValue(option, one));
     const value = values[item.field];
     // 배열은 선택지에 있는 항목만 남긴다(고정 목록의 항목 복구와 같은 규칙). 남는 항목이 없으면 기본값이다.
-    const kept = Array.isArray(value) ? value.filter(listed) : listed(value) ? [value] : [];
-    const valid = Array.isArray(value) ? kept.length === value.length : kept.length === 1;
-    return { field: item.field, key: item.key, status: valid ? 'valid' : 'invalid', kept: Array.isArray(value) ? kept : undefined };
+    const validSelectedValues = Array.isArray(value) ? value.filter(listed) : listed(value) ? [value] : [];
+    const valid = Array.isArray(value) ? validSelectedValues.length === value.length : validSelectedValues.length === 1;
+    return { field: item.field, key: item.key, status: valid ? 'valid' : 'invalid', validSelectedValues: Array.isArray(value) ? validSelectedValues : undefined };
   });
   const [, setRetryTick] = useState(0);
   const recovered = useRef(new Set<string>());
   const lastRecovery = useRef<string | undefined>(undefined);
-  const running = judged.some((item) => item.status === 'running');
-  const failed = judged.filter((item) => item.status === 'failed');
-  const invalid = judged.filter((item) => item.status === 'invalid');
-  const stuck = invalid.filter(
+  const running = optionValidationResults.some((item) => item.status === 'running');
+  const failed = optionValidationResults.filter((item) => item.status === 'failed');
+  const invalid = optionValidationResults.filter((item) => item.status === 'invalid');
+  const unrecoverableSelections = invalid.filter(
     (item) => sameSearchValue(values[item.field], definition.fields[item.field]!.default) || recovered.current.has(item.key),
   );
   const allValid = !running && failed.length === 0 && invalid.length === 0;
 
   /** 무효 필드만 고쳐 replace 한 번. 배열은 남은 항목으로, 남은 항목이 없거나 단일 값이면 그 필드와 묶음을 기본값으로. 정착한 뒤에만 한다. */
   useEffect(() => {
-    if (running || invalid.length === 0 || stuck.length > 0) return;
+    if (running || invalid.length === 0 || unrecoverableSelections.length > 0) return;
     const recovery = invalid.map((item) => item.key).join('|');
     if (lastRecovery.current === recovery) return;
     lastRecovery.current = recovery;
@@ -214,8 +214,8 @@ export function useList<
     const next: Record<string, unknown> = { ...values };
     for (const item of invalid) {
       recovered.current.add(item.key);
-      if (item.kept !== undefined && item.kept.length > 0) {
-        next[item.field] = item.kept;
+      if (item.validSelectedValues !== undefined && item.validSelectedValues.length > 0) {
+        next[item.field] = item.validSelectedValues;
         continue;
       }
       const members = def.groups.find((group) => group.fields.includes(item.field))?.fields ?? [item.field];
@@ -499,7 +499,7 @@ export function useList<
   let status: ListStatus;
   if (!full.searched) status = { kind: 'idle', reason: 'not-searched', resume: submit };
   else if (missingRequired.length > 0) status = { kind: 'idle', reason: 'not-ready' };
-  else if (stuck.length > 0) status = { kind: 'idle', reason: 'check-stuck', fields: stuck.map((item) => item.field), resume: retryChecks };
+  else if (unrecoverableSelections.length > 0) status = { kind: 'idle', reason: 'check-stuck', fields: unrecoverableSelections.map((item) => item.field), resume: retryChecks };
   else if (failed.length > 0)
     status = {
       kind: 'idle',

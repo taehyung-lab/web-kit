@@ -1,6 +1,6 @@
 // 파일 책임: 세션 수명(세대·시작/종료 진입점·다른 탭 변경 감지·재발급 단일 비행)을 한 곳에서 판정한다.
 // 요청 전송과 실패 변환은 http가 맡고, 여기에는 "지금 세대와 토큰"과 "재발급"만 묻는다.
-import { isRequestFailure, RequestFailure } from './failure';
+import { isRequestFailure, RequestFailure } from '../failure';
 
 /** 세션이 가진 자격증명. access token 외의 값(재발급 본문에 필요한 ID 등)은 프로젝트가 정한다. */
 export interface Credentials {
