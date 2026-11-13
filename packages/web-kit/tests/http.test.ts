@@ -3,7 +3,7 @@ import { AxiosError, AxiosHeaders, type AxiosAdapter, type InternalAxiosRequestC
 import { afterEach, beforeEach, expect, expectTypeOf, it, vi } from 'vitest';
 import { createResultCodeTable, readEnvelope, RequestFailure } from '../src/failure';
 import { createHttp, springEnvelope, type SpringEnvelopeData, type Http, type ResponseContract } from '../src/http';
-import { createSession, type SessionStore, type StoredSession } from '../src/session';
+import { createSession, type SessionStore, type StoredSession } from '../src/session/session';
 
 interface Credentials {
   readonly accessToken: string;

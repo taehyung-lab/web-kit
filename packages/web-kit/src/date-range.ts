@@ -1,4 +1,4 @@
-// 파일 책임: 직접 입력한 달력 날짜 쌍을 엄격하게 검증한다. URL 복구는 같은 폴더의 fields가 맡는다.
+// 파일 책임: 직접 입력한 달력 날짜 쌍을 엄격하게 검증한다. URL 복구는 search/fields가 맡는다.
 export type DateRangeIssue = 'incomplete' | 'invalid' | 'reversed';
 /** 실제 달력에 존재하는 yyyy-MM-dd 값인지 확인한다. */
 export function isCalendarDate(value: string): boolean {

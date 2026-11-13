@@ -5,7 +5,7 @@ import { serializeFlatListParams } from '@boosterlab/web-kit/api';
 import type { ListPage } from '@boosterlab/web-kit/list';
 import type { WriteMeta } from '@boosterlab/web-kit/query';
 import { queryOptions, useMutation } from '@tanstack/react-query';
-import type { Product, ProductSummary } from '../model/product';
+import type { Product, ProductSummary } from '../product';
 
 export const productKeys = {
   all: ['products'] as const,

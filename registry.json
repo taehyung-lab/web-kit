@@ -300,6 +300,26 @@
           "path": "packages/ui-registry/checks/form.html",
           "type": "registry:file",
           "target": "~/web-kit-checks/form.html"
+        },
+        {
+          "path": "packages/ui-registry/src/form/form-context.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/form/form-context.tsx"
+        },
+        {
+          "path": "packages/ui-registry/src/form/form-fields.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/form/form-fields.tsx"
+        },
+        {
+          "path": "packages/ui-registry/src/form/form-sections.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/form/form-sections.tsx"
+        },
+        {
+          "path": "packages/ui-registry/src/form/form-actions.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/form/form-actions.tsx"
         }
       ],
       "devDependencies": [
@@ -342,6 +362,26 @@
           "path": "packages/ui-registry/checks/list-ui.test.tsx",
           "type": "registry:file",
           "target": "~/src/shared/ui/web-kit/checks/list-ui.test.tsx"
+        },
+        {
+          "path": "packages/ui-registry/src/list/list-context.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/list/list-context.tsx"
+        },
+        {
+          "path": "packages/ui-registry/src/list/list-filters.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/list/list-filters.tsx"
+        },
+        {
+          "path": "packages/ui-registry/src/list/list-results.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/list/list-results.tsx"
+        },
+        {
+          "path": "packages/ui-registry/src/list/list-actions.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/list/list-actions.tsx"
         }
       ],
       "devDependencies": [

@@ -1,4 +1,4 @@
-// 파일 책임: 새 화면의 구조 골격(api·model·state·flows·screens·route)을 web-kit-structure 자리에 만든다.
+// 파일 책임: 새 화면의 구조 골격(api·순수 데이터·forms·search·hooks·pages·route)을 web-kit-structure 자리에 만든다.
 // 완료처럼 보이는 것을 만들지 않는다: 서버 endpoint·필드·화면 배치·저장 뒤 목적지는 선언되지 않은 TODO_web_kit_new_* 이름으로 남겨
 // 채우기 전에는 typecheck가 실패한다. 성공을 지어낸 API, 건너뛴 검사, 통과용 검사 파일은 만들지 않는다.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -44,7 +44,7 @@ function plan({ config, feature, entity, kind, url, group }) {
   const id = route.param ?? 'id';
   const head = (text) => `// 파일 책임: ${text} web-kit-new가 만든 골격이다.\n`;
   const model = {
-    path: `${F}/model/${entity}.ts`, shared: true, content: `${head(`${E} 화면이 쓰는 앱 모델(서버 DTO와 분리).`)}
+    path: `${F}/${entity}.ts`, shared: true, content: `${head(`${E} 화면이 쓰는 앱 모델(서버 DTO와 분리).`)}
 /** TODO(web-kit-new): 서버 명세에서 화면이 쓰는 값만 옮긴다. 채우기 전에는 typecheck가 실패한다. */
 export interface ${E} {
   readonly id: string;
@@ -53,7 +53,7 @@ export interface ${E} {
 ` };
   const detailQuery = {
     path: `${F}/api/${entity}-detail-query.ts`, shared: true, content: `${head(`${E} 단건 조회 query 정의.`)}import { queryOptions } from '@tanstack/react-query';
-import type { ${E} } from '../model/${entity}';
+import type { ${E} } from '../${entity}';
 
 /** 상세·수정 원본이 같은 query(같은 캐시)를 쓴다. */
 export function ${e}DetailQuery(id: string) {
@@ -65,7 +65,7 @@ export function ${e}DetailQuery(id: string) {
 }
 ` };
   const form = {
-    path: `${F}/model/forms/${entity}-form.ts`, shared: true, content: `${head(`${E} 폼의 값 모양·검증(순수).`)}import { z } from 'zod';
+    path: `${F}/forms/${entity}-form.ts`, shared: true, content: `${head(`${E} 폼의 값 모양·검증(순수).`)}import { z } from 'zod';
 
 // TODO(web-kit-new): 서버 명세의 필드·제약을 옮긴다(필수 표시도 이 schema가 정한다). 채우기 전에는 typecheck가 실패한다.
 export const ${e}FormSchema = z.object(${TODO_MARKER}form_fields);
@@ -78,7 +78,7 @@ export type ${E}FormOutput = z.output<typeof ${e}FormSchema>;
     files.push(model, {
       path: `${F}/api/${entity}-list-query.ts`, content: `${head(`${E} 목록 조회 query 정의(요청·응답 변환).`)}import type { ListPage } from '@boosterlab/web-kit/list';
 import { queryOptions } from '@tanstack/react-query';
-import type { ${E} } from '../model/${entity}';
+import type { ${E} } from '../${entity}';
 
 /** 목록 요청(서버 계약). TODO(web-kit-new): 서버 명세의 요청 이름·형식으로 바꾼다. */
 export interface ${E}ListParams {
@@ -93,7 +93,7 @@ export function ${e}ListQuery(params: ${E}ListParams) {
   });
 }
 ` }, {
-      path: `${F}/state/${entity}-list-search.ts`, content: `${head(`${E} 목록 URL 검색 선언과 확정 검색 → 요청 변환.`)}import { defineSearch, type FullSearch } from '@boosterlab/web-kit/search';
+      path: `${F}/search/${entity}-list-search.ts`, content: `${head(`${E} 목록 URL 검색 선언과 확정 검색 → 요청 변환.`)}import { defineSearch, type FullSearch } from '@boosterlab/web-kit/search';
 import { z } from 'zod';
 import type { ${E}ListParams } from '../api/${entity}-list-query';
 
@@ -111,10 +111,10 @@ export function to${E}ListParams(search: ${E}ListSearch): ${E}ListParams {
   return { page: search.page - 1 };
 }
 ` }, {
-      path: `${F}/flows/use-${entity}-list.ts`, content: `${head(`${E} 목록 흐름. URL 검색·조회를 조립하고 화면이 쓸 목록 상태를 돌려준다.`)}import { useList } from '@boosterlab/web-kit/list';
+      path: `${F}/hooks/use-${entity}-list.ts`, content: `${head(`${E} 목록 흐름. URL 검색·조회를 조립하고 화면이 쓸 목록 상태를 돌려준다.`)}import { useList } from '@boosterlab/web-kit/list';
 import type { UrlSearch } from '@boosterlab/web-kit/search';
 import { ${e}ListQuery } from '../api/${entity}-list-query';
-import { ${e}ListSearch, to${E}ListParams } from '../state/${entity}-list-search';
+import { ${e}ListSearch, to${E}ListParams } from '../search/${entity}-list-search';
 
 /** search·navigate는 route가 URL에서 읽어 넘긴다. */
 export function use${E}List({
@@ -135,10 +135,10 @@ export function use${E}List({
   return { list };
 }
 ` }, {
-      path: `${F}/screens/${E}ListScreen.tsx`, content: `${head(`${E} 목록 화면. 목록 상태는 목록 flow가 조립한다.`)}import type { UrlSearch } from '@boosterlab/web-kit/search';
-import { use${E}List } from '../flows/use-${entity}-list';
+      path: `${F}/pages/${E}ListPage.tsx`, content: `${head(`${E} 목록 화면. 목록 상태는 목록 flow가 조립한다.`)}import type { UrlSearch } from '@boosterlab/web-kit/search';
+import { use${E}List } from '../hooks/use-${entity}-list';
 
-export function ${E}ListScreen({
+export function ${E}ListPage({
   search,
   navigate,
 }: {
@@ -150,8 +150,8 @@ export function ${E}ListScreen({
   return <${TODO_MARKER}list_layout list={list} />;
 }
 ` }, {
-      path: `${config.routes}/${group}/${route.file}`, content: `${routeHead(`${url} 목록 경로. URL 검색을 검증하고 화면에 넘긴다.`)}import { ${E}ListScreen } from '${A}features/${feature}/screens/${E}ListScreen';
-import { ${e}ListSearch } from '${A}features/${feature}/state/${entity}-list-search';
+      path: `${config.routes}/${group}/${route.file}`, content: `${routeHead(`${url} 목록 경로. URL 검색을 검증하고 화면에 넘긴다.`)}import { ${E}ListPage } from '${A}features/${feature}/pages/${E}ListPage';
+import { ${e}ListSearch } from '${A}features/${feature}/search/${entity}-list-search';
 
 export const Route = createFileRoute('${route.id}')({
   validateSearch: ${e}ListSearch.validateSearch,
@@ -161,27 +161,27 @@ export const Route = createFileRoute('${route.id}')({
 
 function ${E}ListRoute() {
   const navigate = Route.useNavigate();
-  return <${E}ListScreen search={Route.useSearch()} navigate={(next, { replace }) => void navigate({ search: next, replace })} />;
+  return <${E}ListPage search={Route.useSearch()} navigate={(next, { replace }) => void navigate({ search: next, replace })} />;
 }
 ` });
   } else if (route.mode === 'detail') {
     files.push(model, detailQuery, {
-      path: `${F}/flows/use-${entity}-detail.ts`, content: `${head(`${E} 상세 흐름. 단건 상태 판정(useRecord)을 이 한 곳에서 한다.`)}import { useRecord } from '@boosterlab/web-kit/record';
+      path: `${F}/hooks/use-${entity}-detail.ts`, content: `${head(`${E} 상세 흐름. 단건 상태 판정(useRecord)을 이 한 곳에서 한다.`)}import { useRecord } from '@boosterlab/web-kit/record';
 import { ${e}DetailQuery } from '../api/${entity}-detail-query';
 
 export function use${E}Detail(${id}: string) {
   return useRecord(${e}DetailQuery(${id}), ${id}, { progress: 'page' });
 }
 ` }, {
-      path: `${F}/screens/${E}DetailScreen.tsx`, content: `${head(`${E} 상세 화면. 단건 상태는 상세 flow가 판정한다.`)}import { use${E}Detail } from '../flows/use-${entity}-detail';
+      path: `${F}/pages/${E}DetailPage.tsx`, content: `${head(`${E} 상세 화면. 단건 상태는 상세 flow가 판정한다.`)}import { use${E}Detail } from '../hooks/use-${entity}-detail';
 
-export function ${E}DetailScreen({ ${id} }: { readonly ${id}: string }) {
+export function ${E}DetailPage({ ${id} }: { readonly ${id}: string }) {
   const state = use${E}Detail(${id});
   // TODO(web-kit-new): registry record의 Detail로 대기·없음·실패·내용을 그린다(web-kit-record). 채우기 전에는 typecheck가 실패한다.
   return <${TODO_MARKER}detail_layout state={state} />;
 }
 ` }, {
-      path: `${config.routes}/${group}/${route.file}`, content: `${routeHead(`${url} 상세 경로. URL의 식별자만 화면에 넘긴다.`)}import { ${E}DetailScreen } from '${A}features/${feature}/screens/${E}DetailScreen';
+      path: `${config.routes}/${group}/${route.file}`, content: `${routeHead(`${url} 상세 경로. URL의 식별자만 화면에 넘긴다.`)}import { ${E}DetailPage } from '${A}features/${feature}/pages/${E}DetailPage';
 
 export const Route = createFileRoute('${route.id}')({
   component: ${E}DetailRoute,
@@ -189,13 +189,13 @@ export const Route = createFileRoute('${route.id}')({
 
 function ${E}DetailRoute() {
   const { ${id} } = Route.useParams();
-  return <${E}DetailScreen ${id}={${id}} />;
+  return <${E}DetailPage ${id}={${id}} />;
 }
 ` });
   } else if (route.mode === 'create') {
     files.push(form, {
       path: `${F}/api/${entity}-create.ts`, content: `${head(`${E} 등록 요청.`)}import { useMutation } from '@tanstack/react-query';
-import type { ${E}FormOutput } from '../model/forms/${entity}-form';
+import type { ${E}FormOutput } from '../forms/${entity}-form';
 
 export function useCreate${E}() {
   return useMutation({
@@ -204,11 +204,11 @@ export function useCreate${E}() {
   });
 }
 ` }, {
-      path: `${F}/flows/use-${entity}-create.ts`, content: `${head(`${E} 등록 흐름. 저장은 요청 결과를 돌려주고, 완료(onSaved)에서 다음 화면으로 간다.`)}import { useSaveForm } from '@boosterlab/web-kit/form';
+      path: `${F}/hooks/use-${entity}-create.ts`, content: `${head(`${E} 등록 흐름. 저장은 요청 결과를 돌려주고, 완료(onSaved)에서 다음 화면으로 간다.`)}import { useSaveForm } from '@boosterlab/web-kit/form';
 import { useCreate${E} } from '../api/${entity}-create';
-import { ${e}FormSchema, type ${E}FormInput, type ${E}FormOutput } from '../model/forms/${entity}-form';
+import { ${e}FormSchema, type ${E}FormInput, type ${E}FormOutput } from '../forms/${entity}-form';
 
-// TODO(web-kit-new): 등록 화면의 첫 값을 제품 결정대로 정해 model/forms에 둔다. 채우기 전에는 typecheck가 실패한다.
+// TODO(web-kit-new): 등록 화면의 첫 값을 제품 결정대로 정해 forms에 둔다. 채우기 전에는 typecheck가 실패한다.
 const SOURCE: { readonly id: string; readonly values: ${E}FormInput } = { id: 'new', values: ${TODO_MARKER}form_empty_values };
 
 export function use${E}Create() {
@@ -224,24 +224,24 @@ export function use${E}Create() {
   return { editor };
 }
 ` }, {
-      path: `${F}/screens/${E}CreateScreen.tsx`, content: `${head(`${E} 등록 화면. 저장 흐름은 등록 flow가 맡는다.`)}import { use${E}Create } from '../flows/use-${entity}-create';
+      path: `${F}/pages/${E}CreatePage.tsx`, content: `${head(`${E} 등록 화면. 저장 흐름은 등록 flow가 맡는다.`)}import { use${E}Create } from '../hooks/use-${entity}-create';
 
-export function ${E}CreateScreen() {
+export function ${E}CreatePage() {
   const { editor } = use${E}Create();
   // TODO(web-kit-new): registry form/form의 Form·칸으로 필드를 배치한다(web-kit-form). 채우기 전에는 typecheck가 실패한다.
   return <${TODO_MARKER}form_layout editor={editor} />;
 }
 ` }, {
-      path: `${config.routes}/${group}/${route.file}`, content: `${routeHead(`${url} 등록 경로.`)}import { ${E}CreateScreen } from '${A}features/${feature}/screens/${E}CreateScreen';
+      path: `${config.routes}/${group}/${route.file}`, content: `${routeHead(`${url} 등록 경로.`)}import { ${E}CreatePage } from '${A}features/${feature}/pages/${E}CreatePage';
 
 export const Route = createFileRoute('${route.id}')({
-  component: ${E}CreateScreen,
+  component: ${E}CreatePage,
 });
 ` });
   } else {
     files.push(model, detailQuery, form, {
       path: `${F}/api/${entity}-update.ts`, content: `${head(`${E} 수정 요청.`)}import { useMutation } from '@tanstack/react-query';
-import type { ${E}FormOutput } from '../model/forms/${entity}-form';
+import type { ${E}FormOutput } from '../forms/${entity}-form';
 
 export function useUpdate${E}(id: string) {
   return useMutation({
@@ -250,12 +250,12 @@ export function useUpdate${E}(id: string) {
   });
 }
 ` }, {
-      path: `${F}/flows/use-${entity}-edit.ts`, content: `${head(`${E} 수정 흐름. 원본 단건 상태와, 준비된 원본으로 만든 저장 폼을 나눠 돌려준다.`)}import { useSaveForm } from '@boosterlab/web-kit/form';
+      path: `${F}/hooks/use-${entity}-edit.ts`, content: `${head(`${E} 수정 흐름. 원본 단건 상태와, 준비된 원본으로 만든 저장 폼을 나눠 돌려준다.`)}import { useSaveForm } from '@boosterlab/web-kit/form';
 import { useRecord } from '@boosterlab/web-kit/record';
 import { ${e}DetailQuery } from '../api/${entity}-detail-query';
 import { useUpdate${E} } from '../api/${entity}-update';
-import { ${e}FormSchema, type ${E}FormOutput } from '../model/forms/${entity}-form';
-import type { ${E} } from '../model/${entity}';
+import { ${e}FormSchema, type ${E}FormOutput } from '../forms/${entity}-form';
+import type { ${E} } from '../${entity}';
 
 /** 수정 원본의 단건 상태. */
 export function use${E}EditSource(${id}: string) {
@@ -267,7 +267,7 @@ export function use${E}Edit(record: ${E}) {
   const update = useUpdate${E}(record.id);
   const editor = useSaveForm({
     schema: ${e}FormSchema,
-    // TODO(web-kit-new): 원본 → 폼 값 변환을 model/forms에 두고 여기서 쓴다. 채우기 전에는 typecheck가 실패한다.
+    // TODO(web-kit-new): 원본 → 폼 값 변환을 forms에 두고 여기서 쓴다. 채우기 전에는 typecheck가 실패한다.
     source: { id: record.id, values: ${TODO_MARKER}form_values(record) },
     progress: 'edit',
     save: async (output: ${E}FormOutput) => {
@@ -279,10 +279,10 @@ export function use${E}Edit(record: ${E}) {
   return { editor };
 }
 ` }, {
-      path: `${F}/screens/${E}EditScreen.tsx`, content: `${head(`${E} 수정 화면. 원본 조회·저장은 수정 flow가 맡는다.`)}import { use${E}Edit, use${E}EditSource } from '../flows/use-${entity}-edit';
-import type { ${E} } from '../model/${entity}';
+      path: `${F}/pages/${E}EditPage.tsx`, content: `${head(`${E} 수정 화면. 원본 조회·저장은 수정 flow가 맡는다.`)}import { use${E}Edit, use${E}EditSource } from '../hooks/use-${entity}-edit';
+import type { ${E} } from '../${entity}';
 
-export function ${E}EditScreen({ ${id} }: { readonly ${id}: string }) {
+export function ${E}EditPage({ ${id} }: { readonly ${id}: string }) {
   const state = use${E}EditSource(${id});
   // TODO(web-kit-new): registry record의 Detail로 원본 상태를 그리고 준비되면 수정 폼을 그린다(web-kit-record·web-kit-form). 채우기 전에는 typecheck가 실패한다.
   return <${TODO_MARKER}edit_layout state={state} renderForm={(record: ${E}) => <${E}EditForm record={record} />} />;
@@ -294,7 +294,7 @@ function ${E}EditForm({ record }: { readonly record: ${E} }) {
   return <${TODO_MARKER}form_layout editor={editor} />;
 }
 ` }, {
-      path: `${config.routes}/${group}/${route.file}`, content: `${routeHead(`${url} 수정 경로. URL의 식별자만 화면에 넘긴다.`)}import { ${E}EditScreen } from '${A}features/${feature}/screens/${E}EditScreen';
+      path: `${config.routes}/${group}/${route.file}`, content: `${routeHead(`${url} 수정 경로. URL의 식별자만 화면에 넘긴다.`)}import { ${E}EditPage } from '${A}features/${feature}/pages/${E}EditPage';
 
 export const Route = createFileRoute('${route.id}')({
   component: ${E}EditRoute,
@@ -302,7 +302,7 @@ export const Route = createFileRoute('${route.id}')({
 
 function ${E}EditRoute() {
   const { ${id} } = Route.useParams();
-  return <${E}EditScreen ${id}={${id}} />;
+  return <${E}EditPage ${id}={${id}} />;
 }
 ` });
   }
@@ -354,6 +354,6 @@ export function formatScaffold(result, { feature, kind, url }) {
   if (result.conflicts.length > 0) return lines.join('\n');
   lines.push(`이 화면 골격에 남은 미완성 표시 ${result.markers}곳(${TODO_MARKER}…, 공유 파일 중 이미 고친 것은 세지 않음): 선언되지 않은 이름이라 채우기 전에는 typecheck가 실패한다.`);
   lines.push('생성한 파일 수는 완료한 화면 수가 아니다. 검사 파일은 만들지 않았다: 화면 행동·서버 요청을 확인하는 제품 검사를 직접 작성하고 따로 집계한다.');
-  lines.push(`직접 연결할 것: 문구(features/${feature}/i18n.ts와 app의 문구 등록), 메뉴, route 트리 재생성(vite dev·build).`);
+  lines.push(`직접 연결할 것: 문구(features/${feature}/messages.ts와 app의 문구 등록), 메뉴, route 트리 재생성(vite dev·build).`);
   return lines.join('\n');
 }

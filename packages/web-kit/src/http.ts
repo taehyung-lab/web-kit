@@ -13,7 +13,7 @@ import {
   type ResultCodeTable,
   type TransportOutcome,
 } from './failure';
-import type { Credentials, Session } from './session';
+import type { Credentials, Session } from './session/session';
 
 /**
  * E1(인증 필터가 업무 실행 전에 401로 거절하는가)의 키트 기본값. 쓰기의 401은 재전송하지 않고 반영 여부 미확정으로 돌려준다.

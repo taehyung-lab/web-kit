@@ -2,7 +2,7 @@
 import { expect, it } from 'vitest';
 import * as core from '../src/index';
 import * as form from '../src/form';
-import * as list from '../src/list';
+import * as list from '../src/list/index';
 import * as dialog from '../src/confirmation';
 import * as choice from '../src/choice-binding';
 import * as search from '../src/search';

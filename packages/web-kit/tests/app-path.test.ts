@@ -1,7 +1,7 @@
 // 파일 책임: 외부에서 받은 이동 주소가 같은 앱 안의 경로로만 통과하는지 공격 모양 표로 검사한다.
 import { expect, it } from 'vitest';
 import { safeAppPath } from '../src/app-path';
-import { captureListReturn } from '../src/list-return';
+import { captureListReturn } from '../src/list/list-return';
 
 const accepted = ['/', '/items', '/items?page=3#row', '/items/1/edit', '/search?q=a%20b', '/login-help', '/a//b', '/files?path=%2Fshare'];
 const rejected: readonly unknown[] = [

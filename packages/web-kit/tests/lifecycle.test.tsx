@@ -11,7 +11,7 @@ import {
 import { afterEach, expect, it, vi } from "vitest";
 import { useConfirmationState } from "../src/confirmation";
 import { FieldFrame } from "../../ui-registry/src/form/field";
-import { activateTableRow } from "../src/row-activation";
+import { activateTableRow } from "../src/list/row-activation";
 
 afterEach(() => {
   cleanup();
