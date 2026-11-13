@@ -3,7 +3,7 @@ import { useList } from '@boosterlab/web-kit/list';
 import type { UrlSearch } from '@boosterlab/web-kit/search';
 import { useState } from 'react';
 import { productListQuery, useDeactivateProducts } from '../api/products';
-import { PRODUCT_LIST_PERIODS, productListSearch, toListProductsParams } from '../state/product-list-search';
+import { productListSearch, toListProductsParams } from '../state/product-list-search';
 import { useCategoryOptions } from './use-category-options';
 
 /** search·navigate는 route가 URL에서 읽어 넘긴다. */
@@ -22,7 +22,6 @@ export function useProductList({
     query: (full) => productListQuery(toListProductsParams(full)),
     rowId: (row) => row.id,
     selectable: (row) => row.status !== 'INACTIVE',
-    periods: PRODUCT_LIST_PERIODS,
   });
   const categories = useCategoryOptions();
   const deactivate = useDeactivateProducts();

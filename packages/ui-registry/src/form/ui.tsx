@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox as CheckboxInput } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select as SelectRoot, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SelectBox } from '../select-box';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertDialog, ConfirmDialog, Dialog } from '../ui/dialog';
 import { Pending } from '../ui/pending';
@@ -378,6 +378,7 @@ function Text({
   maxLength,
   showCount = false,
   onKeyDown,
+  controlClassName,
   ...field
 }: FormFieldProps & {
   readonly type?: 'text' | 'email' | 'password' | 'tel' | 'date' | 'time' | 'number' | 'url' | 'search';
@@ -388,6 +389,8 @@ function Text({
   readonly maxLength?: number;
   readonly showCount?: boolean;
   readonly onKeyDown?: (event: KeyboardEvent) => void;
+  /** 입력 칸 자체의 크기·모양(기본 클래스 뒤에 합친다). 라벨·오류·접근성 연결은 바꾸지 않는다. */
+  readonly controlClassName?: string;
 }) {
   const { copy } = useFormContext();
   return (
@@ -399,6 +402,7 @@ function Text({
           <>
             <Input
               {...control}
+              className={controlClassName}
               type={type}
               placeholder={placeholder}
               autoComplete={autoComplete}
@@ -478,6 +482,7 @@ function Select({
   status = 'ready',
   onRetry,
   onChange,
+  controlClassName,
   ...field
 }: FormFieldProps & {
   readonly options: readonly { readonly value: string; readonly label: string }[];
@@ -485,6 +490,8 @@ function Select({
   readonly status?: OptionsStatus;
   readonly onRetry?: () => void;
   readonly onChange?: (value: string) => void;
+  /** 입력 칸 자체의 크기·모양(기본 클래스 뒤에 합친다). 라벨·오류·접근성 연결은 바꾸지 않는다. */
+  readonly controlClassName?: string;
 }) {
   const { copy, renderFailure } = useFormContext();
   const retry = useOptionsRetryFocus(onRetry);
@@ -528,6 +535,7 @@ function Select({
             disabled={disabled}
             trigger={trigger}
             triggerRef={retry.inputRef}
+            className={controlClassName}
             value={selected}
             options={options}
             placeholder={placeholder ?? copy.choose}
@@ -549,6 +557,7 @@ function SelectControl({
   disabled,
   trigger,
   triggerRef,
+  className,
   value,
   options,
   placeholder,
@@ -559,6 +568,7 @@ function SelectControl({
   readonly disabled: boolean;
   readonly trigger: Omit<FieldControlProps, never> & { readonly 'aria-required': boolean };
   readonly triggerRef: (node: HTMLElement | null) => void;
+  readonly className?: string;
   readonly value: string;
   readonly options: readonly { readonly value: string; readonly label: string }[];
   readonly placeholder: string;
@@ -567,31 +577,25 @@ function SelectControl({
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <SelectRoot
+    <SelectBox
+      {...trigger}
+      ref={triggerRef}
+      className={cn('w-full', className)}
       name={name}
       disabled={disabled}
-      items={options}
+      options={options}
+      placeholder={placeholder}
       value={value === '' ? null : value}
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
         if (!next) onBlur();
       }}
+      onBlur={() => (open ? undefined : onBlur())}
       onValueChange={(next) => {
         if (typeof next === 'string') onValueChange(next);
       }}
-    >
-      <SelectTrigger {...trigger} ref={triggerRef} className="w-full" onBlur={() => (open ? undefined : onBlur())}>
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        {options.map((option) => (
-          <SelectItem key={option.value} value={option.value}>
-            {option.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </SelectRoot>
+    />
   );
 }
 
@@ -714,6 +718,7 @@ function Section({
   errorMarker,
   children,
   className,
+  headingClassName,
 }: {
   readonly title?: ReactNode;
   readonly fields?: readonly string[];
@@ -721,6 +726,8 @@ function Section({
   readonly errorMarker?: (errorCount: number) => ReactNode;
   readonly children: ReactNode;
   readonly className?: string;
+  /** 구역 제목 줄의 모양(접는 구역은 h2, 그 밖에는 legend). 기본 클래스 뒤에 합치며 열고 닫기·오류 표시는 바꾸지 않는다. */
+  readonly headingClassName?: string;
 }) {
   const { editor, copy } = useFormContext();
   if (fields !== undefined) {
@@ -732,6 +739,7 @@ function Section({
         errorLabel={copy.sectionErrors}
         errorMarker={errorMarker}
         className={className}
+        headingClassName={headingClassName}
       >
         {children}
       </FormSection>
@@ -739,7 +747,7 @@ function Section({
   }
   return (
     <fieldset data-slot="form-section" className={cn('grid min-w-0 gap-4 rounded-xl border border-border p-4', className)}>
-      {title === undefined ? null : <legend className="px-1 text-sm font-medium">{title}</legend>}
+      {title === undefined ? null : <legend className={cn('px-1 text-sm font-medium', headingClassName)}>{title}</legend>}
       {children}
     </fieldset>
   );
@@ -757,6 +765,7 @@ export function FormSection({
   errorLabel,
   errorMarker,
   className,
+  headingClassName,
   children,
 }: {
   readonly form: AnyFormApi;
@@ -767,13 +776,15 @@ export function FormSection({
   /** 오류가 있을 때 머리글 제목 뒤에 그릴 표시(오류 수를 받는다). 화면 낭독기가 읽을 문구도 이 표시가 책임진다. 없으면 기본 표시. */
   readonly errorMarker?: (errorCount: number) => ReactNode;
   readonly className?: string;
+  /** 제목 줄(h2)의 모양. 기본 클래스 뒤에 합친다. */
+  readonly headingClassName?: string;
   readonly children: ReactNode;
 }) {
   const section = useFormSection(form, fields);
   const contentId = useId();
   return (
     <section data-slot="form-section" className={cn('min-w-0 rounded-xl border border-border', className)}>
-      <h2 className="text-base font-medium">
+      <h2 className={cn('text-base font-medium', headingClassName)}>
         <button
           type="button"
           className="flex w-full items-center gap-2 rounded-xl px-4 py-3 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"

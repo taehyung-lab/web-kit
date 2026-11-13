@@ -4,7 +4,7 @@
 
 목록의 결과 출처와 목록 복귀 문맥은 [용어](../GLOSSARY.md)에서 구분한다.
 
-- **core**(루트 `.`): 외부 상태나 실행 없이 입력만으로 결과를 정하는 순수 규칙이다(실패 12종 해석, 기간 검증, 체크 트리 선택, query 직렬화). `tests/core-boundary.test.ts`는 루트에서 따라가는 파일에 라이브러리 의존이 없는지만 검사한다. 순수한지는 이 정의와 검토로 판단한다. `session`처럼 라이브러리에 의존하지 않아도 실행·부수효과가 있는 코드는 core가 아니며, 자기 subpath로 공개한다.
+- **core**(루트 `.`): 외부 상태나 실행 없이 입력만으로 결과를 정하는 순수 규칙이다(실패 12종 해석, 시간대별 날짜 경계·기간 검증, 체크 트리 선택, query 직렬화). `tests/core-boundary.test.ts`는 루트에서 따라가는 파일에 라이브러리 의존이 없는지만 검사한다. 순수한지는 이 정의와 검토로 판단한다. `session`처럼 라이브러리에 의존하지 않아도 실행·부수효과가 있는 코드는 core가 아니며, 자기 subpath로 공개한다.
 - **책임별 입구(subpath)**: `/list`·`/form`처럼 책임별 상태·hook·Provider를 공개한다. 이름을 새로 만들 때는 [공개 입구 판단](../references/docs/decisions/0002-distribution.md)를 따른다.
 - **registry 복사본**: 원본은 `packages/ui-registry/src`, 정의는 루트 `registry.json`, 빌드 결과는 `public/r`에 있다. 폼·필터·표·상세 등 표현을 소비 프로젝트에 설치한다. 공통 처리 순서는 패키지가 끝내고 복사본은 반환된 ref·속성·이벤트를 연결한다. 제품 실행 코드는 registry를 import하지 않는다.
 - **skills**: module별 사용 기준이다. 코드와 같은 버전으로 배포한다.
@@ -18,9 +18,10 @@
 | `/session/browser` | 브라우저 저장 장애 복구·외부 이벤트 판별·해제 | 저장 key·동기 schema·읽기 불가 정책 |
 | `/http` | 헤더·토큰, 필수 응답 계약·선택 Spring 해석, 401 재발급 뒤 한 번 재전송, 반영 여부 판정 | 응답 해석·코드 의미·공개 경로·운영 헤더·axios 기본값 |
 | `/query` | 재시도 대상, 실패 알림 한 번, 선언한 무효화, 민감한 쓰기의 입력값 기록 지움, 세션 전환 시 비움 | 재시도 횟수, 알림 표시, staleTime 등 수치 |
-| `/search` · `/list` | URL 검색 상태·검색 확정·선택 수명([web-kit-list](../skills/web-kit-list/SKILL.md)) | 필드 schema·encode·기본값·조회 시작 조건·첫 정렬 방향, 조회 함수, 다운로드 요청 |
+| `/search` · `/list` | URL 검색 상태·검색 확정·선택 수명([web-kit-list](../skills/web-kit-list/SKILL.md)) | 목록 검색 정책(주소 키·표현·보기 수·미추가 검색어·기간 진입 규칙)과 칸 종류 값, 또는 필드 schema·encode·기본값, 조회 시작 조건, 조회 함수, 다운로드 요청 |
 | `/list` + registry `list` | `ListProvider`·`useListModel`과 필터·기간·키워드·표·페이지·일괄 확인·다운로드 연결 hook | model, 필드·컬럼·배치·문구·실패 표현 |
 | `/permission` | 진입 거부·메뉴 숨김·버튼 비활성의 닫힘 기본 판정 | 권한 상태·판정 함수·권한 목록 |
+| 루트 `calendarDayBounds` | 명시한 날짜·시간대의 시작/다음 날 시작, 입력 오류·없는 날짜 구별 | 시간대 선택·표시·서버 종료 정밀도·실패 연결 |
 | 루트 + registry `checkbox-tree`·`filter-error` | 순수 기간·트리 계산과 오류/트리 표현 연결 | checkbox·문구·스타일 |
 | `/form` · `/dialog` + registry `form`·`dialog` | 제출·확인·저장·기준선·오류·늦은 결과·이탈의 hook/Provider; 복사본 Form·FormGuard·Dialog | schema·원본·저장·완료 동작·배치·문구 |
 | `/record` + registry `record`·`retry` | 단건 상태·갱신 실패·재시도 focus·마스킹; 복사본 Record·항목·이력 | queryOptions·항목·노출 정책·실패 문구 |
@@ -29,6 +30,8 @@
 | `/testing` · `/testing/unit`(기능별 하위 입구 포함) · `/testing/browser` · `/testing/fixtures` | adapter 검사, 복사본 단위·브라우저 적합성 기준·검사 화면 | 실제 복사본·연결 파일·실행 대상 버전 |
 | `/structure`(개발 도구) · bin `web-kit-structure`·`web-kit-new` | 실제 import 대상을 해소한 구조 역할 판정(ESLint 규칙), 구조 결과, 완료를 만들지 않는 화면 골격 | `web-kit.structure.json`의 경로·별칭·생성 코드·예외. 선택 peer `eslint`·`typescript`·`typescript-eslint` |
 | `/testing/session` | 저장 실패·다른 탭 변경·종료의 adapter 검사(React/Form import 없음) | 자기 저장 adapter와 격리된 검사 환경 |
+
+고정 `options`와 서버 `check` 중 무엇을 쓸지는 [목록 선택지 연결](../skills/web-kit-list/SKILL.md#고정-선택지와-서버-선택지-고르기)에서 고른다. 서버 선택지는 기존 `ChoiceFilter`가 조회 상태와 URL 확인을 함께 연결한다.
 
 React·ReactDOM은 필수 peer(소비 앱이 설치하는 동료 라이브러리)이고 TanStack·axios와 검사 러너는 선택 설치다. 각 책임에서 쓰는 의존은 package.json을 따른다. Base UI는 패키지 peer가 아니라 registry 항목 의존이며 react-virtual은 `/list`의 가상 행 hook 때문에 남는다. 설치하지 않은 선택 기능은 "검사하지 않음"으로 기록한다. 루트가 React를 import하지 않는 것과 React 없는 독립 패키지는 다르다.
 

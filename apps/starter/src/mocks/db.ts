@@ -2,6 +2,8 @@
 // 파일 책임: mock 서버의 메모리 상태(분류·상품·토큰·refresh 쿠키 유효 여부). 브라우저 mock과 테스트가 같은 규칙을 쓴다.
 import type { WorkflowValues } from '@/features/form-workflows/model/forms/workflow-form';
 import type { Category, Product, ProductStatus } from '@/api/generated/models';
+import type { MemberSummary } from '@/features/members/model/member';
+import { seedMembers } from './members';
 
 /** mock access 토큰 수명. 지나면 401 → 재발급 흐름이 일어난다. */
 const TOKEN_TTL_MS = 2 * 60 * 1000;
@@ -52,6 +54,7 @@ export interface MockTerms {
 
 interface State {
   products: Product[];
+  members: MemberSummary[];
   terms: MockTerms[];
   workflows: { id: string; saved: WorkflowValues }[];
   tokens: Map<string, number>;
@@ -59,11 +62,12 @@ interface State {
   issued: number;
 }
 
-const state: State = { products: seed(), terms: [], workflows: [], tokens: new Map(), refreshValid: true, issued: 0 };
+const state: State = { products: seed(), members: seedMembers(), terms: [], workflows: [], tokens: new Map(), refreshValid: true, issued: 0 };
 
 /** 서버 상태를 JSON으로 옮길 수 있는 모양. 브라우저 mock이 새로 고침 뒤에도 같은 서버로 보이게 저장·복원한다. */
 export interface MockSnapshot {
   readonly products: Product[];
+  readonly members: MemberSummary[];
   readonly terms: MockTerms[];
   readonly workflows: { id: string; saved: WorkflowValues }[];
   readonly tokens: [string, number][];
@@ -91,9 +95,17 @@ export const mockDb = {
   set products(next: Product[]) {
     state.products = next;
   },
+  /** 회원(목록 예시와 일괄 상태 변경). */
+  get members() {
+    return state.members;
+  },
+  set members(next: MemberSummary[]) {
+    state.members = next;
+  },
   /** 처음 상태로 되돌린다(테스트마다). */
   reset() {
     state.products = seed();
+    state.members = seedMembers();
     state.terms = [];
     state.workflows = [];
     state.tokens = new Map();

@@ -10,6 +10,6 @@ export {
   useListDetailsBinding, useBulkConfirmation, useListChoiceBinding, useListChoiceNormalization,
   useListMultiChoiceBinding, useListPeriodBinding, useListDownloadBinding,
   useListKeywordBinding, useListVirtualRows,
-  listPaginationBinding, listViewBinding, listRowBinding,
+  listPaginationBinding, listViewBinding, listRowBinding, listFieldMeta,
   type ListModel, type PeriodShortcut, type DownloadControl,
 } from './list-binding';

@@ -3,6 +3,7 @@ import type { FetchQueryOptions } from '@tanstack/react-query';
 import { redirect } from '@tanstack/react-router';
 import type { CheckboxTreeNode } from '../checkbox-tree';
 import type { SortFirst } from './interactions';
+import type { ListSearch, SearchMeta } from './list-search';
 
 type StandardResult<T> =
   | { readonly value: T; readonly issues?: undefined }
@@ -79,6 +80,8 @@ export interface SearchDefinition<F extends AnyFields> {
   /** 처음 누른 머리글의 정렬 방향(화면 값). */
   readonly sortFirst: SortFirst;
   readonly groups: readonly SearchGroup[];
+  /** 검색 제출 때 정리할 기간 쌍(검색 필드 키). URL의 묶음 복구는 groups가 별도로 맡는다. */
+  readonly periods?: readonly (readonly [string, string])[];
   readonly gated: boolean;
   readonly defaults: FullSearch<F>;
   /**
@@ -97,6 +100,8 @@ export interface SearchDefinition<F extends AnyFields> {
   readonly resolve: (sparse: SparseSearch<F>) => FullSearch<F>;
   /** 전체 값 → URL 값. 기본값과 같은 필드를 생략하고 encode를 적용한다. 검색 전이면 빈 URL이다. */
   readonly canonical: (full: FullSearch<F>) => UrlSearch;
+  /** listSearch로 선언했을 때 칸 이름별 종류 정보. 화면 부품이 주소 키·선택지를 여기서 읽는다. */
+  readonly meta?: SearchMeta;
 }
 
 /** JSON으로 오가는 값의 깊은 비교. */
@@ -126,6 +131,8 @@ function readField(schema: FieldSchema<unknown>, value: unknown): { ok: true; va
 export function defineSearch<const F extends AnyFields>(spec: {
   readonly fields: F;
   readonly groups?: readonly SearchGroup<keyof F & string>[];
+  /** 검색 제출 때 한쪽만·없는 날짜·역순이면 두 필드를 기본값으로 돌린다. URL 읽기는 바꾸지 않는다. */
+  readonly periods?: readonly (readonly [keyof F & string, keyof F & string])[];
   readonly gated?: boolean;
   /** 페이지·크기·정렬 필드 이름. 생략하면 page·size·sort·order. */
   readonly view?: Partial<Record<keyof ViewKeys, keyof F & string>>;
@@ -190,6 +197,7 @@ export function defineSearch<const F extends AnyFields>(spec: {
     view: { page: 'page', size: 'size', sort: 'sort', order: 'order', ...spec.view },
     sortFirst: spec.sortFirst ?? 'current',
     groups,
+    periods: spec.periods,
     gated,
     defaults,
     validateSearch,
@@ -202,5 +210,44 @@ export function defineSearch<const F extends AnyFields>(spec: {
     read,
     resolve,
     canonical,
+  };
+}
+
+/** route 연결. guard(권한 확인 등)는 주소 교정보다 먼저 실행해 거부된 진입에서 주소를 바꾸지 않는다. */
+export interface SearchRoute {
+  readonly validateSearch: (raw: Record<string, unknown>) => UrlSearch;
+  readonly beforeLoad: (args: { readonly location: { readonly pathname: string; readonly search: unknown } }) => void;
+}
+
+/** listSearch 선언을 주소에 연결한 검색. useList의 definition으로 쓰고 route는 route()를 펼친다. */
+export interface ConnectedSearch<F extends AnyFields, M extends SearchMeta = SearchMeta> extends SearchDefinition<F> {
+  readonly meta: M;
+  readonly route: (options?: { readonly guard?: () => void }) => SearchRoute;
+}
+
+/**
+ * listSearch 선언을 주소(Router)에 연결한다. 엔진은 defineSearch와 같다. checks는 서버 선택지 확인으로,
+ * 선택지 query가 실행 층(api)에 있으므로 순수 선언 밖에서 붙인다.
+ */
+export function connectSearch<F extends AnyFields, M extends SearchMeta>(
+  search: ListSearch<F, M>,
+  options: { readonly checks?: { readonly [K in keyof F]?: FieldCheck } } = {},
+): ConnectedSearch<F, M> {
+  const fields = { ...search.fields } as Record<string, SearchField<any>>;
+  for (const [key, check] of Object.entries(options.checks ?? {})) {
+    if (!(key in fields)) throw new Error(`connectSearch: unknown check field "${key}"`);
+    if (check !== undefined) fields[key] = { ...fields[key]!, check: check as FieldCheck };
+  }
+  const definition = defineSearch({ ...search, fields: fields as F });
+  return {
+    ...definition,
+    meta: search.meta,
+    route: ({ guard } = {}) => ({
+      validateSearch: definition.validateSearch,
+      beforeLoad: (args) => {
+        guard?.();
+        definition.beforeLoad(args);
+      },
+    }),
   };
 }

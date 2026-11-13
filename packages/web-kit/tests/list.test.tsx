@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // 파일 책임: useList의 검색 확정·조회·이전 결과·조회 보류·선택지 확인·선택·일괄 작업을 관찰 결과로 검사한다.
-import { act, cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, cleanup, render, renderHook, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, queryOptions, useQuery } from '@tanstack/react-query';
 import { StrictMode, useState, type ReactNode } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { RequestFailure } from '../src/failure';
 import { defineSearch, type FieldCheck, type SparseSearch } from '../src/search/fields';
 import { useList, type ListPage } from '../src/use-list';
+import { useBulkConfirmation } from '../src/list-binding';
 
 interface Row {
   readonly id: string;
@@ -700,7 +701,7 @@ it('L32 실행 snapshot 밖 성공 ID를 반환하면 선택을 보존하고 오
   await flush();
   act(() => latest.selection.toggleRow('1', true));
   await act(async () => {
-    await expect(latest.selection.run(async () => ({ completedIds: ['2'] }))).rejects.toThrow('subset');
+    await expect(latest.selection.run(async () => ({ completedIds: ['2'] }))).rejects.toMatchObject({ kind: 'contract', resultUnknown: true });
   });
   expect(latest.selection.selectedIds).toEqual(['1']);
 });
@@ -712,7 +713,7 @@ it('L33 성공 ID 없는 런타임 결과는 전체 성공으로 처리하지 �
   await act(async () => {
     // JavaScript 소비자의 잘못된 결과도 선택 삭제로 이어지지 않아야 한다.
     // @ts-expect-error 완료 ID는 공개 타입에서도 필수다.
-    await expect(latest.selection.run(async () => ({ count: 0 }))).rejects.toThrow('subset');
+    await expect(latest.selection.run(async () => ({ count: 0 }))).rejects.toMatchObject({ kind: 'contract', resultUnknown: true });
   });
   expect(latest.selection.selectedIds).toEqual(['1']);
 });
@@ -733,8 +734,8 @@ it('L34 늦게 도착한 이전 조건 응답은 현재 결과·선택·상태�
 });
 
 /** 키워드·기간 필드를 가진 목록. 입력 중 키워드와 기간 선언을 검사한다. */
-function KeywordHarness(props: { onSearch: (search: unknown) => void; delayed?: boolean }) {
-  const definition = keywordDefinition;
+function KeywordHarness(props: { onSearch: (search: unknown) => void; delayed?: boolean; definitionPeriods?: boolean }) {
+  const definition = props.definitionPeriods ? keywordPeriodDefinition : keywordDefinition;
   const [search, setSearch] = useState(() => definition.validateSearch({}));
   keywordLatest = useList({
     definition,
@@ -752,7 +753,7 @@ function KeywordHarness(props: { onSearch: (search: unknown) => void; delayed?: 
       },
     }),
     rowId: (row) => row.id,
-    periods: [['from', 'to']],
+    periods: props.definitionPeriods ? undefined : [['from', 'to']],
   });
   return null;
 }
@@ -766,13 +767,14 @@ const keywordDefinition = defineSearch({
     to: { schema: z.string(), default: undefined },
   },
 });
+const keywordPeriodDefinition = defineSearch({ fields: keywordDefinition.fields, periods: [['from', 'to']] });
 let keywordLatest!: ReturnType<typeof useList<(typeof keywordDefinition)['fields'], Row>>;
-function mountKeywords(delayed = false) {
+function mountKeywords(delayed = false, definitionPeriods = false) {
   const searches: unknown[] = [];
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
-      <KeywordHarness delayed={delayed} onSearch={(search) => searches.push(search)} />
+      <KeywordHarness delayed={delayed} definitionPeriods={definitionPeriods} onSearch={(search) => searches.push(search)} />
     </QueryClientProvider>,
   );
   return searches;
@@ -795,8 +797,8 @@ it('L35 입력 중 키워드는 페이지 이동에는 남고 필터 교체에�
   expect(keywordLatest.keywordInput('words', ['name']).text).toBe('');
 });
 
-it('L36 기간 선언은 UI 없이도 한쪽만·없는 날짜·역순인 기간만 기본값으로 돌리고 나머지 조건으로 검색한다', async () => {
-  const searches = mountKeywords();
+it.each([false, true])('L36 기간 선언은 UI 없이도 한쪽만·없는 날짜·역순인 기간만 기본값으로 돌리고 나머지 조건으로 검색한다 (검색 선언: %s)', async (definitionPeriods) => {
+  const searches = mountKeywords(false, definitionPeriods);
   await act(async () => {});
   for (const [from, to] of [
     ['2026-01-02', undefined],
@@ -955,4 +957,160 @@ it('K1 Router처럼 URL 반영이 늦어도 검색 뒤 입력 중 글자를 유�
   act(() => { keywordLatest.patchDraft({ q: 'next' }); keywordLatest.submit(); });
   await waitFor(() => expect(searches.at(-1)).toMatchObject({ q: 'next' }));
   expect(keywordLatest.keywordInput('words', ['name']).text).toBe('pending');
+});
+
+
+it('bulk confirmation fixes both ids and value, preserving failed rows after partial success', async () => {
+  let binding!: ReturnType<typeof useBulkConfirmation<unknown, string>>;
+  let changeValue!: (value: string) => void;
+  const run = vi.fn(async (_ids: readonly string[], _value?: string) => ({ completedIds: ['1'] }));
+  const check = vi.fn(() => undefined);
+  function Bulk({ model }: { model: typeof latest }) {
+    const [value, setValue] = useState('inactive');
+    changeValue = setValue;
+    binding = useBulkConfirmation({ model, run, check, value });
+    return null;
+  }
+  mount({ definition: makeDefinition(), initial: {}, fetchRows: async () => page('1', '2'), renderResult: model => <Bulk model={model} /> });
+  await flush();
+  act(() => latest.selection.togglePage(true));
+  act(() => binding.open());
+  act(() => changeValue('active'));
+  await act(async () => { await binding.confirm(); });
+  expect(run).toHaveBeenCalledWith(['1', '2'], 'inactive');
+  expect(check).toHaveBeenLastCalledWith(['1', '2'], 'inactive');
+  expect(latest.selection.selectedIds).toEqual(['2']);
+});
+
+it('bulk confirmation rejects changed selection before running a captured value', async () => {
+  let binding!: ReturnType<typeof useBulkConfirmation<unknown, string>>;
+  const run = vi.fn(async () => ({ completedIds: ['1'] }));
+  function Bulk({ model }: { model: typeof latest }) {
+    binding = useBulkConfirmation({ model, run, value: 'inactive' });
+    return null;
+  }
+  mount({ definition: makeDefinition(), initial: {}, fetchRows: async () => page('1', '2'), renderResult: model => <Bulk model={model} /> });
+  await flush();
+  act(() => latest.selection.toggleRow('1', true));
+  act(() => binding.open());
+  act(() => latest.selection.toggleRow('2', true));
+  await act(async () => { await binding.confirm(); });
+  expect(run).not.toHaveBeenCalled();
+  expect(binding.pending).toBeUndefined();
+});
+
+
+it.each([false, true])('검색 선언 기간은 codec의 검색 키로 복구하고 직접 입력을 보존한다 (초안 기간 우선: %s)', async (override) => {
+  const definition = defineSearch({
+    fields: {
+      from: { schema: z.string(), default: '2026-01-01' },
+      to: { schema: z.string(), default: '2026-01-31' },
+      q: { schema: z.string(), default: '' },
+    },
+    periods: [['from', 'to']],
+  });
+  type Draft = { range: { start: string; end: string }; text: string; local: string };
+  let current!: ReturnType<typeof useList<typeof definition.fields, Row, Error, readonly unknown[], Draft>>;
+  const navigate = vi.fn();
+  const validateDraft = vi.fn(() => []);
+  function Period() {
+    current = useList({
+      definition,
+      search: { from: '2026-03-01', to: '2026-03-31' },
+      navigate,
+      query: (full) => ({ queryKey: ['period-codec', full], queryFn: async () => page('1') }),
+      rowId: (row) => row.id,
+      draft: {
+        from: (full): Draft => ({ range: { start: full.from, end: full.to }, text: full.q, local: '' }),
+        to: (draft) => ({ from: draft.range.start, to: draft.range.end, q: draft.text.trim() }),
+      },
+      // 빈 배열도 명시한 초안 기간이다. definition의 검색 키를 다시 적용하지 않는다.
+      periods: override ? [] : undefined,
+      validateDraft,
+    });
+    return null;
+  }
+  client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(<QueryClientProvider client={client}><Period /></QueryClientProvider>);
+  act(() => {
+    current.patchDraft({ range: { start: '2026-04-01', end: '' }, text: '  keep  ', local: 'unsaved' });
+    current.submit();
+  });
+  const range = override ? { start: '2026-04-01', end: '' } : { start: '2026-01-01', end: '2026-01-31' };
+  expect(current.draft).toEqual({ range, text: '  keep  ', local: 'unsaved' });
+  expect(validateDraft).toHaveBeenLastCalledWith(current.draft);
+  expect(navigate).toHaveBeenLastCalledWith(override ? { from: '2026-04-01', to: '', q: 'keep' } : { q: 'keep' }, { replace: false });
+  await act(async () => {});
+});
+
+
+it('L 결과 불확실 쓰기는 직접 재실행·선택 변경을 막고 재조회 성공 뒤 새 선택만 허용한다', async () => {
+  const fetchRows = vi.fn(async () => page('1', '2'));
+  mount({ definition: makeDefinition(), initial: {}, fetchRows });
+  await flush();
+  act(() => latest.selection.toggleRow('1', true));
+  const failure = new RequestFailure({ kind: 'contract', resultUnknown: true });
+  const action = vi.fn(async () => { throw failure; });
+  await act(async () => { await expect(latest.selection.run(action)).rejects.toBe(failure); });
+  await act(async () => { await expect(latest.selection.run(action)).rejects.toBe(failure); });
+  expect(action).toHaveBeenCalledTimes(1);
+  act(() => latest.selection.toggleRow('2', true));
+  expect(latest.selection.selectedIds).toEqual(['1']);
+  expect(latest.selection.canSelect('1')).toBe(false);
+  fetchRows.mockRejectedValueOnce(new Error('offline'));
+  await act(async () => { expect(await latest.selection.recover()).toBe(false); });
+  expect(latest.selection.failure).toBe(failure);
+  await act(async () => { expect(await latest.selection.recover()).toBe(true); });
+  expect(latest.selection.failure).toBeUndefined();
+  expect(latest.selection.selectedIds).toEqual([]);
+  act(() => latest.selection.toggleRow('2', true));
+  const next = vi.fn(async (ids: readonly string[]) => ({ completedIds: ids }));
+  await act(async () => { await latest.selection.run(next); });
+  expect(next).toHaveBeenCalledWith(['2']);
+});
+
+
+it.each([
+  ['success', false], ['failure', false], ['success', true], ['failure', true],
+] as const)('L 이전 조회의 복구 %s는 이동(왕복=%s) 뒤 잠금을 풀지 않는다', async (outcome, roundTrip) => {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  queryClient.setQueryData(['recovery', 'B'], page('1'));
+  const oldRecovery = deferred<ListPage<Row>>();
+  const nextQuery = deferred<ListPage<Row>>();
+  let aCalls = 0;
+  let bCalls = 0;
+  const definition = defineSearch({ fields: { q: { schema: z.string(), default: 'A' } } });
+  const { result } = renderHook(() => {
+    const [url, move] = useState({ q: 'A' });
+    return { move, list: useList({
+      definition, search: url, navigate: (next) => move({ q: String(next.q ?? 'A') }),
+      query: ({ q }) => ({ queryKey: ['recovery', q], queryFn: () => q === 'A'
+        ? (++aCalls === 2 ? oldRecovery.promise : Promise.resolve(page('1')))
+        : (++bCalls === 1 ? nextQuery.promise : Promise.resolve(page('1'))), staleTime: 0 }),
+      rowId: (row: Row) => row.id,
+    }) };
+  }, { wrapper: ({ children }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider> });
+  await waitFor(() => expect(result.current.list.isCurrent).toBe(true));
+  act(() => result.current.list.selection.toggleRow('1', true));
+  const failure = new RequestFailure({ kind: 'contract', resultUnknown: true });
+  await act(async () => { await expect(result.current.list.selection.run(async () => { throw failure; })).rejects.toBe(failure); });
+  let recovery!: Promise<boolean>;
+  act(() => { recovery = result.current.list.selection.recover(); });
+  await waitFor(() => expect(aCalls).toBe(2));
+  act(() => result.current.move({ q: 'B' }));
+  await waitFor(() => expect(bCalls).toBe(1));
+  if (roundTrip) act(() => result.current.move({ q: 'A' }));
+  await act(async () => {
+    if (outcome === 'success') oldRecovery.resolve(page('1'));
+    else oldRecovery.reject(new Error('recovery failed'));
+    expect(await recovery).toBe(false);
+  });
+  expect(result.current.list.selection.failure).toBe(failure);
+  if (!roundTrip) expect(queryClient.getQueryState(['recovery', 'B'])?.fetchStatus).toBe('fetching');
+  await act(async () => { nextQuery.reject(new Error('new query failed')); });
+  // 이동이 끝난 현재 문맥에서 새로 성공한 복구만 재개한다.
+  await act(async () => { expect(await result.current.list.selection.recover()).toBe(true); });
+  expect(result.current.list.selection.failure).toBeUndefined();
+  expect(result.current.list.selection.selectedIds).toEqual([]);
+  queryClient.clear();
 });

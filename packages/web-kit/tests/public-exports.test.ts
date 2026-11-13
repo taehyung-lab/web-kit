@@ -12,6 +12,7 @@ const expected = {
   "choice": ["normalizeChoiceValue", "useChoiceBinding"],
   "core": [
     "RequestFailure",
+    "calendarDayBounds",
     "checkboxTreeSelection",
     "createResultCodeTable",
     "isRequestFailure",
@@ -64,6 +65,7 @@ const expected = {
     "ListProvider",
     "activateTableRow",
     "captureListReturn",
+    "listFieldMeta",
     "listPaginationBinding",
     "listRowBinding",
     "listViewBinding",

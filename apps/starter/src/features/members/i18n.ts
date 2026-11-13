@@ -11,6 +11,7 @@ export const memberResources = {
       sort: { joinedAt: '가입일순', name: '이름순', lastLoginAt: '최근 접속순' },
       filter: { period: '기간', keyword: '검색어', all: '전체', lastWeek: '최근 7일', lastMonth: '최근 1개월' },
       list: { notSearched: '검색 조건을 정하고 검색을 누르세요.', empty: '조건에 맞는 회원이 없습니다.' },
+      bulk: { status: '바꿀 계정 상태', choose: '상태 선택', change: '상태 변경', title: '계정 상태를 바꿀까요?', body: '{{count}}명을 {{status}}(으)로 바꿉니다.' },
     },
   },
   en: {
@@ -24,6 +25,7 @@ export const memberResources = {
       sort: { joinedAt: 'Newest members', name: 'Name', lastLoginAt: 'Recent sign-in' },
       filter: { period: 'Period', keyword: 'Keyword', all: 'All', lastWeek: 'Last 7 days', lastMonth: 'Last month' },
       list: { notSearched: 'Set the filters and press Search.', empty: 'No members match these filters.' },
+      bulk: { status: 'New account status', choose: 'Choose status', change: 'Change status', title: 'Change account status?', body: 'Change {{count}} members to {{status}}.' },
     },
   },
 } as const;

@@ -60,7 +60,7 @@ export class RequestFailure extends Error {
   readonly messageKey: string | undefined;
   readonly endsSession: boolean;
   readonly fieldErrors: readonly FieldError[];
-  /** 쓰기가 서버에 반영됐는지 확인할 수 없음. 요청 경로를 아는 http만 정하고, kind로 추측하지 않는다. */
+  /** 쓰기가 서버에 반영됐는지 확인할 수 없음. 전송 경로 또는 쓰기 응답 해석을 맡은 소비자가 정하며, kind만으로 추측하지 않는다. */
   readonly resultUnknown: boolean;
   readonly #fields: ConstructorParameters<typeof RequestFailure>[0];
 

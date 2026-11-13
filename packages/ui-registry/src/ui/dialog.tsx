@@ -6,6 +6,7 @@ import { createContext, useContext, type ReactNode, type RefObject } from 'react
 import { useDialogBinding, useConfirmBinding, useAcknowledgeBinding } from '@boosterlab/web-kit/dialog';
 import { Button } from '@/components/ui/button';
 import { Dialog as DialogRoot, DialogClose, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import type { useConfirmationState } from '@boosterlab/web-kit/dialog';
 import { Pending } from './pending';
 
 /** 대화창 버튼의 앱 기본 문구. pending은 실행 중 진행 표시를 화면 낭독기가 읽는 문구다. */
@@ -189,5 +190,25 @@ export function AlertDialog({
     >
       {children}
     </Dialog>
+  );
+}
+
+/** 확인 수명의 표현 연결. 오류 분류·실행·대상 결정은 호출자가 소유한다. */
+export function ConfirmationDialog<T, F>({ confirmation, renderFailure, completionMessage, retryLabel, ...props }: {
+  readonly confirmation: ReturnType<typeof useConfirmationState<T, F>>;
+  readonly renderFailure: (failure: F) => ReactNode;
+  /** 요청은 끝났고 후속 처리만 남았을 때의 설명과 재시도 버튼 문구. */
+  readonly completionMessage?: ReactNode;
+  readonly retryLabel?: string;
+} & Omit<Parameters<typeof ConfirmDialog>[0], 'open' | 'pending' | 'onConfirm' | 'onCancel'>) {
+  const { state, covered, confirm, close } = confirmation;
+  return (
+    <ConfirmDialog {...props} confirmLabel={state.kind === 'open' && state.completed ? retryLabel ?? props.confirmLabel : props.confirmLabel} open={state.kind === 'open' && !covered}
+      pending={state.kind === 'open' && state.pending} onConfirm={() => void confirm()} onCancel={close}>
+      {state.kind === 'open' && state.completed && completionMessage !== undefined ? completionMessage : props.children}
+      {state.kind === 'open' && state.failure !== undefined && (
+        <p role="alert" className="text-destructive">{renderFailure(state.failure)}</p>
+      )}
+    </ConfirmDialog>
   );
 }

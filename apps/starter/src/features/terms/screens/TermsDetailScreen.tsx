@@ -2,7 +2,6 @@
 import { Record } from '@/shared/ui/web-kit/detail-ui';
 import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { failureCopyKey } from '@/shared/lib/failure-copy';
 import { useTermsDetail } from '../flows/use-terms-detail';
 
 /** 약관 하나의 상세. */
@@ -14,8 +13,6 @@ export function TermsDetailScreen({ termsId }: { readonly termsId: string }) {
       <h1>{t('terms.detailTitle')}</h1>
       <Record
         state={state}
-        messages={{ loading: t('common.loading'), retry: t('common.retry'), refreshFailed: t('common.refreshFailed'), empty: t('common.empty') }}
-        renderFailure={(failure) => t(failureCopyKey(failure))}
         missing={
           <>
             <p>{t('terms.notFound')}</p>

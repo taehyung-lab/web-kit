@@ -3,7 +3,6 @@ import { Button } from '@/shared/ui/button';
 import { ListProvider, ListResult, ResultTable, Pagination } from '@/shared/ui/web-kit/list-ui';
 import type { UrlSearch } from '@boosterlab/web-kit/search';
 import { useTranslation } from 'react-i18next';
-import { failureCopyKey } from '@/shared/lib/failure-copy';
 import { useProductList } from '../flows/use-product-list';
 import { ProductFilters } from './ProductFilters';
 import { ProductActions } from './ProductActions';
@@ -31,21 +30,15 @@ export function ProductListScreen({
           {t('products.create')}
         </Button>
       </header>
+      {/* 공용 문구·실패 문구는 앱 ListDefaults가 준다. 여기에는 이 목록만의 문구를 둔다. */}
       <ListProvider
         model={list}
-        renderFailure={(failure, place) => (place === 'refresh' ? '' : t(failureCopyKey(failure)))}
         messages={{
           search: t('products.filter.submit'),
           reset: t('products.filter.reset'),
-          retry: t('common.retry'),
           optionsFailed: t('products.list.optionsFailed'),
-          refreshFailed: t('common.refreshFailed'),
-          selectPage: t('common.selectPage'),
-          selectRow: t('common.selectRow'),
-          loading: t('common.loading'),
           empty: t('products.list.empty'),
           size: t('products.list.pageSize'),
-          cancel: t('common.cancel'),
         }}
       >
         <ProductFilters />

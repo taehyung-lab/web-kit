@@ -7,6 +7,7 @@ import { MEMBER_ACCOUNT_STATUSES, MEMBER_KEYWORD_FIELDS, MEMBER_PERIOD_TYPES, ME
 import { MEMBER_PAGE_SIZES, MEMBER_SORT_KEYS } from '../model/rules/member-list-policy';
 
 const isoDate = z.iso.date();
+const periodFields = ['startDate', 'endDate'] as const;
 
 /**
  * 회원 목록 예시의 값: 진입 시 조회하지 않고 검색을 눌러야 조회, 페이지 크기 100, 가입일 내림차순, 기간 기준 가입일,
@@ -28,14 +29,12 @@ export const memberListSearch = defineSearch({
     signupMethods: { schema: z.array(z.enum(MEMBER_SIGNUP_METHODS)), default: [] as readonly (typeof MEMBER_SIGNUP_METHODS)[number][] },
     accountStatuses: { schema: z.array(z.enum(MEMBER_ACCOUNT_STATUSES)), default: [] as readonly (typeof MEMBER_ACCOUNT_STATUSES)[number][] },
   },
-  groups: [{ fields: ['startDate', 'endDate'], valid: ({ startDate, endDate }) => (startDate === undefined) === (endDate === undefined) && (startDate === undefined || String(startDate) <= String(endDate)) }],
+  periods: [periodFields],
+  groups: [{ fields: periodFields, valid: ({ startDate, endDate }) => (startDate === undefined) === (endDate === undefined) && (startDate === undefined || String(startDate) <= String(endDate)) }],
   gated: true,
   view: { size: 'pageSize', sort: 'sortType', order: 'sortDirection' },
   sortFirst: 'desc',
 });
-
-/** 직접 입력하는 기간 쌍. */
-export const MEMBER_LIST_PERIODS = [['startDate', 'endDate']] as const;
 
 export type MemberListSearch = FullSearch<typeof memberListSearch.fields>;
 

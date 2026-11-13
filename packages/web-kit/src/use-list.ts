@@ -1,9 +1,9 @@
 /** 목록의 확정 조건·초안·결과 출처·선택과 일괄 실행 수명을 소유한다. */
 // 파일 책임: 목록 화면 하나의 검색 초안·확정(기간 검증·추가된 키워드), 선택지 확인, 조회 상태, 이전 결과, 정렬 전이,
 // 행 선택·일괄 작업 수명을 소유한다. 화면 부품을 바꾸거나 숨겨도 검색 직전 보장이 남도록 UI가 아닌 여기서 한다.
-import { useQueries, useQuery, type QueryKey, type UseQueryOptions } from '@tanstack/react-query';
+import { hashKey, useQueries, useQuery, type QueryKey, type UseQueryOptions } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { isRequestFailure } from './failure';
+import { isRequestFailure, RequestFailure } from './failure';
 import { useBlockingProgress } from './progress';
 import { validateDateRange } from './date-range';
 import { sameSearchValue, type FullSearch, type SearchDefinition, type SearchField, type UrlSearch } from './search/fields';
@@ -81,6 +81,7 @@ export interface ListOptions<
   /**
    * 직접 입력하는 기간 쌍 [시작 필드, 끝 필드](초안 키). 검색 직전 한쪽만·없는 날짜·역순이면 그 쌍만 기본값으로 돌리고
    * 나머지 조건으로 검색한다(주소의 잘못된 값과 같은 규칙). 입력 UI와 무관하게 지킨다.
+   * 보통 definition.periods(검색 키)에 선언한다. 여기 명시하면 definition.periods 대신 이 초안 키를 쓴다.
    */
   readonly periods?: readonly (readonly [NoInfer<keyof D & string>, NoInfer<keyof D & string>])[];
 }
@@ -314,6 +315,17 @@ export function useList<
 
   /** 맞지 않는 기간 쌍(한쪽만·없는 날짜·역순)을 기본값으로 돌린다. 주소의 잘못된 값처럼 그 쌍만 바뀐다. */
   function withValidPeriods(draft: D): D {
+    // 검색 선언의 키는 codec 변환 뒤 값에서 확인한다. 바뀐 날짜와 연결된 초안만 되돌려 다른 입력을 보존한다.
+    if (latest.current.periods === undefined) {
+      if (!definition.periods?.length) return draft;
+      const search = { ...full, ...codec.to(draft) };
+      let next = search;
+      for (const [from, to] of definition.periods ?? []) {
+        if (validateDateRange(search[from] as string | undefined, search[to] as string | undefined) === undefined) continue;
+        next = { ...next, [from]: definition.defaults[from], [to]: definition.defaults[to] };
+      }
+      return next === search ? draft : applyCodecDelta(draft, codec.from(search), codec.from(next)) as D;
+    }
     const values = draft as Record<string, unknown>;
     let defaults: Record<string, unknown> | undefined;
     let next = values;
@@ -325,10 +337,30 @@ export function useList<
     return next as D;
   }
 
+  /**
+   * 선언 정책이 미추가 검색어 포함(pending: include)이면 입력 중 글자를 같은 구분 규칙으로 칩에 더하고 입력을 비운다.
+   * 화면의 [추가]·Enter와 같은 addKeyword 규칙(trim·같은 대상 중복 제거)을 쓴다.
+   */
+  function withPendingKeywords(state: typeof draftCurrent): typeof draftCurrent {
+    let next = state;
+    for (const [name, entry] of Object.entries(definition.meta ?? {})) {
+      if (entry.kind !== 'keywords' || entry.pending !== 'include') continue;
+      const pending = next.inputs[name];
+      if (pending === undefined || pending.text.trim() === '') continue;
+      const target = entry.targets.includes(pending.choice) ? pending.choice : entry.targets[0];
+      if (target === undefined) continue;
+      const texts = entry.split === undefined ? [pending.text] : pending.text.split(entry.split);
+      const draft = next.draft as Record<string, unknown>;
+      const items = texts.reduce((items, text) => addKeyword(items, target, text), (draft[name] as readonly Keyword[] | undefined) ?? []);
+      next = { ...next, draft: { ...draft, [name]: items } as D, inputs: { ...next.inputs, [name]: { choice: target, text: '' } } };
+    }
+    return next;
+  }
+
   /** 추가된 키워드와 기간을 정리·검증한 뒤 첫 페이지로 확정한다. 보기 상태(size·sort·order)는 지금 값 그대로다. */
   function submit() {
     setSubmitVersion((version) => version + 1);
-    const merged = draftLatest.current;
+    const merged = withPendingKeywords(draftLatest.current);
     const draft = withValidPeriods(merged.draft);
     const issues = [...requiredIssues({ ...full, ...codec.to(draft) }), ...(latest.current.validateDraft?.(draft) ?? [])];
     setDraft({ ...merged, draft, issues });
@@ -382,11 +414,40 @@ export function useList<
   const selectedIds = isCurrent ? rows.map(options.rowId).filter((id) => selectionCurrent.selected.has(id)) : [];
   const [runningAction, setRunningAction] = useState(false);
   const actionLock = useRef(false);
+  // 결과를 모르는 쓰기는 같은 화면에서 재전송하지 않는다. 명시적 재조회 성공만 이 잠금을 푼다.
+  const [actionFailure, setActionFailure] = useState<RequestFailure>();
+  const uncertainAction = useRef<RequestFailure | undefined>(undefined);
+  const recoveryLock = useRef(false);
+  // QueryObserver.refetch는 완료 시 다른 조회의 결과를 돌려줄 수 있다. 왕복 이동도 새 복구 문맥이다.
+  const recoveryKey = hashKey([selectionLifetime, screenQuery.queryKey, enabled]);
+  const recoveryScope = useRef({ key: recoveryKey });
+  if (recoveryScope.current.key !== recoveryKey) recoveryScope.current = { key: recoveryKey };
+  const [recoveringAction, setRecoveringAction] = useState(false);
+  async function recoverAction() {
+    if (!enabled || executionLock.current || recoveryLock.current || actionLock.current || uncertainAction.current === undefined) return false;
+    recoveryLock.current = true;
+    setRecoveringAction(true);
+    const failure = uncertainAction.current;
+    const scope = recoveryScope.current;
+    try {
+      const result = await query.refetch({ cancelRefetch: true });
+      if (result.isSuccess && mounted.current && recoveryScope.current === scope && uncertainAction.current === failure) {
+        uncertainAction.current = undefined;
+        setActionFailure(undefined);
+        setSelection((prev) => ({ ...prev, selected: new Set() }));
+        return true;
+      }
+      return false;
+    } finally {
+      recoveryLock.current = false;
+      if (mounted.current) setRecoveringAction(false);
+    }
+  }
   const actionLifetime = useRef<string | undefined>(undefined);
 
   /** 현재 조건의 선택 가능한 행에만 반영한다. */
   function toggle(ids: readonly string[], on: boolean) {
-    if (executionLock.current || !isCurrent) return;
+    if (executionLock.current || uncertainAction.current || !isCurrent) return;
     if (actionLock.current && actionLifetime.current === selectionLifetime) return;
     setSelection((prev) => {
       if (prev.lifetime !== selectionLifetime) return prev;
@@ -405,6 +466,7 @@ export function useList<
     action: (ids: readonly string[]) => Promise<T>,
   ): Promise<T | undefined> {
     if (actionLock.current || executionLock.current || !isCurrent || selectedIds.length === 0) return undefined;
+    if (uncertainAction.current) throw uncertainAction.current;
     actionLock.current = true;
     actionLifetime.current = selectionLifetime;
     setRunningAction(true);
@@ -415,12 +477,18 @@ export function useList<
       // completedIds는 업무 결과이고, 선택 수명 적용은 이 module이 맡는다.
       const completed = typeof result === 'object' && result !== null && 'completedIds' in result ? result.completedIds : undefined;
       if (!Array.isArray(completed) || completed.some((id) => typeof id !== 'string' || !ids.includes(id)))
-        throw new Error('completedIds must be a subset of the submitted selection');
+        throw new RequestFailure({ kind: 'contract', resultUnknown: true });
       if (mounted.current)
         setSelection((prev) =>
           prev.lifetime === lifetime ? { ...prev, selected: new Set([...prev.selected].filter((id) => !completed.includes(id))) } : prev,
         );
       return result;
+    } catch (failure) {
+      if (isRequestFailure(failure) && failure.resultUnknown) {
+        uncertainAction.current = failure;
+        if (mounted.current) setActionFailure(failure);
+      }
+      throw failure;
     } finally {
       actionLock.current = false;
       if (mounted.current) setRunningAction(false);
@@ -454,6 +522,12 @@ export function useList<
     search: full,
     defaults: definition.defaults,
     view: definition.view,
+    /** listSearch로 선언한 칸 종류 정보. 화면 부품이 name으로 주소 키·선택지를 읽는다. */
+    meta: definition.meta,
+    /** 행 식별. 표가 같은 규칙을 다시 받지 않도록 낸다. */
+    rowId: options.rowId,
+    /** 업무상 선택할 수 있는 행인지(선언했을 때만). 표의 선택 칸 표시가 이것을 읽는다. */
+    isSelectable: options.selectable,
     checks: Object.fromEntries(Object.entries(definition.fields).map(([name, field]) => [name, field.check])),
     status,
     /** 보여 줄 행. isCurrent가 false면 이전 조건이거나 사용자 검색 응답 대기 중인 읽기용 결과다. */
@@ -522,7 +596,7 @@ export function useList<
     },
     selection: {
       selectedIds,
-      canSelect: (id: string) => allowed.includes(id),
+      canSelect: (id: string) => !actionFailure && allowed.includes(id),
       isChecked: (id: string) => selectedIds.includes(id),
       isAllChecked: allowed.length > 0 && selectedIds.length === allowed.length,
       isMixed: selectedIds.length > 0 && selectedIds.length < allowed.length,
@@ -531,6 +605,9 @@ export function useList<
       clear: () => setSelection((prev) => ({ ...prev, selected: new Set() })),
       run,
       isRunning: runningAction,
+      failure: actionFailure,
+      isRecovering: recoveringAction,
+      recover: recoverAction,
     },
   };
 }

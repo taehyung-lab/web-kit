@@ -187,7 +187,8 @@
     "dependencies": [
       "choice",
       "dialog",
-      "pending"
+      "pending",
+      "inputs"
     ]
   },
   "list": {
@@ -219,7 +220,8 @@
     "dependencies": [
       "choice",
       "dialog",
-      "pending"
+      "pending",
+      "inputs"
     ]
   },
   "record": {

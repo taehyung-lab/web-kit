@@ -28,9 +28,7 @@ export function ProductDetailScreen({
         ‹ {t('products.backToList')}
       </Button>
       <Record
-        messages={{ loading: t('common.loading'), retry: t('common.retry'), refreshFailed: t('common.refreshFailed'), empty: t('common.empty') }}
         state={state}
-        renderFailure={(failure) => t(failureCopyKey(failure))}
         missing={
           <>
             <p>{t(failureCopyKey(state.kind === 'missing' ? state.failure : undefined))}</p>

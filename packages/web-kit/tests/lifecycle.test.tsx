@@ -158,3 +158,176 @@ it("table row activates with configured keys and leaves nested controls alone", 
   fireEvent.keyDown(screen.getByRole("button"), { key: "Enter" });
   expect(activate).toHaveBeenCalledTimes(2);
 });
+
+it("retries completion without repeating a committed request", async () => {
+  const run = vi.fn(async (_id: number) => "saved");
+  const onSuccess = vi
+    .fn()
+    .mockRejectedValueOnce(new Error("navigation failed"))
+    .mockResolvedValueOnce(undefined);
+  const { result } = renderHook(() =>
+    useConfirmationState({
+      run,
+      onSuccess,
+      onError: (failure: unknown) => ({ kind: "show", failure }),
+    }),
+  );
+  act(() => result.current.request(1));
+  await act(async () => {
+    await result.current.confirm();
+  });
+  expect(result.current.state).toMatchObject({
+    kind: "open",
+    completed: true,
+    pending: false,
+  });
+  await act(async () => {
+    await result.current.confirm();
+  });
+  expect(run).toHaveBeenCalledTimes(1);
+  expect(onSuccess).toHaveBeenCalledTimes(2);
+  expect(result.current.state.kind).toBe("closed");
+});
+
+it("invalidates an open confirmation and late completion when identity changes", async () => {
+  let resolve!: () => void;
+  const onSuccess = vi.fn();
+  const run = vi.fn(
+    () =>
+      new Promise<void>((done) => {
+        resolve = done;
+      }),
+  );
+  const { result, rerender } = renderHook(
+    ({ identity }) =>
+      useConfirmationState({
+        identity,
+        run,
+        onSuccess,
+        onError: (failure: unknown) => ({ kind: "show", failure }),
+      }),
+    { initialProps: { identity: 1 } },
+  );
+  act(() => result.current.request(1));
+  rerender({ identity: 2 });
+  expect(result.current.state.kind).toBe("closed");
+  await act(async () => {
+    await result.current.confirm();
+  });
+  expect(run).not.toHaveBeenCalled();
+  act(() => result.current.request(2));
+  let task!: Promise<void>;
+  act(() => {
+    task = result.current.confirm();
+  });
+  rerender({ identity: 3 });
+  await act(async () => {
+    resolve();
+    await task;
+  });
+  expect(onSuccess).not.toHaveBeenCalled();
+  expect(result.current.state.kind).toBe("closed");
+});
+
+it("does not start success effects after unmount and exposes invalidation across a success await", async () => {
+  let resolve!: () => void;
+  const completed = new Promise<void>((done) => {
+    resolve = done;
+  });
+  const effect = vi.fn();
+  const started = vi.fn();
+  const hook = renderHook(() =>
+    useConfirmationState({
+      run: async () => undefined,
+      onSuccess: async (_result, { isCurrent }) => {
+        started();
+        await completed;
+        if (isCurrent()) effect();
+      },
+      onError: () => ({ kind: "close" }),
+    }),
+  );
+  act(() => hook.result.current.request(undefined));
+  let task!: Promise<void>;
+  await act(async () => {
+    task = hook.result.current.confirm();
+    await Promise.resolve();
+  });
+  expect(started).toHaveBeenCalledTimes(1);
+  hook.unmount();
+  await act(async () => {
+    resolve();
+    await task;
+  });
+  expect(effect).not.toHaveBeenCalled();
+});
+
+it("uses dialog progress rather than a deletion cover when retrying only completion", async () => {
+  let finish!: () => void;
+  const onSuccess = vi
+    .fn()
+    .mockRejectedValueOnce(new Error("followup"))
+    .mockImplementationOnce(
+      () =>
+        new Promise<void>((done) => {
+          finish = done;
+        }),
+    );
+  const hook = renderHook(() =>
+    useConfirmationState({
+      progress: "delete",
+      run: async () => undefined,
+      onSuccess,
+      onError: (failure) => ({ kind: "show", failure }),
+    }),
+  );
+  act(() => hook.result.current.request(undefined));
+  await act(async () => {
+    await hook.result.current.confirm();
+  });
+  let task!: Promise<void>;
+  act(() => {
+    task = hook.result.current.confirm();
+  });
+  expect(hook.result.current.state).toMatchObject({
+    kind: "open",
+    completed: true,
+    pending: true,
+  });
+  expect(hook.result.current.covered).toBe(false);
+  await act(async () => {
+    finish();
+    await task;
+  });
+});
+
+it("keeps successful request results across closing and reopening completion failures for the same target", async () => {
+  const run = vi.fn(async (id: number) => id);
+  const onSuccess = vi
+    .fn()
+    .mockRejectedValueOnce(new Error("navigation"))
+    .mockResolvedValueOnce(undefined);
+  const hook = renderHook(() =>
+    useConfirmationState({
+      identity: 1,
+      run,
+      onSuccess,
+      onError: (failure) => ({ kind: "show", failure }),
+    }),
+  );
+  act(() => hook.result.current.request(1));
+  await act(async () => {
+    await hook.result.current.confirm();
+  });
+  act(() => hook.result.current.close());
+  act(() => hook.result.current.request(1));
+  expect(hook.result.current.state).toMatchObject({
+    kind: "open",
+    completed: true,
+  });
+  await act(async () => {
+    await hook.result.current.confirm();
+  });
+  expect(run).toHaveBeenCalledTimes(1);
+  expect(onSuccess).toHaveBeenCalledTimes(2);
+});
