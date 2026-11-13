@@ -5,7 +5,7 @@
 
 ## 결정
 
-1. 소비 앱의 폴더 책임과 import 방향을 키트의 사용 계약으로 배포한다. 앱은 app(조립)·runtime(실행 기반)·routes·생성 코드·features·shared로, feature는 api·model(순수)·state·flows·screens·i18n.ts·public.ts로 나눈다.
+1. 소비 앱의 폴더 책임과 import 방향을 키트의 사용 계약으로 배포한다. 앱은 app(조립)·runtime(실행 기반)·routes·생성 코드·features·shared로, feature는 api·루트 순수 데이터·forms·rules·storage·search·hooks·pages·messages.ts·public.ts로 나눈다.
 2. 적용 범위: starter와 구조 계약을 채택한 앱은 필수, 키트 일부만 쓰는 앱은 채택하지 않을 수 있다. 채택한 앱은 옮긴 파일을 바로 엄격하게 적용하고 미이전 파일만 파일·규칙·이유를 적은 예외로 둔다.
 3. route는 URL 폴더와 정해진 파일 이름(index·new·$id/edit·route·$)을 쓰고, 기존 제품 URL 보존이 이름 관례보다 우선한다. 로그인 전 화면은 `_public` 묶음에서 이미 로그인한 경우의 판정을 한 곳에 둔다. 골격이 다르면 별도 묶음, 같은 화면의 여러 URL은 route가 문맥만 넘기고, 골격 안 없는 경로는 로그인 뒤 묶음의 `$.tsx`. 묶음 이름은 키트가 정하지 않고 프로젝트가 역할에 맞게 정하며(starter는 `_app`), 생성기는 `web-kit.structure.json`의 `screenGroup`으로 받는다(2026-11-06 결정: 키트가 폴더 이름을 강제하지 않는다). route 안 검사 파일과 기본 loader는 두지 않는다.
 4. 강제 장치는 개발 도구로 분리해 같은 패키지의 선택 입구 `@boosterlab/web-kit/structure`(ESLint preset)와 bin `web-kit-structure`·`web-kit-new`로 배포한다. eslint·typescript·typescript-eslint는 선택 peer다. 별도 패키지로 나누지 않는다.
@@ -16,7 +16,8 @@
 
 - 구조 규칙이 starter 예시와 소비 앱 문서에만 있으면 앱마다 갈라지고, starter 예시 자체가 화면에서 업무(요청·저장 수명·이동)를 조립해 그 형태가 복제됐다. 같은 뜻을 여러 앱에 적용하려면 정본 스킬·실제 검사·예시를 함께 바꿔야 한다.
 - 실행 기반과 앱 조립이 한 폴더에 있으면 feature → app → feature 양방향 의존이 생겨 기계적으로 구별할 수 없다. runtime을 나누면 방향 규칙 하나로 판정된다.
-- 흐름을 model 안에 두면 "model은 순수"라는 규칙에 예외가 생긴다. 흐름을 형제 폴더(flows)로 두고 상태는 state로 나눠 model 규칙을 한 줄로 유지한다. 화면에서 키트 hook을 전부 막으면 표시 코드까지 flow로 밀려나므로 UI binding은 허용하고 업무 실행 입구만 막는다.
+- 순수 코드는 루트 도메인 파일·forms·rules에 두고, 업무 hook은 hooks, 검색 조건은 search, 저장·공유 상태는 storage, 화면은 pages로 나눈다(2026-11-13 사용자 승인). model/forms 같은 중첩과 flows·screens 같은 추상 이름을 줄여 처음 읽는 사람이 책임을 찾게 한다. 루트 permissions.ts는 실행 연결이므로 storage 역할이다. 이전 구조 계약과 호환되지 않아 후보 버전은 6.0.0-rc.1이다.
+- 흐름을 순수 코드 안에 두면 "model은 순수"라는 규칙에 예외가 생긴다. 흐름을 형제 폴더(hooks)로 두고 검색·저장 상태는 search·storage로 나눠 순수 코드 규칙을 한 줄로 유지한다. 화면에서 키트 hook을 전부 막으면 표시 코드까지 flow로 밀려나므로 UI binding은 허용하고 업무 실행 입구만 막는다.
 - 경로 문자열 비교로는 별칭·상대 경로·재export·동적 import 우회를 막지 못하므로 TypeScript 해석기로 실제 대상을 해소한다. 업무 의미는 기계로 판정하지 않고 검토·제품 검사에 둔다.
 - 별도 패키지는 배포·고정·검사 경로를 하나 더 만든다. 같은 패키지의 선택 입구는 스킬(보장 정본)과 규칙이 같은 버전으로 묶이고, 선택 peer라 런타임만 쓰는 앱의 설치를 늘리지 않는다(starter 설치와 최소 소비 검사로 확인한다). 독립 소비자·배포 요구가 생기면 분리를 다시 판단한다.
 - 생성된 파일 수가 완료 수로 읽히면 검증되지 않은 화면이 완료로 집계된다.

@@ -1,5 +1,5 @@
 // 파일 책임: 회원 목록 예시의 처음 mock 데이터. 가입 방법·상태·날짜가 골고루 섞이게 만든다. 바뀐 상태는 mockDb가 들고 있다.
-import type { MemberSummary } from '@/features/members/model/member';
+import type { MemberSummary } from '@/features/members/member';
 
 /** 60명의 처음 회원. 한 페이지(100건)에 가상화 기준(50행)을 넘게 담겨 머리글 고정 표를 보여 준다. */
 export function seedMembers(): MemberSummary[] {

@@ -1,6 +1,6 @@
 # 시험판에서 옮겨 오기
 
-5.0.0 첫 정식 기준으로 옮길 때는 사용하던 시험판에 따라 다음 연결을 함께 이전한다. 현재 검사용 후보는 5.1.0-rc.7이다. 조건부 칸은 web-kit-form의 같은 조건 함수·schema·빈 값 선언을 함께 연결한다.
+5.0.0 첫 정식 기준으로 옮길 때는 사용하던 시험판에 따라 다음 연결을 함께 이전한다. 현재 검사용 후보는 6.0.0-rc.1이다. 조건부 칸은 web-kit-form의 같은 조건 함수·schema·빈 값 선언을 함께 연결한다.
 
 - **목록 선택 칸의 전체 규칙·검색 그룹·선택 칸 정리(rc.6 → rc.7, 복사본 교정 필요: `list`·`choice`·`form`):** ① 다중이고 필수가 아니며 서버 검색이 아닌 `List.Choice`는 비면 전체가 체크로 보이고, 모든 선택지를 고르면 `[]`로 접힌다(이전에는 모두 고르면 모든 값이 배열로 남고 비면 아무것도 체크되지 않았다). 아무것도 체크되지 않은 상태는 없다: 마지막 하나를 해제하거나 전체를 지우는 변경은 무시한다. 평면 `MultiSelect`도 같다(이전에는 마지막 하나를 해제하면 전체가 체크됐다). 새 공개 이름 `commitFilterSelection`(`/search`)·`toggleWithin`(루트). 필수인 평면 `MultiSelect`는 이제 필수 `List.Choice`와 같다: 빈 값이 전체가 아니라 미선택으로 보이고 모두 고르면 값을 접지 않는다(이전에는 필수여도 빈 값이 전체로 보였다). `useListChoiceBinding`은 네 번째 인자(서버 검색 여부)와 반환 `ready`(값 정리를 해도 되는 선택지)를 더했고, `useChoiceBinding`은 `groupState`를 더했다. 프로젝트가 "모두 고름" 배열을 구별해 쓰고 있었다면 확인한다. 기존 필수 `List.Choice`와 단일 선택, 서버 검색은 이전과 같다. ② `Choice`의 `appearance="search"`가 가지가 있는 선택지를 그룹 제목과 그룹 체크로 보인다(가지 체크는 그 아래 중첩된 가지까지 모든 leaf를 켜고 끄며, 서버 검색이면 지금 결과의 leaf만 바꾸고 이미 고른 다른 값은 보존한다). ③ `Form.Choice`는 선택지 재시도에 성공하면 준비된 입력으로 포커스를 돌려준다(`Form.Select`와 같다). ④ `ChoiceProps`는 `/choice`의 `ChoiceBindingOptions`에 `appearance`만 더한 타입이다(구조는 같다). ⑤ `Choice`·`Select`의 선택지 지연·실패 자리는 같은 부품을 쓴다(모양은 같다). 새 공개 이름은 `listChoiceValue`(`/list`)와 `viewFilterSelection`(`/search`)이다. 복사본을 직접 고친 프로젝트는 이전/새 원본 차이를 비교해 교정한다.
 - **스킬 이름 정정과 작은 정리(rc.5 → rc.6, 복사본 교정 필요: `CheckboxTree` 한 파일):** `web-kit-record` 스킬이 안내하던 `Record`·`RecordDefaults`를 실제 공개 이름 `Detail`·`DetailDefaults`로 바로잡았다(코드는 rc.5에서 이미 바뀌었다). `checkboxTreeSelection(...).checked`의 쓰이지 않던 둘째 인자(`requireAll`)를 없앴으므로 직접 호출하며 둘째 인자를 넘기던 코드는 인자를 지운다. `CheckboxTree` 복사본도 같은 인자를 넘기지 않게 바꿨다(동작은 같다). `RequestFailure.rejectsAuthentication`이 더해졌다(401이거나 결과 코드 표가 세션 종료를 정한 실패). 키트 안의 세 곳이 따로 쓰던 같은 식을 이 한 곳으로 모았고 동작은 같다.
@@ -64,12 +64,28 @@
 - **타입 import(복사본 교정 필요):** form/ui.tsx·list-ui.tsx·ui/dialog.tsx의 타입 전용 import를 `import type { … }`로 교정한다. 패키지 갱신만으로 기존 복사본 문법은 바뀌지 않는다. 적용 뒤 lint와 적합성 검사를 실행한다.
 - **인증 실패 값(복사본 교정 필요):** `model.failure`를 `verifyFailure`·`resendFailure`로 나누고 `labels.failure`도 `labels.verifyFailure`·`labels.resendFailure`로 바꾼다. 인증 검사 연결은 `/testing/unit/auth`·`/testing/fixtures/auth`를 사용한다.
 
+## 6.0.0 후보: 읽기 쉬운 feature 구조
+
+구조 계약을 채택한 소비 앱은 파일·import와 구조 검사기를 함께 옮긴다. runtime API와 registry UI는 그대로다. 패키지만 올리면 기존 구조는 검사에 실패하므로 소비 소스 교정이 필요하다.
+
+| 이전 자리 | 새 자리 |
+|---|---|
+| `model/forms/`, `model/rules/` | `forms/`, `rules/` |
+| `model/product.ts` 같은 순수 타입·계산 | feature 루트 `product.ts` (data 역할), 검사도 옆에 배치 가능 |
+| `state/`의 목록·검색·복귀 조건 | `search/` |
+| `state/`의 저장·공유 수명 | `storage/` |
+| `flows/` | `hooks/` |
+| `screens/ProductListScreen.tsx` | `pages/ProductListPage.tsx`, export·사용처도 함께 변경 |
+| feature `i18n.ts` | feature `messages.ts` |
+
+루트 `permissions.ts`는 실행 연결이므로 storage로 검사한다. `public.ts`와 앱 루트 app·runtime·routes·features·shared는 유지한다. app 문구 등록과 runtime i18n 인스턴스 이름도 유지한다. 기존 Page 이름과 겹치는 부분 부품은 역할을 드러내는 Section·Layout 등으로 구분한다. pages 안에는 그 페이지의 필터·표·표시 도우미를 함께 둘 수 있다. 예외나 규칙 비활성화로 옮기기를 대신하지 않는다. 새 역할의 import·순수성·JSX 경계는 [구조 계약](../skills/web-kit-structure/SKILL.md)이 정본이다.
+
 ## 구조 계약 채택
 
 구조 계약을 담은 5.0.0-rc.9부터 폴더 책임·import 방향을 사용 계약([web-kit-structure](../skills/web-kit-structure/SKILL.md))으로 배포한다. 런타임 동작은 바뀌지 않는다. 채택하는 앱은 lint·검사 결과가 달라지므로 다음 순서로 옮긴다. 키트 일부만 쓰고 채택하지 않는 앱은 이 절을 건너뛴다.
 
 1. **연결:** [설치 안내의 구조 계약 연결](installing.md#구조-계약-연결)대로 설정·lint·CI를 붙인다. 처음 실행한 위반 목록을 그대로 예외로 옮기지 않는다. 옮길 묶음을 정하고, 이번에 옮기지 않는 파일만 파일·규칙·이유(남기는 이유와 옮길 묶음)로 적는다.
 2. **runtime 분리:** http·세션·QueryClient·서버 시계·i18n 인스턴스·전역 안내 저장소처럼 feature가 쓰는 실행 기반을 `src/runtime/`으로 옮긴다. runtime에서 feature를 부르던 연결(예: 서버 로그아웃 요청을 feature api로 보냄)은 runtime 안의 직접 요청이나 app의 구독으로 바꾼다. feature 문구 모음은 app이 runtime의 i18n 인스턴스에 등록한다. orval mutator 경로도 runtime으로 바꾸고 생성 코드를 다시 만든다. 이것이 끝나야 feature → app 위반이 사라진다.
-3. **대표 화면부터:** 인증 화면 → 목록·등록/수정·상세 대표 → 나머지 순서로 옮긴다. 화면의 `useSaveForm`·`useList`·`useRecord`·`useAuthChallenge`·요청·이동을 `flows/use-<행동>.ts`로 옮기고 화면은 flow 결과만 그린다. 저장(`save`)은 요청과 응답 반환만, 세션 시작·이동·후속 조회는 완료(`onSaved`)로 나눈다. 사용자 조작 중 실행해야 하던 일(권한 요청 등)은 첫 `await` 전 위치를 지킨다. 실패 의미 판정·정책 값은 `model/rules/<업무>-policy.ts`, 저장소는 `state/`, URL 목록 검색 선언은 `state/`로 옮긴다. 옮긴 파일은 바로 예외 없이 통과시킨다.
+3. **대표 화면부터:** 인증 화면 → 목록·등록/수정·상세 대표 → 나머지 순서로 옮긴다. 화면의 `useSaveForm`·`useList`·`useRecord`·`useAuthChallenge`·요청·이동을 `hooks/use-<행동>.ts`로 옮기고 화면은 flow 결과만 그린다. 저장(`save`)은 요청과 응답 반환만, 세션 시작·이동·후속 조회는 완료(`onSaved`)로 나눈다. 사용자 조작 중 실행해야 하던 일(권한 요청 등)은 첫 `await` 전 위치를 지킨다. 실패 의미 판정·정책 값은 `rules/<업무>-policy.ts`, 저장소는 `storage/`, URL 목록 검색 선언은 `search/`로 옮긴다. 옮긴 파일은 바로 예외 없이 통과시킨다.
 4. **route:** `<이름>.tsx`·`$id.tsx` 화면 파일을 `<이름>/index.tsx`·`$id/index.tsx`로, 로그인 전 화면을 `_public/`로 옮기고 이미 로그인한 경우의 이동 판정을 `_public/route.tsx` 한 곳에 둔다. 앱 골격은 로그인 뒤 묶음의 `route.tsx`(묶음 이름은 프로젝트가 정한다. 예: `_authenticated/route.tsx`)로 옮기고 화면 모양은 `app/shell`에 둔다. 기존 제품 URL이 이름 관례와 다르면 URL을 지킨다. 기본 loader는 지우거나 이유와 함께 예외로 남긴다. route 진입 판정이 feature 상태를 읽으면 그 feature에 `public.ts`를 만든다. route 트리를 다시 생성한다.
 5. **보고:** 구조 결과(`[구조]`)와 제품 동작 보존 결과(기존 시나리오·브라우저·실서버)를 따로 센다. 파일을 옮겨 구조가 통과해도 제품 시나리오가 확인되지 않았으면 그 화면의 이전은 완료가 아니다. 남은 예외 수와 이유를 함께 보고한다.

@@ -1,5 +1,5 @@
 // 파일 책임: 상품 상세 경로. URL의 식별자와 이동 수단만 화면에 넘긴다. 단건 상태 판정은 화면 flow의 useRecord가 한다.
-import { ProductDetailScreen } from '@/features/products/screens/ProductDetailScreen';
+import { ProductDetailPage } from '@/features/products/pages/ProductDetailPage';
 import { createFileRoute } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/_app/products/$productId/')({
@@ -10,7 +10,7 @@ function ProductDetailRoute() {
   const { productId } = Route.useParams();
   const navigate = Route.useNavigate();
   return (
-    <ProductDetailScreen
+    <ProductDetailPage
       productId={productId}
       onEdit={() => void navigate({ to: '/products/$productId/edit', params: { productId } })}
       onBack={() => void navigate({ to: '/products' })}

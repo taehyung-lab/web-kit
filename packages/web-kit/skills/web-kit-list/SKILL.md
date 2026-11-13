@@ -11,7 +11,7 @@ description: 목록 필터·기간 프리셋·날짜 검색의 시간대/UTC 경
 
 ## 화면 선언
 
-실제 조립 예: [apps/starter/src/features/members/state/member-list-search.ts](../../references/apps/starter/src/features/members/state/member-list-search.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/members/search/member-list-search.ts](../../references/apps/starter/src/features/members/search/member-list-search.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 - 목록 검색은 칸 종류로 선언한다(`listSearch`, `/search`). 종류가 주소 키·허용값·기본값·URL 복구 묶음·검색 제출 정리·화면이 읽을 선택지를 함께 정하므로 `groups`·`periods`·`view`·`sortFirst`를 따로 적지 않는다.
   - 제품마다 정책 하나를 `definePolicy`로 둔다: 페이지·보기 수·정렬·방향의 주소 키, 기본 보기 수, 처음 정렬 방향, 검색어 주소 표현(`KeywordCodec`, 배열 그대로면 `arrayKeywordCodec`)과 구분자·미추가 입력 포함(`pending: 'include' | 'exclude'`), 다중 선택 표현(`comma`·`array`, 조건 없음 토큰), 날짜 기간의 기본 주소 키와 진입 규칙(`paired`: 주소의 한쪽 날짜도 함께 지움 / `allow-open`: 한쪽 날짜는 둠. 둘 다 형식 오류·역순은 함께 지우고, 검색할 때는 한쪽만·역순을 함께 지운다). 키트는 이 값들의 기본값을 갖지 않는다.
@@ -30,7 +30,7 @@ description: 목록 필터·기간 프리셋·날짜 검색의 시간대/UTC 경
   - 처음 누른 머리글의 정렬 방향은 `sortFirst`('asc'·'desc'·'current', 생략 시 지금 방향 유지)로 선언한다.
   - URL 값은 그 필드가 가질 수 있는 값만 남는다. 고정 목록(유형·상태·정렬 key 등)은 schema를 그 목록(`z.enum`)으로 두고, 서버 선택지에서 고르는 필드는 `check: { options(parents) → 선택지 queryOptions, allowed(data) → 가능한 값 }`을 둔다. 둘 다 아니면(`z.string` 그대로) 없는 값이 요청에 실린다.
   - `check.options`에는 필터 UI가 쓰는 선택지 queryOptions를 그대로 준다. 확인은 그 query의 observer라서 요청·상태를 필터 UI와 함께 쓴다. 상위 필드에 따라 선택지가 바뀌면 `parents`에 적는다.
-- route에는 `validateSearch`와 `beforeLoad`를 연결한다. `validateSearch`는 정규 URL 표현을 내고 Router가 그대로 URL로 쓴다. 처음 진입한 주소가 정규형이 아니면(역순 기간·틀린 값·모르는 키) `beforeLoad`가 정규형으로 replace한다. route는 `Route.useSearch()`(URL 값)와 navigate를 화면에 넘기고, 화면의 목록 flow가 그것을 `useList`에 넘긴다([목록 flow](../../references/apps/starter/src/features/products/flows/use-product-list.ts.txt)). 값으로 읽는 일은 `useList`가 한다. 검색 선언(`defineSearch`)은 `state/`에 둔다.
+- route에는 `validateSearch`와 `beforeLoad`를 연결한다. `validateSearch`는 정규 URL 표현을 내고 Router가 그대로 URL로 쓴다. 처음 진입한 주소가 정규형이 아니면(역순 기간·틀린 값·모르는 키) `beforeLoad`가 정규형으로 replace한다. route는 `Route.useSearch()`(URL 값)와 navigate를 화면에 넘기고, 화면의 목록 flow가 그것을 `useList`에 넘긴다([목록 flow](../../references/apps/starter/src/features/products/hooks/use-product-list.ts.txt)). 값으로 읽는 일은 `useList`가 한다. 검색 선언(`defineSearch`)은 `search/`에 둔다.
 - `useList`에 넘기는 것: 조회 queryOptions 생성 함수, `rowId`, 필요하면 `selectable`, 제품 검증 `validateDraft`(기간 한도 등). 선택지 준비 같은 화면 조건은 queryOptions의 `enabled`(boolean)로 주면 목록 조건과 함께 지켜지고, 충족 전에는 `idle`(`not-ready`)이다.
 - 페이지의 주 목록이면 `useList({ progress: 'page' })`로 선언한다. 보여 줄 결과가 아직 없고 조회(주소 값 확인 조회 포함) 중인 동안만 앱 셸의 화면 전체 진행 덮개(registry `blocking-progress`의 `BlockingProgress`와 `/dialog` 연결 hook, web-kit-form 「화면 전체 진행 덮개」)가 덮는다. 검색·정렬·페이지 이동은 이전 결과를 보인 채 조회하므로 덮지 않는다. 대화창 안 목록은 선언하지 않는다.
 - 입력 초안 모양이 URL 값과 다르면(기간 preset처럼 URL에는 날짜만 있는 화면) `useList({ draft: { from(search) → 초안, to(초안) → 필터 값 } })`로 선언한다. `draft`·`patchDraft`·`validateDraft`는 그 초안 모양을 쓴다. 검색 선언의 `periods`는 변환 뒤 검색 값으로 검사하고, 복구된 날짜와 연결된 초안만 갱신해 다른 입력은 보존한다. 기존 `useList({ periods })`는 초안 키를 받는 연결로 유지하며 명시하면(빈 배열 포함) 검색 선언의 `periods`보다 우선한다.
@@ -38,7 +38,7 @@ description: 목록 필터·기간 프리셋·날짜 검색의 시간대/UTC 경
 
 ## 키트 보장
 
-실제 조립 예: [apps/starter/src/features/products/screens/ProductListScreen.test.tsx](../../references/apps/starter/src/features/products/screens/ProductListScreen.test.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/products/pages/ProductListPage.test.tsx](../../references/apps/starter/src/features/products/pages/ProductListPage.test.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 - **URL:**
   - 틀린 필드와 그 묶음만 기본값으로 돌린다. 나머지 유효한 값은 유지한다.
@@ -69,7 +69,7 @@ description: 목록 필터·기간 프리셋·날짜 검색의 시간대/UTC 경
 
 ## registry 목록과 제품 선언
 
-실제 조립 예: [apps/starter/src/features/products/screens/ProductListScreen.tsx](../../references/apps/starter/src/features/products/screens/ProductListScreen.tsx.txt)(flow가 준 model을 배치), [apps/starter/src/features/products/flows/use-product-list.ts](../../references/apps/starter/src/features/products/flows/use-product-list.ts.txt)(`useList`·일괄 작업 실행). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/products/pages/ProductListPage.tsx](../../references/apps/starter/src/features/products/pages/ProductListPage.tsx.txt)(flow가 준 model을 배치), [apps/starter/src/features/products/hooks/use-product-list.ts](../../references/apps/starter/src/features/products/hooks/use-product-list.ts.txt)(`useList`·일괄 작업 실행). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 `/list`의 `<ListProvider model={model}>`를 상태 전달의 기본으로 두고 registry `list`의 표시 wrapper와 부품을 조립한다. 각 부품에 `model` props를 직접 넘기는 방식도 허용하며 명시한 model을 우선한다. 복사본 `<List model={model}>` 안에 `List.Filter`·`FilterActions`·`Detail`·`Text`·`Select`·`MultiSelect`·`Period`·`Keywords`·`Result`·`Table`·`Total`·`PageSize`·`SortSelect`·`Pagination`·`Actions`·`BulkAction`·`BulkSelectAction`·`Download`를 원하는 배치로 둔다. 부품은 context로 같은 상태를 읽으므로 필터를 위·왼쪽으로 옮겨도 조회·정렬·선택 연결을 다시 쓰지 않는다. 프로젝트 입력칸은 `useListField(name)`로 같은 초안에 연결한다.
 
@@ -82,7 +82,7 @@ description: 목록 필터·기간 프리셋·날짜 검색의 시간대/UTC 경
 - `Table`은 컬럼(`key`·`header`·`cell`·`sort`)·선택 칸(`selectable`·`rowLabel`)·행 이동(`onOpen`, 클릭·Enter, 행 안 버튼 제외)을 받는다. 50행부터 보이는 행만 그린다(`@tanstack/react-virtual` peer). 머리글 정렬은 `toggleSort`다. `headerClassName`은 머리글(thead) 표면이며 일반·가상화 표에 똑같이 붙는다. 가상화 중에는 머리글이 스크롤 영역 위에 고정되고(기본 불투명 `bg-background`) 행이 그 밑으로 지나가므로, 배경을 바꾸려면 불투명한 색을 준다. 머리글 색을 바깥 선택자(`[&_thead]:…`)로 칠하지 않는다. `ResultTable`은 `Table`의 다른 이름이다.
 - `Total`은 이전 조건 결과를 보이는 동안 '…'이다. `Actions`는 그 동안 안의 쓰기 버튼을 통째로 잠근다.
 - `BulkAction`은 registry `dialog`의 `ConfirmDialog`로 확인을 받으므로 앱 맨 위의 `DialogDefaults`가 필요하다([web-kit-form의 앱 기본 문구](../web-kit-form/SKILL.md#앱-기본-문구)). 확인 당시 결과와 선택이 바뀌면 실행하지 않는다. 실패는 확인창에 남고 선택은 유지된다. 성공 ID 해석·업무 거절 조건은 소비자가 반환한다.
-- `BulkSelectAction`은 값 하나를 골라 선택 행에 적용하는 일괄 작업(상태 변경 등)이다. `options`(선택지)·`placeholder`·`selectLabel`·`run(ids, value)`·`check?(ids, value)`·`describe?(ids, value)`를 받고 선택 칸·실행 버튼·확인창을 한 묶음으로 그리며, 이전 조건 결과를 보이는 동안 묶음 전체가 잠긴다. 확인창을 여는 순간의 행 id와 값을 함께 고정해 업무 확인·실행·문구에 쓰고(`useBulkConfirmation`의 `value`), 값 없이 누르면 실행하지 않고 `requiredMessage`(없으면 `messages.chooseValue`)를 보인다. 성공 뒤에도 고른 값은 남는다. 확인 당시 결과·선택 변경 무효화·실패 선택 유지·중복 실행 방지는 `BulkAction`과 같다. 권한·서버 호출·부분 성공 의미는 소비자가 `run`의 반환으로 정한다. 조립 예: [apps/starter/src/features/members/screens/MemberListScreen.tsx](../../references/apps/starter/src/features/members/screens/MemberListScreen.tsx.txt).
+- `BulkSelectAction`은 값 하나를 골라 선택 행에 적용하는 일괄 작업(상태 변경 등)이다. `options`(선택지)·`placeholder`·`selectLabel`·`run(ids, value)`·`check?(ids, value)`·`describe?(ids, value)`를 받고 선택 칸·실행 버튼·확인창을 한 묶음으로 그리며, 이전 조건 결과를 보이는 동안 묶음 전체가 잠긴다. 확인창을 여는 순간의 행 id와 값을 함께 고정해 업무 확인·실행·문구에 쓰고(`useBulkConfirmation`의 `value`), 값 없이 누르면 실행하지 않고 `requiredMessage`(없으면 `messages.chooseValue`)를 보인다. 성공 뒤에도 고른 값은 남는다. 확인 당시 결과·선택 변경 무효화·실패 선택 유지·중복 실행 방지는 `BulkAction`과 같다. 권한·서버 호출·부분 성공 의미는 소비자가 `run`의 반환으로 정한다. 조립 예: [apps/starter/src/features/members/pages/MemberListPage.tsx](../../references/apps/starter/src/features/members/pages/MemberListPage.tsx.txt).
 - `Download`는 `useListDownload` 결과를 받아 종류 선택·버튼·진행·실패 문구를 그린다.
 - 문구는 `ListDefaults`·`messages`, 모양은 프로젝트 shadcn 테마 변수·`className`·좁은 표시 입구(`Table headerClassName`, `Detail triggerClassName`, `BulkSelectAction selectClassName`)·복사본의 Tailwind 클래스로 바꾼다. 표시 입구는 모양만 바꾸고 동작·접근성 연결은 그대로다. 선택 칸(`Select`·기간 기준·검색어 대상·정렬·페이지 크기·다운로드 종류)은 shadcn Select, 체크는 shadcn Checkbox다.
 - `captureListReturn`/`resolveListReturn`은 목록 주소의 검색·hash를 보존하고 같은 목록 경로에서만 복귀한다. 앱 안 경로 판정은 루트 `safeAppPath`와 같다([web-kit-http](../web-kit-http/SKILL.md)). 조회 결과 출처(`isCurrent`)와는 다른 책임이다.
@@ -117,7 +117,7 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 
 ## 이름 있는 부품과 공용 선택
 
-실제 조립 예: [apps/starter/src/features/products/screens/ProductFilters.tsx](../../references/apps/starter/src/features/products/screens/ProductFilters.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/products/pages/ProductFilters.tsx](../../references/apps/starter/src/features/products/pages/ProductFilters.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 새 화면은 `/list`의 `ListProvider`·`useListModel`·`useListField`와 registry `list`의 `FilterPanel`, `FilterActions`, `TextFilter`, `ChoiceFilter`, `PeriodFilter`, `ListResult`, `ResultTable`, `PageSize`, `Pagination`으로 조립할 수 있다. 복사본의 기존 `List.*` 표기와 같은 상태·구현을 쓴다. `useListFilterBinding`·`useListPeriodBinding`·`useBulkConfirmation` 등 패키지 연결 hook의 반환값을 표현에 연결하며 순서를 다시 구현하지 않는다. 화면은 제목·필터·업무 작업·결과로 읽히도록 나누고 열 선언과 요청 변환은 해당 책임에 둔다.
 
@@ -129,10 +129,10 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 | 준비된 트리·그룹 또는 표시 모양을 고르는 선택 | `List.Choice`(`ChoiceFilter`) | 화면은 `nodes`, 검색 필드는 허용값 schema |
 | 서버 응답으로 표시와 URL 허용값을 함께 확인 | `List.Choice`(`ChoiceFilter`) | 검색 필드의 `check`; 화면은 필드 이름과 문구·표시 설정 |
 
-서버 선택지는 다음 세 자리에 연결한다. 실제 예: [분류 요청](../../references/apps/starter/src/features/products/api/categories.ts.txt) → [상품 검색 선언](../../references/apps/starter/src/features/products/state/product-list-search.ts.txt) → 위 `ProductFilters`의 `categoryId` 칸.
+서버 선택지는 다음 세 자리에 연결한다. 실제 예: [분류 요청](../../references/apps/starter/src/features/products/api/categories.ts.txt) → [상품 검색 선언](../../references/apps/starter/src/features/products/search/product-list-search.ts.txt) → 위 `ProductFilters`의 `categoryId` 칸.
 
 1. feature `api/`에서 선택지 `queryOptions`를 만든다. 요청·응답 변환·query key·취소 signal·캐시 수치는 프로젝트가 소유한다.
-2. feature `state/`의 필드 `check`에 그 query를 주는 `options`, 응답에서 저장 가능한 값을 읽는 `allowed`, 표시 이름과 값을 만드는 `tree`를 연결한다. 상위 필터에 따라 선택지가 달라지면 `parents`에 상위 필드 이름을 적고, query key에도 해당 상위 값을 포함한다.
+2. feature `search/`의 필드 `check`에 그 query를 주는 `options`, 응답에서 저장 가능한 값을 읽는 `allowed`, 표시 이름과 값을 만드는 `tree`를 연결한다. 상위 필터에 따라 선택지가 달라지면 `parents`에 상위 필드 이름을 적고, query key에도 해당 상위 값을 포함한다.
 3. 화면의 `ChoiceFilter`는 `name`과 문구·표시 설정을 받는다. 같은 선언을 URL 확인과 칸이 구독하므로, 화면에서 별도 조회·로딩·오류·재시도를 조립하지 않는다. 기존 선택값을 확인하는 동안 목록 조회를 보류하고, 선택지 조회 실패에는 URL을 유지하며 칸의 재시도로 재개한다. 확인할 값이 없으면 목록과 선택지 조회는 함께 시작할 수 있다.
 
 목록 옵션을 받기 위한 기본 `loader`는 두지 않는다. 조회 상태는 목록 flow와 선택지 선언이 소유한다([route 역할](../web-kit-structure/SKILL.md#route-파일)). 진입 시 사전 조회가 필요하다는 근거가 생기면 같은 query 캐시를 쓰는 최적화로 별도 판단하며, 필터 변경·URL 확인의 소유권은 유지한다.
@@ -149,6 +149,6 @@ registry `choice`는 `/choice`의 `useChoiceBinding`을 쓴다. 이를 쓰는 `C
 
 `Choice`의 단일 선택 해제는 `clearLabel`을 지정했을 때만 제공한다. `placeholder`만으로 해제를 허용하지 않는다. 서버 검색 함수가 다시 만들어져도 진행 중 검색은 유지한다. 검색 범위가 상위 값에 따라 달라지면 `searchKey`에 해당 원시 값 배열을 전달해 이전 검색을 취소하고 다시 조회한다.
 
-즉시 조회와 검색 후 조회, 두 조회 방식의 실제 예는 [즉시 조회 선언](../../references/apps/starter/src/features/products/state/product-list-search.ts.txt)과 [검색 후 조회 선언](../../references/apps/starter/src/features/members/state/member-list-search.ts.txt)의 gated 값 차이로 확인한다. 두 화면 모두 같은 useList와 registry list를 사용한다. 요청 수 관찰은 [회원 화면 검사](../../references/apps/starter/src/features/members/screens/MemberListScreen.test.tsx.txt)에 있다.
+즉시 조회와 검색 후 조회, 두 조회 방식의 실제 예는 [즉시 조회 선언](../../references/apps/starter/src/features/products/search/product-list-search.ts.txt)과 [검색 후 조회 선언](../../references/apps/starter/src/features/members/search/member-list-search.ts.txt)의 gated 값 차이로 확인한다. 두 화면 모두 같은 useList와 registry list를 사용한다. 요청 수 관찰은 [회원 화면 검사](../../references/apps/starter/src/features/members/pages/MemberListPage.test.tsx.txt)에 있다.
 
 선택 설치의 검사 연결은 `/testing/unit/list`를 쓴다. `blocking-progress`도 설치한 경우 registry 연결이 `/testing/unit/combinations`로 실제 덮개 복사본과의 기존 조회 조합 검사를 추가한다. 패키지와 함께 검사 연결 파일·설치 기록을 새 원본에 맞춰 갱신한다.

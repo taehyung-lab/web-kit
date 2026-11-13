@@ -1,8 +1,8 @@
 // 파일 책임: 스타터 합성 서버의 상품·약관·작성 예제와 인증 시험 상태를 관리한다.
 // 파일 책임: mock 서버의 메모리 상태(분류·상품·토큰·refresh 쿠키 유효 여부). 브라우저 mock과 테스트가 같은 규칙을 쓴다.
-import type { WorkflowValues } from '@/features/form-workflows/model/forms/workflow-form';
+import type { WorkflowValues } from '@/features/form-workflows/forms/workflow-form';
 import type { Category, Product, ProductStatus } from '@/api/generated/models';
-import type { MemberSummary } from '@/features/members/model/member';
+import type { MemberSummary } from '@/features/members/member';
 import { seedMembers } from './members';
 
 /** mock access 토큰 수명. 지나면 401 → 재발급 흐름이 일어난다. */

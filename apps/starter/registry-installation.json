@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "version": "5.1.0-rc.7",
-  "sourceRef": "v5.1.0-rc.7",
-  "sourceCommit": "2241d764cd78b3fc162835aab79dce717536ddc6",
-  "sourceWorkingTree": "clean",
+  "version": "6.0.0-rc.1",
+  "sourceRef": "v6.0.0-rc.1",
+  "sourceCommit": "4fd68b78c4c404b29ef64c6b25c985220b28bc29",
+  "sourceWorkingTree": "modified; fingerprints identify the candidate",
   "shadcn": "4.19.1",
   "method": "shadcn@4.19.1 add; installation recorded after review",
   "componentsHash": "7a33830cda235f6d2eecae7871d31a4e8d598f333545e705cdf6dfb79cbd0d2d",

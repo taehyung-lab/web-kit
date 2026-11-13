@@ -4,7 +4,7 @@ web-kit은 React·TanStack(Query·Router·Form) 위에서 관리자 웹의 공�
 
 React 19·TanStack·zod 4·axios/orval을 쓰는 관리자 웹의 공용 키트다. 공통 상태와 처리 순서는 패키지가, 화면 배치와 업무·서버 정책은 프로젝트가 맡는다. UI는 registry(복사할 화면 소스와 검사 연결 묶음)로 설치해 프로젝트가 소유한다.
 
-패키지는 `@boosterlab/web-kit`, 현재 버전은 `5.1.0-rc.7`(미발행 후보)이다. 정확한 공개 입구·의존 버전은 [package.json](package.json), 동작 보장은 같은 버전의 스킬이 정본이다.
+패키지는 `@boosterlab/web-kit`, 현재 버전은 `6.0.0-rc.1`(미발행 후보)이다. 정확한 공개 입구·의존 버전은 [package.json](package.json), 동작 보장은 같은 버전의 스킬이 정본이다.
 
 ## 구조
 

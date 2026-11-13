@@ -10,37 +10,43 @@ const PLUGIN = 'web-kit-structure';
 const LAYER_BANS = {
   shared: { all: ['app', 'runtime', 'routes', 'generated', 'generated-model', 'feature'] },
   runtime: { all: ['app', 'routes', 'feature'] },
-  routes: { value: ['runtime', 'generated', 'feature:api', 'feature:flows'] },
+  routes: { value: ['runtime', 'generated', 'feature:api', 'feature:hooks'] },
   feature: { all: ['app', 'routes'] },
-  'feature:api': { all: ['feature:state', 'feature:flows', 'feature:screens'] },
-  'feature:model': { all: ['feature:flows', 'feature:screens'], value: ['runtime', 'generated', 'feature:api', 'feature:state'] },
-  'feature:state': { all: ['feature:flows', 'feature:screens'] },
-  'feature:flows': { all: ['feature:screens'] },
-  'feature:screens': { value: ['runtime', 'generated', 'generated-model', 'feature:api', 'feature:state'] },
+  'feature:api': { all: ['feature:storage', 'feature:search', 'feature:hooks', 'feature:pages'] },
+  'feature:data': { all: ['feature:hooks', 'feature:pages'], value: ['runtime', 'generated', 'feature:api', 'feature:storage', 'feature:search'] },
+  'feature:storage': { all: ['feature:hooks', 'feature:pages'] },
+  'feature:search': { all: ['feature:hooks', 'feature:pages'] },
+  'feature:hooks': { all: ['feature:pages'] },
+  'feature:pages': { value: ['runtime', 'generated', 'generated-model', 'feature:api', 'feature:storage', 'feature:search'] },
 };
+
+for (const role of ['forms', 'rules']) LAYER_BANS[`feature:${role}`] = LAYER_BANS['feature:data'];
 
 /** 금지 이유. 위반 문구에 붙여 고칠 자리를 알려 준다. */
 const LAYER_REASONS = {
   shared: 'shared는 도메인·앱 연결을 모르는 공용 코드다',
   runtime: 'runtime(설정된 http·세션·QueryClient)은 feature·화면·앱 조립을 모른다. 필요하면 app이 연결한다',
-  routes: 'route는 URL·진입 조건·문맥만 넘긴다. 요청·업무 흐름은 feature의 flows가 실행한다',
+  routes: 'route는 URL·진입 조건·문맥만 넘긴다. 요청·업무 흐름은 feature의 hooks가 실행한다',
   feature: 'feature는 앱 조립(app)·route를 모른다. 실행 기반은 runtime에서 가져온다',
   'feature:api': 'api는 요청·DTO·query 정의만 둔다. 상태·흐름·화면을 모른다',
-  'feature:model': 'model(forms·rules)은 순수하다. 요청·실행 기반·상태 저장·흐름·화면에 의존하지 않는다',
-  'feature:state': 'state는 화면과 흐름을 모른다',
-  'feature:flows': 'flows는 화면이 쓸 상태·동작만 돌려주고 화면 부품을 모른다',
-  'feature:screens': '화면은 flow를 호출하고 그린다. 요청·생성 코드·실행 기반·상태 쓰기는 flows로 옮긴다',
+  'feature:data': 'data·forms·rules는 순수하다. 요청·실행 기반·상태 저장·흐름·화면에 의존하지 않는다',
+  'feature:storage': 'storage·search는 화면과 흐름을 모른다',
+  'feature:hooks': 'hooks는 화면이 쓸 상태·동작만 돌려주고 화면 부품을 모른다',
+  'feature:pages': '화면은 hook을 호출하고 그린다. 요청·생성 코드·실행 기반·상태 쓰기는 hooks로 옮긴다',
   support: '제품 코드는 mock·검사 도우미(support)를 import하지 않는다',
 };
+
+for (const role of ['forms', 'rules']) LAYER_REASONS[`feature:${role}`] = LAYER_REASONS['feature:data'];
+LAYER_REASONS['feature:search'] = LAYER_REASONS['feature:storage'];
 
 const RUNTIME_KIT = ['@boosterlab/web-kit/http', '@boosterlab/web-kit/session', '@boosterlab/web-kit/session/browser', '@boosterlab/web-kit/session/idle', '@boosterlab/web-kit/session/activity', '@boosterlab/web-kit/query'];
 const REACT_FAMILY = ['react', 'react-dom', 'react-i18next', '@tanstack/react-query', '@tanstack/react-router', '@tanstack/react-form', 'axios'];
 
 /** 역할별 패키지 금지. all: 타입 포함, value: 실행 import, names: 특정 실행 이름. */
 const PACKAGE_BANS = {
-  'feature:model': { value: [...REACT_FAMILY, ...RUNTIME_KIT], reason: 'model은 React·라우터·요청·세션 실행에 의존하지 않는 순수 코드다' },
-  'feature:api': { value: ['@tanstack/react-router'], reason: 'api는 화면 이동을 하지 않는다. 이동은 flows가 정한다' },
-  'feature:screens': {
+  'feature:data': { value: [...REACT_FAMILY, ...RUNTIME_KIT], reason: 'data·forms·rules는 React·라우터·요청·세션 실행에 의존하지 않는 순수 코드다' },
+  'feature:api': { value: ['@tanstack/react-router'], reason: 'api는 화면 이동을 하지 않는다. 이동은 hooks가 정한다' },
+  'feature:pages': {
     all: ['zod'],
     value: ['axios', '@tanstack/react-query', ...RUNTIME_KIT, '@boosterlab/web-kit/api'],
     names: {
@@ -50,12 +56,14 @@ const PACKAGE_BANS = {
       '@boosterlab/web-kit/auth': ['useAuthChallenge'],
       '@tanstack/react-router': ['useNavigate', 'useRouter', 'redirect'],
     },
-    reason: '화면은 UI binding만 쓴다. 저장·목록·단건·인증 수명 조립, 요청, 업무 결과에 따른 이동은 flows에 두고 schema는 model에 둔다',
+    reason: '화면은 UI binding만 쓴다. 저장·목록·단건·인증 수명 조립, 요청, 업무 결과에 따른 이동은 hooks에 두고 schema는 forms에 둔다',
   },
 };
 
+for (const role of ['forms', 'rules']) PACKAGE_BANS[`feature:${role}`] = PACKAGE_BANS['feature:data'];
+
 const BROWSER_GLOBALS = new Set(['localStorage', 'sessionStorage', 'indexedDB', 'fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'navigator', 'location', 'history', 'window', 'document', 'globalThis']);
-const NO_JSX = new Set(['api', 'model', 'state', 'flows']);
+const NO_JSX = new Set(['api', 'data', 'forms', 'rules', 'storage', 'search', 'hooks']);
 const RAW_ELEMENTS = { button: 'Button', input: 'Input', select: 'Select', textarea: 'Textarea' };
 const ROUTE_FILES = new Set(['__root', 'route', 'index', 'new', 'edit', '$']);
 
@@ -198,16 +206,16 @@ const packageImport = {
 };
 
 const browserGlobal = {
-  meta: { type: 'problem', schema: [], docs: { description: 'model의 브라우저 저장소·네트워크·이동 전역 사용 금지' } },
+  meta: { type: 'problem', schema: [], docs: { description: '순수 코드의 브라우저 저장소·네트워크·이동 전역 사용 금지' } },
   create(context) {
     const { role, report } = setup(context, 'browser-global');
-    if (role.kind !== 'feature' || role.layer !== 'model') return {};
+    if (role.kind !== 'feature' || !['data', 'forms', 'rules'].includes(role.layer)) return {};
     return {
       'Program:exit'(node) {
         const scope = context.sourceCode.getScope(node);
         for (const reference of scope.through) {
           const name = reference.identifier.name;
-          if (BROWSER_GLOBALS.has(name)) report({ node: reference.identifier, message: `model에서 ${name}을(를) 쓰지 않는다: 저장은 state, 요청은 api, 이동은 flows가 맡는다.` });
+          if (BROWSER_GLOBALS.has(name)) report({ node: reference.identifier, message: `순수 코드에서 ${name}을(를) 쓰지 않는다: 저장은 storage, 요청은 api, 이동은 hooks가 맡는다.` });
         }
       },
     };
@@ -215,11 +223,11 @@ const browserGlobal = {
 };
 
 const noJsx = {
-  meta: { type: 'problem', schema: [], docs: { description: 'api·model·state·flows는 JSX를 만들지 않는다' } },
+  meta: { type: 'problem', schema: [], docs: { description: 'api·data·forms·rules·storage·search·hooks는 JSX를 만들지 않는다' } },
   create(context) {
     const { role, report } = setup(context, 'no-jsx');
     if (role.kind !== 'feature' || !NO_JSX.has(role.layer)) return {};
-    const visit = (node) => report({ node, message: `${roleName(role)}는 JSX를 만들지 않는다. 그리는 일은 screens가 맡는다.` });
+    const visit = (node) => report({ node, message: `${roleName(role)}는 JSX를 만들지 않는다. 그리는 일은 pages가 맡는다.` });
     return { JSXElement: (node) => { if (node.parent?.type !== 'JSXElement' && node.parent?.type !== 'JSXFragment') visit(node); }, JSXFragment: (node) => { if (node.parent?.type !== 'JSXElement' && node.parent?.type !== 'JSXFragment') visit(node); } };
   },
 };
@@ -250,7 +258,7 @@ const fileLayout = {
         const vague = segments.find((segment, index) => VAGUE_NAMES.includes(index === segments.length - 1 ? segment.replace(/(?:\.(?:test|spec))?\.[^.]+$/, '') : segment));
         if (vague) report({ node, message: `${rel}: '${vague}' 같은 포괄 이름은 쓰지 않는다. 의미·소유자로 이름을 짓는다(예: rules/<업무>-policy.ts, forms/<폼>-form.ts).` });
         if (role.kind === 'unknown') report({ node, message: `${rel}: src 아래 정해진 자리(app·runtime·routes·features·shared, 생성 코드·지원 폴더)가 아니다.` });
-        if (role.kind === 'feature' && role.layer === 'invalid') report({ node, message: `${rel}: feature 안에는 api·model·state·flows·screens 폴더와 i18n.ts·public.ts만 둔다.` });
+        if (role.kind === 'feature' && role.layer === 'invalid') report({ node, message: `${rel}: feature 안에는 api·forms·rules·storage·search·hooks·pages 폴더, 순수 .ts 파일과 messages.ts·permissions.ts·public.ts를 둔다.` });
         if (role.kind === 'routes' || (role.kind === 'test' && (rel === config.routes || rel.startsWith(config.routes + '/')))) {
           const name = basename(rel).replace(/\.[^.]+$/, '');
           if (isTestFile(rel)) report({ node, message: `${rel}: route 폴더에 검사 파일을 두지 않는다. 검사는 feature 옆이나 tests/에 둔다.` });
