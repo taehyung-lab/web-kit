@@ -30,7 +30,7 @@ const nodes = [
 afterEach(cleanup);
 /** 값은 화면에 출력하여 UI 입력의 결과만 관찰한다. */
 function Harness(props: Partial<ChoiceProps>) {
-  const [value, setValue] = useState<ChoiceValue>(props.multiple ? [] : undefined);
+  const [value, setValue] = useState<ChoiceValue>(props.value ?? (props.multiple ? [] : undefined));
   return (
     <>
       <Choice label="선택" nodes={nodes} appearance="vertical" {...props} value={value} onValueChange={setValue} />
@@ -66,6 +66,32 @@ it(title('G033', '검색 상자도 그룹 제목과 그룹 체크를 보이고 �
   expect(screen.getByTestId('value').textContent).toBe('["a","b"]');
   fireEvent.click(screen.getByRole('checkbox', { name: '그룹' }));
   expect(screen.getByTestId('value').textContent).toBe('[]');
+});
+it(title('G033', '검색 상자의 가지 체크는 중첩된 하위 가지의 leaf까지 모두 켜고 끈다'), async () => {
+  render(<Harness appearance="search" multiple />);
+  fireEvent.click(screen.getByRole('button', { name: '선택' }));
+  // 전체 아래 그룹(a, b)과 직접 leaf c: 전체 체크는 셋 모두다.
+  fireEvent.click(await screen.findByRole('checkbox', { name: '전체' }));
+  expect(screen.getByTestId('value').textContent).toBe('["a","b","c"]');
+  fireEvent.click(screen.getByRole('option', { name: 'Gamma' }));
+  expect(screen.getByTestId('value').textContent).toBe('["a","b"]');
+  expect(screen.getByRole('checkbox', { name: '전체' }).getAttribute('aria-checked')).toBe('mixed');
+  expect(screen.getByRole('checkbox', { name: '그룹' }).getAttribute('aria-checked')).toBe('true');
+});
+it(title('G033', '직접 leaf가 없는 가지도 제목과 체크가 사라지지 않는다'), async () => {
+  render(<Harness appearance="search" multiple nodes={[{ label: '상위', children: [{ label: '하위', children: [{ value: 'a', label: 'Alpha' }, { value: 'b', label: 'Beta' }] }] }]} />);
+  fireEvent.click(screen.getByRole('button', { name: '선택' }));
+  fireEvent.click(await screen.findByRole('checkbox', { name: '상위' }));
+  expect(screen.getByTestId('value').textContent).toBe('["a","b"]');
+});
+it(title('G034', '서버 검색 결과의 그룹 체크는 그 결과의 leaf만 바꾸고 이미 고른 다른 값은 보존한다'), async () => {
+  render(<Harness appearance="search" multiple value={['a', 'x']} debounceMs={1} nodes={[{ value: 'a', label: 'Alpha' }]} search={async () => [{ label: '그룹', children: [{ value: 'b', label: 'Beta' }, { value: 'c', label: 'Gamma' }] }]} />);
+  fireEvent.click(screen.getByRole('button', { name: '선택' }));
+  const group = await screen.findByRole('checkbox', { name: '그룹' });
+  fireEvent.click(group);
+  expect(screen.getByTestId('value').textContent).toBe('["a","x","b","c"]');
+  fireEvent.click(screen.getByRole('checkbox', { name: '그룹' }));
+  expect(screen.getByTestId('value').textContent).toBe('["a","x"]');
 });
 it(title('G027', '단일 선택에서 가지는 저장할 수 없고 모양을 바꿔도 값은 유지된다'), () => {
   const view = render(<Harness />);

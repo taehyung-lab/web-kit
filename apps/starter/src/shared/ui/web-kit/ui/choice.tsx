@@ -45,17 +45,42 @@ export function MixedCheckbox({ className, ...props }: ComponentProps<typeof Che
 }
 
 type Leaf = { readonly value: string; readonly label: string };
-type LeafGroup = { readonly label: string | undefined; readonly items: readonly Leaf[] };
+/** 가지 하나의 제목과 체크. targets는 그 가지 아래 모든 leaf다. */
+type BranchHead = { readonly label: string; readonly depth: number; readonly targets: readonly string[] };
+/** 검색 상자의 한 묶음: 목록에 보이는 leaf 줄(items)과, 그 앞에 그리는 가지 제목들(heads). */
+type LeafGroup = { readonly heads: readonly BranchHead[]; readonly items: readonly Leaf[] };
 
-/** 검색 상자용: leaf를 바로 위 가지 이름으로 묶는다. 가지 없이 맨 위에 있는 leaf는 제목 없는 묶음이다. */
-function leafGroups(nodes: readonly ChoiceNode[], parent?: string): LeafGroup[] {
+/** 가지 하나와 그 아래 가지를 위에서 아래 순서로 묶는다. items가 비어 있을 수 있다. */
+function branchGroups(node: Extract<ChoiceNode, { children: readonly ChoiceNode[] }>, depth: number): LeafGroup[] {
   const own: Leaf[] = [];
-  const groups: LeafGroup[] = [];
-  for (const node of nodes) {
-    if (node.children === undefined) own.push({ value: node.value, label: node.label });
-    else groups.push(...leafGroups(node.children, node.label));
+  const below: LeafGroup[] = [];
+  for (const child of node.children) {
+    if (child.children === undefined) own.push({ value: child.value, label: child.label });
+    else below.push(...branchGroups(child, depth + 1));
   }
-  return own.length > 0 ? [{ label: parent, items: own }, ...groups] : groups;
+  return [{ heads: [{ label: node.label, depth, targets: treeLeaves(node.children) }], items: own }, ...below];
+}
+
+/**
+ * 검색 상자용 묶음. 바로 달린 leaf가 없는 가지(상위만 있는 가지)의 제목과 체크는 다음 묶음의 앞에 이어 그려
+ * 콤보박스가 빈 묶음을 감춰도 사라지지 않는다. 맨 위의 leaf는 제목 없는 묶음이다.
+ */
+function leafGroups(nodes: readonly ChoiceNode[]): LeafGroup[] {
+  const top = nodes.filter((node) => node.children === undefined).map((node) => ({ value: node.value as string, label: node.label }));
+  const raw = [
+    ...(top.length > 0 ? [{ heads: [] as BranchHead[], items: top }] : []),
+    ...nodes.flatMap((node) => (node.children === undefined ? [] : branchGroups(node, 0))),
+  ];
+  const groups: LeafGroup[] = [];
+  let pending: BranchHead[] = [];
+  for (const group of raw) {
+    if (group.items.length === 0) pending = [...pending, ...group.heads];
+    else {
+      groups.push({ heads: [...pending, ...group.heads], items: group.items });
+      pending = [];
+    }
+  }
+  return groups;
 }
 
 /** 같은 leaf 값 모델을 모든 모양에서 사용한다. 가지 ID는 저장하지 않는다. */
@@ -170,36 +195,35 @@ export function Choice(props: ChoiceProps) {
           <ComboboxEmpty>{props.messages?.empty ?? '선택지가 없습니다.'}</ComboboxEmpty>
           <ComboboxList>
             {grouped
-              ? (group: LeafGroup) => {
-                  const values = group.items.map((item) => item.value);
-                  const every = values.every((value) => selected.includes(value));
-                  const some = values.some((value) => selected.includes(value));
-                  return (
-                    <ComboboxGroup key={group.label ?? ''} items={group.items}>
-                      {group.label !== undefined && (
-                        <ComboboxLabel className="flex items-center gap-2">
+              ? (group: LeafGroup) => (
+                  <ComboboxGroup key={`${group.heads.map((head) => head.label).join('/')}:${group.items[0]?.value ?? ''}`} items={group.items}>
+                    {group.heads.map((head) => {
+                      const every = head.targets.length > 0 && head.targets.every((value) => selected.includes(value));
+                      const some = head.targets.some((value) => selected.includes(value));
+                      return (
+                        <ComboboxLabel key={`${head.depth}:${head.label}`} className="flex items-center gap-2" style={{ paddingInlineStart: `${head.depth}rem` }}>
                           {multiple && (
                             <MixedCheckbox
-                              aria-label={group.label}
+                              aria-label={head.label}
                               disabled={disabled}
                               checked={every}
                               indeterminate={some && !every}
-                              onCheckedChange={() => toggleGroup(values)}
+                              onCheckedChange={() => toggleGroup(head.targets)}
                             />
                           )}
-                          {group.label}
+                          {head.label}
                         </ComboboxLabel>
+                      );
+                    })}
+                    <ComboboxCollection>
+                      {(item: Leaf) => (
+                        <ComboboxItem key={item.value} value={item}>
+                          {item.label}
+                        </ComboboxItem>
                       )}
-                      <ComboboxCollection>
-                        {(item: Leaf) => (
-                          <ComboboxItem key={item.value} value={item}>
-                            {item.label}
-                          </ComboboxItem>
-                        )}
-                      </ComboboxCollection>
-                    </ComboboxGroup>
-                  );
-                }
+                    </ComboboxCollection>
+                  </ComboboxGroup>
+                )
               : (item: Leaf) => (
                   <ComboboxItem key={item.value} value={item}>
                     {item.label}

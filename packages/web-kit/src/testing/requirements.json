@@ -74,7 +74,8 @@
       "G030",
       "G031",
       "G032",
-      "G033"
+      "G033",
+      "G034"
     ],
     "connections": [
       "choice.test.tsx"
