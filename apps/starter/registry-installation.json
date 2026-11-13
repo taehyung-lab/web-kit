@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "version": "6.0.0-rc.1",
-  "sourceRef": "v6.0.0-rc.1",
-  "sourceCommit": "4fd68b78c4c404b29ef64c6b25c985220b28bc29",
-  "sourceWorkingTree": "modified; fingerprints identify the candidate",
+  "version": "6.0.0-rc.2",
+  "sourceRef": "v6.0.0-rc.2",
+  "sourceCommit": "2766a79c1609da2482fb4f6864d9a6b8d5d6ddb7",
+  "sourceWorkingTree": "clean",
   "shadcn": "4.19.1",
   "method": "shadcn@4.19.1 add; installation recorded after review",
   "componentsHash": "7a33830cda235f6d2eecae7871d31a4e8d598f333545e705cdf6dfb79cbd0d2d",
@@ -190,14 +190,14 @@
     },
     {
       "name": "form",
-      "artifactHash": "403d41765ca22ef2577ba11acd988d57d99f6b2f2d7f4c268db57e56d092641d",
+      "artifactHash": "885c09e0b731012f8a5aaaea51eb1dd6d017aa73462879d1bfba29d1c245e7dd",
       "files": [
         {
           "source": "packages/ui-registry/src/form/form.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/form/form.tsx",
           "installed": "src/shared/ui/web-kit/form/form.tsx",
-          "sourceHash": "5087ab9a7973f212d7f3219a0b524d2f82900ad68dd05db26b96552bffeca522",
-          "installedHash": "f23bb827e11d3b4a17664c206718ac606f8efce7d8e3ece3f84f1c8b51d60d73"
+          "sourceHash": "bac0cae5afc1f89e320354ca78d63930ec3711e1a90bbddee57efbfaa757df29",
+          "installedHash": "bac0cae5afc1f89e320354ca78d63930ec3711e1a90bbddee57efbfaa757df29"
         },
         {
           "source": "packages/ui-registry/src/form/field.tsx",
@@ -261,19 +261,47 @@
           "installed": "web-kit-checks/form.html",
           "sourceHash": "aaf6f7014547c4d98cd76ba2e9bcfca680ee374bc8364bdbf882d4a4ce766771",
           "installedHash": "aaf6f7014547c4d98cd76ba2e9bcfca680ee374bc8364bdbf882d4a4ce766771"
+        },
+        {
+          "source": "packages/ui-registry/src/form/form-context.tsx",
+          "registryTarget": "~/src/shared/ui/web-kit/form/form-context.tsx",
+          "installed": "src/shared/ui/web-kit/form/form-context.tsx",
+          "sourceHash": "b40810e4f7fe64125966033e8001f6a7ac0cb94348413e4b4fbcf57c5911dcdb",
+          "installedHash": "b40810e4f7fe64125966033e8001f6a7ac0cb94348413e4b4fbcf57c5911dcdb"
+        },
+        {
+          "source": "packages/ui-registry/src/form/form-fields.tsx",
+          "registryTarget": "~/src/shared/ui/web-kit/form/form-fields.tsx",
+          "installed": "src/shared/ui/web-kit/form/form-fields.tsx",
+          "sourceHash": "64c7ea9ef36c781589641811097a33bf342df3ba35f3caed349a3b17ece9531c",
+          "installedHash": "44963da4e3eb25559dae4875d1e0a12496bae316e432840b19c028dd21b4b594"
+        },
+        {
+          "source": "packages/ui-registry/src/form/form-sections.tsx",
+          "registryTarget": "~/src/shared/ui/web-kit/form/form-sections.tsx",
+          "installed": "src/shared/ui/web-kit/form/form-sections.tsx",
+          "sourceHash": "91e1cdd7fe86ffccf93af9fd34233a7f292d7276413ebc2016a95c532b19b962",
+          "installedHash": "91e1cdd7fe86ffccf93af9fd34233a7f292d7276413ebc2016a95c532b19b962"
+        },
+        {
+          "source": "packages/ui-registry/src/form/form-actions.tsx",
+          "registryTarget": "~/src/shared/ui/web-kit/form/form-actions.tsx",
+          "installed": "src/shared/ui/web-kit/form/form-actions.tsx",
+          "sourceHash": "a096abbd2f3c85930f52a961bde3410f289f68dec013547b0a8fe9b62b34de76",
+          "installedHash": "134f6f837de8c3ba8f13f30d97fb10051a05ec3a0b8a4dba09a02834ba384b85"
         }
       ]
     },
     {
       "name": "list",
-      "artifactHash": "6dcd6bc8c15462e999f74e2701309a9f3be4cce4e9fab7997634035e6ca56b94",
+      "artifactHash": "e07310b7153daa3da80909d3fe4c1b7fec2dbb705c35017c612ffc4774df7555",
       "files": [
         {
           "source": "packages/ui-registry/src/list.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/list.tsx",
           "installed": "src/shared/ui/web-kit/list.tsx",
-          "sourceHash": "170826c3afdcb414ba0c4ed202b052c77cda8946a1a5e5cf7a171a9b30b8aa56",
-          "installedHash": "df3e54207ebf3458149ea114447fca4dd1814f5c387b45b08887ee7449513cd8"
+          "sourceHash": "10c82451cd1d56e9929b6d86135e630bc2dad2489fc9bdd72d6ab01baf9b826d",
+          "installedHash": "10c82451cd1d56e9929b6d86135e630bc2dad2489fc9bdd72d6ab01baf9b826d"
         },
         {
           "source": "packages/ui-registry/checks/list-ui.test.tsx",
@@ -281,6 +309,34 @@
           "installed": "src/shared/ui/web-kit/checks/list-ui.test.tsx",
           "sourceHash": "f2c64f58188d7df70c1f18dd05c516a35faba8e4320608b24ad5973d0625c8f7",
           "installedHash": "f2c64f58188d7df70c1f18dd05c516a35faba8e4320608b24ad5973d0625c8f7"
+        },
+        {
+          "source": "packages/ui-registry/src/list/list-context.tsx",
+          "registryTarget": "~/src/shared/ui/web-kit/list/list-context.tsx",
+          "installed": "src/shared/ui/web-kit/list/list-context.tsx",
+          "sourceHash": "cb4304a016b62f553a378fe687f54311f55acc36db64fff335c076eea3e18763",
+          "installedHash": "cb4304a016b62f553a378fe687f54311f55acc36db64fff335c076eea3e18763"
+        },
+        {
+          "source": "packages/ui-registry/src/list/list-filters.tsx",
+          "registryTarget": "~/src/shared/ui/web-kit/list/list-filters.tsx",
+          "installed": "src/shared/ui/web-kit/list/list-filters.tsx",
+          "sourceHash": "9f1d33ff03e17504514fee4ac6278a4c3e810382fcf6d2d8e0f11f5ae43b6a6a",
+          "installedHash": "18ff2cb0740981693ccffa632906261a6580c4182bb2b4469968f3f1dea953f5"
+        },
+        {
+          "source": "packages/ui-registry/src/list/list-results.tsx",
+          "registryTarget": "~/src/shared/ui/web-kit/list/list-results.tsx",
+          "installed": "src/shared/ui/web-kit/list/list-results.tsx",
+          "sourceHash": "dc27e481461ff8afc1a9abee38756d2f548f8cbe2759ce5e0b37bd3dff42af72",
+          "installedHash": "05f20c661972221788d4aafd3fa2aa9c100daab864e0a354fa737d3870552400"
+        },
+        {
+          "source": "packages/ui-registry/src/list/list-actions.tsx",
+          "registryTarget": "~/src/shared/ui/web-kit/list/list-actions.tsx",
+          "installed": "src/shared/ui/web-kit/list/list-actions.tsx",
+          "sourceHash": "948b9af3bf7f68b6d64aeac03d274ad9fd769a0d552c6ca0a6203a2bfc8d40d5",
+          "installedHash": "99e82f5edfd8530962d0ffe96326503774cb63252a39ca112566d6d01e2ea421"
         }
       ]
     },
