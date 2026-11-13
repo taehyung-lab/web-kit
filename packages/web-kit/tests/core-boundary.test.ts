@@ -172,7 +172,7 @@ function reach(entry: string): Set<string> {
 }
 
 it.each(['../src/form/index.ts', '../../ui-registry/src/form/form.tsx'])('%s는 목록(list·search)을 import하지 않는다', (entry) => {
-  for (const file of reach(entry)) expect(file).not.toMatch(/use-list|list-ui|\/list\/|list-download|list-return|\/search\//);
+  for (const file of reach(entry)) expect(file).not.toMatch(/use-list|list-ui|\/list(?:\/|\.tsx?)|list-download|list-return|\/search\//);
 });
 
 it.each(['../src/list/use-list.ts', '../src/list/index.ts', '../../ui-registry/src/list.tsx'])('%s는 폼을 import하지 않는다', (entry) => {
@@ -212,7 +212,7 @@ it('패키지 제품 실행 코드에는 화면 요소·스타일·registry impo
 });
 
 it('/choice는 목록·폼을 import하지 않는다', () => {
-  for (const file of reach('../src/choice-binding.ts')) expect(file).not.toMatch(/use-list|list-binding|\/list\/|\/form\//);
+  for (const file of reach('../src/choice-binding.ts')) expect(file).not.toMatch(/use-list|list-binding|\/list(?:\/|\.tsx?)|\/form\//);
 });
 
 /** registry는 공개 패키지 입구와 자기 원본 파일만 연결한다. */
