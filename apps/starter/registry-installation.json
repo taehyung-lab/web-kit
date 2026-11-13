@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "version": "5.1.0-rc.5",
-  "sourceRef": "v5.1.0-rc.5",
-  "sourceCommit": "b0492972654ad20f5a57a3bdf4d720b696224a77",
+  "version": "5.1.0-rc.6",
+  "sourceRef": "v5.1.0-rc.6",
+  "sourceCommit": "5ae1c37ad7214cbaa70da520cccd71b00e25daa0",
   "sourceWorkingTree": "clean",
   "shadcn": "4.19.1",
   "method": "shadcn@4.19.1 add; installation recorded after review",
@@ -306,14 +306,14 @@
     },
     {
       "name": "checkbox-tree",
-      "artifactHash": "3cd936da0ced4ad6bc8aeff9cac8e8a291b6013056153cca23c9b402c37819c6",
+      "artifactHash": "a4a8abcd027905b1f696209a9ea5d6ca8ad6b5601143e13c4144980e419da61c",
       "files": [
         {
           "source": "packages/ui-registry/src/CheckboxTree.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/CheckboxTree.tsx",
           "installed": "src/shared/ui/web-kit/CheckboxTree.tsx",
-          "sourceHash": "d075c20e90a0f263a9e4e1d675feecd3e80d0814681653c3c01bb43edeedbb45",
-          "installedHash": "d075c20e90a0f263a9e4e1d675feecd3e80d0814681653c3c01bb43edeedbb45"
+          "sourceHash": "31e879ae4a4fae740e2167da7bb300b02c8e340d8acf12c6c724e44ddf2f1545",
+          "installedHash": "31e879ae4a4fae740e2167da7bb300b02c8e340d8acf12c6c724e44ddf2f1545"
         },
         {
           "source": "packages/ui-registry/checks/checkbox-tree-focus.test.tsx",
