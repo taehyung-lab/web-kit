@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "version": "5.1.0-rc.7",
   "sourceRef": "v5.1.0-rc.7",
-  "sourceCommit": "bee996bdf0a223e8109e72d7941a1aaa9f8d617e",
+  "sourceCommit": "2d8aab090830bac542db61629ec098e6d27586b7",
   "sourceWorkingTree": "clean",
   "shadcn": "4.19.1",
   "method": "shadcn@4.19.1 add; installation recorded after review",
@@ -266,14 +266,14 @@
     },
     {
       "name": "list",
-      "artifactHash": "c245014b3eee5f31d9a9f7343091f3c6c2cf2201757b884fa1b12b2c33e3edce",
+      "artifactHash": "c19f9e33423923decfc1b4801ccc96c6b60ec171cdc600903d8bc805c2f4bdf9",
       "files": [
         {
           "source": "packages/ui-registry/src/list.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/list.tsx",
           "installed": "src/shared/ui/web-kit/list.tsx",
-          "sourceHash": "404a1067d39f23b9de4d84751ab58893d8c2eb2cc3ed7417fd536297192d138b",
-          "installedHash": "6c7ad16775badd09a8755a0afde541484326d8732493726860a89f8689f24634"
+          "sourceHash": "f743e7cc53c1961202d5bd6cf18cb82dd161e1ada305d9244a124d0d3d9a0286",
+          "installedHash": "30234c226a5a130f938869b6b784e151cd9b9207242bd26d4a8d4e5cce15386c"
         },
         {
           "source": "packages/ui-registry/checks/list-ui.test.tsx",
