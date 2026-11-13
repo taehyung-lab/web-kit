@@ -40,7 +40,7 @@
 |---|---|---|
 | 체크 트리: 전체·부모 삼상태·자식 (명시 선택) | 루트 `checkboxTreeSelection`·`treeLeaves` | `checkbox-tree` 또는 `choice` |
 | 선택지 일부만 보일 때(서버 검색) 한 그룹 토글, 다른 선택 보존 | 루트 `toggleWithin` | `choice`(검색 모양) |
-| 목록 필터: 비면 전체로 보이고 마지막 하나는 해제되지 않음 | `/search` `viewFilterSelection`·`commitFilterSelection`, `/list` `listChoiceValue` | `list` |
+| 목록 필터(다중·필수 아님·서버 검색 아님): 비면 전체로 보이고 마지막 하나는 해제되지 않음. 필수 칸은 명시 선택(빈 값=미선택), 서버 검색은 이전 규칙 | `/search` `viewFilterSelection`·`commitFilterSelection`, `/list` `listChoiceValue` | `list` |
 | 선택 칸 5가지 모양 + 서버 검색 + 그룹 | `/choice` `useChoiceBinding` | `choice` |
 | 등록·수정 폼의 선택 칸 (빈 값=미선택, 필수는 저장 때 오류) | `/form` | `form` + `choice` |
 
