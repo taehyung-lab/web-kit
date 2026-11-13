@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "version": "5.1.0-rc.7",
   "sourceRef": "v5.1.0-rc.7",
-  "sourceCommit": "97f36de3e072b773ab5a8bd77e0aadbd1e850a6f",
+  "sourceCommit": "bee996bdf0a223e8109e72d7941a1aaa9f8d617e",
   "sourceWorkingTree": "clean",
   "shadcn": "4.19.1",
   "method": "shadcn@4.19.1 add; installation recorded after review",
@@ -137,14 +137,14 @@
     },
     {
       "name": "choice",
-      "artifactHash": "2a01e4f1ab1646b3db2c77f2c8174157d073eaf5393e472bdce9617ed42abff1",
+      "artifactHash": "999dbd857ab5e5b09000db74f04d3b807eb507f913ceecacd8ffedf60f34642e",
       "files": [
         {
           "source": "packages/ui-registry/src/ui/choice.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/ui/choice.tsx",
           "installed": "src/shared/ui/web-kit/ui/choice.tsx",
-          "sourceHash": "41b1787a8162a7d12be021a96a44b60232a2f68ef38bac15068e09df986d477e",
-          "installedHash": "12c6ff001c58edd1c866d498091611996e35a030796351831fcaf20a8a46c771"
+          "sourceHash": "448c9cdb3448e359170f59ffea839400b8a5ec8538677c43f6120bb73ee930bc",
+          "installedHash": "e391c0ebb8d95cdb5a4d660e49976c3f7862e2dc785842cbc89cfc1e7bbe2bcf"
         },
         {
           "source": "packages/ui-registry/checks/choice.test.tsx",
