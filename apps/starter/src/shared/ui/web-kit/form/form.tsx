@@ -9,10 +9,13 @@ import type { AnyFormApi, DeepKeys, DeepValue } from '@tanstack/react-form';
 import {
   createContext,
   useContext,
+  useEffect,
   useId,
   useState,
   type FormHTMLAttributes,
+  type HTMLAttributes,
   type KeyboardEvent,
+  type MouseEvent,
   type ReactNode,
 } from 'react';
 import { cn } from 'cn';
@@ -344,22 +347,47 @@ function Field<V = unknown>({
   );
 }
 
+/** 선택 칸의 선택지 지연·실패 자리. Choice와 Select가 같은 모양·문구·재시도 버튼을 쓰고, onRetry가 없으면 다시 시도 버튼을 그리지 않는다. */
+function OptionsState({ status, labelId, control, onRetry }: {
+  readonly status: Exclude<OptionsStatus, 'ready'>;
+  readonly labelId: string | undefined;
+  readonly control: HTMLAttributes<HTMLDivElement>;
+  readonly onRetry: ((event: MouseEvent<HTMLButtonElement>) => void) | undefined;
+}) {
+  const { copy, renderFailure } = useFormContext();
+  const failureText = status === 'loading' ? undefined : renderFailure(status.failure, 'options');
+  return (
+    <div {...control} role="group" tabIndex={-1} aria-labelledby={labelId} className={optionsStateClass}>
+      {status === 'loading' ? (
+        <span role="status" className="text-muted-foreground">{copy.loading}</span>
+      ) : failureText === null ? null : (
+        <span role="alert" className="flex flex-wrap items-center gap-2 text-destructive">
+          {failureText ?? copy.optionsFailed}
+          {onRetry === undefined ? null : <Button type="button" variant="outline" size="sm" onClick={onRetry}>{copy.retry}</Button>}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** 선택지 재시도에 성공해 입력이 새로 그려지면, 재시도 버튼이 사라지며 잃은 포커스를 그 입력으로 돌려준다(Select의 triggerRef와 같은 보장). */
+function FocusAfterRetry({ id, focus }: { readonly id: string | undefined; readonly focus: (node: HTMLElement | null) => void }) {
+  useEffect(() => {
+    focus(id === undefined ? null : document.getElementById(id));
+  });
+  return null;
+}
+
 /** 폼 검증·필수 표시·오류 초점을 같은 선택 입력에 연결한다. */
 function Choice({ name, description, status = 'ready', onRetry, ...props }: FormFieldProps & Omit<ChoiceProps, 'value' | 'onValueChange'> & { readonly status?: OptionsStatus; readonly onRetry?: () => void }) {
-  const { editor, copy, renderFailure } = useFormContext();
+  const { editor } = useFormContext();
   useFormChoiceBinding(editor, name, status === 'ready' && props.search === undefined ? props.nodes : undefined);
   const retry = useOptionsRetryFocus(onRetry);
   return (
     <Field<ChoiceProps['value']> name={name} label={props.label} description={description} disabled={props.disabled} labelTarget={status === 'ready' ? 'control' : 'group'}>
       {({ value, change, blur, ...control }, labelId) => {
-        if (status === 'ready') return <ChoiceInput {...props} {...control} value={value} onValueChange={change} onBlur={blur} />;
-        const failureText = status === 'loading' ? undefined : renderFailure(status.failure, 'options');
-        return <div {...control} role="group" tabIndex={-1} aria-labelledby={labelId} className={optionsStateClass}>
-          {status === 'loading' ? <span role="status" className="text-muted-foreground">{copy.loading}</span> : failureText === null ? null : <span role="alert" className="flex flex-wrap items-center gap-2 text-destructive">
-            {failureText ?? copy.optionsFailed}
-            {onRetry !== undefined && <Button type="button" variant="outline" size="sm" onClick={retry.onRetry}>{copy.retry}</Button>}
-          </span>}
-        </div>;
+        if (status === 'ready') return <><ChoiceInput {...props} {...control} value={value} onValueChange={change} onBlur={blur} /><FocusAfterRetry id={control.id} focus={retry.inputRef} /></>;
+        return <OptionsState status={status} labelId={labelId} control={control} onRetry={onRetry === undefined ? undefined : retry.onRetry} />;
       }}
     </Field>
   );
@@ -493,39 +521,14 @@ function Select({
   /** 입력 칸 자체의 크기·모양(기본 클래스 뒤에 합친다). 라벨·오류·접근성 연결은 바꾸지 않는다. */
   readonly controlClassName?: string;
 }) {
-  const { copy, renderFailure } = useFormContext();
+  const { copy } = useFormContext();
   const retry = useOptionsRetryFocus(onRetry);
   return (
     <Field<unknown> {...field} labelTarget={status === 'ready' ? 'control' : 'group'}>
       {({ value, change, blur, ...control }, labelId) => {
         const selected = value === null || value === undefined ? '' : String(value);
         if (status !== 'ready') {
-          const failureText = status === 'loading' ? undefined : renderFailure(status.failure, 'options');
-          return (
-            <div
-              key="state"
-              id={control.id}
-              aria-describedby={control['aria-describedby']}
-              aria-invalid={control['aria-invalid']}
-              role="group"
-              tabIndex={-1}
-              aria-labelledby={labelId}
-              className={optionsStateClass}
-            >
-              {status === 'loading' ? (
-                <span role="status" className="text-muted-foreground">{copy.loading}</span>
-              ) : failureText === null ? null : (
-                <span role="alert" className="flex flex-wrap items-center gap-2 text-destructive">
-                  {failureText ?? copy.optionsFailed}
-                  {onRetry === undefined ? null : (
-                    <Button type="button" variant="outline" size="sm" onClick={retry.onRetry}>
-                      {copy.retry}
-                    </Button>
-                  )}
-                </span>
-              )}
-            </div>
-          );
+          return <OptionsState key="state" status={status} labelId={labelId} control={{ id: control.id, 'aria-describedby': control['aria-describedby'], 'aria-invalid': control['aria-invalid'] }} onRetry={onRetry === undefined ? undefined : retry.onRetry} />;
         }
         const { name, disabled, ...trigger } = control;
         return (

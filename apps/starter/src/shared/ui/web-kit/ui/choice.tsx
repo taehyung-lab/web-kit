@@ -3,8 +3,8 @@
 import type { ComponentProps, ReactNode } from 'react';
 import { cn } from 'cn';
 import { ChevronDownIcon } from 'lucide-react';
-import { useChoiceBinding } from '@boosterlab/web-kit/choice';
-import { treeLeaves, treeLeafNodes, type CheckboxTreeNode } from '@boosterlab/web-kit';
+import { useChoiceBinding, type ChoiceBindingOptions, type ChoiceNode as ChoiceBindingNode, type ChoiceValue } from '@boosterlab/web-kit/choice';
+import { treeLeaves, treeLeafNodes } from '@boosterlab/web-kit';
 import { Button } from '@/shared/ui/button';
 import { Checkbox } from '@/shared/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/shared/ui/radio-group';
@@ -18,34 +18,14 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu';
-import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList, ComboboxTrigger } from '@/shared/ui/combobox';
+import { Combobox, ComboboxCollection, ComboboxContent, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxLabel, ComboboxList, ComboboxTrigger } from '@/shared/ui/combobox';
 import { InputGroupAddon, InputGroupButton } from '@/shared/ui/input-group';
 
-export type ChoiceNode = CheckboxTreeNode;
-export type ChoiceValue = string | readonly string[] | undefined;
-export interface ChoiceProps {
-  readonly nodes: readonly ChoiceNode[];
-  readonly value: ChoiceValue;
-  readonly onValueChange: (value: ChoiceValue) => void;
-  readonly multiple?: boolean;
+export type ChoiceNode = ChoiceBindingNode;
+export type { ChoiceValue };
+/** 동작 입력(값·트리·검색·접근성)은 패키지의 ChoiceBindingOptions가 소유하고, 여기서는 모양 선택만 더한다. */
+export interface ChoiceProps extends ChoiceBindingOptions {
   readonly appearance?: 'vertical' | 'horizontal' | 'dropdown' | 'menu' | 'search';
-  readonly label: string;
-  readonly allLabel?: string;
-  readonly placeholder?: string;
-  /** 이 이름을 주면 단일 선택을 비우는 동작을 제공한다. placeholder와는 별개다. */
-  readonly clearLabel?: string;
-  /** 서버 검색의 상위 조건·언어 등. 함수 identity 대신 이 값이 바뀔 때 다시 조회한다. */
-  readonly searchKey?: readonly (string | number | boolean | null | undefined)[];
-  readonly disabled?: boolean;
-  readonly id?: string;
-  readonly 'aria-describedby'?: string;
-  readonly 'aria-invalid'?: boolean;
-  readonly 'aria-required'?: boolean;
-  readonly onBlur?: () => void;
-  /** 서버 검색은 요청 취소 신호를 받고 트리를 반환한다. 검색 결과와 선택 값은 따로 유지한다. */
-  readonly search?: (text: string, signal: AbortSignal) => Promise<readonly ChoiceNode[]>;
-  readonly debounceMs?: number;
-  readonly messages?: { readonly loading?: string; readonly failed?: string; readonly retry?: string; readonly empty?: string };
 }
 
 /**
@@ -64,10 +44,24 @@ export function MixedCheckbox({ className, ...props }: ComponentProps<typeof Che
   );
 }
 
+type Leaf = { readonly value: string; readonly label: string };
+type LeafGroup = { readonly label: string | undefined; readonly items: readonly Leaf[] };
+
+/** 검색 상자용: leaf를 바로 위 가지 이름으로 묶는다. 가지 없이 맨 위에 있는 leaf는 제목 없는 묶음이다. */
+function leafGroups(nodes: readonly ChoiceNode[], parent?: string): LeafGroup[] {
+  const own: Leaf[] = [];
+  const groups: LeafGroup[] = [];
+  for (const node of nodes) {
+    if (node.children === undefined) own.push({ value: node.value, label: node.label });
+    else groups.push(...leafGroups(node.children, node.label));
+  }
+  return own.length > 0 ? [{ label: parent, items: own }, ...groups] : groups;
+}
+
 /** 같은 leaf 값 모델을 모든 모양에서 사용한다. 가지 ID는 저장하지 않는다. */
 export function Choice(props: ChoiceProps) {
   const { nodes, multiple = false, appearance = 'dropdown', disabled, label } = props;
-  const { id, text, setText, result, selected, names, summary, control, selection, toggle, select } = useChoiceBinding(props);
+  const { id, text, setText, result, selected, names, summary, control, selection, toggle, toggleGroup, select } = useChoiceBinding(props);
   /** 다중 가지는 삼상태, 단일 가지는 제목으로만 보여 준다. */
   function branch(node: ChoiceNode, key: number): ReactNode {
     const targets = node.children === undefined ? [node.value] : treeLeaves(node.children);
@@ -136,7 +130,9 @@ export function Choice(props: ChoiceProps) {
   /** 팝업을 여는 버튼 모양. 내용은 지금 고른 값 요약이고 이름은 control의 aria-label이 맡는다. */
   const triggerButton = <Button variant="outline" className="min-w-36 justify-between font-normal" />;
   if (appearance === 'search') {
-    const items = treeLeafNodes(result.nodes);
+    const leaves = treeLeafNodes(result.nodes);
+    const grouped = result.nodes.some((node) => node.children !== undefined);
+    const items = grouped ? leafGroups(result.nodes) : leaves;
     const selectedItems = selected.map((id) => ({ value: id, label: names.current.get(id) ?? id }));
     const common = {
       disabled,
@@ -173,11 +169,42 @@ export function Choice(props: ChoiceProps) {
           )}
           <ComboboxEmpty>{props.messages?.empty ?? '선택지가 없습니다.'}</ComboboxEmpty>
           <ComboboxList>
-            {(item: { value: string; label: string }) => (
-              <ComboboxItem key={item.value} value={item}>
-                {item.label}
-              </ComboboxItem>
-            )}
+            {grouped
+              ? (group: LeafGroup) => {
+                  const values = group.items.map((item) => item.value);
+                  const every = values.every((value) => selected.includes(value));
+                  const some = values.some((value) => selected.includes(value));
+                  return (
+                    <ComboboxGroup key={group.label ?? ''} items={group.items}>
+                      {group.label !== undefined && (
+                        <ComboboxLabel className="flex items-center gap-2">
+                          {multiple && (
+                            <MixedCheckbox
+                              aria-label={group.label}
+                              disabled={disabled}
+                              checked={every}
+                              indeterminate={some && !every}
+                              onCheckedChange={() => toggleGroup(values)}
+                            />
+                          )}
+                          {group.label}
+                        </ComboboxLabel>
+                      )}
+                      <ComboboxCollection>
+                        {(item: Leaf) => (
+                          <ComboboxItem key={item.value} value={item}>
+                            {item.label}
+                          </ComboboxItem>
+                        )}
+                      </ComboboxCollection>
+                    </ComboboxGroup>
+                  );
+                }
+              : (item: Leaf) => (
+                  <ComboboxItem key={item.value} value={item}>
+                    {item.label}
+                  </ComboboxItem>
+                )}
           </ComboboxList>
         </ComboboxContent>
       </div>

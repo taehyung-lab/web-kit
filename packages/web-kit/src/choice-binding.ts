@@ -103,5 +103,11 @@ export function useChoiceBinding(props: ChoiceBindingOptions) {
     const next = selection.set(targets, !selection.checked(targets));
     select(props.search === undefined ? next : [...next, ...selected.filter((id) => !selection.all.includes(id))]);
   }
-  return { id, text, setText, result, selected, names, summary, control, selection, toggle, select };
+  /** 서버 검색 결과의 그룹처럼 선택지 전체의 일부인 leaf를 한꺼번에 켜거나 끈다. 이미 고른 다른 값은 건드리지 않는다. */
+  function toggleGroup(targets: readonly string[]) {
+    if (props.search === undefined) return toggle(targets);
+    const every = targets.every((value) => selected.includes(value));
+    select(every ? selected.filter((value) => !targets.includes(value)) : [...selected, ...targets.filter((value) => !selected.includes(value))]);
+  }
+  return { id, text, setText, result, selected, names, summary, control, selection, toggle, toggleGroup, select };
 }

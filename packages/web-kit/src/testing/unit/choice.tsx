@@ -51,6 +51,22 @@ it(title('G026', '가지의 일부/전체/없음을 구분하고 leaf ID만 저�
   fireEvent.click(screen.getByRole('checkbox', { name: '전체' }));
   expect(screen.getByTestId('value').textContent).toBe('[]');
 });
+it(title('G033', '검색 상자도 그룹 제목과 그룹 체크를 보이고 그룹 체크가 그 그룹의 leaf만 켜고 끈다'), async () => {
+  render(<Harness appearance="search" multiple />);
+  fireEvent.click(screen.getByRole('button', { name: '선택' }));
+  const group = await screen.findByRole('checkbox', { name: '그룹' });
+  expect(group.getAttribute('aria-checked')).toBe('false');
+  fireEvent.click(group);
+  expect(screen.getByTestId('value').textContent).toBe('["a","b"]');
+  expect(screen.getByRole('checkbox', { name: '그룹' }).getAttribute('aria-checked')).toBe('true');
+  fireEvent.click(screen.getByRole('option', { name: 'Beta' }));
+  expect(screen.getByTestId('value').textContent).toBe('["a"]');
+  expect(screen.getByRole('checkbox', { name: '그룹' }).getAttribute('aria-checked')).toBe('mixed');
+  fireEvent.click(screen.getByRole('checkbox', { name: '그룹' }));
+  expect(screen.getByTestId('value').textContent).toBe('["a","b"]');
+  fireEvent.click(screen.getByRole('checkbox', { name: '그룹' }));
+  expect(screen.getByTestId('value').textContent).toBe('[]');
+});
 it(title('G027', '단일 선택에서 가지는 저장할 수 없고 모양을 바꿔도 값은 유지된다'), () => {
   const view = render(<Harness />);
   expect(screen.getAllByRole('radio')).toHaveLength(3);

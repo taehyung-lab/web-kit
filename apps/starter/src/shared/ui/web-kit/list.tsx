@@ -1,6 +1,6 @@
 // 파일 책임: 목록 기본 UI의 묶음 부품(List.*). 각 부품은 같은 목록 상태(useList)를 context로 읽어서, 필터·표·페이지 이동을
 // 어디에 두어도 조회·정렬·선택 연결을 다시 쓰지 않는다. 검색 직전 보장(기간 검증·입력 중 키워드)은 상태가 맡고 부품은 표시만 한다.
-import { ListProvider as ModelProvider, useListModel, useListField, useListFilterBinding, useListDetailsBinding, useBulkConfirmation, useListChoiceBinding, useListChoiceNormalization, useListMultiChoiceBinding, useListPeriodBinding, listPaginationBinding, useListDownloadBinding, useListKeywordBinding, listViewBinding, listRowBinding, useListVirtualRows, listFieldMeta, type PeriodShortcut, type DownloadControl, type ListModel } from '@boosterlab/web-kit/list';
+import { ListProvider as ModelProvider, useListModel, useListField, useListFilterBinding, useListDetailsBinding, useBulkConfirmation, useListChoiceBinding, listChoiceValue, useListChoiceNormalization, useListMultiChoiceBinding, useListPeriodBinding, listPaginationBinding, useListDownloadBinding, useListKeywordBinding, listViewBinding, listRowBinding, useListVirtualRows, listFieldMeta, type PeriodShortcut, type DownloadControl, type ListModel } from '@boosterlab/web-kit/list';
 import { Choice as ChoiceInput, MixedCheckbox, type ChoiceProps } from './ui/choice';
 import { createContext, useContext, useId, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { cn } from 'cn';
@@ -218,9 +218,10 @@ function Choice({ model: explicitModel, name, searchName = name, nodes, ...props
   const { check, options, choices } = useListChoiceBinding(model, searchName, nodes);
   useListChoiceNormalization(model, name, props.search === undefined && (check === undefined ? nodes !== undefined : options.isSuccess && !options.isFetching && !options.isError) ? choices : undefined);
   const message = field.issues[0]?.message;
+  const rule = listChoiceValue(choices, { multiple: props.multiple, search: props.search, required: field.required });
   return <div className="grid content-start gap-2">
     <Label htmlFor={id}>{props.label}{field.required && <RequiredMark />}</Label>
-    <ChoiceInput {...props} id={id} nodes={choices} value={field.value} onValueChange={field.set} aria-required={field.required} aria-invalid={message !== undefined} aria-describedby={message === undefined ? undefined : `${id}-error`} />
+    <ChoiceInput {...props} id={id} nodes={choices} value={rule.view(field.value)} onValueChange={(next) => field.set(rule.commit(next))} aria-required={field.required} aria-invalid={message !== undefined} aria-describedby={message === undefined ? undefined : `${id}-error`} />
     {check !== undefined && options.isFetching && <span role="status" className="text-sm text-muted-foreground">{copy.loading}</span>}
     {check !== undefined && options.isError && <span role="alert" className="flex items-center gap-2 text-sm text-destructive">{copy.fieldOptionsFailed}<Button type="button" variant="outline" size="sm" onClick={() => void options.refetch()}>{copy.retry}</Button></span>}
     {message !== undefined && <FieldMessage id={`${id}-error`}>{message}</FieldMessage>}

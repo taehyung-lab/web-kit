@@ -73,7 +73,8 @@
       "G029",
       "G030",
       "G031",
-      "G032"
+      "G032",
+      "G033"
     ],
     "connections": [
       "choice.test.tsx"
@@ -153,6 +154,7 @@
       "G090",
       "form-choice-prune",
       "form-choice-status",
+      "form-choice-retry-focus",
       "form-choice-search",
       "form-choice-single",
       "form-choice-empty",
@@ -210,6 +212,7 @@
       "G105",
       "list-search-lock",
       "list-choice-prune",
+      "list-choice-all",
       "list-choice-status",
       "list-choice-search",
       "keyword-separators"

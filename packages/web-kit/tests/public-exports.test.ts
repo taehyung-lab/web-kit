@@ -65,6 +65,7 @@ const expected = {
     "ListProvider",
     "activateTableRow",
     "captureListReturn",
+    "listChoiceValue",
     "listFieldMeta",
     "listPaginationBinding",
     "listRowBinding",

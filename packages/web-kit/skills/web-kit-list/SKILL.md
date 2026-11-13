@@ -139,7 +139,7 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 
 ### Choice의 값과 준비 상태
 
-registry `choice`는 `/choice`의 `useChoiceBinding`을 쓴다. 이를 쓰는 `ChoiceFilter`(`List.Choice`)는 단일/다중을 같은 트리로 표현한다. 다중 값은 leaf ID 배열이며 부모는 삼상태다. `appearance`를 바꿔도 값·검색 수명은 같다.
+registry `choice`는 `/choice`의 `useChoiceBinding`을 쓴다. 이를 쓰는 `ChoiceFilter`(`List.Choice`)는 단일/다중을 같은 트리로 표현한다. 다중 값은 leaf ID 배열이며 부모는 삼상태다. `appearance`를 바꿔도 값·검색 수명은 같다. 다중이고 필수가 아니며 서버 검색이 아닌 `List.Choice`는 필터 규칙을 따른다: 빈 선택은 제한 없음이라 전체와 모든 선택지가 체크로 보이고, 모두 고르거나 전체를 지우면 `[]`로 접힌다(`listChoiceValue`). 아무것도 체크되지 않은 상태는 없다. 서버 검색(`search`) 모양은 검색 결과를 가지(그룹) 제목과 그룹 체크로 묶어 보이며, 그룹 체크는 지금 보이는 그 그룹의 leaf만 켜고 끈다.
 
 - 직접 준 `nodes`는 준비된 고정 전체 선택지다. 선택지 밖 값은 표시·초안·[검색] 제출에서 정리한다. URL·진입 요청의 허용값은 별도로 검색 필드 schema 또는 `check.allowed`가 맡는다.
 - `check`를 쓰면 같은 query의 로딩·실패 중에는 초안을 보존하고 성공 뒤 정리한다. 상위 `check.parents` 값이 바뀌면 하위 초안을 기본값으로 정리한다.
