@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "version": "5.1.0-rc.6",
-  "sourceRef": "v5.1.0-rc.6",
-  "sourceCommit": "5ae1c37ad7214cbaa70da520cccd71b00e25daa0",
+  "version": "5.1.0-rc.7",
+  "sourceRef": "v5.1.0-rc.7",
+  "sourceCommit": "97f36de3e072b773ab5a8bd77e0aadbd1e850a6f",
   "sourceWorkingTree": "clean",
   "shadcn": "4.19.1",
   "method": "shadcn@4.19.1 add; installation recorded after review",
@@ -137,14 +137,14 @@
     },
     {
       "name": "choice",
-      "artifactHash": "96fafcd9ab38e006569a51ac7bb6a870f4cbc4a0557bd81065f63686a343563a",
+      "artifactHash": "2a01e4f1ab1646b3db2c77f2c8174157d073eaf5393e472bdce9617ed42abff1",
       "files": [
         {
           "source": "packages/ui-registry/src/ui/choice.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/ui/choice.tsx",
           "installed": "src/shared/ui/web-kit/ui/choice.tsx",
-          "sourceHash": "0db44397e9c5302fa35417812d16fef51c24159e57f865c78e226341c5195211",
-          "installedHash": "8a73535293005189ba63dcc34d02c361a5f2d3c2b2ec629897dfb1f009a02806"
+          "sourceHash": "41b1787a8162a7d12be021a96a44b60232a2f68ef38bac15068e09df986d477e",
+          "installedHash": "12c6ff001c58edd1c866d498091611996e35a030796351831fcaf20a8a46c771"
         },
         {
           "source": "packages/ui-registry/checks/choice.test.tsx",
@@ -190,14 +190,14 @@
     },
     {
       "name": "form",
-      "artifactHash": "3680600db3688db4fb39741b67b9f39d68fe46613002222654b817bedee0e214",
+      "artifactHash": "403d41765ca22ef2577ba11acd988d57d99f6b2f2d7f4c268db57e56d092641d",
       "files": [
         {
           "source": "packages/ui-registry/src/form/form.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/form/form.tsx",
           "installed": "src/shared/ui/web-kit/form/form.tsx",
-          "sourceHash": "f79e8752df64c2604d061f665cc44612c6b198d5354d7caf06ac2c33777edead",
-          "installedHash": "8115ddae7ddf7c70eef8dbc746eda6f77c6e8fd02f8eb5e3ed363fe5a877e9e4"
+          "sourceHash": "5087ab9a7973f212d7f3219a0b524d2f82900ad68dd05db26b96552bffeca522",
+          "installedHash": "f23bb827e11d3b4a17664c206718ac606f8efce7d8e3ece3f84f1c8b51d60d73"
         },
         {
           "source": "packages/ui-registry/src/form/field.tsx",
@@ -266,14 +266,14 @@
     },
     {
       "name": "list",
-      "artifactHash": "1946bbc350557c64d150c8c716a30199572462542b7657ab0d515cd80fec3934",
+      "artifactHash": "c245014b3eee5f31d9a9f7343091f3c6c2cf2201757b884fa1b12b2c33e3edce",
       "files": [
         {
           "source": "packages/ui-registry/src/list.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/list.tsx",
           "installed": "src/shared/ui/web-kit/list.tsx",
-          "sourceHash": "858cb0b944f8219633d45c4ba4c789c98898127fff93ab1873a93bc17c136bf4",
-          "installedHash": "5c85672b29bbd24624f6e025116f4e514e7c189ad4b069f54402e36b5831af7f"
+          "sourceHash": "404a1067d39f23b9de4d84751ab58893d8c2eb2cc3ed7417fd536297192d138b",
+          "installedHash": "6c7ad16775badd09a8755a0afde541484326d8732493726860a89f8689f24634"
         },
         {
           "source": "packages/ui-registry/checks/list-ui.test.tsx",
