@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "version": "5.1.0-rc.7",
   "sourceRef": "v5.1.0-rc.7",
-  "sourceCommit": "2d8aab090830bac542db61629ec098e6d27586b7",
+  "sourceCommit": "a3d1b25ec5f68486d492e48f7334f6b8ccde727d",
   "sourceWorkingTree": "clean",
   "shadcn": "4.19.1",
   "method": "shadcn@4.19.1 add; installation recorded after review",
@@ -137,14 +137,14 @@
     },
     {
       "name": "choice",
-      "artifactHash": "999dbd857ab5e5b09000db74f04d3b807eb507f913ceecacd8ffedf60f34642e",
+      "artifactHash": "ea899aac1e9135157b202200cc2b1358f3de811566421abb2f696a227b0f695b",
       "files": [
         {
           "source": "packages/ui-registry/src/ui/choice.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/ui/choice.tsx",
           "installed": "src/shared/ui/web-kit/ui/choice.tsx",
-          "sourceHash": "448c9cdb3448e359170f59ffea839400b8a5ec8538677c43f6120bb73ee930bc",
-          "installedHash": "e391c0ebb8d95cdb5a4d660e49976c3f7862e2dc785842cbc89cfc1e7bbe2bcf"
+          "sourceHash": "29382dfce207a6fea07de9cea543ef9022edf16b0622a07ef356f839e5b25fee",
+          "installedHash": "c85b7e36e29d055b410dea9b100f442f927fbfcc075b20b737aecb61607d680f"
         },
         {
           "source": "packages/ui-registry/checks/choice.test.tsx",
@@ -266,14 +266,14 @@
     },
     {
       "name": "list",
-      "artifactHash": "c19f9e33423923decfc1b4801ccc96c6b60ec171cdc600903d8bc805c2f4bdf9",
+      "artifactHash": "6dcd6bc8c15462e999f74e2701309a9f3be4cce4e9fab7997634035e6ca56b94",
       "files": [
         {
           "source": "packages/ui-registry/src/list.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/list.tsx",
           "installed": "src/shared/ui/web-kit/list.tsx",
-          "sourceHash": "f743e7cc53c1961202d5bd6cf18cb82dd161e1ada305d9244a124d0d3d9a0286",
-          "installedHash": "30234c226a5a130f938869b6b784e151cd9b9207242bd26d4a8d4e5cce15386c"
+          "sourceHash": "170826c3afdcb414ba0c4ed202b052c77cda8946a1a5e5cf7a171a9b30b8aa56",
+          "installedHash": "df3e54207ebf3458149ea114447fca4dd1814f5c387b45b08887ee7449513cd8"
         },
         {
           "source": "packages/ui-registry/checks/list-ui.test.tsx",
