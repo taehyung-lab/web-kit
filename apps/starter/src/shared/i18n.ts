@@ -36,6 +36,7 @@ export const sharedResources = {
       pageOf: '{{page}} / {{pages}} 페이지',
       sortAsc: '오름차순 정렬됨',
       sortDesc: '내림차순 정렬됨',
+      chooseValue: '바꿀 값을 먼저 선택하세요.',
     },
     failure: {
       kind: {
@@ -96,6 +97,7 @@ export const sharedResources = {
       pageOf: 'Page {{page}} of {{pages}}',
       sortAsc: 'sorted ascending',
       sortDesc: 'sorted descending',
+      chooseValue: 'Choose a value first.',
     },
     failure: {
       kind: {

@@ -1,6 +1,6 @@
 /** 검색 값 전이의 달력·중복·전체 선택 의미를 검사한다. */
 import { expect, it } from 'vitest';
-import { addKeyword, nextSort, normalizeFilterSelection, calendarDate, shiftCalendarDate } from '../src/search/interactions';
+import { addKeyword, nextSort, normalizeFilterSelection, viewFilterSelection, commitFilterSelection, calendarDate, shiftCalendarDate } from '../src/search/interactions';
 it('키워드는 공백·동일 필드 중복을 제거하지만 다른 필드의 같은 문자는 유지한다', () => {
   const once = addKeyword([], 'name', ' A ');
   expect(addKeyword(once, 'name', 'A')).toEqual(once);
@@ -21,4 +21,16 @@ it('시간대와 월말을 명시적으로 계산한다', () => {
   expect(shiftCalendarDate('2024-03-31', { unit: 'month', amount: -1 })).toBe('2024-02-29');
   expect(shiftCalendarDate('2024-03-01', { unit: 'day', amount: -6 })).toBe('2024-02-24');
   expect(() => shiftCalendarDate('2024-02-30', { unit: 'day', amount: 1 })).toThrow();
+});
+
+it('viewFilterSelection: 빈 선택은 모든 선택지가 체크로 보이고 선택이 있으면 선택지에 있는 값만 보인다', () => {
+  expect(viewFilterSelection([], ['a', 'b'])).toEqual(['a', 'b']);
+  expect(viewFilterSelection(['a', 'unknown'], ['a', 'b'])).toEqual(['a']);
+});
+
+it('commitFilterSelection: 마지막 하나를 해제하는 변경은 무시하고 모두 고르면 제한 없음으로 접는다', () => {
+  expect(commitFilterSelection([], ['a'], ['a', 'b'])).toEqual(['a']);
+  expect(commitFilterSelection([], [], ['a', 'b'])).toEqual([]);
+  expect(commitFilterSelection(['a', 'b'], ['a'], ['a', 'b'])).toEqual([]);
+  expect(commitFilterSelection(['b'], [], ['a', 'b'])).toEqual(['b']);
 });

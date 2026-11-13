@@ -8,8 +8,8 @@ export { captureListReturn, resolveListReturn, type ListReturnContext } from './
 export {
   ListProvider, useListModel, useListField, useListFilterBinding,
   useListDetailsBinding, useBulkConfirmation, useListChoiceBinding, useListChoiceNormalization,
-  useListMultiChoiceBinding, useListPeriodBinding, useListDownloadBinding,
+  useListMultiChoiceBinding, listChoiceValue, useListPeriodBinding, useListDownloadBinding,
   useListKeywordBinding, useListVirtualRows,
-  listPaginationBinding, listViewBinding, listRowBinding,
+  listPaginationBinding, listViewBinding, listRowBinding, listFieldMeta,
   type ListModel, type PeriodShortcut, type DownloadControl,
 } from './list-binding';

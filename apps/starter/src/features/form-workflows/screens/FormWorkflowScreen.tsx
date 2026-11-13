@@ -1,7 +1,7 @@
 // 파일 책임: 작성 예제 화면. 칸·줄·선택 배치를 그린다. 게시·임시 저장과 게시 후 조회는 작성 flow가 맡는다.
 import { Button } from '@/shared/ui/button';
 import { useTranslation } from 'react-i18next';
-import { Form } from '@/shared/ui/web-kit/form/ui';
+import { Form } from '@/shared/ui/web-kit/form/form';
 import { useWorkflowForm } from '../flows/use-workflow-form';
 import type { WorkflowValues } from '../model/forms/workflow-form';
 

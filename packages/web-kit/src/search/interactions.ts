@@ -25,6 +25,17 @@ export function normalizeFilterSelection<T>(selected: readonly T[], options: rea
   const kept = options.filter((value) => selected.includes(value));
   return kept.length === options.length ? [] : kept;
 }
+/** 화면에 체크로 보이는 선택. 비어 있으면 제한 없음이라 모든 선택지가 체크로 보이고, 선택이 있으면 선택지에 있는 값만 보인다. */
+export function viewFilterSelection<T>(selected: readonly T[], options: readonly T[]): readonly T[] {
+  return selected.length === 0 ? options : selected.filter((value) => options.includes(value));
+}
+/**
+ * 필터 선택의 다음 값. 아무것도 안 고른 상태는 없다: 마지막 하나를 해제하는 변경은 무시하고(현재 값을 그대로 둔다),
+ * 모든 선택지를 고르면 제한 없음(빈 배열)으로 접는다.
+ */
+export function commitFilterSelection<T>(next: readonly T[], current: readonly T[], options: readonly T[]): readonly T[] {
+  return options.some((value) => next.includes(value)) ? normalizeFilterSelection(next, options) : current;
+}
 export type PeriodPreset = { readonly unit: 'day' | 'month'; readonly amount: number };
 /** 지정한 시각·시간대의 날짜만 읽는다. 브라우저 시간대를 암묵적으로 사용하지 않는다. */
 export function calendarDate(now: Date, timeZone: string): string {

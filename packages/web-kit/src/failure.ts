@@ -60,7 +60,7 @@ export class RequestFailure extends Error {
   readonly messageKey: string | undefined;
   readonly endsSession: boolean;
   readonly fieldErrors: readonly FieldError[];
-  /** 쓰기가 서버에 반영됐는지 확인할 수 없음. 요청 경로를 아는 http만 정하고, kind로 추측하지 않는다. */
+  /** 쓰기가 서버에 반영됐는지 확인할 수 없음. 전송 경로 또는 쓰기 응답 해석을 맡은 소비자가 정하며, kind만으로 추측하지 않는다. */
   readonly resultUnknown: boolean;
   readonly #fields: ConstructorParameters<typeof RequestFailure>[0];
 
@@ -87,6 +87,11 @@ export class RequestFailure extends Error {
     this.fieldErrors = fields.fieldErrors ?? [];
     this.resultUnknown = fields.resultUnknown === true;
     this.#fields = fields;
+  }
+
+  /** 서버가 이 요청의 인증을 거절했는가: 401이거나 결과 코드 표 행이 세션 종료를 정했다. 거절 뒤 처리(재발급·종료)는 호출자가 정한다. */
+  get rejectsAuthentication(): boolean {
+    return this.status === 401 || this.endsSession;
   }
 
   /** 같은 실패에 "쓰기 반영 여부를 확인할 수 없음" 사실만 더한 복사본. */

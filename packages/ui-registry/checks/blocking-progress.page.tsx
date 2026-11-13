@@ -9,8 +9,8 @@ import installation from '../../../../../registry-installation.json';
 import '@/styles.css';
 let Page = createProgressFeatureConformancePage({ BlockingProgress, Dialog, DialogDefaults, defaultDialogLabels });
 if (new URLSearchParams(location.search).get('mode') === 'error' && installation.items.some((item) => item.name === 'form')) {
-  const forms = import.meta.glob('../form/ui.tsx');
-  const load = forms['../form/ui.tsx'];
+  const forms = import.meta.glob('../form/form.tsx');
+  const load = forms['../form/form.tsx'];
   if (!load) throw new Error('form 설치 기록에 맞는 소비 복사본 없음');
   type FormParts = Parameters<typeof FormProgressPage>[0];
   const { Form, FormDefaults, defaultFormMessages, defaultFormGuardMessages } = await load() as Pick<FormParts, 'Form' | 'FormDefaults' | 'defaultFormMessages' | 'defaultFormGuardMessages'>;

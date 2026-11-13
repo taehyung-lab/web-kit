@@ -9,19 +9,22 @@ import type { AnyFormApi, DeepKeys, DeepValue } from '@tanstack/react-form';
 import {
   createContext,
   useContext,
+  useEffect,
   useId,
   useState,
   type FormHTMLAttributes,
+  type HTMLAttributes,
   type KeyboardEvent,
+  type MouseEvent,
   type ReactNode,
 } from 'react';
 import { cn } from 'cn';
-import { Button } from '@/components/ui/button';
-import { Checkbox as CheckboxInput } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select as SelectRoot, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/shared/ui/button';
+import { Checkbox as CheckboxInput } from '@/shared/ui/checkbox';
+import { Input } from '@/shared/ui/input';
+import { Label } from '@/shared/ui/label';
+import { SelectBox } from '../select-box';
+import { Textarea } from '@/shared/ui/textarea';
 import { AlertDialog, ConfirmDialog, Dialog } from '../ui/dialog';
 import { Pending } from '../ui/pending';
 import { FormArrayField, type FormArrayRows } from '@boosterlab/web-kit/form';
@@ -344,22 +347,47 @@ function Field<V = unknown>({
   );
 }
 
+/** 선택 칸의 선택지 지연·실패 자리. Choice와 Select가 같은 모양·문구·재시도 버튼을 쓰고, onRetry가 없으면 다시 시도 버튼을 그리지 않는다. */
+function OptionsState({ status, labelId, control, onRetry }: {
+  readonly status: Exclude<OptionsStatus, 'ready'>;
+  readonly labelId: string | undefined;
+  readonly control: HTMLAttributes<HTMLDivElement>;
+  readonly onRetry: ((event: MouseEvent<HTMLButtonElement>) => void) | undefined;
+}) {
+  const { copy, renderFailure } = useFormContext();
+  const failureText = status === 'loading' ? undefined : renderFailure(status.failure, 'options');
+  return (
+    <div {...control} role="group" tabIndex={-1} aria-labelledby={labelId} className={optionsStateClass}>
+      {status === 'loading' ? (
+        <span role="status" className="text-muted-foreground">{copy.loading}</span>
+      ) : failureText === null ? null : (
+        <span role="alert" className="flex flex-wrap items-center gap-2 text-destructive">
+          {failureText ?? copy.optionsFailed}
+          {onRetry === undefined ? null : <Button type="button" variant="outline" size="sm" onClick={onRetry}>{copy.retry}</Button>}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** 선택지 재시도에 성공해 입력이 새로 그려지면, 재시도 버튼이 사라지며 잃은 포커스를 그 입력으로 돌려준다(Select의 triggerRef와 같은 보장). */
+function FocusAfterRetry({ id, focus }: { readonly id: string | undefined; readonly focus: (node: HTMLElement | null) => void }) {
+  useEffect(() => {
+    focus(id === undefined ? null : document.getElementById(id));
+  });
+  return null;
+}
+
 /** 폼 검증·필수 표시·오류 초점을 같은 선택 입력에 연결한다. */
 function Choice({ name, description, status = 'ready', onRetry, ...props }: FormFieldProps & Omit<ChoiceProps, 'value' | 'onValueChange'> & { readonly status?: OptionsStatus; readonly onRetry?: () => void }) {
-  const { editor, copy, renderFailure } = useFormContext();
+  const { editor } = useFormContext();
   useFormChoiceBinding(editor, name, status === 'ready' && props.search === undefined ? props.nodes : undefined);
   const retry = useOptionsRetryFocus(onRetry);
   return (
     <Field<ChoiceProps['value']> name={name} label={props.label} description={description} disabled={props.disabled} labelTarget={status === 'ready' ? 'control' : 'group'}>
       {({ value, change, blur, ...control }, labelId) => {
-        if (status === 'ready') return <ChoiceInput {...props} {...control} value={value} onValueChange={change} onBlur={blur} />;
-        const failureText = status === 'loading' ? undefined : renderFailure(status.failure, 'options');
-        return <div {...control} role="group" tabIndex={-1} aria-labelledby={labelId} className={optionsStateClass}>
-          {status === 'loading' ? <span role="status" className="text-muted-foreground">{copy.loading}</span> : failureText === null ? null : <span role="alert" className="flex flex-wrap items-center gap-2 text-destructive">
-            {failureText ?? copy.optionsFailed}
-            {onRetry !== undefined && <Button type="button" variant="outline" size="sm" onClick={retry.onRetry}>{copy.retry}</Button>}
-          </span>}
-        </div>;
+        if (status === 'ready') return <><ChoiceInput {...props} {...control} value={value} onValueChange={change} onBlur={blur} /><FocusAfterRetry id={control.id} focus={retry.inputRef} /></>;
+        return <OptionsState status={status} labelId={labelId} control={control} onRetry={onRetry === undefined ? undefined : retry.onRetry} />;
       }}
     </Field>
   );
@@ -378,6 +406,7 @@ function Text({
   maxLength,
   showCount = false,
   onKeyDown,
+  controlClassName,
   ...field
 }: FormFieldProps & {
   readonly type?: 'text' | 'email' | 'password' | 'tel' | 'date' | 'time' | 'number' | 'url' | 'search';
@@ -388,6 +417,8 @@ function Text({
   readonly maxLength?: number;
   readonly showCount?: boolean;
   readonly onKeyDown?: (event: KeyboardEvent) => void;
+  /** 입력 칸 자체의 크기·모양(기본 클래스 뒤에 합친다). 라벨·오류·접근성 연결은 바꾸지 않는다. */
+  readonly controlClassName?: string;
 }) {
   const { copy } = useFormContext();
   return (
@@ -399,6 +430,7 @@ function Text({
           <>
             <Input
               {...control}
+              className={controlClassName}
               type={type}
               placeholder={placeholder}
               autoComplete={autoComplete}
@@ -478,6 +510,7 @@ function Select({
   status = 'ready',
   onRetry,
   onChange,
+  controlClassName,
   ...field
 }: FormFieldProps & {
   readonly options: readonly { readonly value: string; readonly label: string }[];
@@ -485,40 +518,17 @@ function Select({
   readonly status?: OptionsStatus;
   readonly onRetry?: () => void;
   readonly onChange?: (value: string) => void;
+  /** 입력 칸 자체의 크기·모양(기본 클래스 뒤에 합친다). 라벨·오류·접근성 연결은 바꾸지 않는다. */
+  readonly controlClassName?: string;
 }) {
-  const { copy, renderFailure } = useFormContext();
+  const { copy } = useFormContext();
   const retry = useOptionsRetryFocus(onRetry);
   return (
     <Field<unknown> {...field} labelTarget={status === 'ready' ? 'control' : 'group'}>
       {({ value, change, blur, ...control }, labelId) => {
         const selected = value === null || value === undefined ? '' : String(value);
         if (status !== 'ready') {
-          const failureText = status === 'loading' ? undefined : renderFailure(status.failure, 'options');
-          return (
-            <div
-              key="state"
-              id={control.id}
-              aria-describedby={control['aria-describedby']}
-              aria-invalid={control['aria-invalid']}
-              role="group"
-              tabIndex={-1}
-              aria-labelledby={labelId}
-              className={optionsStateClass}
-            >
-              {status === 'loading' ? (
-                <span role="status" className="text-muted-foreground">{copy.loading}</span>
-              ) : failureText === null ? null : (
-                <span role="alert" className="flex flex-wrap items-center gap-2 text-destructive">
-                  {failureText ?? copy.optionsFailed}
-                  {onRetry === undefined ? null : (
-                    <Button type="button" variant="outline" size="sm" onClick={retry.onRetry}>
-                      {copy.retry}
-                    </Button>
-                  )}
-                </span>
-              )}
-            </div>
-          );
+          return <OptionsState key="state" status={status} labelId={labelId} control={{ id: control.id, 'aria-describedby': control['aria-describedby'], 'aria-invalid': control['aria-invalid'] }} onRetry={onRetry === undefined ? undefined : retry.onRetry} />;
         }
         const { name, disabled, ...trigger } = control;
         return (
@@ -528,6 +538,7 @@ function Select({
             disabled={disabled}
             trigger={trigger}
             triggerRef={retry.inputRef}
+            className={controlClassName}
             value={selected}
             options={options}
             placeholder={placeholder ?? copy.choose}
@@ -549,6 +560,7 @@ function SelectControl({
   disabled,
   trigger,
   triggerRef,
+  className,
   value,
   options,
   placeholder,
@@ -559,6 +571,7 @@ function SelectControl({
   readonly disabled: boolean;
   readonly trigger: Omit<FieldControlProps, never> & { readonly 'aria-required': boolean };
   readonly triggerRef: (node: HTMLElement | null) => void;
+  readonly className?: string;
   readonly value: string;
   readonly options: readonly { readonly value: string; readonly label: string }[];
   readonly placeholder: string;
@@ -567,31 +580,25 @@ function SelectControl({
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <SelectRoot
+    <SelectBox
+      {...trigger}
+      ref={triggerRef}
+      className={cn('w-full', className)}
       name={name}
       disabled={disabled}
-      items={options}
+      options={options}
+      placeholder={placeholder}
       value={value === '' ? null : value}
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
         if (!next) onBlur();
       }}
+      onBlur={() => (open ? undefined : onBlur())}
       onValueChange={(next) => {
         if (typeof next === 'string') onValueChange(next);
       }}
-    >
-      <SelectTrigger {...trigger} ref={triggerRef} className="w-full" onBlur={() => (open ? undefined : onBlur())}>
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        {options.map((option) => (
-          <SelectItem key={option.value} value={option.value}>
-            {option.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </SelectRoot>
+    />
   );
 }
 
@@ -714,6 +721,7 @@ function Section({
   errorMarker,
   children,
   className,
+  headingClassName,
 }: {
   readonly title?: ReactNode;
   readonly fields?: readonly string[];
@@ -721,6 +729,8 @@ function Section({
   readonly errorMarker?: (errorCount: number) => ReactNode;
   readonly children: ReactNode;
   readonly className?: string;
+  /** 구역 제목 줄의 모양(접는 구역은 h2, 그 밖에는 legend). 기본 클래스 뒤에 합치며 열고 닫기·오류 표시는 바꾸지 않는다. */
+  readonly headingClassName?: string;
 }) {
   const { editor, copy } = useFormContext();
   if (fields !== undefined) {
@@ -732,6 +742,7 @@ function Section({
         errorLabel={copy.sectionErrors}
         errorMarker={errorMarker}
         className={className}
+        headingClassName={headingClassName}
       >
         {children}
       </FormSection>
@@ -739,7 +750,7 @@ function Section({
   }
   return (
     <fieldset data-slot="form-section" className={cn('grid min-w-0 gap-4 rounded-xl border border-border p-4', className)}>
-      {title === undefined ? null : <legend className="px-1 text-sm font-medium">{title}</legend>}
+      {title === undefined ? null : <legend className={cn('px-1 text-sm font-medium', headingClassName)}>{title}</legend>}
       {children}
     </fieldset>
   );
@@ -757,6 +768,7 @@ export function FormSection({
   errorLabel,
   errorMarker,
   className,
+  headingClassName,
   children,
 }: {
   readonly form: AnyFormApi;
@@ -767,13 +779,15 @@ export function FormSection({
   /** 오류가 있을 때 머리글 제목 뒤에 그릴 표시(오류 수를 받는다). 화면 낭독기가 읽을 문구도 이 표시가 책임진다. 없으면 기본 표시. */
   readonly errorMarker?: (errorCount: number) => ReactNode;
   readonly className?: string;
+  /** 제목 줄(h2)의 모양. 기본 클래스 뒤에 합친다. */
+  readonly headingClassName?: string;
   readonly children: ReactNode;
 }) {
   const section = useFormSection(form, fields);
   const contentId = useId();
   return (
     <section data-slot="form-section" className={cn('min-w-0 rounded-xl border border-border', className)}>
-      <h2 className="text-base font-medium">
+      <h2 className={cn('text-base font-medium', headingClassName)}>
         <button
           type="button"
           className="flex w-full items-center gap-2 rounded-xl px-4 py-3 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"

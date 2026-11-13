@@ -1,5 +1,5 @@
 // 파일 책임: 상품 목록의 보기 크기와 일괄 판매 중지 확인을 배치한다. 실행은 목록 flow가 넘긴 동작이 맡는다.
-import { PageSize, ListActions, BulkAction } from '@/shared/ui/web-kit/list-ui';
+import { PageSize, ListActions, BulkAction } from '@/shared/ui/web-kit/list';
 import { useTranslation } from 'react-i18next';
 import { PAGE_SIZES } from '../model/rules/product-list-policy';
 

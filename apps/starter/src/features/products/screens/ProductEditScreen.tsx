@@ -1,7 +1,7 @@
 // 파일 책임: 상품 수정 화면. 원본 상태별 표현과 수정 폼 배치·저장 확인 내용을 그린다. 원본 조회·저장·이동은 수정 flow가 맡는다.
 import { Button } from '@/shared/ui/button';
-import { Record } from '@/shared/ui/web-kit/detail-ui';
-import { Form } from '@/shared/ui/web-kit/form/ui';
+import { Detail } from '@/shared/ui/web-kit/detail';
+import { Form } from '@/shared/ui/web-kit/form/form';
 import { useTranslation } from 'react-i18next';
 import { failureCopyKey } from '@/shared/lib/failure-copy';
 import { useProductEdit, useProductEditSource } from '../flows/use-product-edit';
@@ -18,7 +18,7 @@ export function ProductEditScreen({ productId, onBack }: { readonly productId: s
   return (
     <div>
       <h1>{t('products.form.editTitle')}</h1>
-      <Record
+      <Detail
         messages={{ loading: t('common.loading'), retry: t('common.retry'), refreshFailed: t('common.refreshFailed') }}
         state={state}
         renderFailure={(failure) => t(failureCopyKey(failure))}
@@ -32,7 +32,7 @@ export function ProductEditScreen({ productId, onBack }: { readonly productId: s
         }
       >
         {(product) => <ProductEditForm product={product} />}
-      </Record>
+      </Detail>
     </div>
   );
 }

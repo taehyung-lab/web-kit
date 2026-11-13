@@ -3,7 +3,7 @@
 // 회차·판매처 키는 접을 수 있는 구역(Form.Section fields)이라 닫힌 구역의 오류는 제출 뒤 펼쳐지고 그 칸에 포커스한다.
 // 저장(좌석도 업로드 → 등록)과 완료 뒤 이동은 등록 flow가 맡는다. 공연 폼 전체를 옮긴 것은 아니다.
 import { Button } from '@/shared/ui/button';
-import { Form } from '@/shared/ui/web-kit/form/ui';
+import { Form } from '@/shared/ui/web-kit/form/form';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShowCreate } from '../flows/use-show-create';

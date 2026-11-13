@@ -126,7 +126,7 @@ function parseRecord(raw: string | null): RecordValue | null {
 }
 /** 서버가 세션을 거절했는지 기존 재발급 기준으로 판정한다. */
 function rejectsSession(failure: unknown): boolean {
-  return isRequestFailure(failure) && (failure.status === 401 || failure.endsSession);
+  return isRequestFailure(failure) && failure.rejectsAuthentication;
 }
 /** 타이머는 스스로 마감이나 연장 계기를 만들지 않는다. */
 export function createIdleTimer<C extends Credentials>({ session, key, policy, extend: requestExtend, environment = {}, clock: suppliedClock }: {

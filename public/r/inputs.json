@@ -2,7 +2,7 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "inputs",
   "title": "web-kit inputs",
-  "description": "shadcn 기본 부품(button·input·checkbox)이 키트 부품이 기대는 속성을 지키는지 확인하는 검사 연결; 부품 자체는 shadcn registry에서 설치한다.",
+  "description": "shadcn 기본 입력 검사 연결과 단일 선택 SelectBox 조립. 기본 부품은 shadcn registry에서 설치한다.",
   "dependencies": [],
   "devDependencies": [
     "vitest@4.1.11",
@@ -11,7 +11,8 @@
   "registryDependencies": [
     "button",
     "input",
-    "checkbox"
+    "checkbox",
+    "select"
   ],
   "files": [
     {
@@ -19,6 +20,12 @@
       "content": "// @vitest-environment jsdom\n// 파일 책임: 프로젝트의 shadcn 기본 부품이 키트 부품이 기대는 속성(버튼 기본 type, 입력·체크 접근성 속성)을 지키는지 공통 단위 검사에 연결한다.\nimport { Button } from '@/components/ui/button';\nimport { Checkbox } from '@/components/ui/checkbox';\nimport { Input } from '@/components/ui/input';\nimport { checkInputsConformance } from '@boosterlab/web-kit/testing/unit/primitives';\nimport installation from '../../../../../registry-installation.json';\ncheckInputsConformance({ Button, Input, Checkbox }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });\n",
       "type": "registry:file",
       "target": "~/src/shared/ui/web-kit/checks/inputs.test.tsx"
+    },
+    {
+      "path": "packages/ui-registry/src/select-box.tsx",
+      "content": "import type { ComponentProps } from 'react';\nimport { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';\n\nexport interface SelectOption {\n  readonly value: string;\n  readonly label: string;\n  readonly disabled?: boolean;\n}\n\ntype TriggerProps = Pick<ComponentProps<typeof SelectTrigger>, 'id' | 'ref' | 'className' | 'size' | 'onBlur' | 'aria-label' | 'aria-labelledby' | 'aria-describedby' | 'aria-invalid' | 'aria-required'>;\nexport type SelectBoxProps = TriggerProps & {\n  readonly options: readonly SelectOption[];\n  /** null은 미선택이다. 빈 문자열 옵션은 그대로 선택할 수 있다. */\n  readonly value: string | null;\n  readonly onValueChange: (value: string | null) => void;\n  readonly placeholder?: string;\n  readonly name?: string;\n  readonly disabled?: boolean;\n  readonly open?: boolean;\n  readonly onOpenChange?: (open: boolean) => void;\n};\n\n/** 단일 문자열 선택의 기본 조립. 검증·전체 선택·서버 선택지 수명은 상위 Form/List가 맡는다. */\nexport function SelectBox({ options, value, onValueChange, placeholder, name, disabled, open, onOpenChange, ...trigger }: SelectBoxProps) {\n  return (\n    <Select items={options} value={value} onValueChange={(next) => onValueChange(next)} name={name} disabled={disabled} open={open} onOpenChange={onOpenChange}>\n      <SelectTrigger {...trigger}><SelectValue placeholder={placeholder} /></SelectTrigger>\n      <SelectContent>\n        {options.map(option => <SelectItem key={option.value} value={option.value} disabled={option.disabled}>{option.label}</SelectItem>)}\n      </SelectContent>\n    </Select>\n  );\n}\n",
+      "type": "registry:file",
+      "target": "~/src/shared/ui/web-kit/select-box.tsx"
     }
   ],
   "type": "registry:block"

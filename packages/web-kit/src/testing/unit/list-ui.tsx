@@ -347,6 +347,9 @@ it(title('G098', '제한 없음은 전체 체크로 보이고 일부 해제를 �
   fireEvent.click(screen.getByRole('checkbox', { name: 'A' }));
   fireEvent.click(screen.getByRole('button', { name: '검색' }));
   await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ tags: ['b'] })));
+  // 남은 하나(B)는 해제되지 않는다.
+  fireEvent.click(screen.getByRole('checkbox', { name: 'B' }));
+  expect(checked(screen.getByRole('checkbox', { name: 'B' }))).toBe(true);
   fireEvent.click(screen.getByRole('checkbox', { name: 'A' }));
   expect(checked(screen.getByRole('checkbox', { name: 'A' }))).toBe(true);
   expect(model.draft.tags).toEqual([]);
@@ -641,7 +644,53 @@ it.each(['vertical', 'horizontal', 'dropdown', 'menu'] as const)(title('list-cho
   fireEvent.click(await screen.findByRole('checkbox', { name: 'Gamma' }));
   if (appearance !== 'vertical' && appearance !== 'horizontal') fireEvent.click(screen.getByRole('button', { name: '분류' }));
   fireEvent.click(screen.getByRole('button', { name: '검색' }));
-  await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ tags: ['a', 'b', 'c'] })));
+  // 모두 고르면 제한 없음(빈 선택)으로 검색한다(결정 0006: 필터의 모두 선택=빈 목록).
+  await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ tags: [] })));
+});
+
+it.each(['vertical', 'dropdown'] as const)(title('list-choice-all', 'List.Choice 다중 선택은 비면 전체가 체크로 보이고 전체를 지워도 전체로 돌아온다 %s'), async (appearance) => {
+  mount(() => <List.Filter>
+    <List.Choice name="tags" label="분류" multiple allLabel="전체" appearance={appearance} nodes={[
+      { value: 'a', label: 'Alpha' }, { value: 'b', label: 'Beta' }, { value: 'c', label: 'Gamma' },
+    ]} />
+  </List.Filter>, { initial: { tags: [] } });
+  if (appearance === 'dropdown') fireEvent.click(screen.getByRole('button', { name: '분류' }));
+  const state = (name: string) => screen.getByRole('checkbox', { name }).getAttribute('aria-checked');
+  // 비어 있으면 제한 없음이라 전체와 모든 선택지가 체크로 보인다.
+  for (const name of ['전체', 'Alpha', 'Beta', 'Gamma']) expect(await screen.findByRole('checkbox', { name })).toBeTruthy();
+  for (const name of ['전체', 'Alpha', 'Beta', 'Gamma']) expect(state(name)).toBe('true');
+  // 하나를 끄면 나머지만 명시 선택이 되고 전체는 일부 선택이다.
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Beta' }));
+  await waitFor(() => expect(model.draft.tags).toEqual(['a', 'c']));
+  expect(state('Beta')).toBe('false');
+  expect(state('전체')).toBe('mixed');
+  // 다시 모두 고르면 제한 없음(빈 선택)으로 돌아간다.
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Beta' }));
+  await waitFor(() => expect(model.draft.tags).toEqual([]));
+  // 전체를 지워도 비어 있는 선택은 전체로 보인다. 아무것도 안 고른 상태는 없다.
+  fireEvent.click(screen.getByRole('checkbox', { name: '전체' }));
+  await waitFor(() => expect(model.draft.tags).toEqual([]));
+  for (const name of ['전체', 'Alpha', 'Beta', 'Gamma']) expect(state(name)).toBe('true');
+  // 하나만 남기면 마지막 하나는 해제되지 않는다: 일반 평면 체크와 같은 "최소 하나".
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Beta' }));
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Gamma' }));
+  await waitFor(() => expect(model.draft.tags).toEqual(['a']));
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Alpha' }));
+  expect(model.draft.tags).toEqual(['a']);
+  expect(state('Alpha')).toBe('true');
+});
+
+it(title('list-multiselect-required', '필수인 평면 다중 선택은 비면 미선택으로 보이고 모두 고르면 값을 접지 않는다(필수 List.Choice와 같다)'), async () => {
+  const def = defineSearch({ fields: { ...definition.fields, tags: { ...definition.fields.tags, required: { message: '분류를 고르세요.' } } } });
+  mount(() => <List.Filter>
+    <List.MultiSelect name="tags" label="태그" options={[{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }]} />
+  </List.Filter>, { def, initial: { tags: [] } });
+  expect(checked(screen.getByRole('checkbox', { name: 'A' }))).toBe(false);
+  expect(checked(screen.getByRole('checkbox', { name: 'B' }))).toBe(false);
+  fireEvent.click(screen.getByRole('checkbox', { name: 'A' }));
+  await waitFor(() => expect(model.draft.tags).toEqual(['a']));
+  fireEvent.click(screen.getByRole('checkbox', { name: 'B' }));
+  await waitFor(() => expect(model.draft.tags).toEqual(['a', 'b']));
 });
 
 it(title('list-choice-status', '선택지 지연·실패에는 URL·초안을 보존하고 재시도 성공 뒤 검색에서 정리한다'), async () => {

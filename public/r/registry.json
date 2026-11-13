@@ -7,18 +7,24 @@
       "name": "inputs",
       "type": "registry:block",
       "title": "web-kit inputs",
-      "description": "shadcn \uae30\ubcf8 \ubd80\ud488(button\u00b7input\u00b7checkbox)\uc774 \ud0a4\ud2b8 \ubd80\ud488\uc774 \uae30\ub300\ub294 \uc18d\uc131\uc744 \uc9c0\ud0a4\ub294\uc9c0 \ud655\uc778\ud558\ub294 \uac80\uc0ac \uc5f0\uacb0; \ubd80\ud488 \uc790\uccb4\ub294 shadcn registry\uc5d0\uc11c \uc124\uce58\ud55c\ub2e4.",
+      "description": "shadcn 기본 입력 검사 연결과 단일 선택 SelectBox 조립. 기본 부품은 shadcn registry에서 설치한다.",
       "dependencies": [],
       "registryDependencies": [
         "button",
         "input",
-        "checkbox"
+        "checkbox",
+        "select"
       ],
       "files": [
         {
           "path": "packages/ui-registry/checks/inputs.test.tsx",
           "type": "registry:file",
           "target": "~/src/shared/ui/web-kit/checks/inputs.test.tsx"
+        },
+        {
+          "path": "packages/ui-registry/src/select-box.tsx",
+          "type": "registry:file",
+          "target": "~/src/shared/ui/web-kit/select-box.tsx"
         }
       ],
       "devDependencies": [
@@ -30,7 +36,7 @@
       "name": "pending",
       "type": "registry:block",
       "title": "web-kit pending",
-      "description": "web-kit pending \ud45c\ud604 \uc6d0\ubcf8; \ub3d9\uc791\uc740 \uc124\uce58\ud55c \uac19\uc740 \ubc84\uc804\uc758 \ud328\ud0a4\uc9c0\uac00 \uc18c\uc720\ud55c\ub2e4.",
+      "description": "web-kit pending 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
       "dependencies": [],
       "registryDependencies": [
         "spinner"
@@ -56,7 +62,7 @@
       "name": "dialog",
       "type": "registry:block",
       "title": "web-kit dialog",
-      "description": "web-kit dialog \ud45c\ud604 \uc6d0\ubcf8; \ub3d9\uc791\uc740 \uc124\uce58\ud55c \uac19\uc740 \ubc84\uc804\uc758 \ud328\ud0a4\uc9c0\uac00 \uc18c\uc720\ud55c\ub2e4.",
+      "description": "web-kit dialog 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
       "dependencies": [],
       "registryDependencies": [
         "@web-kit/pending",
@@ -100,7 +106,7 @@
       "name": "blocking-progress",
       "type": "registry:block",
       "title": "web-kit blocking-progress",
-      "description": "web-kit blocking-progress \ud45c\ud604 \uc6d0\ubcf8; \ub3d9\uc791\uc740 \uc124\uce58\ud55c \uac19\uc740 \ubc84\uc804\uc758 \ud328\ud0a4\uc9c0\uac00 \uc18c\uc720\ud55c\ub2e4.",
+      "description": "web-kit blocking-progress 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
       "dependencies": [],
       "registryDependencies": [
         "@web-kit/pending",
@@ -143,7 +149,7 @@
       "name": "choice",
       "type": "registry:block",
       "title": "web-kit choice",
-      "description": "web-kit choice \ud45c\ud604 \uc6d0\ubcf8; \ub3d9\uc791\uc740 \uc124\uce58\ud55c \uac19\uc740 \ubc84\uc804\uc758 \ud328\ud0a4\uc9c0\uac00 \uc18c\uc720\ud55c\ub2e4.",
+      "description": "web-kit choice 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
       "dependencies": [
         "cn@0.5.2",
         "lucide-react@1.68.0"
@@ -178,7 +184,7 @@
       "name": "retry",
       "type": "registry:block",
       "title": "web-kit retry",
-      "description": "web-kit retry \ud45c\ud604 \uc6d0\ubcf8; \ub3d9\uc791\uc740 \uc124\uce58\ud55c \uac19\uc740 \ubc84\uc804\uc758 \ud328\ud0a4\uc9c0\uac00 \uc18c\uc720\ud55c\ub2e4.",
+      "description": "web-kit retry 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
       "dependencies": [
         "@tanstack/react-query@5.102.6"
       ],
@@ -206,7 +212,7 @@
       "name": "ui",
       "type": "registry:block",
       "title": "web-kit ui",
-      "description": "web-kit ui \ud45c\ud604 \uc6d0\ubcf8; \ub3d9\uc791\uc740 \uc124\uce58\ud55c \uac19\uc740 \ubc84\uc804\uc758 \ud328\ud0a4\uc9c0\uac00 \uc18c\uc720\ud55c\ub2e4.",
+      "description": "web-kit ui 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
       "dependencies": [],
       "registryDependencies": [
         "@web-kit/pending",
@@ -226,7 +232,7 @@
       "name": "form",
       "type": "registry:block",
       "title": "web-kit form",
-      "description": "web-kit form \ud45c\ud604 \uc6d0\ubcf8; \ub3d9\uc791\uc740 \uc124\uce58\ud55c \uac19\uc740 \ubc84\uc804\uc758 \ud328\ud0a4\uc9c0\uac00 \uc18c\uc720\ud55c\ub2e4.",
+      "description": "web-kit form 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
       "dependencies": [
         "cn@0.5.2",
         "@tanstack/react-form@1.33.5",
@@ -241,13 +247,14 @@
         "input",
         "label",
         "select",
-        "textarea"
+        "textarea",
+        "@web-kit/inputs"
       ],
       "files": [
         {
-          "path": "packages/ui-registry/src/form/ui.tsx",
+          "path": "packages/ui-registry/src/form/form.tsx",
           "type": "registry:file",
-          "target": "~/src/shared/ui/web-kit/form/ui.tsx"
+          "target": "~/src/shared/ui/web-kit/form/form.tsx"
         },
         {
           "path": "packages/ui-registry/src/form/field.tsx",
@@ -306,7 +313,7 @@
       "name": "list",
       "type": "registry:block",
       "title": "web-kit list",
-      "description": "web-kit list \ud45c\ud604 \uc6d0\ubcf8; \ub3d9\uc791\uc740 \uc124\uce58\ud55c \uac19\uc740 \ubc84\uc804\uc758 \ud328\ud0a4\uc9c0\uac00 \uc18c\uc720\ud55c\ub2e4.",
+      "description": "web-kit list 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
       "dependencies": [
         "cn@0.5.2",
         "lucide-react@1.68.0",
@@ -322,13 +329,14 @@
         "input",
         "label",
         "select",
-        "table"
+        "table",
+        "@web-kit/inputs"
       ],
       "files": [
         {
-          "path": "packages/ui-registry/src/list-ui.tsx",
+          "path": "packages/ui-registry/src/list.tsx",
           "type": "registry:file",
-          "target": "~/src/shared/ui/web-kit/list-ui.tsx"
+          "target": "~/src/shared/ui/web-kit/list.tsx"
         },
         {
           "path": "packages/ui-registry/checks/list-ui.test.tsx",
@@ -346,7 +354,7 @@
       "name": "record",
       "type": "registry:block",
       "title": "web-kit record",
-      "description": "web-kit record \ud45c\ud604 \uc6d0\ubcf8; \ub3d9\uc791\uc740 \uc124\uce58\ud55c \uac19\uc740 \ubc84\uc804\uc758 \ud328\ud0a4\uc9c0\uac00 \uc18c\uc720\ud55c\ub2e4.",
+      "description": "web-kit record 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
       "dependencies": [
         "cn@0.5.2",
         "@tanstack/react-query@5.102.6"
@@ -358,9 +366,9 @@
       ],
       "files": [
         {
-          "path": "packages/ui-registry/src/detail-ui.tsx",
+          "path": "packages/ui-registry/src/detail.tsx",
           "type": "registry:file",
-          "target": "~/src/shared/ui/web-kit/detail-ui.tsx"
+          "target": "~/src/shared/ui/web-kit/detail.tsx"
         },
         {
           "path": "packages/ui-registry/checks/record-ui.test.tsx",
@@ -377,7 +385,7 @@
       "name": "checkbox-tree",
       "type": "registry:block",
       "title": "web-kit checkbox-tree",
-      "description": "web-kit checkbox-tree \ud45c\ud604 \uc6d0\ubcf8; \ub3d9\uc791\uc740 \uc124\uce58\ud55c \uac19\uc740 \ubc84\uc804\uc758 \ud328\ud0a4\uc9c0\uac00 \uc18c\uc720\ud55c\ub2e4.",
+      "description": "web-kit checkbox-tree 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
       "dependencies": [],
       "registryDependencies": [],
       "files": [
@@ -401,7 +409,7 @@
       "name": "filter-error",
       "type": "registry:block",
       "title": "web-kit filter-error",
-      "description": "web-kit filter-error \ud45c\ud604 \uc6d0\ubcf8; \ub3d9\uc791\uc740 \uc124\uce58\ud55c \uac19\uc740 \ubc84\uc804\uc758 \ud328\ud0a4\uc9c0\uac00 \uc18c\uc720\ud55c\ub2e4.",
+      "description": "web-kit filter-error 표현 원본; 동작은 설치한 같은 버전의 패키지가 소유한다.",
       "dependencies": [
         "cn@0.5.2"
       ],
@@ -426,8 +434,8 @@
     {
       "name": "auth",
       "type": "registry:block",
-      "title": "web-kit \uc778\uc99d \ucf54\ub4dc",
-      "description": "\ub85c\uadf8\uc778 \uc804 \uc778\uc99d \ucf54\ub4dc\u00b7\uae30\ud55c\u00b7\uc7ac\uc804\uc1a1 \ud45c\ud604\uacfc \uac80\uc0ac \uc5f0\uacb0",
+      "title": "web-kit 인증 코드",
+      "description": "로그인 전 인증 코드·기한·재전송 표현과 검사 연결",
       "dependencies": [],
       "registryDependencies": [
         "button",
@@ -475,7 +483,7 @@
     {
       "name": "all",
       "type": "registry:block",
-      "title": "web-kit \uc804\uccb4 \ud45c\ud604",
+      "title": "web-kit 전체 표현",
       "registryDependencies": [
         "@web-kit/inputs",
         "@web-kit/pending",

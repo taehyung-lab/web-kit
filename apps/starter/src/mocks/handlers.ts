@@ -2,8 +2,8 @@
 import { draftSchema, publishSchema } from '@/features/form-workflows/model/forms/workflow-form';
 import type { Product, ProductUpsertRequest } from '@/api/generated/models';
 import { delay, http, HttpResponse, type DefaultBodyType } from 'msw';
+import type { MemberSummary } from '@/features/members/model/member';
 import { mockDb, type MockTerms } from './db';
-import { MEMBERS } from './members';
 
 const API = '*/api';
 /** 일괄 작업 한도(mock 업무 규칙). 넘으면 HTTP 200 봉투에 업무 거절 코드를 준다. */
@@ -176,7 +176,7 @@ export const handlers = [
     const denied = unauthorized(request);
     if (denied) return denied;
     const query = new URL(request.url).searchParams;
-    const keywords = query.getAll('keyword').map((item) => item.split(':') as [keyof (typeof MEMBERS)[number], string]);
+    const keywords = query.getAll('keyword').map((item) => item.split(':') as [keyof MemberSummary, string]);
     const methods = query.getAll('signupMethod');
     const statuses = query.getAll('accountStatus');
     const periodType = (query.get('periodType') ?? 'joinedAt') as 'joinedAt' | 'lastLoginAt';
@@ -185,7 +185,7 @@ export const handlers = [
     const [sortKey = 'joinedAt', direction = 'desc'] = (query.get('sort') ?? '').split(',');
     const page = Number(query.get('page') ?? 0);
     const size = Number(query.get('size') ?? 100);
-    const rows = MEMBERS.filter((member) =>
+    const rows = mockDb.members.filter((member) =>
       keywords.every(([field, value]) => String(member[field]).toLowerCase().includes(value.toLowerCase())),
     )
       .filter((member) => methods.length === 0 || methods.includes(member.signupMethod))
@@ -193,12 +193,23 @@ export const handlers = [
       .filter((member) => from === null || member[periodType].slice(0, 10) >= from)
       .filter((member) => to === null || member[periodType].slice(0, 10) <= to)
       .sort((a, b) => {
-        const left = a[sortKey as keyof (typeof MEMBERS)[number]];
-        const right = b[sortKey as keyof (typeof MEMBERS)[number]];
+        const left = a[sortKey as keyof MemberSummary];
+        const right = b[sortKey as keyof MemberSummary];
         const order = left < right ? -1 : left > right ? 1 : 0;
         return direction === 'asc' ? order : -order;
       });
     return ok({ content: rows.slice(page * size, page * size + size), totalElements: rows.length });
+  }),
+
+  /** 회원 계정 상태 일괄 변경. 한도를 넘으면 HTTP 200 봉투의 업무 거절이다. */
+  http.post(`${API}/members/status`, async ({ request }) => {
+    await latency();
+    const denied = unauthorized(request);
+    if (denied) return denied;
+    const { memberIds, accountStatus } = (await request.json()) as { memberIds: string[]; accountStatus: MemberSummary['accountStatus'] };
+    if (memberIds.length > BULK_LIMIT) return envelope(200, 3001, 'Too many items at once', null);
+    mockDb.members = mockDb.members.map((member) => (memberIds.includes(member.id) ? { ...member, accountStatus } : member));
+    return ok({ changedCount: memberIds.length });
   }),
 
   http.post(`${API}/products`, async ({ request }) => {

@@ -7,11 +7,11 @@ import type { RecordState } from '../../record';
 import { conformanceTitle, type ConformanceTarget } from '../target.mjs';
 
 /** 소비처가 넘긴 실제 복사본으로 record-ui 보장 전체를 등록한다. */
-export function checkRecordUiConformance({ Record }: { Record: typeof Contract0.Record }, target: ConformanceTarget) {
+export function checkRecordUiConformance({ Detail }: { Detail: typeof Contract0.Detail }, target: ConformanceTarget) {
   const it = baseIt;
   const title = (id: string, label: string) => conformanceTitle(id, target, label);
 // @vitest-environment jsdom
-// 파일 책임: Record 묶음 부품이 useRecord 상태(대기·없음·실패·준비됨·갱신 실패)와 항목·이력을 화면에 그리는 결과를 검사한다.
+// 파일 책임: Detail 묶음 부품이 useRecord 상태(대기·없음·실패·준비됨·갱신 실패)와 항목·이력을 화면에 그리는 결과를 검사한다.
 
 afterEach(cleanup);
 
@@ -22,15 +22,15 @@ const renderFailure = (failure: unknown) => (failure instanceof RequestFailure &
 
 function view(state: RecordState<{ name: string; phone?: string; count: number }>) {
   return render(
-    <Record state={state} renderFailure={renderFailure} missing={<a href="/list">목록으로</a>}>
+    <Detail state={state} renderFailure={renderFailure} missing={<a href="/list">목록으로</a>}>
       {(data) => (
-        <Record.Fields>
-          <Record.Field label="이름">{data.name}</Record.Field>
-          <Record.Field label="전화">{data.phone}</Record.Field>
-          <Record.Field label="수">{data.count}</Record.Field>
-        </Record.Fields>
+        <Detail.Fields>
+          <Detail.Field label="이름">{data.name}</Detail.Field>
+          <Detail.Field label="전화">{data.phone}</Detail.Field>
+          <Detail.Field label="수">{data.count}</Detail.Field>
+        </Detail.Fields>
       )}
-    </Record>,
+    </Detail>,
   );
 }
 
@@ -68,11 +68,11 @@ it(title('G108', 'F9 내용 없는 실패는 다시 시도를, 재조회 실패�
 
 it(title('G109', '이력은 일시·변경·담당자 표이고 0건이면 빈 문구다'), () => {
   const { rerender } = render(
-    <Record.History entries={[]} labels={{ at: '일시', changes: '변경', actor: '담당' }} empty="이력 없음" />,
+    <Detail.History entries={[]} labels={{ at: '일시', changes: '변경', actor: '담당' }} empty="이력 없음" />,
   );
   expect(screen.getByText('이력 없음')).toBeTruthy();
   rerender(
-    <Record.History
+    <Detail.History
       entries={[{ id: '1', at: '2026-10-28 10:00', actor: '', changes: ['등록', '이름: A'] }]}
       labels={{ at: '일시', changes: '변경', actor: '담당' }}
     />,

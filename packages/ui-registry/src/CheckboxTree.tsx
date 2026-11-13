@@ -43,8 +43,8 @@ export function CheckboxTree<T extends string>({
 }) {
   const selection = checkboxTreeSelection(nodes, values);
   /** 하나의 부모 또는 leaf를 체크박스와 라벨로 연결한다. */
-  const control = (label: string, descendants: readonly T[], requireAll = false) => {
-    const checked = selection.checked(descendants, requireAll);
+  const control = (label: string, descendants: readonly T[]) => {
+    const checked = selection.checked(descendants);
     return (
       <label className={styles.label}>
         {renderCheckbox({
@@ -76,7 +76,7 @@ export function CheckboxTree<T extends string>({
       onBlur={onBlur}
       className={styles.root}
     >
-      {selectAllLabel !== undefined ? control(selectAllLabel, selection.all, true) : null}
+      {selectAllLabel !== undefined ? control(selectAllLabel, selection.all) : null}
       {selectAllLabel !== undefined && styles.separator ? (
         <span aria-hidden="true" className={styles.separator} />
       ) : null}

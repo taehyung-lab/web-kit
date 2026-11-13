@@ -9,8 +9,8 @@ const target = { registryVersion: installation.sourceRef, registryCommit: instal
 checkProgressConformance({ BlockingProgress, ConfirmDialog, DialogDefaults, defaultDialogLabels }, target);
 const names = new Set(installation.items.map((item) => item.name));
 if (names.has('form')) {
-  const forms = import.meta.glob('../form/ui.tsx');
-  const load = forms['../form/ui.tsx'];
+  const forms = import.meta.glob('../form/form.tsx');
+  const load = forms['../form/form.tsx'];
   if (!load) throw new Error('form 설치 기록에 맞는 소비 복사본 없음');
   type FormParts = Parameters<typeof FormProgressCheck>[0];
   const module = await load() as Pick<FormParts, 'Form' | 'FormDefaults' | 'defaultFormMessages' | 'defaultFormGuardMessages'>;

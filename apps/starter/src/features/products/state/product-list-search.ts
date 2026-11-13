@@ -16,6 +16,7 @@ const statusList = z
   .transform((values) => PRODUCT_STATUSES.filter((status) => values.includes(status)));
 
 const isoDate = z.iso.date();
+const periodFields = ['from', 'to'] as const;
 
 /**
  * 상품 목록 검색. 기본값은 예시 제품 값이다(진입 즉시 조회, 최신 등록순, 20개).
@@ -42,15 +43,13 @@ export const productListSearch = defineSearch({
     sort: { schema: z.enum(SORT_KEYS), default: 'createdAt' as (typeof SORT_KEYS)[number] },
     order: { schema: z.enum(['asc', 'desc']), default: 'desc' as 'asc' | 'desc' },
   },
-  groups: [{ fields: ['from', 'to'], valid: ({ from, to }) => validateDateRange(from as string | undefined, to as string | undefined) !== 'reversed' }],
+  periods: [periodFields],
+  groups: [{ fields: periodFields, valid: ({ from, to }) => validateDateRange(from as string | undefined, to as string | undefined) !== 'reversed' }],
   view: { size: 'pageSize' },
   sortFirst: 'desc',
 });
 
 export type ProductListSearch = FullSearch<typeof productListSearch.fields>;
-
-/** 상품 목록은 직접 입력한 기간이 반쯤 비었거나 역순이면 그 쌍만 기본값으로 돌리고 나머지 조건으로 검색한다(useList periods). */
-export const PRODUCT_LIST_PERIODS = [['from', 'to']] as const;
 
 /** 확정 검색 → 서버 요청. 서버 page는 0부터, 정렬은 Spring "필드,방향" 형식이다. */
 export function toListProductsParams(search: ProductListSearch): ListProductsParams {

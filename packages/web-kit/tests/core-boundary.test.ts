@@ -57,7 +57,7 @@ it.each(['../src/form/index.ts', '../src/form/save-form.ts', '../src/form/naviga
       const file = queue.pop()!;
       if (visited.has(file)) continue;
       visited.add(file);
-      expect(file).not.toMatch(/\/ui\/|\/list-ui\.|\/detail-ui\.|\/form\/ui\./);
+      expect(file).not.toMatch(/\/ui\/|ui-registry\/src\/(?:list|detail)\.tsx|ui-registry\/src\/form\/form\.tsx/);
       for (const [, specifier] of sources[file]!.matchAll(/(?:from|import)\s+['"]([^'"]+)['"]/g)) {
         if (specifier!.startsWith('.') || specifier!.startsWith('@boosterlab/web-kit')) {
           const target = resolve(file, specifier!);
@@ -127,12 +127,12 @@ it.each([...entriesWithoutIdle, '../src/use-list.ts'])(
 /** 목록·폼·상세·기본 UI는 권한 판정과 결합하지 않는다(결정 0001 구조와 저장소·0006 필수와 권한). 권한 결과는 프로젝트가 연결한다. */
 it.each([
   '../src/form/index.ts',
-  '../../ui-registry/src/form/ui.tsx',
+  '../../ui-registry/src/form/form.tsx',
   '../src/use-list.ts',
   '../src/list.ts',
-  '../../ui-registry/src/list-ui.tsx',
+  '../../ui-registry/src/list.tsx',
   '../src/record.ts',
-  '../../ui-registry/src/detail-ui.tsx',
+  '../../ui-registry/src/detail.tsx',
   '../../ui-registry/src/ui/index.ts',
   '../src/search/index.ts',
 ])(
@@ -171,11 +171,11 @@ function reach(entry: string): Set<string> {
   return visited;
 }
 
-it.each(['../src/form/index.ts', '../../ui-registry/src/form/ui.tsx'])('%s는 목록(list·search)을 import하지 않는다', (entry) => {
+it.each(['../src/form/index.ts', '../../ui-registry/src/form/form.tsx'])('%s는 목록(list·search)을 import하지 않는다', (entry) => {
   for (const file of reach(entry)) expect(file).not.toMatch(/use-list|list-ui|\/list\.ts|list-download|list-return|\/search\//);
 });
 
-it.each(['../src/use-list.ts', '../src/list.ts', '../../ui-registry/src/list-ui.tsx'])('%s는 폼을 import하지 않는다', (entry) => {
+it.each(['../src/use-list.ts', '../src/list.ts', '../../ui-registry/src/list.tsx'])('%s는 폼을 import하지 않는다', (entry) => {
   for (const file of reach(entry)) expect(file).not.toMatch(/\/form\//);
 });
 
@@ -184,7 +184,7 @@ it('진행 표시 마크업(shadcn Spinner 연결)은 /ui의 pending 한 곳에�
     .filter(([file, source]) => !file.startsWith('../src/testing/') && (source.includes('@/components/ui/spinner') || source.includes('data-slot="pending"')))
     .map(([file]) => file);
   expect(owners).toEqual(['../../ui-registry/src/ui/pending.tsx']);
-  for (const file of ['../../ui-registry/src/list-ui.tsx', '../../ui-registry/src/form/ui.tsx', '../../ui-registry/src/ui/dialog.tsx']) expect(sources[file], file).toMatch(/<Pending label=/);
+  for (const file of ['../../ui-registry/src/list.tsx', '../../ui-registry/src/form/form.tsx', '../../ui-registry/src/ui/dialog.tsx']) expect(sources[file], file).toMatch(/<Pending label=/);
   expect(sources['../../ui-registry/src/ui/blocking-progress.tsx']).toMatch(/<Spinner large \/>/);
   expect(sources['../../ui-registry/src/ui/index.ts']).toMatch(/export \{ Pending \} from '\.\/pending'/);
 });
@@ -237,7 +237,7 @@ it.each(Object.entries(exportsMap).filter(([name]) => !name.startsWith('./testin
 /** 선택한 검사 입구는 다른 기능의 실행 의존을 끌어오지 않는다. 실제 설치 부재는 최소 소비 검사로 확인한다. */
 it.each(['../src/testing/form-unit.ts', '../src/testing/unit/auth.tsx', '../src/testing/auth-fixture.tsx'])('%s는 선택하지 않은 목록 검사를 불러오지 않는다', (entry) => {
   for (const file of reach(entry)) {
-    expect(file).not.toMatch(/use-list|list-ui|list-download|list-return/);
+    expect(file).not.toMatch(/use-list|list-ui|list-download|list-return|ui-registry\/src\/list\.tsx/);
     expect(sources[file]).not.toMatch(/from ['"]@tanstack\/react-query['"]/);
     if (entry !== '../src/testing/form-unit.ts') expect(file).not.toMatch(/\/form\//);
   }

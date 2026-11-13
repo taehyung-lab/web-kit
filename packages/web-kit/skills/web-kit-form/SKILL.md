@@ -9,6 +9,10 @@ description: 등록·수정·대화창 폼의 저장·저장 뒤 추가 작업·
 
 이 책임만 골라 사용할 수 있다. 선택한 한 책임 안에서는 키트 수명 처리와 자체 구현을 섞지 않는다. 선택 설치 peer(해당 기능을 쓸 때만 설치하는 동료 라이브러리)를 설치하지 않아 실행하지 못한 기능은 "검사하지 않음"으로 기록한다. 예시는 같은 버전의 실제 starter 코드에서 가져와 패키지에 함께 담는다. 링크로 읽고 조립 방식만 참고한다. 예제만 따로 실행하는 용도는 아니다. 이 책임을 어느 파일에 조립하는지(flow는 `features/<도메인>/flows`, 화면은 `screens`)는 [web-kit-structure](../web-kit-structure/SKILL.md)가 정한다. 아래에서 "화면"은 사용자가 보는 화면 단위를 뜻하며, 키트 수명 hook을 부르는 코드는 그 화면의 flow에 둔다.
 
+`inputs` registry의 `SelectBox`는 일반 단일 선택을 `options/value/onValueChange`로 조립한다. `null`은 미선택이고 빈 문자열 옵션은 유효한 값이다. `id/ref/aria-*`는 trigger에 연결한다. 폼의 검증·blur 수명과 목록의 전체 선택 의미는 각각 `Form.Select`·`List.Select`가 소유하며 내부 표시만 공유한다. 복잡한 그룹·사용자 정의 항목은 shadcn 원시 부품으로 조립할 수 있다.
+
+`dialog` registry의 `ConfirmationDialog`는 `useConfirmationState` 결과를 `confirmation`으로 받아 open·pending·covered·실패 표시를 연결한다. `renderFailure`와 제목·내용은 소비자가 제공한다. `completionMessage`·`retryLabel`은 요청 성공 뒤 후속 처리만 실패한 상태의 설명과 버튼 문구다. 실행과 오류 분류는 기존 flow에 남는다. 직접 open/onConfirm을 제어할 때는 기존 `ConfirmDialog`를 쓴다.
+
 ## registry 폼 UI
 
 실제 조립 예: [apps/starter/src/features/products/screens/ProductForm.tsx](../../references/apps/starter/src/features/products/screens/ProductForm.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
@@ -20,7 +24,7 @@ description: 등록·수정·대화창 폼의 저장·저장 뒤 추가 작업·
 - 고칠 수 없는 칸(`disabled`)은 오류를 숨긴다. 서버 필드 오류가 그 칸으로 대응되면 칸에 붙은 것으로 세지 않고 폼 한 줄(`Form.Failure`)로 알린다.
 - `Form.Text`·`TextArea`의 `maxLength`는 길어지는 편집만 거부한다(한글 조합 커밋도). 서버가 준 초과 초기값은 줄일 수 있다. `showCount`면 글자 수를 보인다.
 - `Form.Select`는 값이 비었을 때만 빈 선택지(`placeholder`)를 둔다. 서버 선택지는 `status`('loading'·'ready'·`{ failure }`)와 `onRetry`로 그 칸 자리에 불러오는 중·실패·다시 시도를 보인다. `onChange`는 사용자가 고른 직후에만 불린다(함께 비울 값).
-- `Form.Section`: 칸 묶음. `fields`(이 구역 칸의 정확한 경로나 접두, 예 `['order.grades']`)를 주면 접을 수 있는 구역이다. 처음엔 펼침, 머리글 버튼으로 닫고 연다(닫혀도 칸은 마운트된 채 숨김). 열림 규칙: 제출이 거절될 때마다(클라이언트 검증 실패, 서버 필드 오류 도착, `save`가 던진 `FormRejection`) 실패한 칸을 가진 구역을 모두 펼친 다음(실패 칸이 없는 구역은 그대로) 화면 순서 첫 오류 칸에 포커스한다. 저장 중에 사용자가 닫은 구역도 그 저장의 서버 오류가 오면 펼친다. 그 밖의 열고 닫기는 사용자 상태라, 펼쳐진 구역은 고쳐도 열린 채이고 사용자가 닫으면 다음 거절까지 닫힌 채다. 머리글 오류 표시는 프로젝트가 고른다. 기본: 구역 칸에 오류(클라이언트·서버)가 있으면 머리글에 「!」, 화면 낭독기는 제목과 `messages.sectionErrors(count)`(기본 `오류 N개`)를 읽는다. `errorMarker={(errorCount) => …}`를 주면 그 표시로 바꾼다(예: 보이는 "오류 2개" 배지). 바꾼 표시는 화면 낭독기가 읽을 문구까지 책임진다. 키트 `Form` 밖의 폼은 `FormSection`(`form`·`fields`·`title`·`errorLabel`, 선택 `errorMarker`)을 같은 규칙으로 쓴다. 구역 열림·오류 수를 프로젝트가 따로 만들지 않는다.
+- `Form.Section`: 칸 묶음. `fields`(이 구역 칸의 정확한 경로나 접두, 예 `['order.grades']`)를 주면 접을 수 있는 구역이다. 처음엔 펼침, 머리글 버튼으로 닫고 연다(닫혀도 칸은 마운트된 채 숨김). 열림 규칙: 제출이 거절될 때마다(클라이언트 검증 실패, 서버 필드 오류 도착, `save`가 던진 `FormRejection`) 실패한 칸을 가진 구역을 모두 펼친 다음(실패 칸이 없는 구역은 그대로) 화면 순서 첫 오류 칸에 포커스한다. 저장 중에 사용자가 닫은 구역도 그 저장의 서버 오류가 오면 펼친다. 그 밖의 열고 닫기는 사용자 상태라, 펼쳐진 구역은 고쳐도 열린 채이고 사용자가 닫으면 다음 거절까지 닫힌 채다. 머리글 오류 표시는 프로젝트가 고른다. 기본: 구역 칸에 오류(클라이언트·서버)가 있으면 머리글에 「!」, 화면 낭독기는 제목과 `messages.sectionErrors(count)`(기본 `오류 N개`)를 읽는다. `errorMarker={(errorCount) => …}`를 주면 그 표시로 바꾼다(예: 보이는 "오류 2개" 배지). 바꾼 표시는 화면 낭독기가 읽을 문구까지 책임진다. 키트 `Form` 밖의 폼은 `FormSection`(`form`·`fields`·`title`·`errorLabel`, 선택 `errorMarker`·`headingClassName`)을 같은 규칙으로 쓴다. `headingClassName`은 구역 제목 줄(접는 구역은 h2, 그 밖에는 legend)의 모양만 바꾼다. 구역 열림·오류 수를 프로젝트가 따로 만들지 않는다.
 - `Form.Failure`: 폼 수준 한 줄. 칸에 붙지 못한 저장 실패와, 저장 뒤 완료 처리 실패(다시 시도 = 완료 처리만)를 보인다. 서버 필드 오류가 모두 칸에 붙은 검증 실패는 그리지 않는다. 위치는 놓는 곳이 정한다.
 - `Form.File`: 값은 `FormFileValue`(`empty`·`existing{name}`·`selected{file}`·`removed`). 지금 파일 이름을 상태에서 그리고 입력의 설명으로 잇는다. 선택 창을 열었다 취소해도 값은 그대로이고, 지우는 길은 제거 버튼 하나다(기존 파일이면 `removed`). 고른 File은 다른 칸 오류·재마운트·대화창 열고 닫기·저장 실패 뒤에도 같은 객체로 남아 다시 저장하면 그대로 보낸다. 업로드와 `removed`의 요청 변환은 `save`가 한다.
 - `Form.Submit`은 저장 중·확인 대기·완료 처리 중에 `aria-disabled`로 잠긴다(`disabled`로 바꾸지 않아 포커스가 남는다). `Form.Cancel`도 그동안 잠긴다. 저장 중 표시는 폼 종류로 갈린다.
@@ -35,7 +39,7 @@ description: 등록·수정·대화창 폼의 저장·저장 뒤 추가 작업·
 - Enter: 폼에서 Enter는 기본적으로 제출(저장 버튼 클릭)이다. 단, 폼 안에서 입력한 값을 [추가] 버튼이 목록에 넣는 입력칸(제목 입력 + [추가]로 목록에 넣는 칸 등)에서는 Enter가 제출 대신 [추가] 클릭으로 동작한다. 줄마다 자기 칸이고 [추가]가 빈 줄만 더하는 배열 줄 입력(등급명·회차 날짜 등)은 일반 칸이라 Enter가 폼 제출이다. 모달 안 입력칸의 Enter는 그 모달의 확인(모달 폼 제출)이며 바깥 폼은 제출되지 않는다. 키트에서: 일반 칸은 `Form.Submit`이 있는 `<Form>`이 받으므로 칸에서 Enter를 막지 않는다. 값을 목록에 넣는 [추가] 칸은 `onKeyDown={rows.enterAdds(add)}`. 목록 검색어 칸의 키 연결은 [web-kit-list](../web-kit-list/SKILL.md)를 따른다(기본 복사본은 Enter = 추가 후 검색). 모달은 `Form.Dialog` 안에 자기 `<Form>`과 `Form.Submit`을 둔다.
 - `Form.Dialog`: 대화창 안 하위 폼(자기 `useSaveForm`). 안쪽 제출(버튼·Enter)은 안쪽만 검증·저장하고 바깥 폼의 저장·검증 오류·확인창을 건드리지 않는다. 바깥에 오류가 있어도 안쪽 제출은 막히지 않는다. 닫기·취소는 그 안의 폼만 보고 묻는다(바깥이 dirty여도 바깥 이탈 확인은 뜨지 않는다). 하위 결과를 바깥 값에 넣으면 바깥이 dirty가 되어 이후 이탈은 바깥 기준으로 묻는다. 입력이 있어도 묻지 않고 닫는 대화창은 안쪽을 `<Form protect={false}>`로 둔다.
 - 이탈: `FormGuard`가 등록된 폼 중 하나라도 입력이 기준선과 다르면 Router 이동·브라우저 이탈을 한 번 묻고, 저장 중이면 묻지 않고 막는다. 저장 성공 뒤 이동은 묻지 않는다. Router를 거치지 않는 이탈(같은 메뉴 다시 누르기)은 `useLeave()(run, reason)`로 같은 판정을 받는다. 확인 뒤 `run`이 이동하면 `ignoreBlocker: true`로 이동한다. 로그인 같은 제품 예외만 `<Form protect={false}>`. 이 값은 해당 폼의 보호 등록 자체를 제외하므로 변경 경고와 저장 중 Router·브라우저 이탈 차단이 함께 빠진다. 검증·중복 제출 잠금·기준선 처리는 남고 `Form.Cancel`의 진행 중 잠금도 유지된다. 기존 등록 화면의 보호 정책을 이 예시만으로 바꾸지 않는다.
-- 문구는 앱 기본(`FormDefaults`·`DialogDefaults`·`FormGuard messages`(까닭별: navigate·cancel))이 한 번 주고, 화면의 `<Form messages>`는 그 폼에서만 키별로 덮으며 `formatError`(칸 오류 값 → 문구)·`renderFailure(failure, place)`(place: save·completion·options, `undefined`면 키트 문구, `null`이면 그 자리에 그리지 않음)는 그 폼에서 통째로 바꾼다. 모양은 프로젝트 shadcn 테마 변수와 복사본의 Tailwind 클래스로 바꾼다(키트 스타일시트는 없다). 새 화면마다 Field·이탈 확인·확인창을 다시 만들지 않는다.
+- 문구는 앱 기본(`FormDefaults`·`DialogDefaults`·`FormGuard messages`(까닭별: navigate·cancel))이 한 번 주고, 화면의 `<Form messages>`는 그 폼에서만 키별로 덮으며 `formatError`(칸 오류 값 → 문구)·`renderFailure(failure, place)`(place: save·completion·options, `undefined`면 키트 문구, `null`이면 그 자리에 그리지 않음)는 그 폼에서 통째로 바꾼다. 모양은 프로젝트 shadcn 테마 변수와 복사본의 Tailwind 클래스로 바꾼다(키트 스타일시트는 없다). 화면마다 다른 크기는 좁은 표시 입구로 준다: `Form.Section headingClassName`, `Form.Text`·`Form.Select controlClassName`(입력 칸 자체, 기본 클래스 뒤에 합친다). 라벨·오류·접근성 연결은 바뀌지 않으며, 감싸는 요소에서 `[&_input]`처럼 안쪽을 칠하지 않는다. 새 화면마다 Field·이탈 확인·확인창을 다시 만들지 않는다.
 
 ## 앱 기본 문구
 
@@ -46,6 +50,7 @@ description: 등록·수정·대화창 폼의 저장·저장 뒤 추가 작업·
 - `DialogDefaults labels={{ close, confirm, cancel, pending }}`: 이 아래 `Dialog`·`ConfirmDialog`·`AlertDialog`(폼·목록 일괄 작업·이탈 확인이 그리는 창 포함)의 기본 버튼·진행 문구. 창에 준 `closeLabel`·`confirmLabel`·`cancelLabel`·`pendingLabel`이 그 창에서만 앞선다. 폼 없이 대화창만 설치한 앱도 이것만 둔다.
 - `FormDefaults messages formatError? renderFailure?`: 이 아래 모든 `<Form>`의 문구(`FormMessages` 전체)·칸 오류 해소·실패 문구. `formatError`가 없으면 첫 문자열 오류, `renderFailure`가 없으면 키트 문구(`messages.saveFailed` 등)다. 폼의 확인창도 대화창 부품이므로 `DialogDefaults`도 함께 둔다.
 - `FormGuard messages`: 이탈 확인 문구 전체(`navigate`·`cancel`·`navigationFailed`).
+- 목록·상세의 앱 기본값은 registry `list`의 `ListDefaults`([web-kit-list](../web-kit-list/SKILL.md))·registry `record`의 `DetailDefaults`([web-kit-record](../web-kit-record/SKILL.md))로 같은 자리에 둔다. 이 둘은 일부 문구만 받아도 되며 빠진 키는 키트 기본(한국어) 문구다. 다른 언어 앱은 화면에 보이는 키를 모두 준다.
 - 문구 집합은 모두 전체를 받는다(참조 정리 확인창 `referenceTitle(count)`·`referenceConfirm` 포함). 키트에 문구가 늘면 소비 앱 타입 검사가 실패하므로 빠진 문구가 조용히 다른 언어로 보이지 않는다. 한국어 앱은 복사본이 내보내는 `defaultFormMessages`·`defaultDialogLabels`·`defaultFormGuardMessages`를 그대로 넘긴다.
 - 공급이 없으면 `<Form>`·대화창이 렌더할 때 바로 오류가 난다(`requires <FormDefaults messages>`·`requires <DialogDefaults labels>`). 단위 시험에서 부품만 그릴 때도 같은 공급으로 감싼다.
 - 화면마다 문구·`formatError`·`renderFailure`를 넘기는 연결을 따로 만들지 않는다. 그 화면만 다른 값이 필요할 때만 그 `<Form>`에 준다.
@@ -70,7 +75,7 @@ registry `blocking-progress`의 `BlockingProgress messages={{ loading, create, e
 
 ## headless 연결
 
-실제 조립 예: [apps/starter/src/shared/ui/web-kit/form/ui.tsx](../../references/apps/starter/src/shared/ui/web-kit/form/ui.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/shared/ui/web-kit/form/form.tsx](../../references/apps/starter/src/shared/ui/web-kit/form/form.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 headless는 화면 배치 없이 상태와 연결 함수만 쓰는 방식이다. 특수 표현도 `/form`의 `useFormRootBinding`·`useFormFieldBinding`·`useFormDialogScope`·`useFormCancel`과 Provider를 사용한다. ref는 실제 요소를 가리키는 참조이고 반환된 이벤트·속성과 함께 해당 요소에 연결한다. 제출·참조 확인·값 적용·오류 focus 순서를 복사본에서 다시 만들지 않는다. registry 폼은 이 연결을 이미 포함한다.
 
@@ -156,6 +161,8 @@ headless는 화면 배치 없이 상태와 연결 함수만 쓰는 방식이다.
 실제 조립 예: [apps/starter/src/features/products/screens/ProductDetailScreen.tsx](../../references/apps/starter/src/features/products/screens/ProductDetailScreen.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 삭제·상태 변경처럼 입력 없이 확인만 받는 작업은 `/dialog`의 `useConfirmationState`에 실행 함수와 실패 처리를 연결한다. `request`로 대상을 정하고 `confirm`으로 실행한다. 실행 중에는 재실행·닫기·대상 교체가 막힌다. 성공하면 닫힌다. 실패는 `onError`가 닫기 또는 보이기를 정한다. 표시는 registry `dialog`의 `ConfirmDialog`에 `state`를 연결한다. 삭제면 `progress: 'delete'`를 준다: 실행하는 동안 화면 전체 진행 덮개가 `messages.delete` 문구로 덮고 `covered`가 true이므로 확인창은 `open={state.kind === 'open' && !covered}`로 내린다(확인창 → 덮개 → 이동, 실패하면 덮개가 닫히고 확인창이 실패 문구와 함께 다시 열린다). 상태 변경 등 그 밖의 확인 실행은 선언하지 않는다(확인창 안 진행 표시).
+
+`run`에는 서버 요청을, 선택 `onSuccess`에는 요청 성공 뒤 무효화·알림·화면 이동을 둔다. 후속 처리가 실패하면 결과를 보관하므로 다음 확인은 `onSuccess`만 재실행한다. 이때 `state.completed`가 참이다. 후속 실패 창을 닫았다 다시 열어도 같은 `identity`와 같은 확인 값(`Object.is`, id 같은 안정적인 값 권장)이면 요청 결과를 유지한다. 후속 처리까지 성공하거나 대상이 바뀌면 기록을 버린다. 후속 처리만 재시도할 때는 삭제 덮개 대신 확인창 안 진행 표시를 쓴다. 후속 처리의 여러 단계 중 이미 끝난 알림 등은 소비자가 중복되지 않게 연결한다. `identity`에는 현재 상세 id처럼 대상을 구별하는 값을 준다. 값 변경과 unmount는 이전 확인의 늦은 완료를 무효화하지만 이미 전송한 서버 요청을 취소하지 않는다. `onSuccess`가 기다리는 작업 뒤에 화면 이동·알림을 실행한다면 전달된 `isCurrent()`를 먼저 확인한다. 함수 안에서 시작한 외부 부수효과를 키트가 되돌려 주지는 않는다.
 
 ## 확인 방법
 

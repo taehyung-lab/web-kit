@@ -73,7 +73,9 @@
       "G029",
       "G030",
       "G031",
-      "G032"
+      "G032",
+      "G033",
+      "G034"
     ],
     "connections": [
       "choice.test.tsx"
@@ -153,6 +155,7 @@
       "G090",
       "form-choice-prune",
       "form-choice-status",
+      "form-choice-retry-focus",
       "form-choice-search",
       "form-choice-single",
       "form-choice-empty",
@@ -187,7 +190,8 @@
     "dependencies": [
       "choice",
       "dialog",
-      "pending"
+      "pending",
+      "inputs"
     ]
   },
   "list": {
@@ -209,6 +213,8 @@
       "G105",
       "list-search-lock",
       "list-choice-prune",
+      "list-choice-all",
+      "list-multiselect-required",
       "list-choice-status",
       "list-choice-search",
       "keyword-separators"
@@ -219,7 +225,8 @@
     "dependencies": [
       "choice",
       "dialog",
-      "pending"
+      "pending",
+      "inputs"
     ]
   },
   "record": {

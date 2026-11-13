@@ -1,6 +1,6 @@
 // 파일 책임: 상품 상세 화면. 단건 상태 판정은 상세 flow(useRecord) 한 곳이 하고, 여기서는 상태별 표현과 dt/dd 목록을 그린다.
 import { failureCopyKey } from '@/shared/lib/failure-copy';
-import { Record } from '@/shared/ui/web-kit/detail-ui';
+import { Detail } from '@/shared/ui/web-kit/detail';
 import { Button } from '@/shared/ui/button';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -27,10 +27,8 @@ export function ProductDetailScreen({
       <Button variant="ghost" className="self-start" onClick={onBack}>
         ‹ {t('products.backToList')}
       </Button>
-      <Record
-        messages={{ loading: t('common.loading'), retry: t('common.retry'), refreshFailed: t('common.refreshFailed'), empty: t('common.empty') }}
+      <Detail
         state={state}
-        renderFailure={(failure) => t(failureCopyKey(failure))}
         missing={
           <>
             <p>{t(failureCopyKey(state.kind === 'missing' ? state.failure : undefined))}</p>
@@ -41,7 +39,7 @@ export function ProductDetailScreen({
         }
       >
         {(product) => <ProductDetail product={product} onEdit={onEdit} />}
-      </Record>
+      </Detail>
     </div>
   );
 }
@@ -51,7 +49,7 @@ function ProductDetail({ product, onEdit }: { readonly product: Product; readonl
   const { t, i18n } = useTranslation();
   const categories = useCategoryOptions();
   const categoryName = categories.nameOf(product.categoryId) ?? t('common.empty');
-  const item = (label: string, value: ReactNode) => <Record.Field label={label}>{value}</Record.Field>;
+  const item = (label: string, value: ReactNode) => <Detail.Field label={label}>{value}</Detail.Field>;
   return (
     <article className="rounded-xl border border-slate-200 bg-white p-6">
       <header className="mb-4 flex items-start justify-between gap-4">
@@ -65,7 +63,7 @@ function ProductDetail({ product, onEdit }: { readonly product: Product; readonl
           {t('products.edit')}
         </Button>
       </header>
-      <Record.Fields>
+      <Detail.Fields>
         {item(t('products.fields.status'), <StatusBadge status={product.status} />)}
         {item(t('products.fields.category'), categoryName)}
         {item(t('products.fields.price'), formatPrice(product.price, i18n.language))}
@@ -86,7 +84,7 @@ function ProductDetail({ product, onEdit }: { readonly product: Product; readonl
         )}
         {item(t('products.fields.createdAt'), formatDate(product.createdAt, i18n.language))}
         {item(t('products.fields.updatedAt'), formatDate(product.updatedAt, i18n.language))}
-      </Record.Fields>
+      </Detail.Fields>
     </article>
   );
 }

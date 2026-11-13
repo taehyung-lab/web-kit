@@ -23,7 +23,7 @@ export function checkboxTreeSelection<T extends string>(
   const selected = new Set(values);
   return {
     all,
-    checked: (targets: readonly T[], _requireAll = false) => {
+    checked: (targets: readonly T[]) => {
       const count = targets.filter((value) => selected.has(value)).length;
       return count > 0 && count === targets.length;
     },
@@ -40,4 +40,13 @@ export function checkboxTreeSelection<T extends string>(
       return all.filter((value) => next.has(value));
     },
   };
+}
+
+/**
+ * 선택지 전체가 아니라 일부(서버 검색 결과의 한 그룹 등)만 보일 때의 토글: 대상이 모두 선택돼 있으면 끄고, 아니면 켠다.
+ * 대상 밖에서 이미 고른 값은 그대로 둔다.
+ */
+export function toggleWithin<T extends string>(selected: readonly T[], targets: readonly T[]): T[] {
+  const every = targets.length > 0 && targets.every((value) => selected.includes(value));
+  return every ? selected.filter((value) => !targets.includes(value)) : [...selected, ...targets.filter((value) => !selected.includes(value))];
 }

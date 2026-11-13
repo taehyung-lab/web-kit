@@ -547,6 +547,19 @@ it.each(['vertical', 'horizontal', 'dropdown', 'menu'] as const)(title('form-cho
   expect(screen.queryByRole('alertdialog')).toBeNull();
 });
 
+it(title('form-choice-retry-focus', '선택지 재시도에 성공하면 포커스가 준비된 선택 칸으로 돌아온다'), async () => {
+  const schema = z.object({ ids: z.array(z.string()) });
+  const C = Form.of<z.input<typeof schema>>();
+  function Editor() {
+    const [status, setStatus] = useState<'ready' | { failure: unknown }>({ failure: new Error('options') });
+    const editor = useSaveForm({ schema, source: { id: 'retry-focus', values: { ids: [] } }, save: async () => undefined });
+    return <C editor={editor}><C.Choice name="ids" label="분류" multiple status={status} onRetry={() => setStatus('ready')} nodes={status === 'ready' ? [{ value: 'a', label: 'Alpha' }] : []} /></C>;
+  }
+  await mount(() => <Editor />);
+  fireEvent.click(screen.getByRole('button', { name: '다시 시도' }));
+  await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: '분류' })));
+});
+
 it(title('form-choice-status', '선택지 로딩·실패는 원본·제출을 유지하고 재시도 성공 때만 정리한다'), async () => {
   const schema = z.object({ ids: z.array(z.string()), note: z.string() });
   const C = Form.of<z.input<typeof schema>>();

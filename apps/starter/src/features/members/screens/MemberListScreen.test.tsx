@@ -14,7 +14,9 @@ describe('member list (search to load)', () => {
     expect(memberRequests(requests)).toEqual([]);
 
     await user.click(screen.getByRole('button', { name: '검색' }));
-    expect(await screen.findByRole('cell', { name: 'member1@example.com' })).toBeTruthy();
+    // 60건이 한 페이지에 담겨 가상화 표가 된다(jsdom은 화면 크기가 없어 행은 브라우저 검사에서 본다).
+    expect(await screen.findByText((_, element) => element?.tagName === 'P' && element.textContent === '총 60건')).toBeTruthy();
+    expect(document.querySelector('[data-virtual] thead')?.className).toContain('sticky');
     expect(router.state.location.search).toEqual({ searched: true });
     expect(memberRequests(requests).map((request) => request.line)).toEqual(['GET /api/members?page=0&size=100&sort=joinedAt,desc&periodType=joinedAt']);
   });

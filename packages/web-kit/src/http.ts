@@ -214,7 +214,7 @@ export function createHttp<C extends Credentials>({
     if (failure.kind === 'cancelled') throw failure;
     const read = isRead(config);
     const resendable = read || AUTH_REJECTS_BEFORE_EXECUTION;
-    const rejected = failure.status === 401 || failure.endsSession;
+    const rejected = failure.rejectsAuthentication;
     if (rejected && token !== undefined) {
       const now = session.current()?.credentials.accessToken;
       if (now !== undefined && now !== token) {

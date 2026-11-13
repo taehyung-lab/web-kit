@@ -156,3 +156,12 @@ it('키트가 두 벌 로드돼도 다른 사본이 만든 실패를 알아본�
   expect(isRequestFailure(other)).toBe(true);
   expect(isRequestFailure({ kind: 'not-found' })).toBe(false);
 });
+
+describe('인증 거절 판정', () => {
+  it('401이거나 결과 코드 표가 세션 종료를 정한 실패만 인증 거절이다', () => {
+    expect(new RequestFailure({ kind: 'unauthorized', status: 401 }).rejectsAuthentication).toBe(true);
+    expect(new RequestFailure({ kind: 'unauthorized', code: 'X', endsSession: true }).rejectsAuthentication).toBe(true);
+    expect(new RequestFailure({ kind: 'unauthorized', status: 403 }).rejectsAuthentication).toBe(false);
+    expect(new RequestFailure({ kind: 'network' }).rejectsAuthentication).toBe(false);
+  });
+});

@@ -21,6 +21,18 @@ describe('product list', () => {
     ]);
   });
 
+  it('keeps a one-sided period on entry but restores the pair when searching', async () => {
+    const user = userEvent.setup();
+    const { router, requests } = renderApp('/products?keyword=lamp&from=2026-01-01');
+    await screen.findByRole('cell', { name: 'Desk Lamp' });
+    expect(router.state.location.search).toEqual({ keyword: 'lamp', from: '2026-01-01' });
+    expect(requests.some((request) => request.line.includes('createdFrom=2026-01-01'))).toBe(true);
+
+    await user.click(screen.getByRole('button', { name: '검색' }));
+    await waitFor(() => expect(router.state.location.search).toEqual({ keyword: 'lamp' }));
+    await waitFor(() => expect(requests.map((request) => request.line)).toContain('GET /api/products?keyword=lamp&page=0&size=20&sort=createdAt,desc'));
+  });
+
   it('drops a fixed-list value that does not exist and keeps the other fields', async () => {
     const { router, requests } = renderApp('/products?keyword=lamp&statuses=ACTIVE,BOGUS&sort=color');
 

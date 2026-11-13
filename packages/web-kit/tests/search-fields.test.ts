@@ -106,3 +106,14 @@ describe('URL 표현과 묶음 유효성', () => {
     expect(search.read({ from: '2026-10-01', to: '2026-10-02' })).toEqual({ from: '2026-10-01', to: '2026-10-02' });
   });
 });
+
+
+it('제출 기간 선언은 URL의 한쪽 날짜 허용과 일반 묶음 복구를 바꾸지 않는다', () => {
+  const definition = defineSearch({
+    fields: search.fields,
+    groups: [{ fields: ['from', 'to'], valid: ({ from, to }) => from === undefined || to === undefined || String(from) <= String(to) }],
+    periods: [['from', 'to']],
+  });
+  expect(definition.validateSearch({ from: '2026-01-01' })).toEqual({ from: '2026-01-01' });
+  expect(definition.validateSearch({ from: '2026-01-02', to: '2026-01-01', page: 2 })).toEqual({ page: 2 });
+});

@@ -3,11 +3,13 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { activateTableRow } from './row-activation';
 import { useQuery } from '@tanstack/react-query';
 import type { DownloadBlock, DownloadKind, DownloadState } from './list-download';
-import { calendarDate, normalizeFilterSelection, shiftCalendarDate, type Keyword, type PeriodPreset } from './search/interactions';
+import { calendarDate, commitFilterSelection, shiftCalendarDate, viewFilterSelection, type Keyword, type PeriodPreset } from './search/interactions';
 import { normalizeChoiceValue, type ChoiceNode, type ChoiceValue } from './choice-binding';
 import { sameSearchValue } from './search/fields';
+import { treeLeaves } from './checkbox-tree';
 import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode, type FormEvent, type KeyboardEvent, type MouseEvent, type RefObject } from 'react';
 import type { FieldCheck, ViewKeys } from './search/fields';
+import type { SearchMeta, SearchMetaEntry } from './search/list-search';
 import type { DraftIssue, KeywordInput, ListStatus } from './use-list';
 
 /** 기본 UI가 읽는 목록 상태(useList 결과와 같은 모양). */
@@ -15,6 +17,11 @@ export interface ListModel<Row = any, D extends object = any> {
   readonly search: Readonly<Record<string, unknown>>;
   readonly defaults: Readonly<Record<string, unknown>>;
   readonly view: ViewKeys;
+  /** listSearch 선언의 칸 종류 정보(defineSearch로 선언했으면 없다). */
+  readonly meta?: SearchMeta;
+  /** useList의 rowId·selectable. 표가 행 규칙을 다시 받지 않도록 낸다. */
+  readonly rowId?: (row: Row) => string;
+  readonly isSelectable?: (row: Row) => boolean;
   readonly draft: D;
   readonly draftSearch?: Readonly<Record<string, unknown>>;
   readonly issues: readonly DraftIssue[];
@@ -43,6 +50,10 @@ export interface ListModel<Row = any, D extends object = any> {
   readonly selection: {
     readonly selectedIds: readonly string[];
     readonly isRunning: boolean;
+    /** 결과 불확실 쓰기. recover로 재조회에 성공할 때까지 재실행을 막는다. */
+    readonly failure?: unknown;
+    readonly isRecovering?: boolean;
+    readonly recover?: () => Promise<boolean>;
     readonly isAllChecked: boolean;
     readonly isMixed: boolean;
     readonly canSelect: (id: string) => boolean;
@@ -57,6 +68,18 @@ export interface ListModel<Row = any, D extends object = any> {
 
 
 const ListContext = createContext<ListModel | undefined>(undefined);
+
+/**
+ * 화면 부품이 칸 이름으로 선언 정보를 읽는다. 이름이 없거나 종류가 다르면 조용히 무시하지 않고 오류를 낸다.
+ * name을 생략하면 그 종류의 칸 하나(페이지·정렬)를 찾는다.
+ */
+export function listFieldMeta<K extends SearchMetaEntry['kind']>(model: ListModel, kind: K, name?: string): Extract<SearchMetaEntry, { kind: K }> {
+  const meta = model.meta ?? {};
+  const entry = name === undefined ? Object.values(meta).find((item) => item.kind === kind) : meta[name];
+  if (entry === undefined || entry.kind !== kind)
+    throw new Error(name === undefined ? `list: no ${kind} field is declared with listSearch` : `list: "${name}" is not a ${kind} field of this listSearch`);
+  return entry as Extract<SearchMetaEntry, { kind: K }>;
+}
 /** 목록 모델만 전달하며 표시 설정은 포함하지 않는다. */
 export function ListProvider({ model, children }: { readonly model: ListModel; readonly children: ReactNode }) {
   return <ListContext.Provider value={model}>{children}</ListContext.Provider>;
@@ -108,8 +131,8 @@ export function useListDetailsBinding(model: ListModel, keys: readonly string[])
 }
 
 /** 확인 당시 결과·선택을 고정하고 실행 직전 검증과 단일 실행을 보장한다. */
-export function useBulkConfirmation<T>({ model, run, check }: { model: ListModel; run: (ids: readonly string[]) => Promise<{ completedIds: readonly string[]; value?: T }>; check?: (ids: readonly string[]) => string | undefined }) {
-  const [pending, setPending] = useState<{ ids: readonly string[]; page: unknown }>();
+export function useBulkConfirmation<T, V = undefined>({ model, run, check, value }: { model: ListModel; run: (ids: readonly string[], value?: V) => Promise<{ completedIds: readonly string[]; value?: T }>; check?: (ids: readonly string[], value?: V) => string | undefined; value?: V }) {
+  const [pending, setPending] = useState<{ ids: readonly string[]; page: unknown; value?: V }>();
   const [error, setError] = useState<unknown>();
   const running = useRef(false);
   const current = useRef(model);
@@ -119,17 +142,17 @@ export function useBulkConfirmation<T>({ model, run, check }: { model: ListModel
     JSON.stringify(snapshot.ids) !== JSON.stringify(now.selection.selectedIds) ||
     !now.isCurrent ||
     snapshot.ids.some((id) => !now.selection.canSelect(id));
-  if (!running.current && pending !== undefined && stale(pending, model)) setPending(undefined);
+  if (!running.current && model.selection.failure === undefined && pending !== undefined && stale(pending, model)) setPending(undefined);
 
   /** 마지막 순간에도 결과·선택 snapshot과 업무 조건을 다시 확인한다. */
   async function confirm() {
-    if (running.current || pending === undefined) return;
+    if (running.current || pending === undefined || current.current.selection.failure !== undefined) return;
     const now = current.current;
     if (stale(pending, now)) {
       setPending(undefined);
       return;
     }
-    const refusal = check?.(pending.ids);
+    const refusal = pending.value === undefined ? check?.(pending.ids) : check?.(pending.ids, pending.value);
     if (refusal) {
       setError(refusal);
       return;
@@ -137,7 +160,7 @@ export function useBulkConfirmation<T>({ model, run, check }: { model: ListModel
     running.current = true;
     setError(undefined);
     try {
-      await now.selection.run(run);
+      await now.selection.run((ids) => pending.value === undefined ? run(ids) : run(ids, pending.value));
       setPending(undefined);
     } catch (failure) {
       setError(failure);
@@ -145,33 +168,63 @@ export function useBulkConfirmation<T>({ model, run, check }: { model: ListModel
       running.current = false;
     }
   }
-  return { pending, error, confirm,
-    locked: !model.isCurrent || model.selection.selectedIds.length === 0 || model.selection.isRunning,
-    open: () => {
-      const refusal = check?.(model.selection.selectedIds);
-      setError(refusal);
-      if (!refusal) setPending({ ids: [...model.selection.selectedIds], page: model.page });
+  return { pending, error: model.selection.failure ?? error, confirm,
+    recovery: model.selection.failure === undefined ? undefined : {
+      pending: model.selection.isRecovering === true,
+      run: async () => {
+        const recovered = await current.current.selection.recover?.();
+        if (recovered) { setPending(undefined); setError(undefined); }
+      },
     },
-    cancel: () => { if (!running.current) setPending(undefined); },
+    locked: !model.isCurrent || model.selection.failure !== undefined || model.selection.selectedIds.length === 0 || model.selection.isRunning,
+    open: () => {
+      if (running.current || model.selection.isRunning || model.selection.failure !== undefined) return;
+      const refusal = value === undefined ? check?.(model.selection.selectedIds) : check?.(model.selection.selectedIds, value);
+      setError(refusal);
+      if (!refusal) setPending({ ids: [...model.selection.selectedIds], page: model.page, value });
+    },
+    cancel: () => { if (!running.current && !current.current.selection.isRecovering) setPending(undefined); },
   };
 }
 
 /** 선택지 조회를 검색 정의의 부모 값과 동일한 조건으로 연결한다. */
-export function useListChoiceBinding(model: ListModel, searchName: string, nodes?: readonly ChoiceNode[]) {
+export function useListChoiceBinding(model: ListModel, searchName: string, nodes?: readonly ChoiceNode[], serverSearch = false) {
   const id = useId();
   const check = model.checks?.[searchName];
   const parents = Object.fromEntries((check?.parents ?? []).map((parent) => [parent, (model.draftSearch ?? model.draft as Record<string, unknown>)[parent]]));
   const options = useQuery(check === undefined ? { queryKey: ['web-kit-no-options', id], enabled: false, queryFn: () => [] } : check.options(parents));
   const choices = nodes ?? (options.data === undefined ? [] : check?.tree?.(options.data) ?? []);
-  return { check, options, choices };
+  // 값 정리(트리 밖 값 제거)는 전체 선택지가 준비됐을 때만 한다: 서버 검색이 아니고, 조회 중·실패가 아니다.
+  const optionsReady = check === undefined ? nodes !== undefined : options.isSuccess && !options.isFetching && !options.isError;
+  const ready = !serverSearch && optionsReady ? choices : undefined;
+  return { check, options, choices, ready };
+}
+
+/**
+ * 목록 필터의 다중 선택 값 규칙: 비면 제한 없음이라 전체가 체크로 보이고, 모두 고르면 다시 비운다.
+ * 아무것도 체크되지 않은 상태는 없다: 마지막 하나를 해제하거나 전체를 지우는 변경은 무시한다.
+ * 단일·서버 검색(선택지 전체를 모름)·필수 칸은 값을 그대로 쓴다.
+ */
+export function listChoiceValue(choices: readonly ChoiceNode[], rule: { readonly multiple?: boolean; readonly search?: unknown; readonly required?: boolean }) {
+  if (rule.multiple !== true || rule.search !== undefined || rule.required === true) {
+    return { view: (value: ChoiceValue): ChoiceValue => value, commit: (next: ChoiceValue, _current: ChoiceValue): ChoiceValue => next };
+  }
+  const leaves = treeLeaves(choices);
+  const asList = (value: ChoiceValue): readonly string[] => (Array.isArray(value) ? value : typeof value === 'string' ? [value] : []);
+  return {
+    view: (value: ChoiceValue): ChoiceValue => viewFilterSelection(asList(value), leaves),
+    commit: (next: ChoiceValue, current: ChoiceValue): ChoiceValue => commitFilterSelection(asList(next), asList(current), leaves),
+  };
 }
 
 /** 제한 없음과 명시 선택을 목록 필터 규칙으로 정규화한다. */
 export function useListMultiChoiceBinding(name: string, values: readonly string[], model?: ListModel) {
   const field = useListField<readonly string[]>(name, name, model);
   const selected = field.value ?? [];
-  const effective = selected.length === 0 ? values : selected.filter((value) => values.includes(value));
-  const set = (next: readonly string[]) => field.set(normalizeFilterSelection(next, values));
+  // 트리 선택(List.Choice)과 같은 규칙: 필수 칸은 값을 그대로, 아니면 빈 값=전체와 마지막 하나 유지.
+  const rule = listChoiceValue(values.map((value) => ({ value, label: value })), { multiple: true, required: field.required });
+  const effective = (rule.view(selected) as readonly string[]).filter((value) => values.includes(value));
+  const set = (next: readonly string[]) => field.set(rule.commit(next, selected) as readonly string[]);
   return { effective, set, toggle: (value: string, on: boolean) => set(on ? [...effective, value] : effective.filter((item) => item !== value)) };
 }
 
@@ -249,7 +302,7 @@ export function listViewBinding(model: ListModel) {
   const sort = String(sortKey ?? '');
   return {
     sortKey, sort, order: model.search[model.view.order] === 'asc' ? 'asc' as const : 'desc' as const,
-    locked: !model.isCurrent || model.selection.isRunning,
+    locked: !model.isCurrent || model.selection.isRunning || model.selection.failure !== undefined,
     total: !shown ? 0 : model.isCurrent ? model.total : undefined,
     size: Number(model.search[model.view.size]),
     setSize: (value: string) => model.setSize(Number(value)),
@@ -274,6 +327,8 @@ export function useListVirtualRows<Row>(rows: readonly Row[], rowId: (row: Row) 
     count: rows.length,
     getScrollElement: () => viewport.current,
     estimateSize: () => 41,
+    // 행 높이가 바뀌는 관찰 콜백 안에서 다시 측정·배치하는 순환을 피한다.
+    useAnimationFrameWithResizeObserver: true,
     overscan: 8,
     getItemKey: (index) => (rows[index] === undefined ? index : rowId(rows[index]!)),
     initialRect: { width: 1, height: 576 },
