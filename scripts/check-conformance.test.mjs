@@ -112,8 +112,8 @@ test('점검: 구조와 UI 적합성을 각각 판정해 둘 다 보인다', () 
   assert.match(r.stdout, /\[UI 적합성\] web-kit 적합성 통과/);
 }));
 test('점검: 구조 위반은 UI 적합성이 통과해도 전체 실패이며 UI 결과는 따로 남는다', () => structureFixture(({ project, check }) => {
-  mkdirSync(join(project, 'src/features/orders/screens'), { recursive: true });
-  writeFileSync(join(project, 'src/features/orders/screens/Bad.tsx'), "import { orderListQuery } from '../api/orders';\nexport const q = orderListQuery;\n");
+  mkdirSync(join(project, 'src/features/orders/pages'), { recursive: true });
+  writeFileSync(join(project, 'src/features/orders/pages/Bad.tsx'), "import { orderListQuery } from '../api/orders';\nexport const q = orderListQuery;\n");
   const r = check('--structure', 'web-kit.structure.json');
   assert.equal(r.status, 1);
   assert.match(r.stderr, /\[구조\] 실패/);

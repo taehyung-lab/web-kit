@@ -9,7 +9,7 @@ import { beforeEach } from 'vitest';
 import { RequestFailure } from '../../failure';
 import { z } from 'zod';
 import { defineSearch } from '../../search/fields';
-import { useList, type ListPage } from '../../use-list';
+import { useList, type ListPage } from '../../list/use-list';
 
 /** 필요한 기능의 실제 복사본으로 해당 검사만 등록한다. */
 export function checkListProgressConformance({ BlockingProgress }: { BlockingProgress: typeof Contract1.BlockingProgress }, target: ConformanceTarget) {

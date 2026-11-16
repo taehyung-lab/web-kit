@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { RequestFailure, type FailureKind } from '../src/failure';
 import { createQueryClient } from '../src/query';
-import { createSession, type SessionStore, type StoredSession } from '../src/session';
+import { createSession, type SessionStore, type StoredSession } from '../src/session/session';
 
 function session() {
   let value: StoredSession<{ accessToken: string }> | null = null;

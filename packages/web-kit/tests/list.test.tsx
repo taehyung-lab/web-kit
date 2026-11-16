@@ -7,8 +7,8 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { RequestFailure } from '../src/failure';
 import { defineSearch, type FieldCheck, type SparseSearch } from '../src/search/fields';
-import { useList, type ListPage } from '../src/use-list';
-import { useBulkConfirmation } from '../src/list-binding';
+import { useList, type ListPage } from '../src/list/use-list';
+import { useBulkConfirmation } from '../src/list/list-binding';
 
 interface Row {
   readonly id: string;

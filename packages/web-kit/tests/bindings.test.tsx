@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { ListProvider, useListModel, useList, type ListModel } from '../src/list';
+import { ListProvider, useListModel, useList, type ListModel } from '../src/list/index';
 import { List, type ListColumn } from '../../ui-registry/src/list';
 import { defineSearch } from '../src/search';
 import { useDialogBinding, useConfirmBinding, useAcknowledgeBinding, useBlockingProgressBinding, BlockingProgressProvider, useBlockingProgress } from '../src/confirmation';

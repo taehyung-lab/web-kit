@@ -2,8 +2,8 @@
 /** 실제 브라우저 저장 경로와 저장 장애를 같은 공개 adapter에서 검사한다. */
 import { afterEach, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { createBrowserSessionStore } from '../src/browser-session-store';
-import { checkSessionStoreAdapter } from '../src/session-testing';
+import { createBrowserSessionStore } from '../src/session/browser-session-store';
+import { checkSessionStoreAdapter } from '../src/session/session-testing';
 const credentials = z.object({ accessToken: z.string(), loginId: z.string() });
 const localStorage = window.localStorage;
 const sessionStorage = window.sessionStorage;

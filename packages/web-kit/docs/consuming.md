@@ -8,10 +8,10 @@
 
 | 프로젝트의 차이 | 어디에서 표현하나 | 실제 조립 예 |
 |---|---|---|
-| 같은 목록인데 검색 시작 시점이 다름 | 같은 `/list`에 조회 조건을 전달 | [즉시 조회](../references/apps/starter/src/features/products/state/product-list-search.ts.txt), [검색 후 조회](../references/apps/starter/src/features/members/state/member-list-search.ts.txt) |
-| 같은 저장 폼인데 일부만 첨부·배열이 필요 | `/form` 상태를 유지하며 필요한 UI를 조합 | [복잡한 폼](../references/apps/starter/src/features/shows/screens/ShowCreateScreen.tsx.txt) |
+| 같은 목록인데 검색 시작 시점이 다름 | 같은 `/list`에 조회 조건을 전달 | [즉시 조회](../references/apps/starter/src/features/products/search/product-list-search.ts.txt), [검색 후 조회](../references/apps/starter/src/features/members/search/member-list-search.ts.txt) |
+| 같은 저장 폼인데 일부만 첨부·배열이 필요 | `/form` 상태를 유지하며 필요한 UI를 조합 | [복잡한 폼](../references/apps/starter/src/features/shows/pages/ShowCreatePage.tsx.txt) |
 | 같은 인증 처리인데 입력 모양이 다름 | `/auth` 진행은 공유하고 프로젝트 UI를 바꿈 | [한 칸·여섯 칸 검사](../references/apps/starter/src/shared/ui/web-kit/checks/auth.page.tsx.txt) |
-| 저장 후 승인 등 업무의 성공 정의가 다름 | 프로젝트 요청 함수·완료 동작에서 연결 | [저장 후 추가 조회](../references/apps/starter/src/features/form-workflows/screens/FormWorkflowScreen.tsx.txt) |
+| 저장 후 승인 등 업무의 성공 정의가 다름 | 프로젝트 요청 함수·완료 동작에서 연결 | [저장 후 추가 조회](../references/apps/starter/src/features/form-workflows/pages/FormWorkflowPage.tsx.txt) |
 
 예를 들어 A·B가 목록과 폼을 같이 쓰고, C는 즉시 조회와 첨부를 더하며, D는 목록 없이 폼을 승인 과정에 연결할 수 있다. web-kit에 A/B/C/D 분기를 만들지 않는다. 두 프로젝트만 같은 기능을 써도 공용화할 수 있지만, 특정 업무를 공유한다면 별도의 업무 책임인지 먼저 판단한다.
 

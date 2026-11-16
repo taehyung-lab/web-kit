@@ -4,8 +4,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 export const CONFIG_FILE = 'web-kit.structure.json';
-export const FEATURE_LAYERS = ['api', 'model', 'state', 'flows', 'screens'];
-export const FEATURE_ROOT_FILES = { 'i18n.ts': 'i18n', 'public.ts': 'public' };
+export const FEATURE_LAYERS = ['api', 'forms', 'rules', 'storage', 'search', 'hooks', 'pages'];
+export const FEATURE_ROOT_FILES = { 'messages.ts': 'messages', 'public.ts': 'public', 'permissions.ts': 'storage' };
 export const APP_ROOTS = ['app', 'runtime', 'routes', 'features', 'shared'];
 /** 책임을 말하지 않는 포괄 이름. 이 이름의 파일·폴더는 무엇이든 담게 되어 자리를 잃는다. */
 export const VAGUE_NAMES = ['utils', 'util', 'helpers', 'helper', 'constants', 'consts', 'common', 'misc'];
@@ -95,7 +95,7 @@ export function isTestFile(rel) {
 /**
  * 파일 하나의 구조 역할. 반환 kind:
  * external(프로젝트 src 밖·패키지) · entry(src 바로 아래 파일) · unknown(정해지지 않은 폴더) · generated · generated-model ·
- * support · test · app · runtime · routes · shared · feature(layer: api|model|state|flows|screens|i18n|public|invalid)
+ * support · test · app · runtime · routes · shared · feature(layer: api|data|forms|rules|storage|search|hooks|pages|messages|public|invalid)
  */
 export function classify(config, file) {
   const rel = posix(relative(config.root, file));
@@ -111,7 +111,7 @@ export function classify(config, file) {
   const [top, name, layer] = parts;
   if (top === 'features') {
     if (parts.length === 2) return { kind: 'feature', layer: 'invalid', feature: undefined, rel };
-    if (parts.length === 3) return { kind: 'feature', layer: FEATURE_ROOT_FILES[layer] ?? 'invalid', feature: name, rel };
+    if (parts.length === 3) return { kind: 'feature', layer: FEATURE_ROOT_FILES[layer] ?? (/\.ts$/.test(layer) && layer !== 'i18n.ts' ? 'data' : 'invalid'), feature: name, rel };
     return { kind: 'feature', layer: FEATURE_LAYERS.includes(layer) ? layer : 'invalid', feature: name, rel };
   }
   if (APP_ROOTS.includes(top)) return { kind: top, rel };
@@ -121,7 +121,7 @@ export function classify(config, file) {
 
 /** 사람이 읽는 역할 이름. 위반 문구에 쓴다. */
 export function roleName(role) {
-  if (role.kind === 'feature') return role.layer === 'public' || role.layer === 'i18n' ? `features/${role.feature}/${role.layer}.ts` : `features/${role.feature ?? '?'}/${role.layer}`;
+  if (role.kind === 'feature') return role.layer === 'public' || role.layer === 'messages' ? `features/${role.feature}/${role.layer}.ts` : `features/${role.feature ?? '?'}/${role.layer}`;
   return role.kind;
 }
 

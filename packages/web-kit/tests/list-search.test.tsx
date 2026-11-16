@@ -17,7 +17,7 @@ import {
   sort,
   type KeywordCodec,
 } from '../src/search/list-search';
-import { useList } from '../src/use-list';
+import { useList } from '../src/list/use-list';
 
 /** 시험용 문자열 표현: `field:value|field:value`. */
 const pipeCodec: KeywordCodec = {

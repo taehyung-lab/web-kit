@@ -1,6 +1,6 @@
 // 파일 책임: 작성 예제의 저장과 저장 후 조회 요청을 프로젝트 계약으로 연결한다.
 import { apiRequest } from '@/runtime/web-kit';
-import type { WorkflowValues } from '../model/forms/workflow-form';
+import type { WorkflowValues } from '../forms/workflow-form';
 /** 작성 예제 mock 서버가 확인한 저장 결과를 받는다. */
 export function saveWorkflow(values: WorkflowValues, mode: 'draft' | 'publish'): Promise<{ saved: WorkflowValues; id: string }> {
   return apiRequest({ url: '/api/form-workflows', method: 'POST', data: { mode, values } });

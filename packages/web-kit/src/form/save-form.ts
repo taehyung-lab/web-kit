@@ -47,12 +47,13 @@ export interface SaveFormOptions<
   readonly schema: StandardSchemaV1<TInput, TOutput>;
   /** 편집 대상. 등록이면 기본값. id가 바뀌면 새 폼, 같은 id의 새 values는 원본 재도착이다. */
   readonly source: { readonly id: unknown; readonly values: TInput };
-  /** true면 유효한 제출이 확인 대기로 가고 confirm()이 같은 S로 저장한다. */
+  /** true면 유효한 제출이 확인 대기로 가고 confirm()이 확인 대기 중인 제출 값으로 저장한다. */
   readonly confirm?: boolean;
   /**
    * 저장 작업. 서버가 저장 결과를 주면 폼 값으로 바꿔 saved로 돌려준다(없으면 제출한 S가 저장 결과다).
    * 그 밖의 결과(새 id·토큰 등)도 함께 돌려주면 onSaved가 받는다.
-   * 요청 전에 화면 절차가 칸을 거절하면 `FormRejection`을 던진다(서버 필드 오류와 같은 길로 처리된다).
+   * 요청 전에 화면 절차가 칸을 거절하거나, 서버가 칸 정보 없는 업무 거절로 답해 저장되지 않은 실패를 화면이 칸으로 해석하면
+   * `FormRejection`을 던진다(서버 필드 오류와 같은 길로 처리된다).
    * 저장 도중 사용자에게 묻는 일(확인창)은 `step.waitForUser(물음)`으로 감싼다. 그동안 화면 전체 진행 덮개를 내린다.
    */
   readonly save: (values: TOutput, submitted: TInput, step: SaveStep) => Promise<TResult>;
@@ -109,7 +110,9 @@ export class DiscardSaveAttempt {
 }
 
 /**
- * 저장 함수(save)가 요청 전에 화면 절차로 거절했음을 알린다(먼저 조회가 필요한 검사·업로드 실패·확인창 취소 등). save 안에서 던진다.
+ * 저장 함수(save)가 칸을 거절했음을 알린다. 요청 전 화면 절차의 거절(먼저 조회가 필요한 검사·업로드 실패·확인창 취소 등)과,
+ * 서버가 칸 정보 없는 업무 거절로 답해 저장되지 않은 실패를 화면이 칸으로 해석한 것(예: 같은 값이 이미 있다는 결과 코드)에 쓴다.
+ * 저장이 일부라도 반영됐을 수 있는 실패에는 쓰지 않는다. save 안에서 던진다.
  * 키트는 서버 필드 오류와 같은 길로 처리한다: 제출 값과 지금 값이 같은 칸에 문구를 붙이고(줄 작업은 지금 위치로 따라감),
  * 그 칸을 가진 구역·reveal을 펼친 뒤 화면 순서 첫 오류 칸에 포커스한다. 붙지 못한 칸이 있거나 root가 있으면 폼 수준 실패(formFailure)로 남고,
  * 칸도 root도 없으면 아무것도 보이지 않는 조용한 중단이다. 저장으로 치지 않으므로 기준선·입력은 그대로다.

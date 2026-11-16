@@ -1,5 +1,5 @@
 // 파일 책임: 명시 목록 모델의 행·초안 타입이 읽기 hook에서 보존되는지 검사한다.
-import { ListProvider, useListModel, useListKeywordBinding, type ListModel } from '../src/list';
+import { ListProvider, useListModel, useListKeywordBinding, type ListModel } from '../src/list/index';
 /** 읽기 결과의 행·초안은 전달한 모델과 같은 타입이어야 한다. */
 export function TypedList({ model }: { model: ListModel<{ id: string }, { term: string }> }) {
   const read = useListModel(model);

@@ -37,7 +37,7 @@ test('--dry-run은 계획만 보이고 파일을 쓰지 않는다', () => projec
   const before = files(dir);
   const result = cli('--feature', 'invoices', '--kind', 'list', '--url', '/invoices', '--dry-run');
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /만들 파일 src\/features\/invoices\/flows\/use-invoice-list\.ts/);
+  assert.match(result.stdout, /만들 파일 src\/features\/invoices\/hooks\/use-invoice-list\.ts/);
   assert.deepEqual(files(dir), before);
 }));
 
@@ -67,19 +67,19 @@ test('같은 입력으로 다시 실행하면 바뀌는 것이 없다', () => pr
 
 test('내용이 다른 화면 파일이 있으면 아무 파일도 쓰지 않고 실패한다. 공유 파일은 덮어쓰지 않고 쓴다', () => project(({ dir, cli }) => {
   assert.equal(cli('--feature', 'invoices', '--kind', 'detail', '--url', '/invoices/$invoiceId').status, 0);
-  const model = join(dir, 'src/features/invoices/model/invoice.ts');
+  const model = join(dir, 'src/features/invoices/invoice.ts');
   writeFileSync(model, 'export interface Invoice { readonly id: string }\n');
   const shared = cli('--feature', 'invoices', '--kind', 'list', '--url', '/invoices');
   assert.equal(shared.status, 0, shared.stderr);
-  assert.match(shared.stdout, /기존 파일 사용 src\/features\/invoices\/model\/invoice\.ts/);
+  assert.match(shared.stdout, /기존 파일 사용 src\/features\/invoices\/invoice\.ts/);
   assert.equal(readFileSync(model, 'utf8'), 'export interface Invoice { readonly id: string }\n');
-  const screen = join(dir, 'src/features/invoices/screens/InvoiceCreateScreen.tsx');
+  const screen = join(dir, 'src/features/invoices/pages/InvoiceCreatePage.tsx');
   writeFileSync(screen, 'export const mine = 1;\n');
   const conflict = cli('--feature', 'invoices', '--kind', 'form', '--url', '/invoices/new');
   assert.equal(conflict.status, 1);
-  assert.match(conflict.stderr, /충돌 src\/features\/invoices\/screens\/InvoiceCreateScreen\.tsx/);
+  assert.match(conflict.stderr, /충돌 src\/features\/invoices\/pages\/InvoiceCreatePage\.tsx/);
   assert.equal(readFileSync(screen, 'utf8'), 'export const mine = 1;\n');
-  assert.equal(existsSync(join(dir, 'src/features/invoices/flows/use-invoice-create.ts')), false, '충돌이 있으면 다른 파일도 쓰지 않는다');
+  assert.equal(existsSync(join(dir, 'src/features/invoices/hooks/use-invoice-create.ts')), false, '충돌이 있으면 다른 파일도 쓰지 않는다');
 }));
 
 test('묶음 이름은 프로젝트가 정한다: --group은 설정보다 앞서고, 둘 다 없으면 만들지 않는다', () => project(({ dir, cli }) => {

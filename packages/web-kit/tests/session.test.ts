@@ -1,7 +1,7 @@
 // 파일 책임: 세션 수명(세대·시작/종료·다른 탭 변경·재발급 단일 비행)의 관찰 결과를 검사한다.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { RequestFailure } from '../src/failure';
-import { createSession, type ReissueEndCodes, type SessionChange, type SessionStore, type StoredSession } from '../src/session';
+import { createSession, type ReissueEndCodes, type SessionChange, type SessionStore, type StoredSession } from '../src/session/session';
 
 interface Credentials {
   readonly accessToken: string;

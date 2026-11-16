@@ -3,7 +3,7 @@
 import { MutationObserver, type MutationCache, type QueryClient, type UseMutationOptions } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createQueryClient } from '../src/query';
-import { createSession, type SessionStore, type StoredSession } from '../src/session';
+import { createSession, type SessionStore, type StoredSession } from '../src/session/session';
 
 const SECRET = 'p@ssw0rd-example';
 const tick = () => new Promise<void>((resolve) => setTimeout(resolve, 0));

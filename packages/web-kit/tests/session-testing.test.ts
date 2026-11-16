@@ -1,7 +1,7 @@
 // 파일 책임: 저장 adapter 검사가 정상 구현은 통과시키고 과거 토큰 복귀·외부 변경 누락·종료 복구를 실제로 잡는지 확인한다.
 import { describe, expect, it, vi } from 'vitest';
 import { checkSessionStoreAdapter, type SessionStoreAdapterFixture } from '@boosterlab/web-kit/testing/session';
-import type { Credentials, StoredSession } from '../src/session';
+import type { Credentials, StoredSession } from '../src/session/session';
 
 type Defect = 'stale-read' | 'ignore-external' | 'wrong-external-token' | 'revive-ended' | 'local-notification' | 'unsubscribe';
 

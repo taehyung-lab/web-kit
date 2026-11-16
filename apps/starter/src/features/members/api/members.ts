@@ -4,7 +4,7 @@ import { serializeFlatListParams } from '@boosterlab/web-kit/api';
 import type { ListPage } from '@boosterlab/web-kit/list';
 import type { WriteMeta } from '@boosterlab/web-kit/query';
 import { queryOptions, useMutation } from '@tanstack/react-query';
-import type { MemberAccountStatus, MemberSignupMethod, MemberSummary } from '../model/member';
+import type { MemberAccountStatus, MemberSignupMethod, MemberSummary } from '../member';
 
 /** 회원 목록 요청 query(서버 계약). 빈 조건은 보내지 않는다. 키워드는 `대상:값` 반복 키다. */
 export interface MemberListParams {

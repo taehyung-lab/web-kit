@@ -29,7 +29,7 @@ function resolve(from: string, specifier: string): string | undefined {
   ).find((key) => key !== undefined);
 }
 
-it.each(['../src/index.ts', '../src/session-testing.ts'])('%s는 상대 경로의 소스 파일만 따라가며 import한다', (entry) => {
+it.each(['../src/index.ts', '../src/session/session-testing.ts'])('%s는 상대 경로의 소스 파일만 따라가며 import한다', (entry) => {
   const visited = new Set<string>();
   const queue = [entry];
   while (queue.length > 0) {
@@ -48,7 +48,7 @@ it.each(['../src/index.ts', '../src/session-testing.ts'])('%s는 상대 경로�
   expect(visited.size).toBeGreaterThan(1);
 });
 
-it.each(['../src/form/index.ts', '../src/form/save-form.ts', '../src/form/navigation.ts', '../src/confirmation.ts', '../src/use-list.ts', '../src/list.ts', '../src/session.ts', '../src/record.ts'])(
+it.each(['../src/form/index.ts', '../src/form/save-form.ts', '../src/form/navigation.ts', '../src/confirmation.ts', '../src/list/use-list.ts', '../src/list/index.ts', '../src/session/session.ts', '../src/record.ts'])(
   '%s의 동작 경로는 기본 UI를 import하지 않는다',
   (entry) => {
     const queue = [entry];
@@ -95,16 +95,16 @@ it('유휴 타이머 경계 검사 대상에 남은 패키지 입구가 모두 �
   expect(entriesWithoutIdle).toEqual(
     expect.arrayContaining([
       '../src/form/index.ts',
-      '../src/list.ts',
+      '../src/list/index.ts',
       '../src/record.ts',
       '../src/search/index.ts',
-      '../src/session.ts',
+      '../src/session/session.ts',
     ]),
   );
-  expect(entriesWithoutIdle).not.toContain('../src/session-idle.ts');
+  expect(entriesWithoutIdle).not.toContain('../src/session/session-idle.ts');
 });
 
-it.each([...entriesWithoutIdle, '../src/use-list.ts'])(
+it.each([...entriesWithoutIdle, '../src/list/use-list.ts'])(
   '%s는 세션 유휴 타이머를 import하지 않는다',
   (entry) => {
     const queue = [entry];
@@ -128,8 +128,8 @@ it.each([...entriesWithoutIdle, '../src/use-list.ts'])(
 it.each([
   '../src/form/index.ts',
   '../../ui-registry/src/form/form.tsx',
-  '../src/use-list.ts',
-  '../src/list.ts',
+  '../src/list/use-list.ts',
+  '../src/list/index.ts',
   '../../ui-registry/src/list.tsx',
   '../src/record.ts',
   '../../ui-registry/src/detail.tsx',
@@ -172,10 +172,10 @@ function reach(entry: string): Set<string> {
 }
 
 it.each(['../src/form/index.ts', '../../ui-registry/src/form/form.tsx'])('%s는 목록(list·search)을 import하지 않는다', (entry) => {
-  for (const file of reach(entry)) expect(file).not.toMatch(/use-list|list-ui|\/list\.ts|list-download|list-return|\/search\//);
+  for (const file of reach(entry)) expect(file).not.toMatch(/use-list|list-ui|\/list(?:\/|\.tsx?)|list-download|list-return|\/search\//);
 });
 
-it.each(['../src/use-list.ts', '../src/list.ts', '../../ui-registry/src/list.tsx'])('%s는 폼을 import하지 않는다', (entry) => {
+it.each(['../src/list/use-list.ts', '../src/list/index.ts', '../../ui-registry/src/list.tsx'])('%s는 폼을 import하지 않는다', (entry) => {
   for (const file of reach(entry)) expect(file).not.toMatch(/\/form\//);
 });
 
@@ -184,7 +184,10 @@ it('진행 표시 마크업(shadcn Spinner 연결)은 /ui의 pending 한 곳에�
     .filter(([file, source]) => !file.startsWith('../src/testing/') && (source.includes('@/components/ui/spinner') || source.includes('data-slot="pending"')))
     .map(([file]) => file);
   expect(owners).toEqual(['../../ui-registry/src/ui/pending.tsx']);
-  for (const file of ['../../ui-registry/src/list.tsx', '../../ui-registry/src/form/form.tsx', '../../ui-registry/src/ui/dialog.tsx']) expect(sources[file], file).toMatch(/<Pending label=/);
+  for (const entry of ['../../ui-registry/src/list.tsx', '../../ui-registry/src/form/form.tsx', '../../ui-registry/src/ui/dialog.tsx']) {
+    const source = [...reach(entry)].map((file) => sources[file]).join('\n');
+    expect(source, entry).toMatch(/<Pending label=/);
+  }
   expect(sources['../../ui-registry/src/ui/blocking-progress.tsx']).toMatch(/<Spinner large \/>/);
   expect(sources['../../ui-registry/src/ui/index.ts']).toMatch(/export \{ Pending \} from '\.\/pending'/);
 });
@@ -209,7 +212,7 @@ it('패키지 제품 실행 코드에는 화면 요소·스타일·registry impo
 });
 
 it('/choice는 목록·폼을 import하지 않는다', () => {
-  for (const file of reach('../src/choice-binding.ts')) expect(file).not.toMatch(/use-list|list-binding|\/list\.ts|\/form\//);
+  for (const file of reach('../src/choice-binding.ts')) expect(file).not.toMatch(/use-list|list-binding|\/list(?:\/|\.tsx?)|\/form\//);
 });
 
 /** registry는 공개 패키지 입구와 자기 원본 파일만 연결한다. */

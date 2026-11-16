@@ -1,6 +1,6 @@
 // 로그인 전 코드의 기한과 단일 요청 진행을 관리한다. 서버 요청·화면 이동·문구는 소비자가 소유한다.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { ServerClock } from './server-clock';
+import type { ServerClock } from './session/server-clock';
 import type { CompletionStep } from './completion';
 export type { CompletionStep } from './completion';
 

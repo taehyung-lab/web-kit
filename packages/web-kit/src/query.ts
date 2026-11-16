@@ -9,7 +9,7 @@ import {
   type QueryKey,
 } from '@tanstack/react-query';
 import { isRequestFailure, type FailureKind } from './failure';
-import type { Credentials, Session } from './session';
+import type { Credentials, Session } from './session/session';
 
 /** 자동 재시도 대상. 나머지(429·contract 포함)는 자동 재시도하지 않는다. */
 const RETRYABLE: ReadonlySet<FailureKind> = new Set(['network', 'timeout', 'server-error']);

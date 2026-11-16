@@ -1,8 +1,8 @@
 // 파일 책임: openapi/sample.json 계약을 흉내 내는 msw handler. Spring 봉투, 401 → 재발급, 필드 오류, 없음, HTTP 200 업무 거절을 낸다.
-import { draftSchema, publishSchema } from '@/features/form-workflows/model/forms/workflow-form';
+import { draftSchema, publishSchema } from '@/features/form-workflows/forms/workflow-form';
 import type { Product, ProductUpsertRequest } from '@/api/generated/models';
 import { delay, http, HttpResponse, type DefaultBodyType } from 'msw';
-import type { MemberSummary } from '@/features/members/model/member';
+import type { MemberSummary } from '@/features/members/member';
 import { mockDb, type MockTerms } from './db';
 
 const API = '*/api';

@@ -1,7 +1,7 @@
 // 인증 복사본 적합성 검사를 위한 공통 입력·요청·시간 조작 화면이다.
 import { useState, type ComponentType } from 'react';
 import { useAuthChallenge } from '../auth';
-import { createServerClock } from '../server-clock';
+import { createServerClock } from '../session/server-clock';
 
 export interface AuthConformanceFormProps {
   readonly model: ReturnType<typeof useAuthChallenge>;

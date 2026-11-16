@@ -324,3 +324,78 @@ describe('listSearch 선언을 이름으로 읽는 칸', () => {
     expect(screen.queryByRole('checkbox')).toBeNull();
   });
 });
+
+describe('List.Table column with several sort keys', () => {
+  // 한 열이 두 날짜(수정일·등록일)를 함께 보이는 표: 머리글 하나가 두 정렬 키를 맡는다.
+  const datedSearch = defineSearch({
+    fields: {
+      page: { schema: z.number(), default: 1 },
+      size: { schema: z.number(), default: 100 },
+      sort: { schema: z.enum(['created', 'updated', 'name']), default: 'created' },
+      order: { schema: z.enum(['asc', 'desc']), default: 'desc' },
+    },
+    sortFirst: 'desc',
+  });
+  function mountDated(initial: Record<string, unknown>) {
+    const seen: Record<string, unknown>[] = [];
+    function App() {
+      const [url, setUrl] = useState(() => datedSearch.validateSearch(initial));
+      const model = useList({
+        definition: datedSearch,
+        search: url,
+        navigate: (next) => {
+          seen.push(next);
+          setUrl(datedSearch.validateSearch(next));
+        },
+        query: (full) => ({ queryKey: ['dated-rows', full], queryFn: async () => ({ rows: rowsOf(1), total: 1 }) }),
+        rowId: (row: CheckRow) => row.id,
+      });
+      return (
+        <List model={model}>
+          <List.Result>
+            <List.Table
+              columns={[
+                { key: 'name', header: 'Name', cell: (row: CheckRow) => row.id, sort: 'name' },
+                { key: 'dates', header: 'Dates', cell: (row: CheckRow) => row.id, sort: ['updated', 'created'] },
+              ]}
+            />
+          </List.Result>
+        </List>
+      );
+    }
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    clientsInUse.push(client);
+    render(
+      <QueryClientProvider client={client}>
+        <DialogDefaults labels={defaultDialogLabels}>
+          <App />
+        </DialogDefaults>
+      </QueryClientProvider>,
+    );
+    return seen;
+  }
+  // 주소는 기본값(sort=created, order=desc)을 생략하므로 기본값을 깔고 비교한다.
+  const datesHeader = async () => (await screen.findByRole('button', { name: /Dates/ })).closest('th')!;
+
+  it('sorts by the first key when another column is sorted', async () => {
+    const seen = mountDated({ sort: 'name', order: 'asc' });
+    const header = await datesHeader();
+    expect(header.getAttribute('aria-sort')).toBeNull();
+    fireEvent.click(within(header).getByRole('button'));
+    await waitFor(() => expect({ sort: 'created', order: 'desc', ...seen.at(-1) }).toMatchObject({ sort: 'updated', order: 'desc' }));
+  });
+
+  it('shows the column as sorted for each of its keys and only flips the order', async () => {
+    const seen = mountDated({ sort: 'created', order: 'desc' });
+    const header = await datesHeader();
+    expect(header.getAttribute('aria-sort')).toBe('descending');
+    fireEvent.click(within(header).getByRole('button'));
+    await waitFor(() => expect({ sort: 'created', order: 'desc', ...seen.at(-1) }).toMatchObject({ sort: 'created', order: 'asc' }));
+    cleanup();
+    const again = mountDated({ sort: 'updated', order: 'asc' });
+    const updated = await datesHeader();
+    expect(updated.getAttribute('aria-sort')).toBe('ascending');
+    fireEvent.click(within(updated).getByRole('button'));
+    await waitFor(() => expect({ sort: 'created', order: 'desc', ...again.at(-1) }).toMatchObject({ sort: 'updated', order: 'desc' }));
+  });
+});

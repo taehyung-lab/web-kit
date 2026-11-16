@@ -1,7 +1,7 @@
 /** 표시 정책과 목록 복귀 문맥의 경계를 검사한다. */
 import { expect, it } from 'vitest';
 import { maskText } from '../src/masking';
-import { captureListReturn, resolveListReturn } from '../src/list-return';
+import { captureListReturn, resolveListReturn } from '../src/list/list-return';
 it('마스킹은 명시한 노출 수와 유니코드 문자 경계를 지킨다', () => {
   expect(maskText('가😀나다', { visibleStart: 1, visibleEnd: 1 })).toBe('가**다');
   expect(maskText('ab', { visibleStart: 2, visibleEnd: 2 })).toBe('ab');

@@ -1,6 +1,6 @@
 // 파일 책임: 상품 목록 경로. URL 검색은 web-kit 검색 선언으로 검증하고(validateSearch), 정규형이 아닌 진입 주소는 교정한다(beforeLoad).
-import { productListSearch } from '@/features/products/state/product-list-search';
-import { ProductListScreen } from '@/features/products/screens/ProductListScreen';
+import { productListSearch } from '@/features/products/search/product-list-search';
+import { ProductListPage } from '@/features/products/pages/ProductListPage';
 import { createFileRoute } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/_app/products/')({
@@ -12,7 +12,7 @@ export const Route = createFileRoute('/_app/products/')({
 function ProductListRoute() {
   const navigate = Route.useNavigate();
   return (
-    <ProductListScreen
+    <ProductListPage
       search={Route.useSearch()}
       navigate={(next, { replace }) => void navigate({ search: next, replace })}
       onOpen={(productId) => void navigate({ to: '/products/$productId', params: { productId } })}
