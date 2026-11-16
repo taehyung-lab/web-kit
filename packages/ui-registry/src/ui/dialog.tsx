@@ -1,7 +1,8 @@
 // 파일 책임: 기본 대화창 세 가지(Dialog·ConfirmDialog·AlertDialog)와 그 포커스 규칙.
 // 열린 직후부터 닫힐 때까지 키보드 포커스가 창 밖으로 한 순간도 나가지 않게 한다(Base UI의 focus guard 경유를 막는다).
 // 창·버튼 모양은 프로젝트의 shadcn Dialog·Button이 정하고, 여기서는 열림·닫기 정책·포커스·잠금 연결만 맡는다.
-// 버튼 기본 문구(닫기·확인·취소·처리 중)는 앱 맨 위의 DialogDefaults 한 곳에서 받는다. 화면이 준 문구는 그 창에서만 앞선다.
+// 버튼 기본 문구(닫기·확인·취소·처리 중)와 확인 수명 창(ConfirmationDialog)의 실패·완료 문구는 앱 맨 위의 DialogDefaults 한 곳에서 받는다.
+// 화면이 준 문구는 그 창에서만 앞선다.
 import { createContext, useContext, type ReactNode, type RefObject } from 'react';
 import { useDialogBinding, useConfirmBinding, useAcknowledgeBinding } from '@boosterlab/web-kit/dialog';
 import { Button } from '@/components/ui/button';
@@ -25,14 +26,34 @@ export const defaultDialogLabels: DialogLabels = {
   pending: '처리 중입니다.',
 };
 
+/** 확인 수명 창(ConfirmationDialog)의 앱 기본 문구. 화면이 같은 이름의 값을 주면 그 창에서만 앞선다. */
+export interface ConfirmationDefaults {
+  /** 실행 실패(onError가 show로 돌려준 값)의 문구. */
+  readonly renderFailure?: (failure: unknown) => ReactNode;
+  /** 요청은 끝났고 후속 처리만 실패했을 때 본문 대신 보일 설명. */
+  readonly completionMessage?: ReactNode;
+  /** 그때 확인 버튼 문구(후속 처리만 다시 한다). */
+  readonly retryLabel?: string;
+}
+
 const DialogLabelsContext = createContext<DialogLabels | undefined>(undefined);
+const ConfirmationDefaultsContext = createContext<ConfirmationDefaults>({});
 
 /**
  * 앱 맨 위에 한 번 두고 대화창 기본 문구 전체를 넘긴다. 이 아래의 Dialog·ConfirmDialog·AlertDialog(폼·목록이 그리는 창 포함)가 이 문구를 쓴다.
+ * confirmation을 주면 이 아래 모든 ConfirmationDialog의 실패·완료 문구가 된다(화면마다 같은 값을 넘기지 않는다).
  * 폼 기본 문구(FormDefaults)와 따로 두어, 폼 없이 대화창만 설치한 앱도 이것만으로 쓴다.
  */
-export function DialogDefaults({ labels, children }: { readonly labels: DialogLabels; readonly children: ReactNode }) {
-  return <DialogLabelsContext.Provider value={labels}>{children}</DialogLabelsContext.Provider>;
+export function DialogDefaults({ labels, confirmation = {}, children }: {
+  readonly labels: DialogLabels;
+  readonly confirmation?: ConfirmationDefaults;
+  readonly children: ReactNode;
+}) {
+  return (
+    <DialogLabelsContext.Provider value={labels}>
+      <ConfirmationDefaultsContext.Provider value={confirmation}>{children}</ConfirmationDefaultsContext.Provider>
+    </DialogLabelsContext.Provider>
+  );
 }
 
 /** 앱 기본 문구를 읽는다. 공급이 없으면 조용히 다른 언어로 그리지 않고 바로 오류로 알린다. */
@@ -193,14 +214,23 @@ export function AlertDialog({
   );
 }
 
-/** 확인 수명의 표현 연결. 오류 분류·실행·대상 결정은 호출자가 소유한다. */
-export function ConfirmationDialog<T, F>({ confirmation, renderFailure, completionMessage, retryLabel, ...props }: {
+/**
+ * 확인 수명의 표현 연결. 오류 분류·실행·대상 결정은 호출자가 소유한다.
+ * 실패·완료 문구는 화면 값 → DialogDefaults confirmation 순으로 고른다. 실패 문구가 어디에도 없으면 바로 오류다.
+ */
+export function ConfirmationDialog<T, F>({ confirmation, renderFailure: screenFailure, completionMessage: screenCompletion, retryLabel: screenRetry, ...props }: {
   readonly confirmation: ReturnType<typeof useConfirmationState<T, F>>;
-  readonly renderFailure: (failure: F) => ReactNode;
-  /** 요청은 끝났고 후속 처리만 남았을 때의 설명과 재시도 버튼 문구. */
+  /** 생략하면 DialogDefaults confirmation.renderFailure. */
+  readonly renderFailure?: (failure: F) => ReactNode;
+  /** 요청은 끝났고 후속 처리만 남았을 때의 설명과 재시도 버튼 문구. 생략하면 DialogDefaults confirmation의 값. */
   readonly completionMessage?: ReactNode;
   readonly retryLabel?: string;
 } & Omit<Parameters<typeof ConfirmDialog>[0], 'open' | 'pending' | 'onConfirm' | 'onCancel'>) {
+  const defaults = useContext(ConfirmationDefaultsContext);
+  const renderFailure = screenFailure ?? defaults.renderFailure;
+  if (renderFailure === undefined) throw new Error('<ConfirmationDialog> requires renderFailure or <DialogDefaults confirmation> above it');
+  const completionMessage = screenCompletion ?? defaults.completionMessage;
+  const retryLabel = screenRetry ?? defaults.retryLabel;
   const { state, covered, confirm, close } = confirmation;
   return (
     <ConfirmDialog {...props} confirmLabel={state.kind === 'open' && state.completed ? retryLabel ?? props.confirmLabel : props.confirmLabel} open={state.kind === 'open' && !covered}

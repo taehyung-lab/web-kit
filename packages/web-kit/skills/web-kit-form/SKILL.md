@@ -11,7 +11,7 @@ description: 등록·수정·대화창 폼의 저장·저장 뒤 추가 작업·
 
 `inputs` registry의 `SelectBox`는 일반 단일 선택을 `options/value/onValueChange`로 조립한다. `null`은 미선택이고 빈 문자열 옵션은 유효한 값이다. `id/ref/aria-*`는 trigger에 연결한다. 폼의 검증·blur 수명과 목록의 전체 선택 의미는 각각 `Form.Select`·`List.Select`가 소유하며 내부 표시만 공유한다. 복잡한 그룹·사용자 정의 항목은 shadcn 원시 부품으로 조립할 수 있다.
 
-`dialog` registry의 `ConfirmationDialog`는 `useConfirmationState` 결과를 `confirmation`으로 받아 open·pending·covered·실패 표시를 연결한다. `renderFailure`와 제목·내용은 소비자가 제공한다. `completionMessage`·`retryLabel`은 요청 성공 뒤 후속 처리만 실패한 상태의 설명과 버튼 문구다. 실행과 오류 분류는 기존 flow에 남는다. 직접 open/onConfirm을 제어할 때는 기존 `ConfirmDialog`를 쓴다.
+`dialog` registry의 `ConfirmationDialog`는 `useConfirmationState` 결과를 `confirmation`으로 받아 open·pending·covered·실패 표시를 연결한다. 제목·내용은 소비자가 제공한다. 실패 문구 `renderFailure`와 `completionMessage`·`retryLabel`(요청 성공 뒤 후속 처리만 실패한 상태의 설명과 버튼 문구)은 앱 맨 위 `DialogDefaults confirmation`이 한 번 주고, 그 창만 다를 때 화면이 같은 이름으로 준다(그 창에서만 앞선다). 실패 문구가 어디에도 없으면 렌더할 때 오류가 난다. 실행과 오류 분류는 기존 flow에 남는다. 직접 open/onConfirm을 제어할 때는 기존 `ConfirmDialog`를 쓴다.
 
 ## registry 폼 UI
 
@@ -47,7 +47,7 @@ description: 등록·수정·대화창 폼의 저장·저장 뒤 추가 작업·
 
 폼·대화창 기본 문구는 키트가 아니라 앱이 정한다. 앱 맨 위(대화창·폼을 그리는 모든 화면의 바깥, 보통 i18n Provider 안) 한 곳에 둔다.
 
-- `DialogDefaults labels={{ close, confirm, cancel, pending }}`: 이 아래 `Dialog`·`ConfirmDialog`·`AlertDialog`(폼·목록 일괄 작업·이탈 확인이 그리는 창 포함)의 기본 버튼·진행 문구. 창에 준 `closeLabel`·`confirmLabel`·`cancelLabel`·`pendingLabel`이 그 창에서만 앞선다. 폼 없이 대화창만 설치한 앱도 이것만 둔다.
+- `DialogDefaults labels={{ close, confirm, cancel, pending }} confirmation?={{ renderFailure?, completionMessage?, retryLabel? }}`: 이 아래 `Dialog`·`ConfirmDialog`·`AlertDialog`(폼·목록 일괄 작업·이탈 확인이 그리는 창 포함)의 기본 버튼·진행 문구와 `ConfirmationDialog`의 실패·완료 문구. 창에 준 `closeLabel`·`confirmLabel`·`cancelLabel`·`pendingLabel`·`renderFailure`·`completionMessage`·`retryLabel`이 그 창에서만 앞선다. 폼 없이 대화창만 설치한 앱도 이것만 둔다.
 - `FormDefaults messages formatError? renderFailure?`: 이 아래 모든 `<Form>`의 문구(`FormMessages` 전체)·칸 오류 해소·실패 문구. `formatError`가 없으면 첫 문자열 오류, `renderFailure`가 없으면 키트 문구(`messages.saveFailed` 등)다. 폼의 확인창도 대화창 부품이므로 `DialogDefaults`도 함께 둔다.
 - `FormGuard messages`: 이탈 확인 문구 전체(`navigate`·`cancel`·`navigationFailed`).
 - 목록·상세의 앱 기본값은 registry `list`의 `ListDefaults`([web-kit-list](../web-kit-list/SKILL.md))·registry `record`의 `DetailDefaults`([web-kit-record](../web-kit-record/SKILL.md))로 같은 자리에 둔다. 이 둘은 일부 문구만 받아도 되며 빠진 키는 키트 기본(한국어) 문구다. 다른 언어 앱은 화면에 보이는 키를 모두 준다.
