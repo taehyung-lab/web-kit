@@ -84,8 +84,17 @@ export interface ListColumn<Row> {
   readonly key: string;
   readonly header: ReactNode;
   readonly cell: (row: Row) => ReactNode;
-  readonly sort?: string;
+  /**
+   * 머리글이 맡는 정렬 키. 한 열이 여러 값을 함께 보이면(예: 수정일/등록일) 키 여러 개를 준다:
+   * 그중 하나로 정렬 중이면 정렬된 머리글로 보이고 누르면 그 키의 방향만 바꾼다. 아니면 누를 때 첫 키로 정렬한다.
+   */
+  readonly sort?: string | readonly [string, ...string[]];
   readonly className?: string;
+}
+
+/** 머리글의 정렬 키 목록. */
+function sortKeysOf(sort: ListColumn<unknown>['sort']): readonly string[] {
+  return sort === undefined ? [] : typeof sort === 'string' ? [sort] : sort;
 }
 
 const ARIA_SORT = { asc: 'ascending', desc: 'descending' } as const;
@@ -190,13 +199,15 @@ function Table<Row>({
               </TableHead>
             )}
             {columns.map((column) => {
-              const direction = column.sort !== undefined && column.sort === sortKey ? order : undefined;
+              const keys = sortKeysOf(column.sort);
+              const current = typeof sortKey === 'string' && keys.includes(sortKey) ? sortKey : undefined;
+              const direction = current === undefined ? undefined : order;
               return (
                 <TableHead key={column.key} scope="col" aria-sort={direction ? ARIA_SORT[direction] : undefined} className={column.className}>
                   {column.sort === undefined ? (
                     column.header
                   ) : (
-                    <Button type="button" variant="ghost" size="sm" className="-ml-2" onClick={() => model.toggleSort(column.sort!)}>
+                    <Button type="button" variant="ghost" size="sm" className="-ml-2" onClick={() => model.toggleSort(current ?? keys[0]!)}>
                       {column.header}
                       <span aria-hidden="true" className={direction === undefined ? 'text-muted-foreground/50' : undefined}>
                         {direction === 'asc' ? '▲' : direction === 'desc' ? '▼' : '↕'}

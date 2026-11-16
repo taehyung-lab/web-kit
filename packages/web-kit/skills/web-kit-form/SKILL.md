@@ -11,7 +11,7 @@ description: 등록·수정·대화창 폼의 저장·저장 뒤 추가 작업·
 
 `inputs` registry의 `SelectBox`는 일반 단일 선택을 `options/value/onValueChange`로 조립한다. `null`은 미선택이고 빈 문자열 옵션은 유효한 값이다. `id/ref/aria-*`는 trigger에 연결한다. 폼의 검증·blur 수명과 목록의 전체 선택 의미는 각각 `Form.Select`·`List.Select`가 소유하며 내부 표시만 공유한다. 복잡한 그룹·사용자 정의 항목은 shadcn 원시 부품으로 조립할 수 있다.
 
-`dialog` registry의 `ConfirmationDialog`는 `useConfirmationState` 결과를 `confirmation`으로 받아 open·pending·covered·실패 표시를 연결한다. `renderFailure`와 제목·내용은 소비자가 제공한다. `completionMessage`·`retryLabel`은 요청 성공 뒤 후속 처리만 실패한 상태의 설명과 버튼 문구다. 실행과 오류 분류는 기존 flow에 남는다. 직접 open/onConfirm을 제어할 때는 기존 `ConfirmDialog`를 쓴다.
+`dialog` registry의 `ConfirmationDialog`는 `useConfirmationState` 결과를 `confirmation`으로 받아 open·pending·covered·실패 표시를 연결한다. 제목·내용은 소비자가 제공한다. 실패 문구 `renderFailure`와 `completionMessage`·`retryLabel`(요청 성공 뒤 후속 처리만 실패한 상태의 설명과 버튼 문구)은 앱 맨 위 `DialogDefaults confirmation`이 한 번 주고, 그 창만 다를 때 화면이 같은 이름으로 준다(그 창에서만 앞선다). 실패 문구가 어디에도 없으면 렌더할 때 오류가 난다. 실행과 오류 분류는 기존 flow에 남는다. 직접 open/onConfirm을 제어할 때는 기존 `ConfirmDialog`를 쓴다.
 
 ## registry 폼 UI
 
@@ -47,7 +47,7 @@ description: 등록·수정·대화창 폼의 저장·저장 뒤 추가 작업·
 
 폼·대화창 기본 문구는 키트가 아니라 앱이 정한다. 앱 맨 위(대화창·폼을 그리는 모든 화면의 바깥, 보통 i18n Provider 안) 한 곳에 둔다.
 
-- `DialogDefaults labels={{ close, confirm, cancel, pending }}`: 이 아래 `Dialog`·`ConfirmDialog`·`AlertDialog`(폼·목록 일괄 작업·이탈 확인이 그리는 창 포함)의 기본 버튼·진행 문구. 창에 준 `closeLabel`·`confirmLabel`·`cancelLabel`·`pendingLabel`이 그 창에서만 앞선다. 폼 없이 대화창만 설치한 앱도 이것만 둔다.
+- `DialogDefaults labels={{ close, confirm, cancel, pending }} confirmation?={{ renderFailure?, completionMessage?, retryLabel? }}`: 이 아래 `Dialog`·`ConfirmDialog`·`AlertDialog`(폼·목록 일괄 작업·이탈 확인이 그리는 창 포함)의 기본 버튼·진행 문구와 `ConfirmationDialog`의 실패·완료 문구. 창에 준 `closeLabel`·`confirmLabel`·`cancelLabel`·`pendingLabel`·`renderFailure`·`completionMessage`·`retryLabel`이 그 창에서만 앞선다. 폼 없이 대화창만 설치한 앱도 이것만 둔다.
 - `FormDefaults messages formatError? renderFailure?`: 이 아래 모든 `<Form>`의 문구(`FormMessages` 전체)·칸 오류 해소·실패 문구. `formatError`가 없으면 첫 문자열 오류, `renderFailure`가 없으면 키트 문구(`messages.saveFailed` 등)다. 폼의 확인창도 대화창 부품이므로 `DialogDefaults`도 함께 둔다.
 - `FormGuard messages`: 이탈 확인 문구 전체(`navigate`·`cancel`·`navigationFailed`).
 - 목록·상세의 앱 기본값은 registry `list`의 `ListDefaults`([web-kit-list](../web-kit-list/SKILL.md))·registry `record`의 `DetailDefaults`([web-kit-record](../web-kit-record/SKILL.md))로 같은 자리에 둔다. 이 둘은 일부 문구만 받아도 되며 빠진 키는 키트 기본(한국어) 문구다. 다른 언어 앱은 화면에 보이는 키를 모두 준다.
@@ -85,7 +85,7 @@ headless는 화면 배치 없이 상태와 연결 함수만 쓰는 방식이다.
 
 - schema: 동기 Standard Schema(zod 4). 비동기 검증은 받지 않는다. 폼 값의 File·Blob은 복사되지 않고 그대로 저장 함수까지 간다.
 - `source { id, values }`: 원본을 폼 값으로 바꾼 것. 등록 화면이면 기본값이다.
-- `save(values, submitted)`: 서버가 저장 결과를 주면 폼 값으로 바꿔 `{ saved }`로 돌려준다. 요청 전에 화면 절차가 거절하면(먼저 조회가 필요한 검사·업로드 실패·확인창 취소) `throw new FormRejection(칸 목록 [{ field, message }], root?)`. 키트가 서버 필드 오류와 같은 길로 처리하므로(아래 「실패」) 화면이 칸에 오류를 직접 붙이거나 구역을 열거나 포커스를 예약하지 않는다.
+- `save(values, submitted)`: 서버가 저장 결과를 주면 폼 값으로 바꿔 `{ saved }`로 돌려준다. 요청 전에 화면 절차가 거절하면(먼저 조회가 필요한 검사·업로드 실패·확인창 취소) `throw new FormRejection(칸 목록 [{ field, message }], root?)`. 서버가 칸 정보(필드 오류) 없이 업무 거절로 답해 저장되지 않았고 어느 칸 때문인지 화면이 알 때(예: 같은 값이 이미 있다는 결과 코드)도 그 실패를 받아 같은 방법으로 던진다. 저장이 일부라도 반영됐을 수 있는 실패에는 쓰지 않는다. 키트가 서버 필드 오류와 같은 길로 처리하므로(아래 「실패」) 화면이 칸에 오류를 직접 붙이거나 구역을 열거나 포커스를 예약하지 않는다.
 - 필요할 때만 선언하는 것:
   - `confirm`: 유효한 제출을 확인 대기로 보낸다. 켜면 `<Form confirm>` 내용이 필수다(위 「저장 확인창」).
   - `fieldError`: 서버 필드를 폼 경로와 문구로 바꾼다. 돌려준 경로는 제출 때 기준이고, 그 뒤 줄 작업은 키트가 따라간다.
