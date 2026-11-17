@@ -29,9 +29,9 @@ const LAYER_REASONS = {
   routes: 'route는 URL·진입 조건·문맥만 넘긴다. 요청·업무 흐름은 feature의 model/use-*가 실행한다',
   feature: 'feature는 앱 조립(app)·route를 모른다. 실행 기반은 runtime에서 가져온다',
   'feature:api': 'api는 요청·DTO·query 정의만 둔다. 상태·흐름·화면을 모른다',
-  'feature:data': 'data·forms·rules는 순수하다. 요청·실행 기반·상태 저장·흐름·화면에 의존하지 않는다',
-  'feature:storage': 'storage·search는 화면과 흐름을 모른다',
-  'feature:hooks': 'hooks는 화면이 쓸 상태·동작만 돌려주고 화면 부품을 모른다',
+  'feature:data': 'model의 검증·계산 파일은 순수하다. 요청·실행 기반·상태 저장·흐름·화면에 의존하지 않는다',
+  'feature:storage': 'model의 상태·검색 파일은 ui와 업무 hook을 모른다',
+  'feature:hooks': 'model의 use-* 파일은 화면이 쓸 상태·동작만 돌려주고 ui를 모른다',
   'feature:pages': '화면은 hook을 호출하고 그린다. 요청·생성 코드·실행 기반·상태 쓰기는 model의 use-* 파일로 옮긴다',
   support: '제품 코드는 mock·검사 도우미(support)를 import하지 않는다',
 };
@@ -44,7 +44,7 @@ const REACT_FAMILY = ['react', 'react-dom', 'react-i18next', '@tanstack/react-qu
 
 /** 역할별 패키지 금지. all: 타입 포함, value: 실행 import, names: 특정 실행 이름. */
 const PACKAGE_BANS = {
-  'feature:data': { value: [...REACT_FAMILY, ...RUNTIME_KIT], reason: 'data·forms·rules는 React·라우터·요청·세션 실행에 의존하지 않는 순수 코드다' },
+  'feature:data': { value: [...REACT_FAMILY, ...RUNTIME_KIT], reason: 'model의 검증·계산 파일은 React·라우터·요청·세션 실행에 의존하지 않는 순수 코드다' },
   'feature:api': { value: ['@tanstack/react-router'], reason: 'api는 화면 이동을 하지 않는다. 이동은 model의 use-* 파일이 정한다' },
   'feature:pages': {
     all: ['zod'],

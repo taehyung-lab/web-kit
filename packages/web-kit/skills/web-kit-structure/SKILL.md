@@ -40,7 +40,7 @@ runtime을 app에서 나누는 이유: feature가 http·세션을 쓰려고 app�
 | `api/` | 요청 함수·DTO·응답 변환·query key/options·mutation과 무효화 | `api/products.ts` |
 | `index.ts` | app·routes·다른 업무가 실제 사용하는 공개 연결만 | 페이지·진입 판정·문구 등록 |
 
-하위 폴더는 login·list·detail·form처럼 함께 읽고 바꾸는 대상으로 묶는다. model 안에 api/lib/hooks/forms/rules/storage/search를 다시 만들지 않는다. 한 파일을 감싸기 위한 폴더나 전달만 하는 hook·컴포넌트를 만들지 않는다. 업무 내부는 실제 파일을 직접 참조하고 하위 index.ts로 재전달하지 않는다. 검사 파일은 대상 옆에 둔다. 화면 대표 export는 `ProductListPage`처럼 Page로 끝내고 부분은 `ProductFilters`처럼 보이는 역할로 이름 짓는다.
+하위 폴더는 login·list·detail·form처럼 함께 읽고 바꾸는 대상으로 묶는다. model 안에 api/lib/hooks/forms/rules/storage/search/schema/schemas를 다시 만들지 않는다. 한 파일을 감싸기 위한 폴더나 전달만 하는 hook·컴포넌트를 만들지 않는다. 업무 내부는 실제 파일을 직접 참조하고 하위 index.ts로 재전달하지 않는다. 검사 파일은 대상 옆에 둔다. 화면 대표 export는 `ProductListPage`처럼 Page로 끝내고 부분은 `ProductFilters`처럼 보이는 역할로 이름 짓는다.
 
 ### model의 파일 이름과 실행 경계
 

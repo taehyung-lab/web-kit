@@ -115,7 +115,7 @@ export function classify(config, file) {
     const fileName = parts.at(-1);
     const folders = parts.slice(3, -1);
     // Group by the work being changed. File names retain the executable/pure distinction without technical subfolders.
-    const technicalFolders = ['api', 'model', 'ui', 'hooks', 'forms', 'rules', 'storage', 'search', 'lib', 'pages'];
+    const technicalFolders = ['api', 'model', 'ui', 'hooks', 'forms', 'rules', 'storage', 'search', 'lib', 'pages', 'schema', 'schemas'];
     let role = 'invalid';
     if (FEATURE_LAYERS.includes(layer) && fileName !== 'index.ts' && !folders.some(folder => technicalFolders.includes(folder))) {
       if (layer === 'ui') role = 'pages';

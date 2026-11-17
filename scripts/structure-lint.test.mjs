@@ -182,3 +182,18 @@ for (const folder of ['model/', 'model/form/', 'model/policy/']) test(`pure ${fo
   const result = await check('valid', { [file]: "import { http } from '@/runtime/http'; import { orderListSearch } from '@/features/orders/model/order-list-search'; import type { Order } from '@/api/generated/models/order'; export type Data = Order; export const values = [http, orderListSearch];" });
   assert.equal(result.violations.filter(v => v.file === file && v.rule === 'layer-import').length, 2, show(result));
 });
+
+for (const folder of ['schema', 'schemas']) {
+  for (const parent of ['model', 'model/form']) test(`technical ${parent}/${folder} is rejected`, async () => {
+    const file = `src/features/orders/${parent}/${folder}/order-form.ts`;
+    const result = await check('valid', { [file]: 'export const initialOrder = { name: "" };' });
+    assert.ok(result.violations.some(v => v.file === file && v.rule === 'file-layout'), show(result));
+  });
+}
+test('form validation and mapping stay beside the business hook', async () => {
+  const result = await check('valid', {
+    'src/features/orders/model/form/order-form.ts': 'export const initialOrder = { name: "" }; export const toOrderRequest = (name: string) => ({ name: name.trim() });',
+    'src/features/orders/model/form/use-order-form.ts': "import { initialOrder, toOrderRequest } from './order-form'; export const useOrderForm = () => toOrderRequest(initialOrder.name);",
+  });
+  assert.equal(result.ok, true, show(result));
+});
