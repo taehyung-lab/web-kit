@@ -261,6 +261,7 @@ describe('listSearch 선언을 이름으로 읽는 칸', () => {
       policy,
       fields: {
         search: keywords({ targets: ['name', 'code'] }),
+        singleSearch: keywords({ targets: ['name'] }),
         statuses: choices({ values: ['on', 'off'], multiple: true }),
         period: dateRange({ types: ['created', 'updated'], defaultType: 'created' }),
         paging: paging(),
@@ -309,6 +310,19 @@ describe('listSearch 선언을 이름으로 읽는 칸', () => {
     fireEvent.click(screen.getByRole('button', { name: /add|추가/i }));
     expect(await screen.findByText('K-name: a')).toBeDefined();
     expect(screen.getByText('K-name: b')).toBeDefined();
+  });
+
+  it.each([
+    ['singleSearch', { name: 'Group name' }],
+    ['search', { name: 'Group name', code: 'Code' }],
+  ])('always shows the selected keyword target for %s', async (name, choiceLabels) => {
+    mount(<List.Keywords name={name} label="Keywords" choiceLabels={choiceLabels} />);
+    const target = screen.getByRole('combobox', { name: 'Keywords 검색 대상' });
+    expect(target.textContent).toContain('Group name');
+    fireEvent.change(screen.getByRole('textbox', { name: 'Keywords' }), { target: { value: 'Booster' } });
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'Keywords' }), { key: 'Enter' });
+    expect(await screen.findByText('Group name: Booster')).toBeDefined();
+    expect(target.textContent).toContain('Group name');
   });
 
   it('refuses a name that is not that kind of field and a missing label instead of showing raw values', () => {
