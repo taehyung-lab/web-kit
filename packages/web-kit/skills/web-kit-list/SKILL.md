@@ -19,6 +19,7 @@ description: 목록 필터·기간 프리셋·날짜 검색의 시간대/UTC 경
   - 확정 값 타입은 `SearchValues<typeof 선언>`이다(주소 키별 평면 값). 선언은 라우터를 실행 import하지 않으므로 순수 층에 두고 요청 변환이 그 타입을 읽는다.
   - 주소 연결은 `connectSearch(선언, { checks? })`다. 서버 선택지 확인(`checks: { 칸: { options, allowed, parents?, tree? } }`)은 실행 층의 query를 묶으므로 여기서 붙인다. 결과를 `useList`의 definition으로 쓰고, route는 `...connected.route({ guard })`를 펼친다. guard(권한 확인 등)는 주소 교정보다 먼저 실행되어 거부된 진입에서 주소를 바꾸지 않는다.
   - 화면 부품은 칸 이름으로 선언을 읽는다: `List.Period name`(+`typeLabels`), `List.Keywords name`(+`choiceLabels`, 구분자는 정책), `List.MultiSelect name`(+`optionLabels`), `List.PageSize`, `List.SortSelect`(+`optionLabels`). 문구는 값→문구 표로 주며 소비자는 `satisfies Record<값 타입, string>`으로 빠진 값을 타입에서 잡는다. 화면은 배치·문구만 준다. 이름이 없거나 종류가 다르거나 문구가 빠진 값이 있으면 오류다.
+  - `List.Keywords`는 검색 대상 수와 관계없이 대상 선택 상자에 현재 선택된 대상을 항상 표시한다. 대상이 하나여도 생략하지 않는다.
   - `List.Table`은 `rowId`·`selectable`을 생략하면 `useList`의 `rowId`와 `selectable`(선언했고 지금 행 중 선택할 수 있는 행이 있을 때 선택 칸)을 쓴다.
   - 정책이 `pending: 'include'`면 `useList.submit`이 [추가]하지 않은 입력을 같은 구분자·같은 추가 규칙(trim·중복 제거)으로 포함한다. 화면에서 submit을 감싸지 않는다.
 - 칸 종류로 표현하지 못하는 검색은 아래 `defineSearch`로 직접 선언한다(같은 엔진). URL 하나에 `defineSearch` 하나를 선언한다.
