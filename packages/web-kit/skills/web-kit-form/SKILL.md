@@ -28,7 +28,7 @@ description: 등록·수정·대화창 폼의 저장·저장 뒤 추가 작업·
 - `Form.Failure`: 폼 수준 한 줄. 칸에 붙지 못한 저장 실패와, 저장 뒤 완료 처리 실패(다시 시도 = 완료 처리만)를 보인다. 서버 필드 오류가 모두 칸에 붙은 검증 실패는 그리지 않는다. 위치는 놓는 곳이 정한다.
 - `Form.File`: 값은 `FormFileValue`(`empty`·`existing{name}`·`selected{file}`·`removed`). 지금 파일 이름을 상태에서 그리고 입력의 설명으로 잇는다. 선택 창을 열었다 취소해도 값은 그대로이고, 지우는 길은 제거 버튼 하나다(기존 파일이면 `removed`). 고른 File은 다른 칸 오류·재마운트·대화창 열고 닫기·저장 실패 뒤에도 같은 객체로 남아 다시 저장하면 그대로 보낸다. 업로드와 `removed`의 요청 변환은 `save`가 한다.
 - `Form.Submit`은 저장 중·확인 대기·완료 처리 중에 `aria-disabled`로 잠긴다(`disabled`로 바꾸지 않아 포커스가 남는다). `Form.Cancel`도 그동안 잠긴다. 저장 중 표시는 폼 종류로 갈린다.
-  - 등록·수정 폼은 `useSaveForm({ progress: 'create' | 'edit' })`로 종류를 선언한다. 저장하는 동안(완료 창이 없으면 완료 처리·이동이 끝날 때까지) 앱 셸의 `BlockingProgress`가 화면 전체를 덮고 그 종류의 문구를 띄운다. 버튼 옆 진행 표시는 그리지 않는다. 최소 표시·지연은 없다.
+  - 등록·수정 폼은 `useSaveForm({ progress: 'create' | 'edit' })`로 종류를 선언한다. 저장하는 동안(완료 창이 없으면 완료 처리·이동이 끝날 때까지) 앱 셸의 `FullPageProgress`가 화면 전체를 덮고 그 종류의 문구를 띄운다. 버튼 옆 진행 표시는 그리지 않는다. 최소 표시·지연은 없다.
   - 선언하지 않은 폼(로그인·대화창 폼)은 덮개 없이 저장 요청·완료 처리 중 버튼 바로 뒤에 진행 표시(`Pending`, 문구 `messages.saving`은 화면 낭독기용)가 선다.
   - 저장 함수가 저장 도중 사용자에게 묻는다면(예: 지워질 회차 확인) 그 물음을 `save`의 세 번째 인자 `step.waitForUser(물음)`으로 감싼다. 묻는 동안 덮개가 내려가고 답한 뒤 저장이 이어지면 다시 덮는다. 감싸지 않으면 물음 창 뒤에 "수정 중" 덮개가 남는다.
 - `Form.Cancel to={...}`: 입력이 있으면 취소 문구로 한 번 묻고 이동한다. `Form.Dialog` 안이면 그 대화창을 닫는다. 저장 중이면 아무것도 하지 않는다.
@@ -59,9 +59,9 @@ description: 등록·수정·대화창 폼의 저장·저장 뒤 추가 작업·
 
 실제 조립 예: [apps/starter/src/app/shell/AppShell.tsx](../../references/apps/starter/src/app/shell/AppShell.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-registry `blocking-progress`의 `BlockingProgress messages={{ loading, create, edit, delete, wait? }}`를 앱 셸(로그인 뒤 화면 골격)에 한 번 두고 셸 본문을 children으로 감싼다. 공통 등록·정리·복원은 `/dialog`의 `useBlockingProgressBinding`·`BlockingProgressProvider`가 맡고 복사본은 반환 속성과 ref를 연결한다. 문구는 프로젝트가 준다(`wait`는 둘째 줄).
-- 무엇이 덮는가: 등록·수정 폼 저장(`useSaveForm({ progress })`), 확인창을 거친 삭제 실행(`useConfirmationState({ progress: 'delete' })`, 아래 「폼 없는 확인」), 페이지 진입 조회(`useList({ progress: 'page' })`·`useRecord(options, id, { progress: 'page' })` — 각 skill), 화면 고유의 진입 대기(`useBlockingProgress('loading', active)`, 예: 수정 폼을 열기 전 보조 조회). 쓰기(등록·수정·삭제)가 조회보다 앞선다. 덮개 밖(셸 없는 화면·단위 시험)에서는 아무 일도 하지 않는다.
-- 덮는 동안 children은 `inert`·`aria-busy`(클릭·포커스·낭독에서 빠짐)이고, `role="status"` 영역이 문구를 읽는다. 대화창(portal)은 children 밖이라 덮개 위에서 조작된다(세션 경고·만료, 저장 완료 창). 덮개 층은 `z-40`(shadcn 대화창 `z-50` 아래)이고 배경은 `bg-background/80`이다. 바꾸려면 `ui/blocking-progress.tsx` 복사본의 클래스를 고치되 프로젝트 대화창의 층보다 낮게 둔다. 가운데 진행 표시는 기본이 키트 원형 회전 표시이고 `indicator`(ReactNode)를 주면 그 표시로 바뀐다(덮개째 낭독기에서 숨김, 움직임 줄이기 설정은 표시를 준 프로젝트가 맞춘다).
+registry `blocking-progress`의 `FullPageProgress messages={{ loading, create, edit, delete, wait? }}`를 앱 셸(로그인 뒤 화면 골격)에 한 번 두고 셸 본문을 children으로 감싼다. 공통 등록·정리·복원은 `/progress`의 `useFullPageProgressBinding`·`FullPageProgressProvider`가 맡고 복사본은 반환 속성과 ref를 연결한다. 문구는 프로젝트가 준다(`wait`는 둘째 줄).
+- 무엇이 덮는가: 등록·수정 폼 저장(`useSaveForm({ progress })`), 확인창을 거친 삭제 실행(`useConfirmationState({ progress: 'delete' })`, 아래 「폼 없는 확인」), 페이지 진입 조회(`useList({ progress: 'page' })`·`useRecord(options, id, { progress: 'page' })` — 각 skill), 화면 고유의 진입 대기(`useFullPageProgress('loading', active)`, 예: 수정 폼을 열기 전 보조 조회). 쓰기(등록·수정·삭제)가 조회보다 앞선다. 덮개 밖(셸 없는 화면·단위 시험)에서는 아무 일도 하지 않는다.
+- 덮는 동안 children은 `inert`·`aria-busy`(클릭·포커스·낭독에서 빠짐)이고, `role="status"` 영역이 문구를 읽는다. 대화창(portal)은 children 밖이라 덮개 위에서 조작된다(세션 경고·만료, 저장 완료 창). 덮개 층은 `z-40`(shadcn 대화창 `z-50` 아래)이고 배경은 `bg-background/80`이다. 바꾸려면 `full-page-progress.tsx` 복사본의 클래스를 고치되 프로젝트 대화창의 층보다 낮게 둔다. 가운데 진행 표시는 기본이 키트 원형 회전 표시이고 `indicator`(ReactNode)를 주면 그 표시로 바뀐다(덮개째 낭독기에서 숨김, 움직임 줄이기 설정은 표시를 준 프로젝트가 맞춘다).
 - 닫힐 때 포커스가 문서 본문으로 밀려나 있으면(inert) 덮기 전 본문에서 마지막으로 포커스한 요소로 돌린다. 기록하는 것은 본문 DOM 안 요소뿐이라, 확인창(portal)을 거친 저장·삭제는 확인창을 연 버튼으로 돌아온다. 그 요소도 사라졌으면 본문 첫 `h1`, 없으면 본문 영역으로 돌린다(문서 본문에 두지 않는다). 본문에 포커스한 적이 없으면(첫 진입) 옮기지 않는다. 완료 창·오류 칸·대화창이 가진 포커스는 건드리지 않는다(칸 없는 저장 실패는 오류 문구가 `role=alert`로 읽히고 포커스는 저장 버튼에 돌아온다).
 - 덮지 않는 것: 목록 검색·정렬·페이지 이동(이전 결과를 보인 채 조회), 단건 언어 전환·재조회, 선택지 조회(그 칸의 상태), 다운로드(버튼 잠금 + 옆 진행 표시), 선언하지 않은 쓰기(상태 변경·대화창 폼 저장·`List.BulkAction`).
 
@@ -69,7 +69,7 @@ registry `blocking-progress`의 `BlockingProgress messages={{ loading, create, e
 
 실제 조립 예: [apps/starter/src/app/NoticeOutlet.tsx](../../references/apps/starter/src/app/NoticeOutlet.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-기본 부품(`Button`·`Input`·`Textarea`·`Select`·`Checkbox`)은 shadcn 설치본을 쓰고 registry `inputs`는 그 부품이 키트가 기대는 속성(버튼 기본 type=button 등)을 지키는지 보는 검사 연결만 둔다. `dialog`는 `Dialog`·`ConfirmDialog`·`AlertDialog`, `pending`은 `Pending`, `blocking-progress`는 `BlockingProgress`를 제공한다. 진행 등록은 `/dialog`의 `useBlockingProgress`, 대화창 연결은 `useDialogBinding`·`useConfirmBinding`·`useAcknowledgeBinding`을 쓴다. 대화창은 열린 순간 첫 칸에 포커스하고 Tab·Shift+Tab 순환을 창 안에서 같은 이벤트로 처리한다(포커스가 창 밖에 한 순간도 나가지 않는다). `ConfirmDialog`는 실행 중(`pending`) 닫기·재실행을 막고, `AlertDialog`는 확인만 받으며 연타해도 한 번만 알린다. 둘 다 `pending`이면 버튼 뒤에 진행 표시(`pendingLabel`은 화면 낭독기 문구)가 선다.
+기본 부품(`Button`·`Input`·`Textarea`·`Select`·`Checkbox`)은 shadcn 설치본을 쓰고 registry `inputs`는 그 부품이 키트가 기대는 속성(버튼 기본 type=button 등)을 지키는지 보는 검사 연결만 둔다. `dialog`는 `Dialog`·`ConfirmDialog`·`AlertDialog`, `pending`은 `Pending`, `blocking-progress`는 `FullPageProgress`를 제공한다. 진행 등록은 `/progress`의 `useFullPageProgress`, 대화창 연결은 `useDialogBinding`·`useConfirmBinding`·`useAcknowledgeBinding`을 쓴다. 대화창은 열린 순간 첫 칸에 포커스하고 Tab·Shift+Tab 순환을 창 안에서 같은 이벤트로 처리한다(포커스가 창 밖에 한 순간도 나가지 않는다). `ConfirmDialog`는 실행 중(`pending`) 닫기·재실행을 막고, `AlertDialog`는 확인만 받으며 연타해도 한 번만 알린다. 둘 다 `pending`이면 버튼 뒤에 진행 표시(`pendingLabel`은 화면 낭독기 문구)가 선다.
 - `Pending`(`label` = 화면 낭독기 문구): 진행 중 표시 하나(`role="status"`·`data-slot="pending"` 안에 shadcn Spinner + `sr-only` 문구). 목록 다운로드·덮개를 선언하지 않은 `Form.Submit`·확인창이 쓰는 그 부품이다. 키트 폼으로 아직 옮기지 않은 화면도 같은 규칙이다: 등록·수정 저장이면 `useSaveForm`에 `progress`를 주고 버튼만 잠근다, 그 밖의 진행이면 버튼을 잠그고 바로 뒤에 이 부품을 둔다. 설치한 `Pending` 한 부품을 재사용한다.
 - 칸·구역·폼 한 줄의 기본 여백 초기화는 0 우선순위(`:where`)라 프로젝트의 간격 유틸리티(`space-y-*` 등)가 그대로 적용된다.
 

@@ -3,10 +3,10 @@ import { useEffect, useRef, useState } from 'react';
 import { useSaveForm } from '../form';
 import { RequestFailure } from '../failure';
 import { createBrowserHistory, createRootRoute, createRoute, createRouter, Outlet, RouterProvider } from '@tanstack/react-router';
-import { useBlockingProgress } from '../progress';
+import { useFullPageProgress } from '../full-page-progress';
 import type * as DialogContract from './contracts/ui/dialog';
 import { dialogDefaultsWrapper, formDefaultsWrapper, type DialogDefaultsParts, type FormDefaultsParts } from './copy-defaults';
-import type * as ProgressContract from './contracts/ui/blocking-progress';
+import type * as ProgressContract from './contracts/ui/full-page-progress';
 import type * as FormContract from './contracts/form/ui';
 import type * as ChoiceContract from './contracts/ui/choice';
 import { z } from 'zod';
@@ -28,7 +28,7 @@ export function createDialogConformancePage({ Dialog, ...copy }: { Dialog: typeo
 }
 
 /** inert·배경 차단·포커스 복원 각 분기를 실제 덮개로 관찰할 화면을 만든다. */
-export function createProgressConformancePage({ BlockingProgress, Dialog, Form, ...copy }: { Form: typeof FormContract.Form; BlockingProgress: typeof ProgressContract.BlockingProgress; Dialog: typeof DialogContract.Dialog } & FormDefaultsParts) {
+export function createProgressConformancePage({ FullPageProgress, Dialog, Form, ...copy }: { Form: typeof FormContract.Form; FullPageProgress: typeof ProgressContract.FullPageProgress; Dialog: typeof DialogContract.Dialog } & FormDefaultsParts) {
   const Root = formDefaultsWrapper(copy);
   /** 조회 종료를 외부 이벤트로 전달해 완료 순간의 포커스를 인위적으로 바꾸지 않는다. */
   function Content({ mode }: { mode: string }) {
@@ -36,7 +36,7 @@ export function createProgressConformancePage({ BlockingProgress, Dialog, Form, 
     const [portal, setPortal] = useState(false);
     const [portalClicks, setPortalClicks] = useState(0);
     const [clicks, setClicks] = useState(0);
-    useBlockingProgress('edit', active);
+    useFullPageProgress('edit', active);
     useEffect(() => {
       const finish = () => { setActive(false); if (mode === 'saved') setPortal(true); };
       window.addEventListener('web-kit:finish', finish);
@@ -60,7 +60,7 @@ export function createProgressConformancePage({ BlockingProgress, Dialog, Form, 
   /** 주소의 mode로 복원 분기만 바꾸고 같은 복사본 덮개를 사용한다. */
   return function ProgressConformancePage() {
     const mode = new URLSearchParams(location.search).get('mode') ?? 'restore';
-    return <Root><BlockingProgress messages={{ loading: '조회 중', create: '등록 중', edit: '수정 중', delete: '삭제 중' }}>{mode === 'error' ? <ErrorForm /> : <Content mode={mode} />}</BlockingProgress></Root>;
+    return <Root><FullPageProgress messages={{ loading: '조회 중', create: '등록 중', edit: '수정 중', delete: '삭제 중' }}>{mode === 'error' ? <ErrorForm /> : <Content mode={mode} />}</FullPageProgress></Root>;
   };
 }
 

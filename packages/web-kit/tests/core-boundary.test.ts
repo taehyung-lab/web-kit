@@ -133,7 +133,7 @@ it.each([
   '../../ui-registry/src/list.tsx',
   '../src/record.ts',
   '../../ui-registry/src/detail.tsx',
-  '../../ui-registry/src/ui/index.ts',
+  '../../ui-registry/src/index.ts',
   '../src/search/index.ts',
 ])(
   '%s는 권한을 import하지 않는다',
@@ -183,13 +183,13 @@ it('진행 표시 마크업(shadcn Spinner 연결)은 /ui의 pending 한 곳에�
   const owners = Object.entries(sources)
     .filter(([file, source]) => !file.startsWith('../src/testing/') && (source.includes('@/components/ui/spinner') || source.includes('data-slot="pending"')))
     .map(([file]) => file);
-  expect(owners).toEqual(['../../ui-registry/src/ui/pending.tsx']);
-  for (const entry of ['../../ui-registry/src/list.tsx', '../../ui-registry/src/form/form.tsx', '../../ui-registry/src/ui/dialog.tsx']) {
+  expect(owners).toEqual(['../../ui-registry/src/pending.tsx']);
+  for (const entry of ['../../ui-registry/src/list.tsx', '../../ui-registry/src/form/form.tsx', '../../ui-registry/src/dialog.tsx']) {
     const source = [...reach(entry)].map((file) => sources[file]).join('\n');
     expect(source, entry).toMatch(/<Pending label=/);
   }
-  expect(sources['../../ui-registry/src/ui/blocking-progress.tsx']).toMatch(/<Spinner large \/>/);
-  expect(sources['../../ui-registry/src/ui/index.ts']).toMatch(/export \{ Pending \} from '\.\/pending'/);
+  expect(sources['../../ui-registry/src/full-page-progress.tsx']).toMatch(/<Spinner large \/>/);
+  expect(sources['../../ui-registry/src/index.ts']).toMatch(/export \{ Pending \} from '\.\/pending'/);
 });
 
 

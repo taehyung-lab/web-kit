@@ -57,20 +57,35 @@ pnpm exec web-kit-registry record --source /path/to/same-version-web-kit --items
 5.0.0-rc.7 후보까지의 복사본은 `ui/styles.css`(`.wk-*` 클래스·`--wk-*` 변수)와 키트 기본 부품(`inputs`)을 썼다. 새 복사본은 shadcn 기본 부품을 조합하고 그 스타일시트를 쓰지 않는다. **복사본 교정과 프로젝트 화면 수정이 모두 필요하다.**
 
 1. 위 3단계대로 base-nova 테마 CSS와 `components.json` 별칭(`aliases.ui: "@/shared/ui"`)을 맞춘다.
-2. 새 원본을 설치하고(기본 부품도 함께 설치된다) 설치 기록을 다시 만든다. 지난 복사본의 `ui/styles.css`·`ui/inputs.tsx`·`checks/styles.test.tsx`는 새 원본에 없으므로 지우고, 앱의 `import '@/shared/ui/web-kit/ui/styles.css'`도 지운다.
+2. 새 원본을 설치하고(기본 부품도 함께 설치된다) 설치 기록을 다시 만든다. 지난 복사본의 `ui/styles.css`·`ui/inputs.tsx`·`checks/styles.test.tsx`는 새 원본에 없으므로 지우고, 앱의 `import '@/shared/ui/web-kit/styles.css'`도 지운다.
 3. 화면 코드의 기본 부품 import와 속성을 바꾼다.
 
 | 이전 | 이후 |
 |---|---|
-| `import { Button } from '@/shared/ui/web-kit/ui'` | `import { Button } from '@/shared/ui/button'` |
+| `import { Button } from '@/shared/ui/web-kit'` | `import { Button } from '@/shared/ui/button'` |
 | `<Button>`(기본 `secondary`) · `variant="primary"` · `"secondary"` · `"ghost"` · `"danger"` | `variant="outline"` · 생략(`default`) · `"outline"` · `"ghost"` · `"destructive"` |
-| `Input`·`Checkbox`(`@/shared/ui/web-kit/ui`) | `@/shared/ui/input`·`@/shared/ui/checkbox`(Base UI 속성 그대로) |
-| `TextArea`(`@/shared/ui/web-kit/ui`) | `Textarea`(`@/shared/ui/textarea`) |
+| `Input`·`Checkbox`(`@/shared/ui/web-kit`) | `@/shared/ui/input`·`@/shared/ui/checkbox`(Base UI 속성 그대로) |
+| `TextArea`(`@/shared/ui/web-kit`) | `Textarea`(`@/shared/ui/textarea`) |
 | `<Select value onChange={(e) => set(e.target.value)}><option value="a">A</option></Select>` | `<Select items={options} value={value} onValueChange={set}><SelectTrigger aria-label="…"><SelectValue placeholder="…" /></SelectTrigger><SelectContent>{options.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select>`(`@/shared/ui/select`) |
 | `--wk-*` 변수·`.wk-*` 클래스로 바꾼 모양 | 테마 변수(`:root`)나 복사본의 Tailwind 클래스 |
 
 4. 키트 묶음 부품의 props는 그대로다. 그리는 결과만 바뀐다: `Form.Select`·`List.Select`·목록 기간 기준·검색어 대상·정렬·페이지 크기·다운로드 종류는 shadcn Select(역할 `combobox` 버튼과 `option` 목록)다. `Form.Select`는 값이 비었을 때 빈 선택지 대신 안내 문구(`placeholder`, 기본 `messages.choose`)를 트리거에 보인다. 단일 `Choice`의 radio는 칸마다 하나의 radiogroup이다. `Form.Checkbox`는 shadcn Checkbox(button)다. 검사·화면 테스트가 네이티브 `<select>`·`<option>`(예: `selectOptions`)이나 `.wk-*` 클래스를 찾았다면 트리거를 눌러 `option`을 고르는 방식이나 `data-slot`(예: `pending`·`blocking-progress`)으로 바꾼다.
-5. 덮개 층은 `z-40`(shadcn 대화창 `z-50` 아래)이다. 층·배경을 바꾸려면 `ui/blocking-progress.tsx` 복사본의 클래스를 고친다(`--wk-blocking-*` 변수는 없다).
+5. 덮개 층은 `z-40`(shadcn 대화창 `z-50` 아래)이다. 층·배경을 바꾸려면 `full-page-progress.tsx` 복사본의 클래스를 고친다(`--wk-blocking-*` 변수는 없다).
+
+### 7.0.0-rc.1 진행 표시와 UI 경로 이전
+
+**복사본 교정 필요.** 6.0.0-rc.3에서 7.0.0-rc.1 후보로 옮길 때 패키지와 같은 후보의 registry를 함께 적용한다. `blocking-progress` 등 설치 항목 이름과 검사 ID는 유지한다. 정식 tag 발행 전에는 검증한 원본 commit으로 고정한다.
+
+| 이전 | 이후 |
+|---|---|
+| `BlockingProgress`(로컬 별칭 포함) | `FullPageProgress` |
+| `/dialog`의 `useBlockingProgress`·`useBlockingProgressBinding`·`BlockingProgressProvider`·`BlockingKind` | `/progress`의 `useFullPageProgress`·`useFullPageProgressBinding`·`FullPageProgressProvider`·`FullPageProgressKind` |
+| `@/shared/ui/web-kit/ui/blocking-progress` | `@/shared/ui/web-kit/full-page-progress` |
+| `@/shared/ui/web-kit/ui/dialog` 등 | `@/shared/ui/web-kit/dialog` 등 |
+| `@/shared/ui/web-kit/ui`의 시각 부품 묶음 | `@/shared/ui/web-kit`(hook은 패키지에서 직접 import) |
+| `/testing/unit`의 `checkBlockingProgressConformance`와 입력 `BlockingProgress` | `checkFullPageProgressConformance`와 입력 `FullPageProgress` |
+
+`ui/`의 dialog·pending·choice·retry·index도 `web-kit/` 바로 아래로 옮긴다. 이전 복사본의 프로젝트 디자인을 보존하며 아래 세 방향 비교를 하고, import·검사 연결·설치 기록을 함께 갱신한다. 이 변경은 이름과 위치만 바꾸며 본문 잠금·초점 복원·진행 우선순위·대화창 순서는 유지한다.
 
 ### 복사본 갱신
 

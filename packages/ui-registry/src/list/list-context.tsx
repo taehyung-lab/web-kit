@@ -1,7 +1,7 @@
 // 파일 책임: 목록 표시 설정의 단일 Context와 여러 목록 영역이 함께 쓰는 기본 UI.
 import { ListProvider as ModelProvider, useListModel, type ListModel } from '@boosterlab/web-kit/list';
 import { createContext, useContext, type ReactNode } from 'react';
-import { MixedCheckbox } from '../ui/choice';
+import { MixedCheckbox } from '../choice';
 import { SelectBox } from '../select-box';
 
 

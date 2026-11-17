@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { SelectBox } from './web-kit/select-box';
-import { ConfirmationDialog, DialogDefaults, defaultDialogLabels } from './web-kit/ui/dialog';
+import { ConfirmationDialog, DialogDefaults, defaultDialogLabels } from './web-kit/dialog';
 
 it('distinguishes an unselected placeholder from the empty-string all option and forwards focus/aria', async () => {
   const user = userEvent.setup();

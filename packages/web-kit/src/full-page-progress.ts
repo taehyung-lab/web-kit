@@ -1,31 +1,31 @@
 // 파일 책임: 화면 전체 진행 덮개의 상태(지금 무엇이 진행 중인가)를 모은다. 폼 저장(등록·수정)·삭제 실행과 페이지 첫 조회가 여기에 등록하고,
-// `/ui`의 BlockingProgress가 이 등록소를 제공·표시한다. UI를 import하지 않는다(동작 경로가 이 파일만 끌어온다).
+// registry의 FullPageProgress가 이 등록소를 제공·표시한다. UI를 import하지 않는다(동작 경로가 이 파일만 끌어온다).
 import { createElement, createContext, useContext, useLayoutEffect, useRef, useState, useSyncExternalStore, type FocusEvent, type ReactNode } from 'react';
 
 /** 덮개 종류. loading은 페이지 첫 조회, create·edit은 등록·수정 저장, delete는 확인창을 거친 삭제 실행이다. 문구는 프로젝트가 종류별로 준다. */
-export type BlockingKind = 'loading' | 'create' | 'edit' | 'delete';
+export type FullPageProgressKind = 'loading' | 'create' | 'edit' | 'delete';
 
 /** 등록소. 진행 하나를 더하고 돌려준 함수로 뺀다. */
 export interface BlockingRegistry {
-  readonly add: (kind: BlockingKind) => () => void;
+  readonly add: (kind: FullPageProgressKind) => () => void;
 }
 
 const BlockingRegistryContext = createContext<BlockingRegistry | undefined>(undefined);
 
 /**
- * active인 동안 이 진행을 덮개에 등록한다. 덮개(BlockingProgress) 밖이면 아무 일도 하지 않는다.
+ * active인 동안 이 진행을 덮개에 등록한다. 덮개(FullPageProgress) 밖이면 아무 일도 하지 않는다.
  * 키트 폼·목록·단건은 선언(progress)만 받으면 스스로 부르고, 화면 고유의 진입 대기(예: 수정 전 보조 조회)만 화면이 직접 부른다.
  */
-export function useBlockingProgress(kind: BlockingKind, active: boolean): void {
+export function useFullPageProgress(kind: FullPageProgressKind, active: boolean): void {
   const registry = useContext(BlockingRegistryContext);
   useLayoutEffect(() => (active && registry !== undefined ? registry.add(kind) : undefined), [registry, kind, active]);
 }
 
 /** 등록된 진행 목록을 들고, 바뀌면 구독자에게 알린다. 쓰기(create·edit·delete)가 조회보다 앞서고, 쓰기끼리는 나중 등록이 이긴다. */
 function createRegistry() {
-  const entries: { readonly kind: BlockingKind }[] = [];
+  const entries: { readonly kind: FullPageProgressKind }[] = [];
   const listeners = new Set<() => void>();
-  let current: BlockingKind | undefined;
+  let current: FullPageProgressKind | undefined;
   const recompute = () => {
     const saving = [...entries].reverse().find((entry) => entry.kind !== 'loading');
     const next = saving?.kind ?? entries[0]?.kind;
@@ -71,7 +71,7 @@ function restoreFocus(root: HTMLElement, last: HTMLElement) {
 }
 
 /** 본문 잠금 속성과 포커스 복원을 같은 진행 등록소에 연결한다. */
-export function useBlockingProgressBinding() {
+export function useFullPageProgressBinding() {
   const [store] = useState(createRegistry);
   const kind = useSyncExternalStore(store.subscribe, store.snapshot, store.snapshot);
   const open = kind !== undefined;
@@ -101,8 +101,8 @@ export function useBlockingProgressBinding() {
 }
 
 /** 진행 hook의 등록소를 배치 없이 본문과 포털 자식에 전달한다. */
-export function BlockingProgressProvider({ binding, children }: {
-  readonly binding: ReturnType<typeof useBlockingProgressBinding>;
+export function FullPageProgressProvider({ binding, children }: {
+  readonly binding: ReturnType<typeof useFullPageProgressBinding>;
   readonly children: ReactNode;
 }) {
   return createElement(BlockingRegistryContext.Provider, { value: binding.registry }, children);

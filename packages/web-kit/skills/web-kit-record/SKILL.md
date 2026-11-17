@@ -14,7 +14,7 @@ description: 상세·수정 원본 같은 단건 조회의 대기·없음·실�
 실제 조립 예: [apps/starter/src/features/products/pages/ProductDetailPage.tsx](../../references/apps/starter/src/features/products/pages/ProductDetailPage.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 - `useRecord(queryOptions, identity)`: queryOptions와 레코드 식별을 넘긴다. 식별은 queryKey의 나머지(언어 등)와 구분된다. 상태 판정은 그 화면 flow 안의 이 한 곳에서만 하고([상세 flow](../../references/apps/starter/src/features/products/hooks/use-product-detail.ts.txt)), 화면은 flow가 준 상태만 그리며 raw query를 다시 읽지 않는다.
-- 페이지 진입 조회(상세·수정 원본)면 `useRecord(queryOptions, identity, { progress: 'page' })`로 선언한다. 보일 내용이 없고 조회 중인 동안만 앱 셸의 화면 전체 진행 덮개(registry `blocking-progress`와 `/dialog`의 진행 연결, web-kit-form 「화면 전체 진행 덮개」)가 덮는다. 언어 전환·재조회(내용 있음)·실패·취소는 덮지 않는다. 대화창 안 조회는 선언하지 않는다.
+- 페이지 진입 조회(상세·수정 원본)면 `useRecord(queryOptions, identity, { progress: 'page' })`로 선언한다. 보일 내용이 없고 조회 중인 동안만 앱 셸의 화면 전체 진행 덮개(registry `blocking-progress`와 `/progress`의 진행 연결, web-kit-form 「화면 전체 진행 덮개」)가 덮는다. 언어 전환·재조회(내용 있음)·실패·취소는 덮지 않는다. 대화창 안 조회는 선언하지 않는다.
 - route에는 기본 loader를 두지 않는다([web-kit-structure](../web-kit-structure/SKILL.md) 「route 파일」). 미리 받기가 꼭 필요하면 이유를 남긴 구조 예외로 두고, 같은 queryOptions로 미리 받기만 한다: 기다리지 않고 실패를 삼키는 `void queryClient.query(options).catch(() => undefined)`(설치된 Query에서 `prefetchQuery`는 deprecated). `ensureQueryData`처럼 실패를 던지는 호출은 loader가 판정하게 되므로 쓰지 않는다. 기다리면 실패가 캐시에 남아 화면 mount 때 한 번 더 요청한다. 진입 대기 표시는 프로젝트가 정한다. 상태 판정은 하지 않는다. 선택지 조회도 같은 원칙이다. 선택지 실패는 그 필드 자리에 보인다.
 
 ## 키트 보장

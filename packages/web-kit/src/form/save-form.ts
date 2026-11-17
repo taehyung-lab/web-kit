@@ -15,7 +15,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { normalizeChoiceValue, type ChoiceNode, type ChoiceValue } from '../choice-binding';
 import { isRequestFailure, type FieldError } from '../failure';
-import { useBlockingProgress } from '../progress';
+import { useFullPageProgress } from '../full-page-progress';
 import type { CompletionStep } from '../completion';
 import { fieldIsHidden, projectConditionalFields, useConditionalFields, type ConditionalField } from './conditional';
 import { followRows, rowMark } from './rows';
@@ -81,7 +81,7 @@ export interface SaveFormOptions<
   /** true면 저장 성공 뒤 `saved`에서 멈추고, 사용자가 확인해 `complete()`를 부를 때 onSaved를 실행한다(저장 완료 확인창). */
   readonly acknowledge?: boolean;
   /**
-   * 등록·수정 폼이면 그 종류. 저장하는 동안(완료 창이 없으면 완료 처리까지) 화면 전체 진행 덮개(`/ui` BlockingProgress)를 그 종류의 문구로 띄우고,
+   * 등록·수정 폼이면 그 종류. 저장하는 동안(완료 창이 없으면 완료 처리까지) 화면 전체 진행 덮개(registry FullPageProgress)를 그 종류의 문구로 띄우고,
    * 저장 버튼 옆 진행 표시는 그리지 않는다. 없으면 덮개 없이 버튼 옆 진행 표시다(로그인·대화창 폼).
    */
   readonly progress?: 'create' | 'edit';
@@ -711,7 +711,7 @@ export function useSaveForm<
   const waitingForUser = asking?.token === submission.current && (asking?.count ?? 0) > 0;
   const blocking =
     (stage.kind === 'saving' && !waitingForUser) || (stage.kind === 'saved' && stage.completing && completion.current.acknowledge !== true);
-  useBlockingProgress(options.progress ?? 'create', options.progress !== undefined && blocking);
+  useFullPageProgress(options.progress ?? 'create', options.progress !== undefined && blocking);
 
   // 입력을 고치면 지우기로 한 실패는 지금 입력이 제출 때 입력과 달라진 동안 보이지 않는다.
   const visibleRejection =

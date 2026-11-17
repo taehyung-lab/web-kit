@@ -2,7 +2,7 @@
 import { keepPreviousData, useQuery, type QueryKey, type UseQueryOptions } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { isRequestFailure, type RequestFailure } from './failure';
-import { useBlockingProgress } from './progress';
+import { useFullPageProgress } from './full-page-progress';
 
 /** 준비됨에만 딸리는 갱신 사실. 갱신 실패는 내용을 지우지 않는다. */
 export interface RecordRefresh {
@@ -36,7 +36,7 @@ function failureOf(error: unknown): unknown {
  * 단건 조회를 판정한다. identity는 레코드 식별이고, queryKey의 나머지(언어 등)와 구분한다.
  * 식별이 바뀌면 이전 내용을 보이지 않는다. 식별이 같고 key만 바뀌면 내용을 유지한 채 갱신 중으로 둔다.
  * 숨김 근거는 이 조회의 실패뿐이다. 다른 요청(보조 선택지·저장)의 실패는 여기에 들어오지 않는다.
- * `progress: 'page'`는 이 조회가 페이지 진입 조회라는 선언이다. 보일 내용이 없고 조회 중인 동안 화면 전체 진행 덮개(`/ui` BlockingProgress)를 띄운다.
+ * `progress: 'page'`는 이 조회가 페이지 진입 조회라는 선언이다. 보일 내용이 없고 조회 중인 동안 화면 전체 진행 덮개(registry FullPageProgress)를 띄운다.
  * 언어 전환·재조회(내용 있음), 실패·취소·비활성은 덮지 않는다. 대화창 안 조회는 선언하지 않는다.
  */
 export function useRecord<TQueryFnData, TError = unknown, TData = TQueryFnData, TQueryKey extends QueryKey = QueryKey>(
@@ -57,7 +57,7 @@ export function useRecord<TQueryFnData, TError = unknown, TData = TQueryFnData, 
   useEffect(() => {
     if (hasData) readyFor.current = { identity };
   }, [hasData, identity]);
-  useBlockingProgress('loading', declaration?.progress === 'page' && query.data === undefined && query.isFetching);
+  useFullPageProgress('loading', declaration?.progress === 'page' && query.data === undefined && query.isFetching);
   const retry = () => {
     void query.refetch();
   };

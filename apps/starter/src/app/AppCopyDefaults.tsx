@@ -8,7 +8,7 @@ import { useFieldMessage } from '@/shared/lib/form-messages';
 import { DetailDefaults } from '@/shared/ui/web-kit/detail';
 import { FormDefaults } from '@/shared/ui/web-kit/form/form';
 import { ListDefaults } from '@/shared/ui/web-kit/list';
-import { DialogDefaults } from '@/shared/ui/web-kit/ui/dialog';
+import { DialogDefaults } from '@/shared/ui/web-kit/dialog';
 
 /** 대화창 버튼 문구와 폼·목록·상세 기본값을 현재 언어로 공급한다. 언어를 바꾸면 열린 화면의 문구도 함께 바뀐다. */
 export function AppCopyDefaults({ children }: { readonly children: ReactNode }) {

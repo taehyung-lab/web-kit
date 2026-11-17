@@ -1,6 +1,6 @@
 /** 확인 대상과 실행 상태를 소유하고 오류 정책·다이얼로그 표현은 프로젝트에 맡긴다. */
 import { useLayoutEffect, useRef, useState } from "react";
-import { useBlockingProgress } from "./progress";
+import { useFullPageProgress } from "./full-page-progress";
 
 type ConfirmationState<T, F> =
   | { readonly kind: "closed" }
@@ -14,7 +14,7 @@ type ConfirmationState<T, F> =
 
 /**
  * 확인 → 실행 → 닫기/재시도를 한 수명으로 관리한다.
- * `progress: 'delete'`면 실행하는 동안 화면 전체 진행 덮개(`/ui` BlockingProgress)를 삭제 문구로 띄우고 `covered`가 true다.
+ * `progress: 'delete'`면 실행하는 동안 화면 전체 진행 덮개(registry FullPageProgress)를 삭제 문구로 띄우고 `covered`가 true다.
  * 그동안 확인창은 그리지 않는다(확인창 → 덮개 → 이동, 실패하면 덮개가 닫히고 확인창이 실패 문구와 함께 다시 보인다).
  */
 export function useConfirmationState<T, F, R = unknown>({
@@ -146,7 +146,7 @@ export function useConfirmationState<T, F, R = unknown>({
     visibleState.kind === "open" &&
     visibleState.pending &&
     !visibleState.completed;
-  useBlockingProgress(progress ?? "delete", covered);
+  useFullPageProgress(progress ?? "delete", covered);
   return { state: visibleState, covered, request, close, confirm };
 }
 
@@ -155,9 +155,3 @@ export {
   useConfirmBinding,
   useAcknowledgeBinding,
 } from "./dialog-binding";
-export {
-  useBlockingProgressBinding,
-  BlockingProgressProvider,
-  useBlockingProgress,
-} from "./progress";
-export type { BlockingKind } from "./progress";

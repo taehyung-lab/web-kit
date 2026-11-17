@@ -1,11 +1,11 @@
 // 파일 책임: 폼 없이 덮개·대화창의 브라우저 검사 화면을 만든다.
 import { useEffect, useState } from 'react';
-import { useBlockingProgress } from '../progress';
-import type * as ProgressContract from './contracts/ui/blocking-progress';
+import { useFullPageProgress } from '../full-page-progress';
+import type * as ProgressContract from './contracts/ui/full-page-progress';
 import type * as DialogContract from './contracts/ui/dialog';
 import { dialogDefaultsWrapper, type DialogDefaultsParts } from './copy-defaults';
 /** inert·배경 차단·포커스 복원 각 분기를 실제 덮개로 관찰할 화면을 만든다. */
-export function createProgressFeatureConformancePage({ BlockingProgress, Dialog, ...copy }: { BlockingProgress: typeof ProgressContract.BlockingProgress; Dialog: typeof DialogContract.Dialog } & DialogDefaultsParts) {
+export function createProgressFeatureConformancePage({ FullPageProgress, Dialog, ...copy }: { FullPageProgress: typeof ProgressContract.FullPageProgress; Dialog: typeof DialogContract.Dialog } & DialogDefaultsParts) {
   const Root = dialogDefaultsWrapper(copy);
   /** 조회 종료를 외부 이벤트로 전달해 완료 순간의 포커스를 인위적으로 바꾸지 않는다. */
   function Content({ mode }: { mode: string }) {
@@ -13,7 +13,7 @@ export function createProgressFeatureConformancePage({ BlockingProgress, Dialog,
     const [portal, setPortal] = useState(false);
     const [portalClicks, setPortalClicks] = useState(0);
     const [clicks, setClicks] = useState(0);
-    useBlockingProgress('edit', active);
+    useFullPageProgress('edit', active);
     useEffect(() => {
       const finish = () => { setActive(false); if (mode === 'saved') setPortal(true); };
       window.addEventListener('web-kit:finish', finish);
@@ -27,6 +27,6 @@ export function createProgressFeatureConformancePage({ BlockingProgress, Dialog,
   /** 주소의 mode로 복원 분기만 바꾸고 같은 복사본 덮개를 사용한다. */
   return function ProgressConformancePage() {
     const mode = new URLSearchParams(location.search).get('mode') ?? 'restore';
-    return <Root><BlockingProgress messages={{ loading: '조회 중', create: '등록 중', edit: '수정 중', delete: '삭제 중' }}><Content mode={mode} /></BlockingProgress></Root>;
+    return <Root><FullPageProgress messages={{ loading: '조회 중', create: '등록 중', edit: '수정 중', delete: '삭제 중' }}><Content mode={mode} /></FullPageProgress></Root>;
   };
 }

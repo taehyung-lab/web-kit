@@ -45,14 +45,14 @@
 
 | 이전 시험판 import | 현재 위치(기본 설치 target 기준) |
 |---|---|
-| `@boosterlab/web-kit/ui` | registry `ui`: `@/shared/ui/web-kit/ui` |
+| `@boosterlab/web-kit` | registry `ui`: `@/shared/ui/web-kit` |
 | `@boosterlab/web-kit/list/ui` | registry `list`: `@/shared/ui/web-kit/list` |
 | `@boosterlab/web-kit/form/ui` | registry `form`: `@/shared/ui/web-kit/form/form` |
 | `@boosterlab/web-kit/detail/ui` | registry `record`: `@/shared/ui/web-kit/detail` |
 | `@boosterlab/web-kit/filter` | registry `checkbox-tree`·`filter-error`: `@/shared/ui/web-kit/CheckboxTree`·`@/shared/ui/web-kit/search/filter-error`; 순수 계산은 패키지 루트 |
 | `@boosterlab/web-kit/styles.css` | 없음: 키트 스타일시트를 없앴다. 프로젝트 shadcn 테마 CSS가 모양을 정한다([설치 안내](installing.md#키트-스타일시트에서-shadcn-기본-부품으로-옮기기)) |
 
-위 6개 패키지 입구는 제거됐다. `/choice`는 공유 선택/검색의 `useChoiceBinding`을 공개하는 새 입구다. `/dialog`는 대화창과 진행 등록 연결을, `/form`·`/list`·`/record`는 각각의 상태·연결 hook을 제공한다.
+위 6개 패키지 입구는 제거됐다. `/choice`는 공유 선택/검색의 `useChoiceBinding`을 공개하는 새 입구다. `/dialog`는 대화창 연결을, `/progress`는 진행 등록 연결을, `/form`·`/list`·`/record`는 각각의 상태·연결 hook을 제공한다.
 
 - 목록 상태 전달은 `/list`의 `ListProvider`가 기본이며 `model` props도 허용한다. 패키지 Provider는 model·children만 받고 문구·실패 표현은 registry 표시 wrapper에 둔다.
 - `Period`/`PeriodFilter`의 `timeZone`·`now`는 생략 가능하다. 기본 브라우저 시간대·현재 시각을 쓰고 넘긴 값은 그대로 쓴다. 요청 날짜 변환도 같은 시간대를 쓴다.

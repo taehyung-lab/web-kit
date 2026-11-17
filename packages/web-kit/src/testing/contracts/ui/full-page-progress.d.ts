@@ -1,7 +1,7 @@
 // 파일 책임: 적합성 검사에 주입하는 UI의 구조 타입 계약이며 런타임 구현은 포함하지 않는다.
 import type { ReactNode } from 'react';
 /** 종류별 주 문구와 보조 문구(없으면 그리지 않음). */
-export interface BlockingProgressMessages {
+export interface FullPageProgressMessages {
     readonly loading: string;
     readonly create: string;
     readonly edit: string;
@@ -15,8 +15,8 @@ export interface BlockingProgressMessages {
  * `indicator`는 가운데 진행 표시를 프로젝트 모양으로 바꾼다(없으면 키트 원형 회전 표시). 덮개 전체가 낭독기에 숨겨져 있어(문구는 상태 영역이 읽는다) 표시는 그림만 맡고,
  * 움직임 줄이기 설정은 그 표시를 준 프로젝트가 맞춘다.
  */
-export declare function BlockingProgress({ messages, indicator, children, }: {
-    readonly messages: BlockingProgressMessages;
+export declare function FullPageProgress({ messages, indicator, children, }: {
+    readonly messages: FullPageProgressMessages;
     readonly indicator?: ReactNode;
     readonly children: ReactNode;
 }): import("react").JSX.Element;

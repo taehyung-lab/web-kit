@@ -4,8 +4,8 @@ import { useState, type ReactNode } from 'react';
 import { cn } from 'cn';
 import { Button } from '@/components/ui/button';
 import { SelectBox } from '../select-box';
-import { ConfirmDialog } from '../ui/dialog';
-import { Pending } from '../ui/pending';
+import { ConfirmDialog } from '../dialog';
+import { Pending } from '../pending';
 import { useListContext, defaultMessages, OptionSelect, type Context, type RenderFailure } from './list-context';
 
 

@@ -5,7 +5,7 @@ import type { RecordState } from '@boosterlab/web-kit/record';
 import { cn } from 'cn';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { RetryRegion } from './ui/retry';
+import { RetryRegion } from './retry';
 
 const defaultMessages = {
   loading: '불러오는 중입니다.',
@@ -214,4 +214,4 @@ function History({
 
 /** 상세 묶음 부품. `<Detail state={useRecord(...)}>{(data) => <Detail.Fields>…</Detail.Fields>}</Detail>` */
 export const Detail = Object.assign(DetailRoot, { Fields, Field, History });
-export { RetryRegion } from './ui/retry';
+export { RetryRegion } from './retry';

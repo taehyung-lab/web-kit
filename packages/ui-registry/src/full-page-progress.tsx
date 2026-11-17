@@ -2,11 +2,11 @@
 // 무엇이 진행 중인지는 등록(폼 저장·페이지 첫 조회)이, 문구는 프로젝트가 정한다. 덮개가 닫힐 때 잃은 포커스를 본문으로 돌린다
 // (본문 DOM 안에서 마지막으로 포커스한 요소 → 사라졌으면 본문 첫 h1 → 그것도 없으면 본문 영역).
 import type { ReactNode } from 'react';
-import { BlockingProgressProvider, useBlockingProgressBinding } from '@boosterlab/web-kit/dialog';
+import { FullPageProgressProvider, useFullPageProgressBinding } from '@boosterlab/web-kit/progress';
 import { Spinner } from './pending';
 
 /** 종류별 주 문구와 보조 문구(없으면 그리지 않음). */
-export interface BlockingProgressMessages {
+export interface FullPageProgressMessages {
   readonly loading: string;
   readonly create: string;
   readonly edit: string;
@@ -21,19 +21,19 @@ export interface BlockingProgressMessages {
  * `indicator`는 가운데 진행 표시를 프로젝트 모양으로 바꾼다(없으면 키트 원형 회전 표시). 덮개 전체가 낭독기에 숨겨져 있어(문구는 상태 영역이 읽는다) 표시는 그림만 맡고,
  * 움직임 줄이기 설정은 그 표시를 준 프로젝트가 맞춘다.
  */
-export function BlockingProgress({
+export function FullPageProgress({
   messages,
   indicator,
   children,
 }: {
-  readonly messages: BlockingProgressMessages;
+  readonly messages: FullPageProgressMessages;
   readonly indicator?: ReactNode;
   readonly children: ReactNode;
 }) {
-  const binding = useBlockingProgressBinding();
+  const binding = useFullPageProgressBinding();
   const { kind, open, contentRef, contentProps } = binding;
   return (
-    <BlockingProgressProvider binding={binding}>
+    <FullPageProgressProvider binding={binding}>
       <div ref={contentRef} data-slot="blocking-progress-root" {...contentProps}>
         {children}
       </div>
@@ -55,6 +55,6 @@ export function BlockingProgress({
       <div role="status" aria-live="polite" aria-atomic="true" data-slot="blocking-progress-status" className="sr-only">
         {open ? [messages[kind!], messages.wait].filter((text) => text !== undefined).join(' ') : ''}
       </div>
-    </BlockingProgressProvider>
+    </FullPageProgressProvider>
   );
 }
