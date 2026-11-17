@@ -37,7 +37,7 @@ test('--dry-run은 계획만 보이고 파일을 쓰지 않는다', () => projec
   const before = files(dir);
   const result = cli('--feature', 'invoices', '--kind', 'list', '--url', '/invoices', '--dry-run');
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /만들 파일 src\/features\/invoices\/hooks\/use-invoice-list\.ts/);
+  assert.match(result.stdout, /만들 파일 src\/features\/invoices\/model\/list\/use-invoice-list\.ts/);
   assert.deepEqual(files(dir), before);
 }));
 
@@ -65,21 +65,58 @@ test('같은 입력으로 다시 실행하면 바뀌는 것이 없다', () => pr
   assert.deepEqual(files(dir).map((path) => [path, readFileSync(join(dir, path), 'utf8')]), snapshot);
 }));
 
+test('공개 입구에 사용자 연결을 보존하며 새 화면 연결만 추가하고 dry-run은 바꾸지 않는다', () => project(({ dir, cli }) => {
+  const feature = join(dir, 'src/features/invoices');
+  mkdirSync(feature, { recursive: true });
+  const entry = join(feature, 'index.ts');
+  const original = '// 사용자 연결\nexport const custom = 1;\n';
+  writeFileSync(entry, original);
+  const dry = cli('--feature', 'invoices', '--kind', 'list', '--url', '/invoices', '--dry-run');
+  assert.equal(dry.status, 0, dry.stderr);
+  assert.equal(readFileSync(entry, 'utf8'), original);
+  const created = cli('--feature', 'invoices', '--kind', 'list', '--url', '/invoices');
+  assert.equal(created.status, 0, created.stderr);
+  const after = readFileSync(entry, 'utf8');
+  assert.ok(after.startsWith(original));
+  assert.match(after, /export \{ InvoiceListPage \} from '\.\/ui\/list\/InvoiceListPage'/);
+  assert.match(after, /export \{ invoiceListSearch \} from '\.\/model\/list\/invoice-list-search'/);
+  assert.equal(cli('--feature', 'invoices', '--kind', 'list', '--url', '/invoices').status, 0);
+  assert.equal(readFileSync(entry, 'utf8'), after);
+}));
+
+test('공개 export는 따옴표·공백·묶음이 달라도 중복하지 않고 다른 출처의 같은 이름은 원자적으로 거절한다', () => project(({ dir, cli }) => {
+  const feature = join(dir, 'src/features/invoices');
+  mkdirSync(feature, { recursive: true });
+  const entry = join(feature, 'index.ts');
+  const original = 'export {InvoiceListPage, extra} from "./ui/list/InvoiceListPage";\n';
+  writeFileSync(entry, original);
+  assert.equal(cli('--feature', 'invoices', '--kind', 'list', '--url', '/invoices').status, 0);
+  const after = readFileSync(entry, 'utf8');
+  assert.equal((after.match(/\bInvoiceListPage\b(?=[,} ])/g) ?? []).length, 1);
+  assert.ok(after.startsWith(original));
+  writeFileSync(entry, after + 'export { AnotherPage as InvoiceCreatePage } from "./custom";\n');
+  const before = files(dir).map(path => [path, readFileSync(join(dir, path), 'utf8')]);
+  const conflict = cli('--feature', 'invoices', '--kind', 'form', '--url', '/invoices/new');
+  assert.equal(conflict.status, 1);
+  assert.deepEqual(files(dir).map(path => [path, readFileSync(join(dir, path), 'utf8')]), before);
+}));
+
 test('내용이 다른 화면 파일이 있으면 아무 파일도 쓰지 않고 실패한다. 공유 파일은 덮어쓰지 않고 쓴다', () => project(({ dir, cli }) => {
   assert.equal(cli('--feature', 'invoices', '--kind', 'detail', '--url', '/invoices/$invoiceId').status, 0);
-  const model = join(dir, 'src/features/invoices/invoice.ts');
+  const model = join(dir, 'src/features/invoices/model/invoice.ts');
   writeFileSync(model, 'export interface Invoice { readonly id: string }\n');
   const shared = cli('--feature', 'invoices', '--kind', 'list', '--url', '/invoices');
   assert.equal(shared.status, 0, shared.stderr);
-  assert.match(shared.stdout, /기존 파일 사용 src\/features\/invoices\/invoice\.ts/);
+  assert.match(shared.stdout, /기존 파일 사용 src\/features\/invoices\/model\/invoice\.ts/);
   assert.equal(readFileSync(model, 'utf8'), 'export interface Invoice { readonly id: string }\n');
-  const screen = join(dir, 'src/features/invoices/pages/InvoiceCreatePage.tsx');
+  const screen = join(dir, 'src/features/invoices/ui/form/InvoiceCreatePage.tsx');
+  mkdirSync(join(dir, 'src/features/invoices/ui/form'), { recursive: true });
   writeFileSync(screen, 'export const mine = 1;\n');
   const conflict = cli('--feature', 'invoices', '--kind', 'form', '--url', '/invoices/new');
   assert.equal(conflict.status, 1);
-  assert.match(conflict.stderr, /충돌 src\/features\/invoices\/pages\/InvoiceCreatePage\.tsx/);
+  assert.match(conflict.stderr, /충돌 src\/features\/invoices\/ui\/form\/InvoiceCreatePage\.tsx/);
   assert.equal(readFileSync(screen, 'utf8'), 'export const mine = 1;\n');
-  assert.equal(existsSync(join(dir, 'src/features/invoices/hooks/use-invoice-create.ts')), false, '충돌이 있으면 다른 파일도 쓰지 않는다');
+  assert.equal(existsSync(join(dir, 'src/features/invoices/model/form/use-invoice-create.ts')), false, '충돌이 있으면 다른 파일도 쓰지 않는다');
 }));
 
 test('묶음 이름은 프로젝트가 정한다: --group은 설정보다 앞서고, 둘 다 없으면 만들지 않는다', () => project(({ dir, cli }) => {

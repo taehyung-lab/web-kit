@@ -1,6 +1,6 @@
 ---
 name: web-kit-structure
-description: 새 feature·화면·route를 추가하거나, 화면에 있던 요청·저장·이동 같은 업무 처리를 옮기거나, 상수·공용 함수·파일 자리를 정할 때 먼저 읽는다. app·runtime·routes·features(api·forms·rules·storage·search·hooks·pages)·shared의 책임과 import 방향, route 파일 규칙, 구조 lint(@boosterlab/web-kit/structure)·골격 생성기(web-kit-new)·web-kit-check 구조 결과를 정한다. 각 공통 동작의 사용법은 web-kit-form·list·record·auth·http로 보낸다.
+description: 새 feature·화면·route를 추가하거나, 화면에 있던 요청·저장·이동 같은 업무 처리를 옮기거나, 상수·공용 함수·파일 자리를 정할 때 먼저 읽는다. app·runtime·routes·features(ui·model·api·index)·shared의 책임과 import 방향, route 파일 규칙, 구조 lint(@boosterlab/web-kit/structure)·골격 생성기(web-kit-new)·web-kit-check 구조 결과를 정한다. 각 공통 동작의 사용법은 web-kit-form·list·record·auth·http로 보낸다.
 ---
 
 # web-kit structure
@@ -24,60 +24,68 @@ description: 새 feature·화면·route를 추가하거나, 화면에 있던 요
 
 runtime을 app에서 나누는 이유: feature가 http·세션을 쓰려고 app을 import하고 app이 다시 feature를 조립하면 양방향 의존이 된다. feature는 runtime을, app은 feature와 runtime을 안다. runtime이 feature를 불러야 할 것 같으면 그 일은 업무이므로 app이 구독·연결한다(예: 세션 종료 → 로그인 화면 이동은 `app/session`).
 
-## feature 층
+## feature 배치
 
-실제 조립 예: [apps/starter/src/features/products/hooks/use-product-create.ts](../../references/apps/starter/src/features/products/hooks/use-product-create.ts.txt), [apps/starter/src/features/products/pages/ProductCreatePage.tsx](../../references/apps/starter/src/features/products/pages/ProductCreatePage.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/products/ui/form/ProductCreatePage.tsx](../../references/apps/starter/src/features/products/ui/form/ProductCreatePage.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-필요한 책임의 폴더만 만든다. 빈 폴더·빈 파일을 미리 만들지 않는다.
+업무 폴더 최상단은 `ui/`, `model/`, `api/`, `index.ts`다. 필요한 폴더만 만든다. `index.ts`는 외부 사용이 있을 때 만든다. 화면 이름으로 찾은 뒤 그리는 코드와 처리 코드를 구별할 수 있게 한다.
 
-| 자리 | 맡는 것 | 하지 않는 것 |
+| 자리 | 맡는 것 | 예 |
 |---|---|---|
-| `api/` | 요청 함수·요청/응답 DTO 모양·DTO → 앱 모델 변환, `queryOptions`·query key·mutation hook과 `meta.invalidates` | 세션 시작·화면 이동·안내창·업무 성공 효과, 상태·업무 hook·화면 import, JSX |
-| `<도메인>.ts` (역할 `data`) | 순수 도메인 타입·계산. 예: `product.ts`의 상품 타입 | React·라우터·Query·axios·키트 실행 입구, 브라우저 전역, api·runtime·storage·search 값, hooks·pages 의존 |
-| `forms/` | 순수 폼 schema·빈 값·원본 ↔ 폼 값·요청 변환·서버 필드 오류 대응 | data와 같은 실행·JSX 금지 |
-| `rules/` | 순수 정책 값·판정·실패 의미 | data와 같은 실행·JSX 금지 |
-| `search/` | URL 검색 선언·목록 조건·상세에서 목록으로 돌아올 조건. 서버 선택지 확인도 여기서 연결 | hooks·pages import, 키트 목록 상태의 복제 |
-| `storage/` | 여러 화면이 공유하거나 저장·복원하는 상태와 수명, 키트 저장소의 프로젝트 설정 | hooks·pages import, 키트가 가진 상태 수명의 복제 |
-| `permissions.ts` (역할 `storage`) | 권한 판정을 실행 환경·세션과 연결 | 순수 규칙으로 취급하거나 pages에서 값 import |
-| `hooks/` | 행동 단위 hook(`use-<행동>.ts`). api·순수 코드·search·storage·runtime·키트 hook을 조립하고 화면에 필요한 상태·동작을 반환 | JSX, pages import, 키트 수명의 재구현 |
-| `pages/` | hook 호출, JSX 배치, 문구, 열·칸·표시 부품, 표시 상태·UI binding | api·생성 코드·runtime·storage·search 값 import, zod, 업무 수명 hook, 업무 결과에 따른 이동 |
-| `messages.ts` | 도메인 문구 원문. 앱의 문구 등록에서 가져온다 | 키트 기본 문구로 올리기 |
-| `public.ts` | feature 밖(다른 feature·route 진입 판정)이 쓰는 연결만. 첫 외부 사용이 생길 때 만든다 | 내부 전체 재export, 다른 feature 내부 경로 우회 |
+| `ui/<화면>/` | 페이지·부분 컴포넌트·표·필터·표시 계산·화면 상태 | `ui/list/ProductListPage.tsx` |
+| `ui/` | 같은 업무의 여러 화면이 쓰는 배치·표시 부품 | `ui/ProductPageLayout.tsx` |
+| `ui/messages.ts` | 해당 업무의 표시 문구. 커지면 화면 폴더 옆에 분리 | 앱의 문구 등록은 feature 입구로 가져감 |
+| `model/<동작>/` | 함께 바꾸는 상태·검증·업무 처리 | `model/form/use-product-create.ts`, `model/form/product-form.ts` |
+| `model/` | 여러 동작이 쓰는 데이터·정책·상태 연결 | `model/product.ts`, `model/product-policy.ts` |
+| `api/` | 요청 함수·DTO·응답 변환·query key/options·mutation과 무효화 | `api/products.ts` |
+| `index.ts` | app·routes·다른 업무가 실제 사용하는 공개 연결만 | 페이지·진입 판정·문구 등록 |
 
-URL 목록 검색은 `search/`에 둔다. 목록·상세 사이에 남길 URL 형식이며 서버 선택지 확인은 api query를 연결하므로 순수 데이터가 아니다. route는 이 선언의 `validateSearch`·`beforeLoad`를 쓴다.
+하위 폴더는 login·list·detail·form처럼 함께 읽고 바꾸는 대상으로 묶는다. model 안에 api/lib/hooks/forms/rules/storage/search를 다시 만들지 않는다. 한 파일을 감싸기 위한 폴더나 전달만 하는 hook·컴포넌트를 만들지 않는다. 업무 내부는 실제 파일을 직접 참조하고 하위 index.ts로 재전달하지 않는다. 검사 파일은 대상 옆에 둔다. 화면 대표 export는 `ProductListPage`처럼 Page로 끝내고 부분은 `ProductFilters`처럼 보이는 역할로 이름 짓는다.
 
-처음 읽는 사람이 찾을 이름을 쓴다. `model/` 없이 `product.ts` 옆에 `product.test.ts`를 둘 수 있다. 필요한 책임의 폴더만 만들고, 한 페이지에서만 쓰는 열·필터·배지·formatter는 그 페이지 가까이 `pages/` 안에 둔다. 파일을 감싸기만 하는 hook이나 중간 컴포넌트는 추가하지 않는다. 페이지의 대표 export는 `ProductListPage`처럼 `Page`로 끝내고, 그 안의 부분은 `ProductFilters`·`ProductDetailsSection`처럼 실제 역할로 이름 짓는다. 기존 `model/`·`state/`·`flows/`·`screens/`·`i18n.ts`는 새로 만들거나 옮기는 코드의 자리가 아니다.
+### model의 파일 이름과 실행 경계
+
+폴더를 줄여도 순수 계산과 상태·요청 조립의 보장을 유지한다. 구조 검사는 model 안의 파일 이름으로 다음 역할을 구별한다. 업무별 하위 폴더에서도 동일하다.
+
+| 이름 | 역할·의존 범위 |
+|---|---|
+| `use-<행동>.ts` | 업무 hook. api·순수 코드·상태·검색·runtime·키트를 조립하고 화면에 필요한 상태와 동작만 반환 |
+| `*-search.ts` | URL 검색·복귀 조건. api의 선택지 query와 연결 가능. hook·ui 참조 금지 |
+| `*-store.ts`, `*-state.ts`, `*-session.ts`, `*-permissions.ts` | 저장·공유 상태·세션·권한 실행 연결. hook·ui 참조 금지 |
+| 그 밖의 `.ts` | 순수 타입·계산·폼 schema·정책·실패 판정. React·라우터·Query·axios·runtime·api 값·상태·검색·hook·ui 및 브라우저 전역 의존 금지 |
+
+예: `model/form/product-form.ts`는 순수 검증과 원본↔폼·요청 변환, `model/product-policy.ts`는 출처를 적은 정책 값, `model/auth-session.ts`는 세션 연결이다. 모든 model과 api는 JSX를 만들지 않는다. 저장·인증·목록 수명은 키트 것을 쓰고 다시 구현하지 않는다.
 
 ## 의존 방향
 
-실제 조립 예: [apps/starter/src/features/auth/public.ts](../../references/apps/starter/src/features/auth/public.ts.txt), [apps/starter/src/routes/_app/route.tsx](../../references/apps/starter/src/routes/_app/route.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/auth/index.ts](../../references/apps/starter/src/features/auth/index.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-- `app → features·runtime·shared`, `routes → features(pages·search·storage·순수 코드·public.ts)·app`, `pages → hooks·순수 코드·shared`, `hooks → api·순수 코드·search·storage·runtime`, `search·storage → api·순수 코드`, `api → 생성 코드·runtime·순수 타입`, `runtime → 키트·외부 라이브러리·shared`. `shared`는 위쪽을 모른다.
-- 다른 feature는 그 feature의 `public.ts`만 import한다. public.ts가 재export한 대상도 실제 출처의 층으로 판정한다(화면이 public.ts를 거쳐 다른 feature의 api를 가져오면 위반).
-- 타입 전용 import(`import type`)는 실행을 만들지 않으므로 실행 금지(화면 → api 타입, 순수 코드 → 생성 DTO 타입)에서는 허용한다. 구조를 알면 안 되는 방향(shared → feature, runtime → feature, storage·search·hooks → pages)은 타입도 금지다.
-- 제품 코드(app·runtime·routes·features·shared)는 mock·검사 도우미(`support`로 설정한 폴더)를 import하지 않는다. 실행 진입(`src/main.tsx`)과 검사 파일은 구조 방향 검사에서 빠진다.
+- app은 features·runtime·shared를 조립한다. routes는 URL·진입 판정·문맥을 넘긴다. feature는 app·routes를 import하지 않는다.
+- app·routes·다른 feature는 대상 업무의 `index.ts`를 통해서만 쓴다. `@/features/products`처럼 폴더 경로를 쓴다. 공개한 이름도 실제 출처를 추적하므로 ui가 index를 거쳐 api를 실행할 수 없다.
+- ui는 model의 업무 hook·순수 코드·shared를 사용한다. api·생성 코드·runtime·상태 연결·검색 선언의 값은 직접 가져오지 않는다.
+- model은 ui를 타입으로도 모른다. api는 model의 순수 코드만 참조하고 상태·검색·hook·ui를 모른다.
+- runtime은 키트·외부 라이브러리·shared만 알고, shared는 업무·runtime·앱 연결을 모른다.
+- 타입 전용 import는 실행 금지에서는 허용한다(ui→api DTO 타입 등). 구조 자체를 모르는 방향(shared→feature, runtime→feature, model→ui)은 타입도 금지한다.
+- 제품 코드에서 mock·검사 도우미를 import하지 않는다. 검사 파일은 역할 검사에서 제외하지만 제품 코드의 지원 코드 참조는 검사한다.
 
 ## 상수와 이름
 
-실제 조립 예: [apps/starter/src/features/products/rules/product-list-policy.ts](../../references/apps/starter/src/features/products/rules/product-list-policy.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/products/model/product-list-policy.ts](../../references/apps/starter/src/features/products/model/product-list-policy.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-- 값의 자리는 사용 횟수가 아니라 의미·수명·소유자로 정한다. 한 함수에서만 쓰면 그 함수 옆, 폼의 빈 값·길이 제한은 그 `forms/` 파일, 여러 흐름이 쓰는 제품 판정 값은 `rules/<업무>-policy.ts`, 저장 key는 그 상태 파일, 숫자 → 표시 문자열은 화면의 이름 있는 formatter, 제품 의미가 없는 공용 계산만 `shared/lib`.
-- `utils`·`helpers`·`constants`·`common`·`misc` 같은 이름의 파일·폴더를 만들지 않는다. 무엇이든 담게 되어 자리를 잃는다. 책임으로 이름 짓는다.
-- 정책 값에는 출처(서버 명세·제품 결정)를 주석으로 남긴다. 키트 기본값으로 올리지 않는다.
+한 함수에서만 쓰는 값은 옆에 둔다. 폼 빈 값·검증은 해당 폼 파일, 여러 동작의 정책은 model의 `<업무>-policy.ts`에 출처와 함께, 저장 key는 상태 파일에 둔다. 표시 변환은 해당 ui에, 업무 의미 없는 공용 계산만 shared/lib에 둔다. utils·helpers·constants·common·misc처럼 무엇이든 담는 이름을 만들지 않는다.
 
 ## 업무 hook 모양
 
-실제 조립 예: [apps/starter/src/features/auth/hooks/use-login-flow.ts](../../references/apps/starter/src/features/auth/hooks/use-login-flow.ts.txt), [apps/starter/src/features/products/hooks/use-product-list.ts](../../references/apps/starter/src/features/products/hooks/use-product-list.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/auth/model/login/use-login-flow.ts](../../references/apps/starter/src/features/auth/model/login/use-login-flow.ts.txt), [apps/starter/src/features/products/model/list/use-product-list.ts](../../references/apps/starter/src/features/products/model/list/use-product-list.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 - 업무 hook은 화면이 그리는 데 필요한 것만 돌려준다. 예: `useLoginFlow({ redirect }) → { editor }`, 안내가 있는 로그인이면 `{ editor, alert, dismissAlert }`. 토큰·setter·임의 query를 그대로 내보내면 화면이 업무를 다시 조립하게 되므로 인터페이스를 줄인다.
 - 저장과 완료를 나눈다. `useSaveForm`의 `save`는 요청만 하고 응답(또는 `{ saved }`)을 돌려준다. 세션 시작·다음 화면 이동·후속 조회는 `onSaved`에 둔다. 그래야 이동이 실패해도 키트가 완료만 다시 시도하고 요청을 다시 보내지 않는다([web-kit-form](../web-kit-form/SKILL.md)). 완료 단계는 다시 실행돼도 같은 결과가 되게 쓴다(같은 토큰으로 세션 세대를 또 열지 않기 등).
-- 키트가 맡은 수명(저장 중복 방지·완료 재시도·목록 확정 검색·단건 상태·인증 기한·늦은 응답 무시)을 업무 hook에서 다시 만들지 않는다. 업무 hook은 업무의 실제 순서와 프로젝트 효과만 소유한다. 판정(이 실패가 자격증명 거절인가)은 `rules`, 그 결과를 어떤 문구·버튼으로 그릴지는 화면이 정한다.
+- 키트가 맡은 수명(저장 중복 방지·완료 재시도·목록 확정 검색·단건 상태·인증 기한·늦은 응답 무시)을 업무 hook에서 다시 만들지 않는다. 업무 hook은 업무의 실제 순서와 프로젝트 효과만 소유한다. 판정(이 실패가 자격증명 거절인가)은 `model`, 그 결과를 어떤 문구·버튼으로 그릴지는 화면이 정한다.
 - 사용자 조작 안에서 실행해야 하는 일(브라우저 권한 요청 등)은 업무 hook으로 옮겨도 첫 `await` 전 같은 동기 구간에서 실행한다. effect·요청 뒤로 미루지 않는다.
 - 같은 내용이 준비된 뒤에만 필요한 조회는 그 부분이 쓰는 별도 업무 hook으로 둔다(없는 상세에서 보조 선택지를 조회하지 않기).
 
 ## 화면이 쓰는 것
 
-실제 조립 예: [apps/starter/src/features/products/pages/ProductListPage.tsx](../../references/apps/starter/src/features/products/pages/ProductListPage.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/products/ui/list/ProductListPage.tsx](../../references/apps/starter/src/features/products/ui/list/ProductListPage.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 - 허용: 업무 hook 호출, registry UI와 shadcn 부품, `useTranslation`, `useState` 같은 표시 상태, 업무 hook이 준 editor·list·state를 부품에 넘기기, `editor.form` 값 읽기·칸 값 넣기 같은 UI binding, `<Link>`, route가 넘긴 이동 콜백 호출.
 - 금지(구조 lint가 막는다): api·생성 코드·runtime·storage·search 값 import, `zod`, `axios`·`@tanstack/react-query`, 키트 실행 입구(`/http`·`/session*`·`/query`·`/api`), `useSaveForm`·`useList`·`useRecord`·`useAuthChallenge`, `useNavigate`·`useRouter`·`redirect`. 맨 `<button>`·`<input>`·`<select>`·`<textarea>`는 app·features·routes 어디서도 쓰지 않는다.
@@ -93,15 +101,15 @@ URL 목록 검색은 `search/`에 둔다. 목록·상세 사이에 남길 URL �
 - 같은 화면을 여러 URL에서 쓰면 route는 URL·진입 조건·문맥(검증한 params·search·이동 콜백)만 넘기고 화면은 features에 하나만 둔다.
 - 골격 안의 없는 경로는 로그인 뒤 묶음의 `$.tsx`(예: `_authenticated/$.tsx`)가 골격을 둔 채 없음 화면을 그린다.
 - route에 검사 파일을 두지 않는다. 기본 loader를 두지 않는다. 조회 상태 판정은 화면 업무 hook의 `useRecord`·`useList` 한 곳이 한다. 꼭 필요한 loader는 이유와 함께 예외로 남긴다.
-- 진입 판정이 feature 상태를 읽으면 그 feature의 `public.ts`를 쓴다(예: `isSignedIn`).
+- 진입 판정이 feature 상태를 읽으면 그 feature의 `index.ts`를 쓴다(예: `isSignedIn`).
 
 ## 검사 경계
 
-실제 조립 예: [apps/starter/src/features/products/pages/ProductCreatePage.test.tsx](../../references/apps/starter/src/features/products/pages/ProductCreatePage.test.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/products/ui/form/ProductCreatePage.test.tsx](../../references/apps/starter/src/features/products/ui/form/ProductCreatePage.test.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 | 자리 | 확인할 것 | 대신 증명하지 못하는 것 |
 |---|---|---|
-| data·forms·rules 순수 단위 검사 | trim·빈 값·조건부 필수·요청 변환·코드 분류 | 화면 연결·서버 수용 |
+| model 순수 단위 검사 | trim·빈 값·조건부 필수·요청 변환·코드 분류 | 화면 연결·서버 수용 |
 | 업무 hook(msw + 앱 조립 `src/test/app.tsx`) | 제출 1회당 요청 1회, 응답별 분기, 완료 재시도에 요청 재전송 없음, 늦은 결과 무시 | 포커스·Tab·OS 권한 |
 | 화면 그리기 | 입력·클릭·오류 표시·잠금 | 실제 서버 계약 |
 | 제품 시나리오(브라우저·실서버) | URL 진입·redirect·세션·실제 요청·서버 반영 | 실행하지 못한 외부 조건 |
@@ -121,7 +129,7 @@ URL 목록 검색은 `search/`에 둔다. 목록·상세 사이에 남길 URL �
 
 ## 새 화면 골격
 
-실제 조립 예: [apps/starter/src/features/members/hooks/use-member-list.ts](../../references/apps/starter/src/features/members/hooks/use-member-list.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예: [apps/starter/src/features/members/model/list/use-member-list.ts](../../references/apps/starter/src/features/members/model/list/use-member-list.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 - `pnpm exec web-kit-new --feature <도메인> --kind list|form|detail --url <URL> [--entity <단수 이름>] [--group <_묶음>] [--dry-run]`을 프로젝트 루트에서 실행한다. `--group`이 없으면 `web-kit.structure.json`의 `screenGroup` 묶음에 만들고, 둘 다 없거나 그 묶음에 `route.tsx`가 없으면 아무것도 쓰지 않고 실패한다(진입 판정 없는 화면을 만들지 않는다). form은 URL이 `/new`면 등록, `/$<id>/edit`면 수정 골격이다.
 - 같은 feature의 공유 파일(앱 모델·단건 query·폼 schema)은 이미 있으면 그대로 쓰고, 화면 파일이 다른 내용으로 이미 있으면 아무 파일도 쓰지 않고 실패한다. 같은 입력으로 다시 실행하면 바뀌는 것이 없다.

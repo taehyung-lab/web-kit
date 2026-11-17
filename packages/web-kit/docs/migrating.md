@@ -64,21 +64,20 @@
 - **타입 import(복사본 교정 필요):** form/ui.tsx·list-ui.tsx·ui/dialog.tsx의 타입 전용 import를 `import type { … }`로 교정한다. 패키지 갱신만으로 기존 복사본 문법은 바뀌지 않는다. 적용 뒤 lint와 적합성 검사를 실행한다.
 - **인증 실패 값(복사본 교정 필요):** `model.failure`를 `verifyFailure`·`resendFailure`로 나누고 `labels.failure`도 `labels.verifyFailure`·`labels.resendFailure`로 바꾼다. 인증 검사 연결은 `/testing/unit/auth`·`/testing/fixtures/auth`를 사용한다.
 
-## 6.0.0 후보: 읽기 쉬운 feature 구조
+## 8.0.0 후보: 업무별 ui / model / api
 
-구조 계약을 채택한 소비 앱은 파일·import와 구조 검사기를 함께 옮긴다. runtime API는 그대로다. 패키지만 올리면 기존 구조는 검사에 실패하므로 소비 소스 교정이 필요하다.
+구조 계약을 채택한 소비 앱은 파일·import·검사기를 함께 옮긴다. 런타임 API와 registry UI는 그대로이며 패키지만 교체하면 이전 구조가 검사에 실패한다.
 
 | 이전 자리 | 새 자리 |
 |---|---|
-| `model/forms/`, `model/rules/` | `forms/`, `rules/` |
-| `model/product.ts` 같은 순수 타입·계산 | feature 루트 `product.ts` (data 역할), 검사도 옆에 배치 가능 |
-| `state/`의 목록·검색·복귀 조건 | `search/` |
-| `state/`의 저장·공유 수명 | `storage/` |
-| `flows/` | `hooks/` |
-| `screens/ProductListScreen.tsx` | `pages/ProductListPage.tsx`, export·사용처도 함께 변경 |
-| feature `i18n.ts` | feature `messages.ts` |
+| `pages/` | `ui/<화면>/`, 여러 화면의 배치는 `ui/` |
+| `hooks/`, `forms/`, `rules/`, `storage/`, `search/` | `model/<함께 바꾸는 동작>/`, 공용 데이터·정책은 `model/` |
+| 업무 루트의 타입·계산 파일 | `model/` |
+| `messages.ts` | `ui/messages.ts` |
+| `permissions.ts` | `model/<업무>-permissions.ts` |
+| `public.ts` | `index.ts`, 외부 import는 업무 폴더 경로 |
 
-루트 `permissions.ts`는 실행 연결이므로 storage로 검사한다. `public.ts`와 앱 루트 app·runtime·routes·features·shared는 유지한다. app 문구 등록과 runtime i18n 인스턴스 이름도 유지한다. 기존 Page 이름과 겹치는 부분 부품은 역할을 드러내는 Section·Layout 등으로 구분한다. pages 안에는 그 페이지의 필터·표·표시 도우미를 함께 둘 수 있다. 예외나 규칙 비활성화로 옮기기를 대신하지 않는다. 새 역할의 import·순수성·JSX 경계는 [구조 계약](../skills/web-kit-structure/SKILL.md)이 정본이다.
+상태 연결은 `*-store`, `*-state`, `*-session`, `*-permissions`, URL 선언은 `*-search`, 업무 hook은 `use-*` 이름으로 실행 역할을 드러낸다. 나머지 model 파일은 순수 코드로 검사한다. 기존 폴더를 통째로 model에 넣지 않는다. [구조 계약](../skills/web-kit-structure/SKILL.md)의 의존 방향·순수성·JSX 경계를 그대로 검증한다. 구조 검사와 생성기, 앱 등록·라우트·문구 소비·검사 import를 함께 옮긴다. 제품 URL·요청·권한·저장·세션 동작은 보존한다.
 
 ## 폼·목록 UI 내부 파일 정리
 
@@ -90,6 +89,6 @@
 
 1. **연결:** [설치 안내의 구조 계약 연결](installing.md#구조-계약-연결)대로 설정·lint·CI를 붙인다. 처음 실행한 위반 목록을 그대로 예외로 옮기지 않는다. 옮길 묶음을 정하고, 이번에 옮기지 않는 파일만 파일·규칙·이유(남기는 이유와 옮길 묶음)로 적는다.
 2. **runtime 분리:** http·세션·QueryClient·서버 시계·i18n 인스턴스·전역 안내 저장소처럼 feature가 쓰는 실행 기반을 `src/runtime/`으로 옮긴다. runtime에서 feature를 부르던 연결(예: 서버 로그아웃 요청을 feature api로 보냄)은 runtime 안의 직접 요청이나 app의 구독으로 바꾼다. feature 문구 모음은 app이 runtime의 i18n 인스턴스에 등록한다. orval mutator 경로도 runtime으로 바꾸고 생성 코드를 다시 만든다. 이것이 끝나야 feature → app 위반이 사라진다.
-3. **대표 화면부터:** 인증 화면 → 목록·등록/수정·상세 대표 → 나머지 순서로 옮긴다. 화면의 `useSaveForm`·`useList`·`useRecord`·`useAuthChallenge`·요청·이동을 `hooks/use-<행동>.ts`로 옮기고 화면은 flow 결과만 그린다. 저장(`save`)은 요청과 응답 반환만, 세션 시작·이동·후속 조회는 완료(`onSaved`)로 나눈다. 사용자 조작 중 실행해야 하던 일(권한 요청 등)은 첫 `await` 전 위치를 지킨다. 실패 의미 판정·정책 값은 `rules/<업무>-policy.ts`, 저장소는 `storage/`, URL 목록 검색 선언은 `search/`로 옮긴다. 옮긴 파일은 바로 예외 없이 통과시킨다.
-4. **route:** `<이름>.tsx`·`$id.tsx` 화면 파일을 `<이름>/index.tsx`·`$id/index.tsx`로, 로그인 전 화면을 `_public/`로 옮기고 이미 로그인한 경우의 이동 판정을 `_public/route.tsx` 한 곳에 둔다. 앱 골격은 로그인 뒤 묶음의 `route.tsx`(묶음 이름은 프로젝트가 정한다. 예: `_authenticated/route.tsx`)로 옮기고 화면 모양은 `app/shell`에 둔다. 기존 제품 URL이 이름 관례와 다르면 URL을 지킨다. 기본 loader는 지우거나 이유와 함께 예외로 남긴다. route 진입 판정이 feature 상태를 읽으면 그 feature에 `public.ts`를 만든다. route 트리를 다시 생성한다.
+3. **대표 화면부터:** 인증 화면 → 목록·등록/수정·상세 대표 → 나머지 순서로 옮긴다. 화면의 `useSaveForm`·`useList`·`useRecord`·`useAuthChallenge`·요청·이동을 `model/<동작>/use-<행동>.ts`로 옮기고 화면은 flow 결과만 그린다. 저장(`save`)은 요청과 응답 반환만, 세션 시작·이동·후속 조회는 완료(`onSaved`)로 나눈다. 사용자 조작 중 실행해야 하던 일(권한 요청 등)은 첫 `await` 전 위치를 지킨다. 실패 의미 판정·정책 값은 `model/<업무>-policy.ts`, 저장소는 `model/`, URL 목록 검색 선언은 `model/<동작>/*-search.ts`로 옮긴다. 옮긴 파일은 바로 예외 없이 통과시킨다.
+4. **route:** `<이름>.tsx`·`$id.tsx` 화면 파일을 `<이름>/index.tsx`·`$id/index.tsx`로, 로그인 전 화면을 `_public/`로 옮기고 이미 로그인한 경우의 이동 판정을 `_public/route.tsx` 한 곳에 둔다. 앱 골격은 로그인 뒤 묶음의 `route.tsx`(묶음 이름은 프로젝트가 정한다. 예: `_authenticated/route.tsx`)로 옮기고 화면 모양은 `app/shell`에 둔다. 기존 제품 URL이 이름 관례와 다르면 URL을 지킨다. 기본 loader는 지우거나 이유와 함께 예외로 남긴다. route 진입 판정이 feature 상태를 읽으면 그 feature에 `index.ts`를 만든다. route 트리를 다시 생성한다.
 5. **보고:** 구조 결과(`[구조]`)와 제품 동작 보존 결과(기존 시나리오·브라우저·실서버)를 따로 센다. 파일을 옮겨 구조가 통과해도 제품 시나리오가 확인되지 않았으면 그 화면의 이전은 완료가 아니다. 남은 예외 수와 이유를 함께 보고한다.

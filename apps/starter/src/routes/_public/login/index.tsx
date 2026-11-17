@@ -1,5 +1,5 @@
 // 파일 책임: 로그인 경로. 들어온 이유(reason)와 돌아갈 곳(redirect)을 URL로 검증해 화면에 넘긴다. 로그인 요청·세션·이동은 auth의 로그인 flow가 맡는다.
-import { LoginPage } from '@/features/auth/pages/LoginPage';
+import { LoginPage } from '@/features/auth';
 import { safeAppPath } from '@boosterlab/web-kit';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
