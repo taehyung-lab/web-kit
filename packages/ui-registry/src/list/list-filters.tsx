@@ -337,9 +337,7 @@ function Keywords({
     <fieldset className="grid content-start gap-2">
       <legend className={legendClass}>{label}</legend>
       <div className="flex flex-wrap items-center gap-2">
-        {choices.length > 1 && (
-          <OptionSelect aria-label={targetLabel ?? `${label} ${copy.keywordTarget}`} value={input.choice} onValueChange={(next) => input.setChoice(next)} options={choices} />
-        )}
+        <OptionSelect aria-label={targetLabel ?? `${label} ${copy.keywordTarget}`} value={input.choice} onValueChange={(next) => input.setChoice(next)} options={choices} />
         <Input
           aria-label={inputLabel ?? label}
           className="w-auto min-w-48 flex-1"
