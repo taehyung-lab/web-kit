@@ -57,7 +57,7 @@ it.each(['../src/form/index.ts', '../src/form/save-form.ts', '../src/form/naviga
       const file = queue.pop()!;
       if (visited.has(file)) continue;
       visited.add(file);
-      expect(file).not.toMatch(/\/ui\/|ui-registry\/src\/(?:list|detail)\.tsx|ui-registry\/src\/form\/form\.tsx/);
+      expect(file).not.toMatch(/ui-registry\/src\//);
       for (const [, specifier] of sources[file]!.matchAll(/(?:from|import)\s+['"]([^'"]+)['"]/g)) {
         if (specifier!.startsWith('.') || specifier!.startsWith('@boosterlab/web-kit')) {
           const target = resolve(file, specifier!);
