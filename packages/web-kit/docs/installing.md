@@ -57,15 +57,15 @@ pnpm exec web-kit-registry record --source /path/to/same-version-web-kit --items
 5.0.0-rc.7 후보까지의 복사본은 `ui/styles.css`(`.wk-*` 클래스·`--wk-*` 변수)와 키트 기본 부품(`inputs`)을 썼다. 새 복사본은 shadcn 기본 부품을 조합하고 그 스타일시트를 쓰지 않는다. **복사본 교정과 프로젝트 화면 수정이 모두 필요하다.**
 
 1. 위 3단계대로 base-nova 테마 CSS와 `components.json` 별칭(`aliases.ui: "@/shared/ui"`)을 맞춘다.
-2. 새 원본을 설치하고(기본 부품도 함께 설치된다) 설치 기록을 다시 만든다. 지난 복사본의 `ui/styles.css`·`ui/inputs.tsx`·`checks/styles.test.tsx`는 새 원본에 없으므로 지우고, 앱의 `import '@/shared/ui/web-kit/styles.css'`도 지운다.
+2. 새 원본을 설치하고(기본 부품도 함께 설치된다) 설치 기록을 다시 만든다. 지난 복사본의 `ui/styles.css`·`ui/inputs.tsx`·`checks/styles.test.tsx`는 새 원본에 없으므로 지우고, 앱의 `import '@/shared/ui/web-kit/ui/styles.css'`도 지운다.
 3. 화면 코드의 기본 부품 import와 속성을 바꾼다.
 
 | 이전 | 이후 |
 |---|---|
-| `import { Button } from '@/shared/ui/web-kit'` | `import { Button } from '@/shared/ui/button'` |
+| `import { Button } from '@/shared/ui/web-kit/ui'` | `import { Button } from '@/shared/ui/button'` |
 | `<Button>`(기본 `secondary`) · `variant="primary"` · `"secondary"` · `"ghost"` · `"danger"` | `variant="outline"` · 생략(`default`) · `"outline"` · `"ghost"` · `"destructive"` |
-| `Input`·`Checkbox`(`@/shared/ui/web-kit`) | `@/shared/ui/input`·`@/shared/ui/checkbox`(Base UI 속성 그대로) |
-| `TextArea`(`@/shared/ui/web-kit`) | `Textarea`(`@/shared/ui/textarea`) |
+| `Input`·`Checkbox`(`@/shared/ui/web-kit/ui`) | `@/shared/ui/input`·`@/shared/ui/checkbox`(Base UI 속성 그대로) |
+| `TextArea`(`@/shared/ui/web-kit/ui`) | `Textarea`(`@/shared/ui/textarea`) |
 | `<Select value onChange={(e) => set(e.target.value)}><option value="a">A</option></Select>` | `<Select items={options} value={value} onValueChange={set}><SelectTrigger aria-label="…"><SelectValue placeholder="…" /></SelectTrigger><SelectContent>{options.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select>`(`@/shared/ui/select`) |
 | `--wk-*` 변수·`.wk-*` 클래스로 바꾼 모양 | 테마 변수(`:root`)나 복사본의 Tailwind 클래스 |
 
