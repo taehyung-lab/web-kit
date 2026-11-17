@@ -57,7 +57,7 @@ it.each(['../src/form/index.ts', '../src/form/save-form.ts', '../src/form/naviga
       const file = queue.pop()!;
       if (visited.has(file)) continue;
       visited.add(file);
-      expect(file).not.toMatch(/\/ui\/|ui-registry\/src\/(?:list|detail)\.tsx|ui-registry\/src\/form\/form\.tsx/);
+      expect(file).not.toMatch(/ui-registry\/src\//);
       for (const [, specifier] of sources[file]!.matchAll(/(?:from|import)\s+['"]([^'"]+)['"]/g)) {
         if (specifier!.startsWith('.') || specifier!.startsWith('@boosterlab/web-kit')) {
           const target = resolve(file, specifier!);
@@ -133,7 +133,7 @@ it.each([
   '../../ui-registry/src/list.tsx',
   '../src/record.ts',
   '../../ui-registry/src/detail.tsx',
-  '../../ui-registry/src/ui/index.ts',
+  '../../ui-registry/src/index.ts',
   '../src/search/index.ts',
 ])(
   '%s는 권한을 import하지 않는다',
@@ -183,13 +183,13 @@ it('진행 표시 마크업(shadcn Spinner 연결)은 /ui의 pending 한 곳에�
   const owners = Object.entries(sources)
     .filter(([file, source]) => !file.startsWith('../src/testing/') && (source.includes('@/components/ui/spinner') || source.includes('data-slot="pending"')))
     .map(([file]) => file);
-  expect(owners).toEqual(['../../ui-registry/src/ui/pending.tsx']);
-  for (const entry of ['../../ui-registry/src/list.tsx', '../../ui-registry/src/form/form.tsx', '../../ui-registry/src/ui/dialog.tsx']) {
+  expect(owners).toEqual(['../../ui-registry/src/pending.tsx']);
+  for (const entry of ['../../ui-registry/src/list.tsx', '../../ui-registry/src/form/form.tsx', '../../ui-registry/src/dialog.tsx']) {
     const source = [...reach(entry)].map((file) => sources[file]).join('\n');
     expect(source, entry).toMatch(/<Pending label=/);
   }
-  expect(sources['../../ui-registry/src/ui/blocking-progress.tsx']).toMatch(/<Spinner large \/>/);
-  expect(sources['../../ui-registry/src/ui/index.ts']).toMatch(/export \{ Pending \} from '\.\/pending'/);
+  expect(sources['../../ui-registry/src/full-page-progress.tsx']).toMatch(/<Spinner large \/>/);
+  expect(sources['../../ui-registry/src/index.ts']).toMatch(/export \{ Pending \} from '\.\/pending'/);
 });
 
 

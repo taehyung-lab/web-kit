@@ -1,6 +1,6 @@
 {
   "name": "@boosterlab/web-kit",
-  "version": "6.0.0-rc.3",
+  "version": "8.0.0-rc.2",
   "private": true,
   "type": "module",
   "sideEffects": false,
@@ -40,7 +40,8 @@
     "./testing/fixtures/dialog": "./src/testing/dialog-fixture.tsx",
     "./testing/fixtures/progress": "./src/testing/progress-fixture.tsx",
     "./testing/fixtures/combinations": "./src/testing/combination-fixtures.tsx",
-    "./structure": "./tools/structure/index.mjs"
+    "./structure": "./tools/structure/index.mjs",
+    "./progress": "./src/full-page-progress.ts"
   },
   "files": [
     "src",

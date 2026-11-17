@@ -3,15 +3,15 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-libra
 import { type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { afterEach, expect, it as baseIt } from 'vitest';
-import { useBlockingProgress } from '../../progress';
-import type * as Contract1 from '../contracts/ui/blocking-progress';
+import { useFullPageProgress } from '../../full-page-progress';
+import type * as Contract1 from '../contracts/ui/full-page-progress';
 import type * as Contract2 from '../contracts/ui/dialog';
 import { conformanceTitle, type ConformanceTarget } from '../target.mjs';
 import { dialogDefaultsWrapper, renderUnder, type DialogDefaultsParts } from '../copy-defaults';
 import { useConfirmationState } from '../../confirmation';
 
 /** 필요한 기능의 실제 복사본으로 해당 검사만 등록한다. */
-export function checkProgressConformance({ BlockingProgress, ConfirmDialog, ...copy }: { BlockingProgress: typeof Contract1.BlockingProgress; ConfirmDialog: typeof Contract2.ConfirmDialog } & DialogDefaultsParts, target: ConformanceTarget) {
+export function checkProgressConformance({ FullPageProgress, ConfirmDialog, ...copy }: { FullPageProgress: typeof Contract1.FullPageProgress; ConfirmDialog: typeof Contract2.ConfirmDialog } & DialogDefaultsParts, target: ConformanceTarget) {
   const render = renderUnder(dialogDefaultsWrapper(copy));
   const it = baseIt;
   const title = (id: string, label: string) => conformanceTitle(id, target, label);
@@ -53,9 +53,9 @@ function body() {
 /** 소비처 덮개 복사본 안에 검사 본문을 배치한다. */
 function Host({ children }: { readonly children: ReactNode }) {
   return (
-    <BlockingProgress messages={MESSAGES}>
+    <FullPageProgress messages={MESSAGES}>
       <div data-testid="app-body">{children}</div>
-    </BlockingProgress>
+    </FullPageProgress>
   );
 }
 
@@ -63,7 +63,7 @@ function Host({ children }: { readonly children: ReactNode }) {
 function PortalScreen({ active, portal, trigger = true }: { readonly active: boolean; readonly portal: boolean; readonly trigger?: boolean }) {
   /** 진행 상태를 실제 등록소에 전달한다. */
   function Probe() {
-    useBlockingProgress('edit', active);
+    useFullPageProgress('edit', active);
     return null;
   }
   return (
@@ -109,7 +109,7 @@ it(title('G011', 'P6 기록한 본문 요소도 사라졌으면 본문의 첫 �
   function Bare({ active, button }: { readonly active: boolean; readonly button: boolean }) {
     /** 진행 상태를 실제 등록소에 전달한다. */
     function Probe() {
-      useBlockingProgress('delete', active);
+      useFullPageProgress('delete', active);
       return null;
     }
     return (
@@ -139,7 +139,7 @@ it(title('G012', 'P6 본문에서 아무 요소에도 포커스한 적이 없으
 it(title('G013', 'P10 덮개는 본문만 막고 덮개 밖(portal) 대화창은 막지 않는다 — 덮개 층은 프로젝트 변수로 바꾼다'), async () => {
   /** 진행 상태를 실제 등록소에 전달한다. */
   function Probe() {
-    useBlockingProgress('loading', true);
+    useFullPageProgress('loading', true);
     return null;
   }
   render(
@@ -160,7 +160,7 @@ it(title('G013', 'P10 덮개는 본문만 막고 덮개 밖(portal) 대화창은
 it(title('G014', '가운데 진행 표시: 기본은 키트 원형 회전 표시, indicator를 주면 그 표시로 바뀌고 문구·본문 막기는 같다'), () => {
   /** 진행 상태를 실제 등록소에 전달한다. */
   function Probe() {
-    useBlockingProgress('loading', true);
+    useFullPageProgress('loading', true);
     return null;
   }
   const { unmount } = render(
@@ -172,11 +172,11 @@ it(title('G014', '가운데 진행 표시: 기본은 키트 원형 회전 표시
   expect(box().querySelector('[data-slot="spinner"][data-size="large"]')).not.toBeNull();
   unmount();
   render(
-    <BlockingProgress messages={MESSAGES} indicator={<svg data-testid="bars" />}>
+    <FullPageProgress messages={MESSAGES} indicator={<svg data-testid="bars" />}>
       <div data-testid="app-body">
         <Probe />
       </div>
-    </BlockingProgress>,
+    </FullPageProgress>,
   );
   expect(box().querySelector('[data-testid="bars"]')).not.toBeNull();
   expect(box().querySelector('[data-slot="spinner"]')).toBeNull();
@@ -188,7 +188,7 @@ it(title('G014', '가운데 진행 표시: 기본은 키트 원형 회전 표시
 it(title('G015', '저장과 조회가 겹치면 저장 문구가 이긴다, 등록소 밖 훅은 아무 일도 하지 않는다'), () => {
   /** 진행 상태를 실제 등록소에 전달한다. */
   function Probe({ kind }: { readonly kind: 'loading' | 'create' }) {
-    useBlockingProgress(kind, true);
+    useFullPageProgress(kind, true);
     return null;
   }
   const { unmount } = render(
@@ -207,7 +207,7 @@ it(title('G015', '저장과 조회가 겹치면 저장 문구가 이긴다, 등�
 it(title('G021', 'P6·P10 덮개 중 덮개 밖 대화창(세션 안내 등)에 간 포커스는 덮개가 닫혀도 그대로 둔다'), async () => {
   /** 진행 상태를 실제 등록소에 전달한다. */
   function Probe({ active }: { readonly active: boolean }) {
-    useBlockingProgress('loading', active);
+    useFullPageProgress('loading', active);
     return null;
   }
   /** 실제 소비 부품을 검사 입력과 연결한다. */
@@ -322,7 +322,7 @@ it(title('G024', 'Q1 progress를 선언하지 않은 확인 실행(상태 변경
 it(title('G025', 'Q1 조회 중에 삭제가 시작되면 삭제 문구가 이긴다'), () => {
   /** 진행 상태를 실제 등록소에 전달한다. */
   function Probe({ kind }: { readonly kind: 'loading' | 'delete' }) {
-    useBlockingProgress(kind, true);
+    useFullPageProgress(kind, true);
     return null;
   }
   render(

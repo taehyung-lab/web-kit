@@ -43,9 +43,9 @@
       ],
       "files": [
         {
-          "path": "packages/ui-registry/src/ui/pending.tsx",
+          "path": "packages/ui-registry/src/pending.tsx",
           "type": "registry:file",
-          "target": "~/src/shared/ui/web-kit/ui/pending.tsx"
+          "target": "~/src/shared/ui/web-kit/pending.tsx"
         },
         {
           "path": "packages/ui-registry/checks/pending.test.tsx",
@@ -71,9 +71,9 @@
       ],
       "files": [
         {
-          "path": "packages/ui-registry/src/ui/dialog.tsx",
+          "path": "packages/ui-registry/src/dialog.tsx",
           "type": "registry:file",
-          "target": "~/src/shared/ui/web-kit/ui/dialog.tsx"
+          "target": "~/src/shared/ui/web-kit/dialog.tsx"
         },
         {
           "path": "packages/ui-registry/checks/dialog.test.tsx",
@@ -114,9 +114,9 @@
       ],
       "files": [
         {
-          "path": "packages/ui-registry/src/ui/blocking-progress.tsx",
+          "path": "packages/ui-registry/src/full-page-progress.tsx",
           "type": "registry:file",
-          "target": "~/src/shared/ui/web-kit/ui/blocking-progress.tsx"
+          "target": "~/src/shared/ui/web-kit/full-page-progress.tsx"
         },
         {
           "path": "packages/ui-registry/checks/blocking-progress.test.tsx",
@@ -165,9 +165,9 @@
       ],
       "files": [
         {
-          "path": "packages/ui-registry/src/ui/choice.tsx",
+          "path": "packages/ui-registry/src/choice.tsx",
           "type": "registry:file",
-          "target": "~/src/shared/ui/web-kit/ui/choice.tsx"
+          "target": "~/src/shared/ui/web-kit/choice.tsx"
         },
         {
           "path": "packages/ui-registry/checks/choice.test.tsx",
@@ -193,9 +193,9 @@
       ],
       "files": [
         {
-          "path": "packages/ui-registry/src/ui/retry.tsx",
+          "path": "packages/ui-registry/src/retry.tsx",
           "type": "registry:file",
-          "target": "~/src/shared/ui/web-kit/ui/retry.tsx"
+          "target": "~/src/shared/ui/web-kit/retry.tsx"
         },
         {
           "path": "packages/ui-registry/checks/retry.test.tsx",
@@ -222,9 +222,9 @@
       ],
       "files": [
         {
-          "path": "packages/ui-registry/src/ui/index.ts",
+          "path": "packages/ui-registry/src/index.ts",
           "type": "registry:file",
-          "target": "~/src/shared/ui/web-kit/ui/index.ts"
+          "target": "~/src/shared/ui/web-kit/index.ts"
         }
       ]
     },

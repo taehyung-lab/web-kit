@@ -3,7 +3,7 @@
 import { changeLanguage, LANGUAGES } from '@/app/i18n';
 import { session } from '@/runtime/web-kit';
 import { Button } from '@/shared/ui/button';
-import { BlockingProgress } from '@/shared/ui/web-kit/ui';
+import { FullPageProgress } from '@/shared/ui/web-kit';
 import { Link, Outlet } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 export function AppShell() {
   const { t, i18n } = useTranslation();
   return (
-    <BlockingProgress
+    <FullPageProgress
       messages={{
         loading: t('app.progress.loading'),
         create: t('app.progress.create'),
@@ -75,6 +75,6 @@ export function AppShell() {
           <Outlet />
         </main>
       </div>
-    </BlockingProgress>
+    </FullPageProgress>
   );
 }

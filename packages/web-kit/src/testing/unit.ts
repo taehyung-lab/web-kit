@@ -1,5 +1,5 @@
 // 파일 책임: jsdom 소비 적합성 검사 등록 함수만 공개한다.
-export { checkBlockingProgressConformance } from './unit/blocking-progress';
+export { checkFullPageProgressConformance } from './unit/blocking-progress';
 export { checkChoiceConformance } from './unit/choice';
 export { checkFormComplexConformance } from './unit/form-complex';
 export { checkFormEnterConformance } from './unit/form-enter';

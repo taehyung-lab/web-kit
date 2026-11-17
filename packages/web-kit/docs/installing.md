@@ -70,7 +70,22 @@ pnpm exec web-kit-registry record --source /path/to/same-version-web-kit --items
 | `--wk-*` 변수·`.wk-*` 클래스로 바꾼 모양 | 테마 변수(`:root`)나 복사본의 Tailwind 클래스 |
 
 4. 키트 묶음 부품의 props는 그대로다. 그리는 결과만 바뀐다: `Form.Select`·`List.Select`·목록 기간 기준·검색어 대상·정렬·페이지 크기·다운로드 종류는 shadcn Select(역할 `combobox` 버튼과 `option` 목록)다. `Form.Select`는 값이 비었을 때 빈 선택지 대신 안내 문구(`placeholder`, 기본 `messages.choose`)를 트리거에 보인다. 단일 `Choice`의 radio는 칸마다 하나의 radiogroup이다. `Form.Checkbox`는 shadcn Checkbox(button)다. 검사·화면 테스트가 네이티브 `<select>`·`<option>`(예: `selectOptions`)이나 `.wk-*` 클래스를 찾았다면 트리거를 눌러 `option`을 고르는 방식이나 `data-slot`(예: `pending`·`blocking-progress`)으로 바꾼다.
-5. 덮개 층은 `z-40`(shadcn 대화창 `z-50` 아래)이다. 층·배경을 바꾸려면 `ui/blocking-progress.tsx` 복사본의 클래스를 고친다(`--wk-blocking-*` 변수는 없다).
+5. 덮개 층은 `z-40`(shadcn 대화창 `z-50` 아래)이다. 층·배경을 바꾸려면 `full-page-progress.tsx` 복사본의 클래스를 고친다(`--wk-blocking-*` 변수는 없다).
+
+### 7.0.0-rc.1 진행 표시와 UI 경로 이전
+
+**복사본 교정 필요.** 6.0.0-rc.3에서 7.0.0-rc.1 후보로 옮길 때 패키지와 같은 후보의 registry를 함께 적용한다. `blocking-progress` 등 설치 항목 이름과 검사 ID는 유지한다. 정식 tag 발행 전에는 검증한 원본 commit으로 고정한다.
+
+| 이전 | 이후 |
+|---|---|
+| `BlockingProgress`(로컬 별칭 포함) | `FullPageProgress` |
+| `/dialog`의 `useBlockingProgress`·`useBlockingProgressBinding`·`BlockingProgressProvider`·`BlockingKind` | `/progress`의 `useFullPageProgress`·`useFullPageProgressBinding`·`FullPageProgressProvider`·`FullPageProgressKind` |
+| `@/shared/ui/web-kit/ui/blocking-progress` | `@/shared/ui/web-kit/full-page-progress` |
+| `@/shared/ui/web-kit/ui/dialog` 등 | `@/shared/ui/web-kit/dialog` 등 |
+| `@/shared/ui/web-kit/ui`의 시각 부품 묶음 | `@/shared/ui/web-kit`(hook은 패키지에서 직접 import) |
+| `/testing/unit`의 `checkBlockingProgressConformance`와 입력 `BlockingProgress` | `checkFullPageProgressConformance`와 입력 `FullPageProgress` |
+
+`ui/`의 dialog·pending·choice·retry·index도 `web-kit/` 바로 아래로 옮긴다. 이전 복사본의 프로젝트 디자인을 보존하며 아래 세 방향 비교를 하고, import·검사 연결·설치 기록을 함께 갱신한다. 이 변경은 이름과 위치만 바꾸며 본문 잠금·초점 복원·진행 우선순위·대화창 순서는 유지한다.
 
 ### 복사본 갱신
 

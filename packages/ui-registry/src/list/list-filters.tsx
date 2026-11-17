@@ -1,6 +1,6 @@
 // 파일 책임: 검색 제출·상세 조건·선택·기간·키워드 입력을 같은 목록 상태에 연결한다.
 import { useListField, useListFilterBinding, useListDetailsBinding, useListChoiceBinding, listChoiceValue, useListChoiceNormalization, useListMultiChoiceBinding, useListPeriodBinding, useListKeywordBinding, listFieldMeta, type PeriodShortcut, type ListModel } from '@boosterlab/web-kit/list';
-import { Choice as ChoiceInput, type ChoiceProps } from '../ui/choice';
+import { Choice as ChoiceInput, type ChoiceProps } from '../choice';
 import { useId, type ReactNode } from 'react';
 import { cn } from 'cn';
 import { Button } from '@/components/ui/button';

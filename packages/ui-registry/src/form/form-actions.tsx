@@ -4,8 +4,8 @@ import type { NavigateOptions } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 import { cn } from 'cn';
 import { Button } from '@/components/ui/button';
-import { AlertDialog, ConfirmDialog, Dialog } from '../ui/dialog';
-import { Pending } from '../ui/pending';
+import { AlertDialog, ConfirmDialog, Dialog } from '../dialog';
+import { Pending } from '../pending';
 import { errorClass, useFormContext, type FormConfirmContent, type FormSavedContent } from './form-context';
 
 // ─── 이탈 보호 ───────────────────────────────────────────────────────────────

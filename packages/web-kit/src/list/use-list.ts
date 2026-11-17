@@ -4,7 +4,7 @@
 import { hashKey, useQueries, useQuery, type QueryKey, type UseQueryOptions } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { isRequestFailure, RequestFailure } from '../failure';
-import { useBlockingProgress } from '../progress';
+import { useFullPageProgress } from '../full-page-progress';
 import { validateDateRange } from '../date-range';
 import { sameSearchValue, type FullSearch, type SearchDefinition, type SearchField, type UrlSearch } from '../search/fields';
 import { addKeyword, nextSort, type Keyword } from '../search/interactions';
@@ -58,7 +58,7 @@ export interface ListOptions<
 > {
   readonly definition: SearchDefinition<F>;
   /**
-   * 'page'면 이 목록이 페이지 진입 조회다: 보여 줄 결과가 아직 없고 조회(주소 값 확인 조회 포함) 중인 동안 화면 전체 진행 덮개(`/ui` BlockingProgress)를 띄운다.
+   * 'page'면 이 목록이 페이지 진입 조회다: 보여 줄 결과가 아직 없고 조회(주소 값 확인 조회 포함) 중인 동안 화면 전체 진행 덮개(registry FullPageProgress)를 띄운다.
    * 검색·페이지 이동은 이전 결과를 보인 채 다시 조회하므로 덮지 않는다.
    */
   readonly progress?: 'page';
@@ -515,7 +515,7 @@ export function useList<
     status = cancelled ? { kind: 'idle', reason: 'cancelled', resume: refetch } : { kind: 'failed', failure: query.error, retry: refetch };
   else status = { kind: 'pending' };
   // 페이지 진입 조회: 보여 줄 결과가 아직 없고 실제로 받고 있는 동안만 덮는다(이전 결과가 있으면 덮지 않는다).
-  useBlockingProgress('loading', options.progress === 'page' && page === undefined && status.kind === 'pending' && (running || query.isFetching));
+  useFullPageProgress('loading', options.progress === 'page' && page === undefined && status.kind === 'pending' && (running || query.isFetching));
 
   return {
     /** 현재 URL을 기본값으로 채운 확정 검색. */

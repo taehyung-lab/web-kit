@@ -2,7 +2,7 @@
 import { act, cleanup, fireEvent, screen, waitFor, } from '@testing-library/react';
 import { type ReactNode } from 'react';
 import { afterEach, expect, it as baseIt, vi } from 'vitest';
-import type * as Contract1 from '../contracts/ui/blocking-progress';
+import type * as Contract1 from '../contracts/ui/full-page-progress';
 import { conformanceTitle, type ConformanceTarget } from '../target.mjs';
 import { formDefaultsWrapper, renderUnder, type FormDefaultsParts } from '../copy-defaults';
 import { z } from 'zod';
@@ -11,7 +11,7 @@ import { useSaveForm, type SaveFormOptions, type SaveStep } from '../../form/sav
 import type * as Contract0 from '../contracts/form/ui';
 
 /** 필요한 기능의 실제 복사본으로 해당 검사만 등록한다. */
-export function checkFormProgressConformance({ Form, BlockingProgress, ...copy }: { Form: typeof Contract0.Form; BlockingProgress: typeof Contract1.BlockingProgress } & FormDefaultsParts, target: ConformanceTarget) {
+export function checkFormProgressConformance({ Form, FullPageProgress, ...copy }: { Form: typeof Contract0.Form; FullPageProgress: typeof Contract1.FullPageProgress } & FormDefaultsParts, target: ConformanceTarget) {
   const render = renderUnder(formDefaultsWrapper(copy));
   const it = baseIt;
   const title = (id: string, label: string) => conformanceTitle(id, target, label);
@@ -53,9 +53,9 @@ function body() {
 /** 소비처 덮개 복사본 안에 검사 본문을 배치한다. */
 function Host({ children }: { readonly children: ReactNode }) {
   return (
-    <BlockingProgress messages={MESSAGES}>
+    <FullPageProgress messages={MESSAGES}>
       <div data-testid="app-body">{children}</div>
-    </BlockingProgress>
+    </FullPageProgress>
   );
 }
 

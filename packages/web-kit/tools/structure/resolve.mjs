@@ -1,4 +1,4 @@
-// 파일 책임: import 문자열을 프로젝트 tsconfig 기준의 실제 파일로 해소하고, 재export(public.ts 등)를 따라 이름이 실제로 정의된 파일을 찾는다.
+// 파일 책임: import 문자열을 프로젝트 tsconfig 기준의 실제 파일로 해소하고, 재export(index.ts 등)를 따라 이름이 실제로 정의된 파일을 찾는다.
 // 문자열 접두어 비교로는 별칭·상대 경로·재export·동적 import 우회를 막지 못하므로 TypeScript 해석기를 그대로 쓴다.
 import { createRequire } from 'node:module';
 import { existsSync, readFileSync, statSync } from 'node:fs';

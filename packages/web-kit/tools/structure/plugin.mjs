@@ -26,13 +26,13 @@ for (const role of ['forms', 'rules']) LAYER_BANS[`feature:${role}`] = LAYER_BAN
 const LAYER_REASONS = {
   shared: 'shared는 도메인·앱 연결을 모르는 공용 코드다',
   runtime: 'runtime(설정된 http·세션·QueryClient)은 feature·화면·앱 조립을 모른다. 필요하면 app이 연결한다',
-  routes: 'route는 URL·진입 조건·문맥만 넘긴다. 요청·업무 흐름은 feature의 hooks가 실행한다',
+  routes: 'route는 URL·진입 조건·문맥만 넘긴다. 요청·업무 흐름은 feature의 model/use-*가 실행한다',
   feature: 'feature는 앱 조립(app)·route를 모른다. 실행 기반은 runtime에서 가져온다',
   'feature:api': 'api는 요청·DTO·query 정의만 둔다. 상태·흐름·화면을 모른다',
-  'feature:data': 'data·forms·rules는 순수하다. 요청·실행 기반·상태 저장·흐름·화면에 의존하지 않는다',
-  'feature:storage': 'storage·search는 화면과 흐름을 모른다',
-  'feature:hooks': 'hooks는 화면이 쓸 상태·동작만 돌려주고 화면 부품을 모른다',
-  'feature:pages': '화면은 hook을 호출하고 그린다. 요청·생성 코드·실행 기반·상태 쓰기는 hooks로 옮긴다',
+  'feature:data': 'model의 검증·계산 파일은 순수하다. 요청·실행 기반·상태 저장·흐름·화면에 의존하지 않는다',
+  'feature:storage': 'model의 상태·검색 파일은 ui와 업무 hook을 모른다',
+  'feature:hooks': 'model의 use-* 파일은 화면이 쓸 상태·동작만 돌려주고 ui를 모른다',
+  'feature:pages': '화면은 hook을 호출하고 그린다. 요청·생성 코드·실행 기반·상태 쓰기는 model의 use-* 파일로 옮긴다',
   support: '제품 코드는 mock·검사 도우미(support)를 import하지 않는다',
 };
 
@@ -44,8 +44,8 @@ const REACT_FAMILY = ['react', 'react-dom', 'react-i18next', '@tanstack/react-qu
 
 /** 역할별 패키지 금지. all: 타입 포함, value: 실행 import, names: 특정 실행 이름. */
 const PACKAGE_BANS = {
-  'feature:data': { value: [...REACT_FAMILY, ...RUNTIME_KIT], reason: 'data·forms·rules는 React·라우터·요청·세션 실행에 의존하지 않는 순수 코드다' },
-  'feature:api': { value: ['@tanstack/react-router'], reason: 'api는 화면 이동을 하지 않는다. 이동은 hooks가 정한다' },
+  'feature:data': { value: [...REACT_FAMILY, ...RUNTIME_KIT], reason: 'model의 검증·계산 파일은 React·라우터·요청·세션 실행에 의존하지 않는 순수 코드다' },
+  'feature:api': { value: ['@tanstack/react-router'], reason: 'api는 화면 이동을 하지 않는다. 이동은 model의 use-* 파일이 정한다' },
   'feature:pages': {
     all: ['zod'],
     value: ['axios', '@tanstack/react-query', ...RUNTIME_KIT, '@boosterlab/web-kit/api'],
@@ -56,7 +56,7 @@ const PACKAGE_BANS = {
       '@boosterlab/web-kit/auth': ['useAuthChallenge'],
       '@tanstack/react-router': ['useNavigate', 'useRouter', 'redirect'],
     },
-    reason: '화면은 UI binding만 쓴다. 저장·목록·단건·인증 수명 조립, 요청, 업무 결과에 따른 이동은 hooks에 두고 schema는 forms에 둔다',
+    reason: '화면은 UI binding만 쓴다. 저장·목록·단건·인증 수명 조립, 요청, 업무 결과에 따른 이동은 model의 use-* 파일에 두고 schema도 같은 동작의 model에 둔다',
   },
 };
 
@@ -172,16 +172,16 @@ const layerImport = {
 };
 
 const featurePublic = {
-  meta: { type: 'problem', schema: [], docs: { description: '다른 feature는 public.ts로만 쓴다' } },
+  meta: { type: 'problem', schema: [], docs: { description: '다른 feature는 index.ts로만 쓴다' } },
   create(context) {
     const { config, file, role, report } = setup(context, 'feature-public');
-    if (role.kind !== 'feature' || role.layer === 'invalid') return {};
+    if (!['feature', 'app', 'routes'].includes(role.kind) || role.layer === 'invalid') return {};
     return onImports((node, info) => {
       const target = resolveImport(config, file, info.source);
       if (target.kind !== 'file') return;
       const targetRole = classify(config, target.path);
-      if (targetRole.kind !== 'feature' || targetRole.feature === role.feature || targetRole.layer === 'public') return;
-      report({ node, message: `features/${role.feature} → ${targetRole.rel}: 다른 feature의 내부 파일을 쓰지 않는다. features/${targetRole.feature}/public.ts에 공개할 연결만 내고 그것을 import한다.` });
+      if (targetRole.kind !== 'feature' || (role.kind === 'feature' && targetRole.feature === role.feature) || targetRole.layer === 'public') return;
+      report({ node, message: `${roleName(role)} → ${targetRole.rel}: 다른 feature의 내부 파일을 쓰지 않는다. features/${targetRole.feature}/index.ts에 공개할 연결만 내고 그것을 import한다.` });
     });
   },
 };
@@ -215,7 +215,7 @@ const browserGlobal = {
         const scope = context.sourceCode.getScope(node);
         for (const reference of scope.through) {
           const name = reference.identifier.name;
-          if (BROWSER_GLOBALS.has(name)) report({ node: reference.identifier, message: `순수 코드에서 ${name}을(를) 쓰지 않는다: 저장은 storage, 요청은 api, 이동은 hooks가 맡는다.` });
+          if (BROWSER_GLOBALS.has(name)) report({ node: reference.identifier, message: `순수 코드에서 ${name}을(를) 쓰지 않는다: 저장은 model의 *-store·*-state·*-session, 요청은 api, 이동은 model의 use-*가 맡는다.` });
         }
       },
     };
@@ -227,7 +227,7 @@ const noJsx = {
   create(context) {
     const { role, report } = setup(context, 'no-jsx');
     if (role.kind !== 'feature' || !NO_JSX.has(role.layer)) return {};
-    const visit = (node) => report({ node, message: `${roleName(role)}는 JSX를 만들지 않는다. 그리는 일은 pages가 맡는다.` });
+    const visit = (node) => report({ node, message: `${roleName(role)}는 JSX를 만들지 않는다. 그리는 일은 ui가 맡는다.` });
     return { JSXElement: (node) => { if (node.parent?.type !== 'JSXElement' && node.parent?.type !== 'JSXFragment') visit(node); }, JSXFragment: (node) => { if (node.parent?.type !== 'JSXElement' && node.parent?.type !== 'JSXFragment') visit(node); } };
   },
 };
@@ -256,9 +256,9 @@ const fileLayout = {
         if (role.kind === 'external' || role.kind === 'generated' || role.kind === 'generated-model') return;
         const segments = rel.split('/');
         const vague = segments.find((segment, index) => VAGUE_NAMES.includes(index === segments.length - 1 ? segment.replace(/(?:\.(?:test|spec))?\.[^.]+$/, '') : segment));
-        if (vague) report({ node, message: `${rel}: '${vague}' 같은 포괄 이름은 쓰지 않는다. 의미·소유자로 이름을 짓는다(예: rules/<업무>-policy.ts, forms/<폼>-form.ts).` });
+        if (vague) report({ node, message: `${rel}: '${vague}' 같은 포괄 이름은 쓰지 않는다. 의미·소유자로 이름을 짓는다(예: model/<업무>-policy.ts, model/<동작>/<폼>-form.ts).` });
         if (role.kind === 'unknown') report({ node, message: `${rel}: src 아래 정해진 자리(app·runtime·routes·features·shared, 생성 코드·지원 폴더)가 아니다.` });
-        if (role.kind === 'feature' && role.layer === 'invalid') report({ node, message: `${rel}: feature 안에는 api·forms·rules·storage·search·hooks·pages 폴더, 순수 .ts 파일과 messages.ts·permissions.ts·public.ts를 둔다.` });
+        if (role.kind === 'feature' && role.layer === 'invalid') report({ node, message: `${rel}: feature 최상단에는 ui·model·api 폴더와 index.ts만 둔다. 내부는 화면·동작별로 묶고, 재전달 index.ts와 기술별 하위 폴더를 만들지 않는다.` });
         if (role.kind === 'routes' || (role.kind === 'test' && (rel === config.routes || rel.startsWith(config.routes + '/')))) {
           const name = basename(rel).replace(/\.[^.]+$/, '');
           if (isTestFile(rel)) report({ node, message: `${rel}: route 폴더에 검사 파일을 두지 않는다. 검사는 feature 옆이나 tests/에 둔다.` });

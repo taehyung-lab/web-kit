@@ -1,6 +1,6 @@
 // 파일 책임: 회원 목록 경로. URL 검색은 web-kit 검색 선언으로 검증하고, 정규형이 아닌 진입 주소는 교정한다.
-import { memberListSearch } from '@/features/members/search/member-list-search';
-import { MemberListPage } from '@/features/members/pages/MemberListPage';
+import { memberListSearch } from '@/features/members';
+import { MemberListPage } from '@/features/members';
 import { createFileRoute } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/_app/members/')({

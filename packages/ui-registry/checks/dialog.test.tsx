@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 // 파일 책임: 설치한 dialog 복사본을 키트 공통 단위 검사에 연결한다.
-import { ConfirmDialog, DialogDefaults, defaultDialogLabels } from '../ui/dialog';
+import { ConfirmDialog, DialogDefaults, defaultDialogLabels } from '../dialog';
 import { checkDialogConformance } from '@boosterlab/web-kit/testing/unit/primitives';
 import installation from '../../../../../registry-installation.json';
 checkDialogConformance({ ConfirmDialog, DialogDefaults, defaultDialogLabels }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });
 
 // 아래는 이 복사본의 확인창 앱 기본값(DialogDefaults confirmation)과 화면별 덮어쓰기를 실제 useConfirmationState로 확인한다.
-import { ConfirmationDialog } from '../ui/dialog';
+import { ConfirmationDialog } from '../dialog';
 import { useConfirmationState } from '@boosterlab/web-kit/dialog';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';

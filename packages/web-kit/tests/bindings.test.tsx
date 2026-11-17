@@ -8,7 +8,8 @@ import { z } from 'zod';
 import { ListProvider, useListModel, useList, type ListModel } from '../src/list/index';
 import { List, type ListColumn } from '../../ui-registry/src/list';
 import { defineSearch } from '../src/search';
-import { useDialogBinding, useConfirmBinding, useAcknowledgeBinding, useBlockingProgressBinding, BlockingProgressProvider, useBlockingProgress } from '../src/confirmation';
+import { useDialogBinding, useConfirmBinding, useAcknowledgeBinding } from '../src/confirmation';
+import { useFullPageProgressBinding, FullPageProgressProvider, useFullPageProgress } from '@boosterlab/web-kit/progress';
 import { useRetryFocus } from '../src/record';
 import { useOptionsRetryFocus, useFormRootBinding, useFormFieldBinding, useSaveForm, formTextBinding } from '../src/form';
 import { CheckboxTree } from '../../ui-registry/src/CheckboxTree';
@@ -127,10 +128,10 @@ it('완료 확인 binding은 열린 주기에 한 번 실행하고 다음 주기
   expect(confirm).toHaveBeenCalledTimes(2);
 });
 it('진행 binding은 본문을 잠그고 덮개 종료 후 잃은 포커스를 돌린다', () => {
-  function Registration({ active }: { active: boolean }) { useBlockingProgress('edit', active); return null; }
+  function Registration({ active }: { active: boolean }) { useFullPageProgress('edit', active); return null; }
   function Progress({ active }: { active: boolean }) {
-    const binding = useBlockingProgressBinding();
-    return <BlockingProgressProvider binding={binding}><div data-testid="content" ref={binding.contentRef} {...binding.contentProps}><button>본문</button><Registration active={active} /></div></BlockingProgressProvider>;
+    const binding = useFullPageProgressBinding();
+    return <FullPageProgressProvider binding={binding}><div data-testid="content" ref={binding.contentRef} {...binding.contentProps}><button>본문</button><Registration active={active} /></div></FullPageProgressProvider>;
   }
   const view = render(<Progress active={false} />);
   screen.getByText('본문').focus();

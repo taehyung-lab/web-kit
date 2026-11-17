@@ -1,6 +1,6 @@
 // 파일 책임: 칸 하나의 입력 부품(Field·Text·TextArea·Select·Choice·Checkbox·File·Array)과 선택지 지연·실패 자리. 모두 form-context의 같은 편집 상태를 읽는다.
 import { useFormFieldBinding, useFormChoiceBinding, formTextBinding, useOptionsRetryFocus, formFileBinding, FormArrayField, type FormArrayRows, type FormFileValue } from '@boosterlab/web-kit/form';
-import { Choice as ChoiceInput, type ChoiceProps } from '../ui/choice';
+import { Choice as ChoiceInput, type ChoiceProps } from '../choice';
 import { useEffect, useState, type HTMLAttributes, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
 import { cn } from 'cn';
 import { Button } from '@/components/ui/button';

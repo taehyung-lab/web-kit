@@ -2,7 +2,7 @@
 import { Button } from '@/shared/ui/button';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { IdleTimer } from '@boosterlab/web-kit/session/idle';
-import { Dialog } from '@/shared/ui/web-kit/ui/dialog';
+import { Dialog } from '@/shared/ui/web-kit/dialog';
 
 /** 대표 탭의 경고를 표시하고 경고 탈출·문서 재표시·계정 교체 때 닫음 기록을 푼다. */
 export function SessionWarning({ idle }: { readonly idle: IdleTimer }) {

@@ -2,14 +2,14 @@
 import { act, cleanup, render, screen, waitFor, } from '@testing-library/react';
 import { type ReactNode } from 'react';
 import { afterEach, expect, it as baseIt } from 'vitest';
-import type * as Contract1 from '../contracts/ui/blocking-progress';
+import type * as Contract1 from '../contracts/ui/full-page-progress';
 import { conformanceTitle, type ConformanceTarget } from '../target.mjs';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach } from 'vitest';
 import { useRecord } from '../../record';
 
 /** 필요한 기능의 실제 복사본으로 해당 검사만 등록한다. */
-export function checkRecordProgressConformance({ BlockingProgress }: { BlockingProgress: typeof Contract1.BlockingProgress }, target: ConformanceTarget) {
+export function checkRecordProgressConformance({ FullPageProgress }: { FullPageProgress: typeof Contract1.FullPageProgress }, target: ConformanceTarget) {
   const it = baseIt;
   const title = (id: string, label: string) => conformanceTitle(id, target, label);
 
@@ -42,9 +42,9 @@ function overlayOpen() {
 /** 소비처 덮개 복사본 안에 검사 본문을 배치한다. */
 function Host({ children }: { readonly children: ReactNode }) {
   return (
-    <BlockingProgress messages={MESSAGES}>
+    <FullPageProgress messages={MESSAGES}>
       <div data-testid="app-body">{children}</div>
-    </BlockingProgress>
+    </FullPageProgress>
   );
 }
 

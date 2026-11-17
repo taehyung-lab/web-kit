@@ -6,7 +6,7 @@ import type { FormArrayRows, FormFileValue } from '@boosterlab/web-kit/form';
 import type { DeepKeys, DeepValue } from '@tanstack/react-form';
 import type { FormHTMLAttributes, ReactNode } from 'react';
 import { cn } from 'cn';
-import { ConfirmDialog } from '../ui/dialog';
+import { ConfirmDialog } from '../dialog';
 import {
   FormContext, errorClass, useFormDefaults,
   type AnyEditor, type FormConfirmContent, type FormContextValue, type FormSavedContent, type FormMessages, type FormatFieldError, type RenderFormFailure,
