@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "version": "8.0.0-rc.2",
   "sourceRef": "v8.0.0-rc.2",
-  "sourceCommit": "0d7cb9db08ac55d3bd5e2e39ac5faa77b4aa1649",
+  "sourceCommit": "855b7acf922bc1a86f0f6327f4994f7efddf22da",
   "sourceWorkingTree": "clean",
   "shadcn": "4.19.1",
   "method": "shadcn@4.19.1 add; installation recorded after review",
