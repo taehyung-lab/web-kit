@@ -45,7 +45,7 @@
 
 | 이전 시험판 import | 현재 위치(기본 설치 target 기준) |
 |---|---|
-| `@boosterlab/web-kit` | registry `ui`: `@/shared/ui/web-kit` |
+| `@boosterlab/web-kit/ui` | registry `ui`: `@/shared/ui/web-kit` |
 | `@boosterlab/web-kit/list/ui` | registry `list`: `@/shared/ui/web-kit/list` |
 | `@boosterlab/web-kit/form/ui` | registry `form`: `@/shared/ui/web-kit/form/form` |
 | `@boosterlab/web-kit/detail/ui` | registry `record`: `@/shared/ui/web-kit/detail` |
