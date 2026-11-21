@@ -2,6 +2,9 @@
 
   python3 .agents/skills/wf-context/context.py inspect [폴더]   사람·에이전트가 직접 볼 때(기본 폴더: 지금 폴더)
   python3 .agents/skills/wf-context/context.py hook            세션 시작 훅(Claude Code SessionStart)이 부른다
+  python3 .agents/skills/wf-context/context.py commit <커밋> [폴더]  커밋 메시지 전문·작성자·날짜·바뀐 파일 이름
+
+commit 은 git 을 직접 불러 메시지 본문을 줄이지 않고 낸다(출력을 요약하는 셸 래퍼를 거치면 본문이 빠질 수 있다).
 
 내는 것: 실경로, 저장소 맨 위, 브랜치·해소한 커밋, 로컬 추적 브랜치와의 차이(마지막 fetch 기준), 작업 트리 변경(파일 이름만),
 설치된 키트·버전 기록(`*.version` 첫 줄, package.json 의 name@version), 같은 저장소의 다른 worktree(진단용), work/*/work.md 지도 제목.
@@ -116,6 +119,29 @@ def maps(root):
     return found
 
 
+MAP_PATH = re.compile(r"`([^`\s]+)`|\]\(([^)\s]+)\)")
+FILE_LIKE = re.compile(r"/|\.[A-Za-z][A-Za-z0-9]{0,5}$")  # 폴더 구분이 있거나 확장자로 끝난다(`v3.7.2`·`npm` 같은 낱말은 경로로 보지 않는다)
+
+
+def missing_map_paths(root):
+    """AGENTS.md 의 프로젝트가 관리하는 부분(키트 영역 아래)에 적힌 경로 가운데 지금 없는 것.
+    파일이 있는지만 본다. 그 파일이 그 일의 올바른 근거인지는 보지 못한다. 명령·주소·절대 경로·~ 경로·와일드카드는 건너뛴다."""
+    try:
+        text = (Path(root) / "AGENTS.md").read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    text = text.split("<!-- agent-workflow-kit:end -->")[-1]
+    missing = []
+    for a, b in MAP_PATH.findall(text):
+        path = (a or b).split("#")[0].rstrip(".,:;")
+        path = re.sub(r":\d+$", "", path)
+        if not path or "://" in path or path[0] in "/~-$<@" or "*" in path or not FILE_LIKE.search(path):
+            continue
+        if not (Path(root) / path).exists() and path not in missing:
+            missing.append(path)
+    return missing
+
+
 def inspect(start, session_dir=None):
     """관찰한 값을 사람이 읽을 줄로 낸다(정보만)."""
     lines = []
@@ -162,7 +188,23 @@ def inspect(start, session_dir=None):
             lines.append(f"같은 저장소의 다른 worktree {len(trees)}개: {shown}{more}")
     found = maps(root)
     lines.append("작업 지도: " + ("; ".join(found) if found else "없음"))
+    gone = missing_map_paths(root)
+    if gone:
+        lines.append("AGENTS.md 프로젝트 지도에 적혀 있지만 지금 없는 경로: " + ", ".join(gone[:LIMIT_FILES]) + (f" 외 {len(gone) - LIMIT_FILES}개" if len(gone) > LIMIT_FILES else ""))
     return lines
+
+
+def commit(ref, start):
+    """커밋 메시지 전문과 바뀐 파일 이름(정보만, diff 내용은 내지 않는다)."""
+    root = (git(start, "rev-parse", "--show-toplevel") or "").strip() or start
+    head = git(root, "show", "-s", "--format=%H%n%an <%ae>%n%ad", "--date=iso", ref)
+    body = git(root, "log", "-1", "--format=%B", ref)
+    if head is None or body is None:
+        return [f"커밋을 찾지 못했다: {ref}"]
+    sha, author, date = (head.strip().splitlines() + ["", "", ""])[:3]
+    names = (git(root, "show", "--name-only", "--format=", ref) or "").split()
+    return [f"커밋: {sha[:12]} / 작성자: {author} / 날짜: {date}", "메시지 전문:", *("  " + l for l in body.rstrip().splitlines()),
+            "바뀐 파일: " + (", ".join(names[:LIMIT_FILES]) + (f" 외 {len(names) - LIMIT_FILES}개" if len(names) > LIMIT_FILES else "") if names else "없음")]
 
 
 def _no_git():
@@ -199,6 +241,10 @@ def hook():
 def main(args):
     if args[:1] == ["hook"]:
         return hook()
+    if args[:1] == ["commit"] and len(args) > 1:
+        for line in commit(args[1], args[2] if len(args) > 2 else os.getcwd()):
+            print(line)
+        return 0
     if args[:1] != ["inspect"]:
         print(__doc__.strip().splitlines()[2].strip() + "\n" + __doc__.strip().splitlines()[3].strip(), file=sys.stderr)
         return 0
