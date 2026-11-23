@@ -165,3 +165,32 @@ describe('인증 거절 판정', () => {
     expect(new RequestFailure({ kind: 'network' }).rejectsAuthentication).toBe(false);
   });
 });
+
+describe('프로젝트 세부 코드', () => {
+  // 세부 코드의 위치·뜻은 프로젝트마다 다르다. 이 시험의 규칙은 data.reason을 읽는다.
+  const detailCode = (body: unknown) => {
+    const data = (body as { data?: { reason?: unknown } } | undefined)?.data;
+    return typeof data?.reason === 'string' ? data.reason : undefined;
+  };
+
+  it('읽기 규칙이 돌려준 값을 뜻 없이 싣고, 결과 코드 표의 종류·문구 키는 바꾸지 않는다', () => {
+    const read = readEnvelope(envelope(2100, { reason: 'X7' }), table, 'r1', { detailCode });
+    expect(read.ok).toBe(false);
+    if (read.ok) return;
+    expect(read.failure).toMatchObject({ kind: 'business', code: '2100', detailCode: 'X7', messageKey: 'notExist' });
+    expect(read.failure.withResultUnknown()).toMatchObject({ detailCode: 'X7', resultUnknown: true });
+  });
+
+  it('2xx 밖 응답도 같은 규칙으로 읽는다', () => {
+    const failure = toRequestFailure({ type: 'response', status: 403, body: envelope(3012, { reason: 'Y1' }) }, table, { detailCode });
+    expect(failure).toMatchObject({ kind: 'business', code: '3012', detailCode: 'Y1', messageKey: 'accountPending' });
+  });
+
+  it('읽기 규칙이 없거나 값이 없으면 세부 코드가 없다', () => {
+    const without = readEnvelope(envelope(2100, { reason: 'X7' }), table);
+    expect(without.ok === false && without.failure.detailCode).toBeUndefined();
+    const missing = readEnvelope(envelope(2100, { other: 1 }), table, undefined, { detailCode });
+    expect(missing.ok === false && missing.failure.detailCode).toBeUndefined();
+    expect(toRequestFailure({ type: 'timeout' }, table, { detailCode }).detailCode).toBeUndefined();
+  });
+});

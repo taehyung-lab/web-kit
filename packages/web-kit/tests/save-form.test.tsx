@@ -87,6 +87,7 @@ function Screen(props: SaveFormOptions<Values, Output>) {
           dirty: save.isDirty,
           stage: save.stage.kind,
           failure: save.failure instanceof Error ? save.failure.message : save.failure,
+          formFailure: save.formFailure instanceof Error ? save.formFailure.message : save.formFailure,
           unattached: save.unattachedFieldErrors.map((error) => error.field),
         })}
       </output>
@@ -99,6 +100,7 @@ function state() {
     dirty: boolean;
     stage: string;
     failure?: string;
+    formFailure?: string;
     unattached: string[];
   };
 }
@@ -237,6 +239,73 @@ it('S6 실패: 입력·기준선 유지, 실패는 그대로 노출, 필드 오�
   expect(document.activeElement).toBe(screen.getByLabelText('email'));
   expect(state()).toMatchObject({ dirty: true, stage: 'idle', failure: 'validation (http 400)', unattached: ['name'] });
   expect((screen.getByLabelText('name') as HTMLInputElement).value).toBe('C');
+});
+
+it('S6b 칸 정보 없는 서버 거절은 rejectedField가 고른 칸에 붙고 폼 수준에 남지 않는다', async () => {
+  const seen: unknown[] = [];
+  render(
+    <Screen
+      schema={schema}
+      source={original}
+      save={async () => {
+        throw new RequestFailure({ kind: 'business', status: 200, code: '2110', detailCode: 'D1' });
+      }}
+      rejectedField={(failure) => {
+        seen.push(failure.detailCode);
+        return failure.detailCode === 'D1' ? { field: 'email', message: 'taken' } : undefined;
+      }}
+    />,
+  );
+  type('name', 'B');
+  await submit();
+  await flush();
+  expect(seen).toEqual(['D1']);
+  expect(screen.getByTestId('email-error').textContent).toBe('taken');
+  expect(document.activeElement).toBe(screen.getByLabelText('email'));
+  expect(state()).toMatchObject({ dirty: true, stage: 'idle' });
+  expect(state().formFailure).toBeUndefined();
+});
+
+it('S6c 반영 미확정·서버 필드 오류·해석 없음은 rejectedField로 바꾸지 않는다', async () => {
+  let next: RequestFailure = new RequestFailure({ kind: 'business', status: 200, code: '2110', resultUnknown: true });
+  const rejectedField = vi.fn(() => ({ field: 'email' as const, message: 'taken' }));
+  render(
+    <Screen
+      schema={schema}
+      source={original}
+      save={async () => {
+        throw next;
+      }}
+      rejectedField={rejectedField}
+    />,
+  );
+  await submit();
+  await flush();
+  expect(screen.getByTestId('email-error').textContent).toBe('');
+  expect(state().formFailure).toBe('business (http 200)');
+  next = new RequestFailure({ kind: 'validation', status: 400, fieldErrors: [{ field: 'name', code: 'Dup' }] });
+  await submit();
+  await flush();
+  expect(rejectedField).not.toHaveBeenCalled();
+  expect(screen.getByTestId('email-error').textContent).toBe('');
+});
+
+it('S6d 고른 칸에 붙지 못하면 원래 실패를 폼 수준에 남긴다', async () => {
+  const pending = deferred<undefined>();
+  render(
+    <Screen
+      schema={schema}
+      source={original}
+      save={() => pending.promise}
+      rejectedField={() => ({ field: 'email', message: 'taken' })}
+    />,
+  );
+  await submit();
+  type('email', 'changed@x');
+  await act(async () => pending.reject(new RequestFailure({ kind: 'business', status: 200, code: '2110' })));
+  await flush();
+  expect(screen.getByTestId('email-error').textContent).toBe('');
+  expect(state()).toMatchObject({ failure: 'business (http 200)', formFailure: 'business (http 200)' });
 });
 
 it('S7 다음 제출은 지난 서버 필드 오류와 실패를 지운다', async () => {

@@ -37,6 +37,19 @@ export interface ResultCodeTable {
   readonly lookup: (status: number, code: string | undefined) => ResultCodeRow | undefined;
 }
 
+/**
+ * 응답 본문에서 프로젝트의 세부 코드를 읽는 규칙. 같은 결과 코드 안에서 이유를 나누는 값이며,
+ * 어디에 실리는지·무슨 뜻인지·어떤 값이 있는지는 프로젝트마다 다르다(같은 값이어도 뜻이 다를 수 있다).
+ * 키트는 돌려받은 값을 뜻 없이 실패에 실어 나르기만 한다. 없으면 undefined를 돌려준다.
+ */
+export type DetailCodeReader = (body: unknown) => string | undefined;
+
+/** 응답 해석의 선택 입력. */
+export interface ResponseReadOptions {
+  /** 세부 코드 읽기 규칙. 없으면 실패에 세부 코드를 싣지 않는다. */
+  readonly detailCode?: DetailCodeReader;
+}
+
 /** 실패 해석의 입력. 각 전송 binding(axios 등)이 자기 오류를 이 모양으로 바꾼다. */
 export type TransportOutcome =
   | { readonly type: 'network' | 'timeout' | 'cancelled'; readonly requestId?: string }
@@ -56,6 +69,11 @@ export class RequestFailure extends Error {
   readonly kind: FailureKind;
   readonly status: number | undefined;
   readonly code: string | undefined;
+  /**
+   * 프로젝트 세부 코드(응답 해석의 `detailCode` 규칙이 읽은 값). 키트는 뜻을 모르고 판정에 쓰지 않는다.
+   * 결과 코드 표의 종류·messageKey를 바꾸지 않으며, 뜻과 화면 처리는 그 코드를 선언한 프로젝트가 정한다.
+   */
+  readonly detailCode: string | undefined;
   readonly requestId: string | undefined;
   readonly messageKey: string | undefined;
   readonly endsSession: boolean;
@@ -68,6 +86,8 @@ export class RequestFailure extends Error {
     readonly kind: FailureKind;
     readonly status?: number;
     readonly code?: string;
+    /** 프로젝트 세부 코드. 뜻 없이 운반한다. */
+    readonly detailCode?: string;
     readonly requestId?: string;
     /** 결과 코드 표 행이 정한 문구 키. */
     readonly messageKey?: string;
@@ -81,6 +101,7 @@ export class RequestFailure extends Error {
     this.kind = fields.kind;
     this.status = fields.status;
     this.code = fields.code;
+    this.detailCode = fields.detailCode;
     this.requestId = fields.requestId;
     this.messageKey = fields.messageKey;
     this.endsSession = fields.endsSession === true;
@@ -167,6 +188,7 @@ function failureOfResponse(
   body: unknown,
   table: ResultCodeTable,
   requestId: string | undefined,
+  options: ResponseReadOptions | undefined,
 ): RequestFailure {
   const code = isEnvelope(body) ? String(body.header.resultCode) : undefined;
   const row = table.lookup(status, code);
@@ -174,6 +196,7 @@ function failureOfResponse(
     kind: row?.kind ?? kindOfStatus(status),
     status,
     code,
+    detailCode: options?.detailCode?.(body),
     requestId,
     messageKey: row?.messageKey,
     endsSession: row?.endsSession === true,
@@ -182,10 +205,14 @@ function failureOfResponse(
 }
 
 /** 전송 실패 하나를 실패 12종 하나로 바꾼다. 없는 status를 채우지 않는다. */
-export function toRequestFailure(outcome: TransportOutcome, table: ResultCodeTable): RequestFailure {
+export function toRequestFailure(
+  outcome: TransportOutcome,
+  table: ResultCodeTable,
+  options?: ResponseReadOptions,
+): RequestFailure {
   if (outcome.type !== 'response')
     return new RequestFailure({ kind: outcome.type, requestId: outcome.requestId });
-  return failureOfResponse(outcome.status, outcome.body, table, outcome.requestId);
+  return failureOfResponse(outcome.status, outcome.body, table, outcome.requestId, options);
 }
 
 /** HTTP 2xx 본문의 봉투를 푼다. resultCode 200만 성공이고, 봉투가 아니면 contract 실패다. */
@@ -193,9 +220,10 @@ export function readEnvelope(
   body: unknown,
   table: ResultCodeTable,
   requestId?: string,
+  options?: ResponseReadOptions,
 ): { readonly ok: true; readonly data: unknown } | { readonly ok: false; readonly failure: RequestFailure } {
   if (!isEnvelope(body))
     return { ok: false, failure: new RequestFailure({ kind: 'contract', status: 200, requestId }) };
   if (body.header.resultCode === 200) return { ok: true, data: body.data };
-  return { ok: false, failure: failureOfResponse(200, body, table, requestId) };
+  return { ok: false, failure: failureOfResponse(200, body, table, requestId, options) };
 }

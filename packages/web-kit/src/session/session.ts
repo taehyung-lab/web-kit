@@ -74,6 +74,7 @@ function applyReissueEnd(error: unknown, table: ReissueEndCodes | undefined): un
     kind: error.kind,
     status: error.status,
     code: error.code,
+    detailCode: error.detailCode,
     requestId: error.requestId,
     messageKey,
     endsSession: true,
