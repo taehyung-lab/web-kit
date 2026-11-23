@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "version": "8.2.0-rc.1",
-  "sourceRef": "v8.2.0-rc.1",
-  "sourceCommit": "632f2db62c1d5ef38518fc71e020f75793c259dc",
+  "version": "8.3.0-rc.1",
+  "sourceRef": "v8.3.0-rc.1",
+  "sourceCommit": "1d792c96e64b0287aac91eabfff6302a83487c11",
   "sourceWorkingTree": "clean",
   "shadcn": "4.19.1",
   "method": "shadcn@4.19.1 add; installation recorded after review",
@@ -294,28 +294,28 @@
     },
     {
       "name": "list",
-      "artifactHash": "d56cef73f06a461c9d01e73a2c644aa0b26ff663139eefb3ead0d8875e3bebfe",
+      "artifactHash": "3ecea906b3b2239886c5a745f0ff74646d1dbef31653342a831918047886b1cb",
       "files": [
         {
           "source": "packages/ui-registry/src/list.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/list.tsx",
           "installed": "src/shared/ui/web-kit/list.tsx",
-          "sourceHash": "d1e430e7117e7de1d103e68fe9c73bf0e597747c6ee710f12d8a27929d5ced7c",
-          "installedHash": "d1e430e7117e7de1d103e68fe9c73bf0e597747c6ee710f12d8a27929d5ced7c"
+          "sourceHash": "42424281c091052a41738b1d6d25317d24180ffa1bcc70919b3688908cbd57f9",
+          "installedHash": "42424281c091052a41738b1d6d25317d24180ffa1bcc70919b3688908cbd57f9"
         },
         {
           "source": "packages/ui-registry/checks/list-ui.test.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/checks/list-ui.test.tsx",
           "installed": "src/shared/ui/web-kit/checks/list-ui.test.tsx",
-          "sourceHash": "c82e197a15bf70685fc91eea9f403d9bf6403b3fa27508e471456dd4599f6d2a",
-          "installedHash": "c82e197a15bf70685fc91eea9f403d9bf6403b3fa27508e471456dd4599f6d2a"
+          "sourceHash": "e7b01e207aa928f31fa74a7f5af75522fb87a4057a0738c856285e2ff56e4725",
+          "installedHash": "e7b01e207aa928f31fa74a7f5af75522fb87a4057a0738c856285e2ff56e4725"
         },
         {
           "source": "packages/ui-registry/src/list/list-context.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/list/list-context.tsx",
           "installed": "src/shared/ui/web-kit/list/list-context.tsx",
-          "sourceHash": "0050db07e2317f7bda054ad66b93e6761901922c62aff67bffbed15e9639cd77",
-          "installedHash": "0050db07e2317f7bda054ad66b93e6761901922c62aff67bffbed15e9639cd77"
+          "sourceHash": "38bd61445b56f65f34b9dd9ded91c59a4a6ec1e7f6512a3e2136950582e605e3",
+          "installedHash": "38bd61445b56f65f34b9dd9ded91c59a4a6ec1e7f6512a3e2136950582e605e3"
         },
         {
           "source": "packages/ui-registry/src/list/list-filters.tsx",
@@ -328,15 +328,15 @@
           "source": "packages/ui-registry/src/list/list-results.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/list/list-results.tsx",
           "installed": "src/shared/ui/web-kit/list/list-results.tsx",
-          "sourceHash": "0ea4bf6c56b0d5eafcde55bebfce08260f57a3ecb2ebee8e48b87631e5d22bb9",
-          "installedHash": "df7a0dd13f92a4208256de9466a6e736b1f9139a466e752271dd2299c3e90224"
+          "sourceHash": "28ec97f3a9d4a74bdff541822ac00f0491b82a99e9731610b1d8922e0cc04566",
+          "installedHash": "40ab04ec4443f9c440462f01df5f992d71f9068bf7cc5637cba460ea4d6d365b"
         },
         {
           "source": "packages/ui-registry/src/list/list-actions.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/list/list-actions.tsx",
           "installed": "src/shared/ui/web-kit/list/list-actions.tsx",
-          "sourceHash": "380b10e88eabc1616f4aaed4c269e921b9dfbac1a23917105212010e343af9b8",
-          "installedHash": "3e05aa027e876a8f224d364519e4d29e5f08f77a4b145f7375e65f77bb2fe4b6"
+          "sourceHash": "083072898331813e84430b4fd564fab30827436ce015bb489e5d59ec6877ac70",
+          "installedHash": "ae3aab3e6a4d7ed6a81e524c8f6d275c99798a22f82ec97aa9402565d67a566b"
         }
       ]
     },
