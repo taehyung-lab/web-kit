@@ -389,15 +389,18 @@ describe('listSearch 선언을 이름으로 읽는 칸', () => {
       }),
       rowId: (row: CheckRow) => row.id,
     });
-    return <List model={model}>{body}</List>;
+    return (
+      <List model={model}>
+        {body}
+        <output data-testid="searched">{JSON.stringify(url.search ?? null)}</output>
+      </List>
+    );
   }
-  function mount(body: ReactNode) {
+  function mount(body: ReactNode, wrap: (node: ReactNode) => ReactNode = (node) => node) {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     clientsInUse.push(client);
     return render(
-      <QueryClientProvider client={client}>
-        <Declared body={body} />
-      </QueryClientProvider>
+      <QueryClientProvider client={client}>{wrap(<Declared body={body} />)}</QueryClientProvider>
     );
   }
 
@@ -448,6 +451,56 @@ describe('listSearch 선언을 이름으로 읽는 칸', () => {
     fireEvent.keyDown(screen.getByRole('textbox', { name: 'Keywords' }), { key: 'Enter' });
     expect(await screen.findByText('Group name: Booster')).toBeDefined();
     expect(target.textContent).toContain('Group name');
+  });
+
+  const keywordBox = () => screen.getByRole('textbox', { name: 'Words' });
+  const searched = () => screen.getByTestId('searched').textContent;
+  const words = (
+    <List.Keywords name="search" label="Words" choiceLabels={{ name: 'K-name', code: 'K-code' }} />
+  );
+
+  it('adds the typed text to the previous target before switching the keyword target', async () => {
+    mount(words);
+    fireEvent.change(keywordBox(), { target: { value: 'kim' } });
+    await pick(screen.getByRole('combobox', { name: 'Words 검색 대상' }), 'K-code');
+    expect(await screen.findByText('K-name: kim')).toBeDefined();
+    expect((keywordBox() as HTMLInputElement).value).toBe('');
+    fireEvent.change(keywordBox(), { target: { value: 'c1' } });
+    fireEvent.click(screen.getByRole('button', { name: /add|추가/i }));
+    expect(await screen.findByText('K-code: c1')).toBeDefined();
+  });
+
+  it('adds and searches on Enter by default', async () => {
+    mount(words);
+    fireEvent.change(keywordBox(), { target: { value: 'kim' } });
+    fireEvent.keyDown(keywordBox(), { key: 'Enter' });
+    expect(await screen.findByText('K-name: kim')).toBeDefined();
+    await waitFor(() => expect(searched()).toContain('kim'));
+  });
+
+  it('with keywordEnterSearch="when-split" adds only on a single keyword and searches when the input has the separator', async () => {
+    mount(words, (node) => <ListDefaults keywordEnterSearch="when-split">{node}</ListDefaults>);
+    fireEvent.change(keywordBox(), { target: { value: 'kim' } });
+    fireEvent.keyDown(keywordBox(), { key: 'Enter' });
+    expect(await screen.findByText('K-name: kim')).toBeDefined();
+    expect(searched()).toBe('null');
+    fireEvent.change(keywordBox(), { target: { value: 'lee,park' } });
+    fireEvent.keyDown(keywordBox(), { key: 'Enter' });
+    expect(await screen.findByText('K-name: park')).toBeDefined();
+    await waitFor(() => expect(searched()).toContain('park'));
+    expect(searched()).toContain('kim');
+  });
+
+  it('shows the separator hint under a keyword field that has a separator, with app wording', async () => {
+    mount(words);
+    expect(keywordBox().getAttribute('aria-describedby')).toBeTruthy();
+    const hint = document.getElementById(keywordBox().getAttribute('aria-describedby')!);
+    expect(hint?.textContent).toBe('여러 검색어는 , 로 구분해 한 번에 넣을 수 있습니다.');
+    cleanup();
+    mount(words, (node) => (
+      <ListDefaults messages={{ keywordHint: () => 'APP HINT' }}>{node}</ListDefaults>
+    ));
+    expect(await screen.findByText('APP HINT')).toBeDefined();
   });
 
   it('refuses a name that is not that kind of field and a missing label instead of showing raw values', () => {

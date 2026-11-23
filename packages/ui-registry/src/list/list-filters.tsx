@@ -424,7 +424,8 @@ function Keywords({
   readonly inputLabel?: string;
   readonly removeLabel?: (item: Keyword, choiceLabel: string) => string;
 } & { readonly model?: ListModel }) {
-  const { model, copy } = useListContext(explicitModel);
+  const { model, copy, keywordEnterSearch } = useListContext(explicitModel);
+  const hintId = useId();
   const meta = givenChoices === undefined ? listFieldMeta(model, 'keywords', name) : undefined;
   const choices = givenChoices ?? labelled(meta!.targets, choiceLabels, name);
   const { input, items, submit, remove } = useListKeywordBinding(
@@ -436,6 +437,7 @@ function Keywords({
   const separator = meta === undefined ? ';' : meta.split;
   const add = () =>
     input.addMany(separator === undefined ? [input.text] : input.text.split(separator));
+  const hint = separator === undefined ? undefined : copy.keywordHint(separator);
   return (
     <fieldset className="grid content-start gap-2">
       <legend className={legendClass}>{label}</legend>
@@ -443,19 +445,26 @@ function Keywords({
         <OptionSelect
           aria-label={targetLabel ?? `${label} ${copy.keywordTarget}`}
           value={input.choice}
-          onValueChange={(next) => input.setChoice(next)}
+          onValueChange={(next) => {
+            if (next === input.choice) return;
+            // 입력 중이던 글자는 그 글자를 쓸 때의 대상으로 먼저 추가한다. 새 대상으로 따라가지 않는다.
+            add();
+            input.setChoice(next);
+          }}
           options={choices}
         />
         <Input
           aria-label={inputLabel ?? label}
+          aria-describedby={hint === undefined ? undefined : hintId}
           className="w-auto min-w-48 flex-1"
           value={input.text}
           onChange={(event) => input.setText(event.target.value)}
           onKeyDown={(event) => {
             if (event.key !== 'Enter' || event.nativeEvent.isComposing) return;
             event.preventDefault();
+            const split = separator !== undefined && input.text.includes(separator);
             add();
-            submit();
+            if (keywordEnterSearch === 'always' || split) submit();
           }}
         />
         <Button type="button" variant="outline" onClick={add}>
@@ -489,6 +498,11 @@ function Keywords({
             );
           })}
         </ul>
+      )}
+      {hint !== undefined && (
+        <p id={hintId} className="text-xs text-muted-foreground">
+          {hint}
+        </p>
       )}
     </fieldset>
   );
