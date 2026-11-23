@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "version": "8.2.0-rc.1",
   "sourceRef": "v8.2.0-rc.1",
-  "sourceCommit": "ae04d669f0eec8ab1a166b7e3a53fcedd827a036",
+  "sourceCommit": "632f2db62c1d5ef38518fc71e020f75793c259dc",
   "sourceWorkingTree": "clean",
   "shadcn": "4.19.1",
   "method": "shadcn@4.19.1 add; installation recorded after review",
@@ -294,7 +294,7 @@
     },
     {
       "name": "list",
-      "artifactHash": "c9ad019bc12a6edafc2e98ea05a44db9861a869180c20ff66513faa7546f2e6a",
+      "artifactHash": "d56cef73f06a461c9d01e73a2c644aa0b26ff663139eefb3ead0d8875e3bebfe",
       "files": [
         {
           "source": "packages/ui-registry/src/list.tsx",
@@ -307,8 +307,8 @@
           "source": "packages/ui-registry/checks/list-ui.test.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/checks/list-ui.test.tsx",
           "installed": "src/shared/ui/web-kit/checks/list-ui.test.tsx",
-          "sourceHash": "ba5198917e5d53c5316dc8a6a17ee55e8f87921ddbad806ca184d910f3c61bd3",
-          "installedHash": "ba5198917e5d53c5316dc8a6a17ee55e8f87921ddbad806ca184d910f3c61bd3"
+          "sourceHash": "c82e197a15bf70685fc91eea9f403d9bf6403b3fa27508e471456dd4599f6d2a",
+          "installedHash": "c82e197a15bf70685fc91eea9f403d9bf6403b3fa27508e471456dd4599f6d2a"
         },
         {
           "source": "packages/ui-registry/src/list/list-context.tsx",
@@ -321,8 +321,8 @@
           "source": "packages/ui-registry/src/list/list-filters.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/list/list-filters.tsx",
           "installed": "src/shared/ui/web-kit/list/list-filters.tsx",
-          "sourceHash": "d5c92bf381dc84bebc1a55f21b5c98755ced9e723c0e8eaffbe7bda990a5d4eb",
-          "installedHash": "9593054ccf1bcbec8c5e442bd47e94dc6d74ff0fc4561f76002376d617749cfe"
+          "sourceHash": "dfe3b43133bb49e52c40ecdf7ea884b16a1dcbd850e71f58f868aa82c0f81c34",
+          "installedHash": "cd918f899473163d0a707205056df8cad5fb29e409bf471bf24a48b0dd3f17f8"
         },
         {
           "source": "packages/ui-registry/src/list/list-results.tsx",

@@ -445,12 +445,8 @@ function Keywords({
         <OptionSelect
           aria-label={targetLabel ?? `${label} ${copy.keywordTarget}`}
           value={input.choice}
-          onValueChange={(next) => {
-            if (next === input.choice) return;
-            // 입력 중이던 글자는 그 글자를 쓸 때의 대상으로 먼저 추가한다. 새 대상으로 따라가지 않는다.
-            add();
-            input.setChoice(next);
-          }}
+          // 대상만 바꾼다. 입력 중이던 글자는 남아 새 대상으로 추가된다(대상을 잘못 고른 뒤 대상만 고치는 경우).
+          onValueChange={(next) => input.setChoice(next)}
           options={choices}
         />
         <Input
