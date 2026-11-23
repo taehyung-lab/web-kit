@@ -459,15 +459,14 @@ describe('listSearch 선언을 이름으로 읽는 칸', () => {
     <List.Keywords name="search" label="Words" choiceLabels={{ name: 'K-name', code: 'K-code' }} />
   );
 
-  it('adds the typed text to the previous target before switching the keyword target', async () => {
+  it('keeps the typed text when only the keyword target changes and adds it to the new target', async () => {
     mount(words);
     fireEvent.change(keywordBox(), { target: { value: 'kim' } });
     await pick(screen.getByRole('combobox', { name: 'Words 검색 대상' }), 'K-code');
-    expect(await screen.findByText('K-name: kim')).toBeDefined();
-    expect((keywordBox() as HTMLInputElement).value).toBe('');
-    fireEvent.change(keywordBox(), { target: { value: 'c1' } });
+    expect((keywordBox() as HTMLInputElement).value).toBe('kim');
+    expect(screen.queryByText('K-name: kim')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /add|추가/i }));
-    expect(await screen.findByText('K-code: c1')).toBeDefined();
+    expect(await screen.findByText('K-code: kim')).toBeDefined();
   });
 
   it('adds and searches on Enter by default', async () => {
