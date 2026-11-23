@@ -54,12 +54,26 @@ const defaultMessages = {
   downloading: '다운로드 중입니다.',
   downloadFailed: '다운로드하지 못했습니다.',
   chooseValue: '바꿀 값을 먼저 선택해 주세요.',
+  /** 아래 셋은 요청 전 거절을 알림 창으로 보일 때(refusal="alert")만 쓴다. */
+  refusalTitle: '알림',
+  selectRows: '항목을 먼저 선택해 주세요.',
+  chooseDownloadKind: '다운로드 종류를 먼저 선택해 주세요.',
 };
-/** 뒤에 더한 문구(fieldOptionsFailed·chooseValue)는 선택이라, 전체 문구를 넘기던 앱이 키 추가로 깨지지 않는다. */
+/** 뒤에 더한 문구(fieldOptionsFailed·chooseValue·알림 창 문구 등)는 선택이라, 전체 문구를 넘기던 앱이 키 추가로 깨지지 않는다. */
 export type ListMessages = Omit<
   typeof defaultMessages,
-  'fieldOptionsFailed' | 'chooseValue' | 'reload' | 'resultUnknown' | 'keywordHint'
+  | 'fieldOptionsFailed'
+  | 'chooseValue'
+  | 'reload'
+  | 'resultUnknown'
+  | 'keywordHint'
+  | 'refusalTitle'
+  | 'selectRows'
+  | 'chooseDownloadKind'
 > & {
+  readonly refusalTitle?: string;
+  readonly selectRows?: string;
+  readonly chooseDownloadKind?: string;
   readonly keywordHint?: (separator: string) => string;
   readonly fieldOptionsFailed?: string;
   readonly chooseValue?: string;
@@ -79,16 +93,24 @@ export type RenderFailure = (failure: unknown, place: FailurePlace) => ReactNode
  * when-split: 입력을 추가하고, 입력에 구분자가 있을 때만 검색한다(검색어 하나 Enter는 추가만).
  */
 export type KeywordEnterSearch = 'always' | 'when-split';
+/**
+ * 요청을 보내기 전에 막은 일(고른 행 없음·바꿀 값 없음·업무 check의 거절·다운로드 종류 없음)을 알리는 방식.
+ * inline: 고른 행이 없으면 실행 버튼을 잠그고, 그 밖의 거절은 버튼 옆 글로 보인다(기본).
+ * alert: 버튼을 잠그지 않고, 누르면 요청 없이 알림 창 하나로 사유를 보인다. [확인]은 창만 닫고 선택·입력은 그대로다.
+ */
+export type RefusalNotice = 'inline' | 'alert';
 type Context = {
   readonly copy: typeof defaultMessages;
   readonly renderFailure: RenderFailure;
   readonly keywordEnterSearch: KeywordEnterSearch;
+  readonly refusal: RefusalNotice;
 };
 /** 앱이 ListDefaults로 준 기본값. 없으면 키트 기본 문구만 쓴다. */
 type Defaults = {
   readonly messages: Partial<ListMessages>;
   readonly renderFailure?: RenderFailure;
   readonly keywordEnterSearch?: KeywordEnterSearch;
+  readonly refusal?: RefusalNotice;
 };
 const DefaultsContext = createContext<Defaults>({ messages: {} });
 /** <List> 안의 표시 설정. 밖에서 명시 모델로 쓴 부품은 null을 보고 앱 기본값을 직접 읽는다. */
@@ -122,6 +144,7 @@ function usePresentation(messages?: Partial<ListMessages>, renderFailure?: Rende
     copy: { ...defaultMessages, ...defaults.messages, ...definedOnly(messages) },
     renderFailure: chainFailure(renderFailure, defaults.renderFailure) ?? (() => undefined),
     keywordEnterSearch: defaults.keywordEnterSearch ?? 'always',
+    refusal: defaults.refusal ?? 'inline',
   };
 }
 
@@ -141,18 +164,22 @@ export function ListDefaults({
   messages,
   renderFailure,
   keywordEnterSearch,
+  refusal,
   children,
 }: {
   readonly messages?: Partial<ListMessages>;
   readonly renderFailure?: RenderFailure;
   /** 앱 전체 검색어 칸의 Enter 검색 실행(KeywordEnterSearch). 생략하면 바깥 값, 없으면 always. */
   readonly keywordEnterSearch?: KeywordEnterSearch;
+  /** 앱 전체 목록이 요청 전 거절을 알리는 방식(RefusalNotice). 생략하면 바깥 값, 없으면 inline. */
+  readonly refusal?: RefusalNotice;
   readonly children: ReactNode;
 }) {
   const outer = useContext(DefaultsContext);
   const value: Defaults = {
     messages: { ...outer.messages, ...definedOnly(messages) },
     keywordEnterSearch: keywordEnterSearch ?? outer.keywordEnterSearch,
+    refusal: refusal ?? outer.refusal,
     renderFailure: chainFailure(renderFailure, outer.renderFailure),
   };
   return <DefaultsContext.Provider value={value}>{children}</DefaultsContext.Provider>;

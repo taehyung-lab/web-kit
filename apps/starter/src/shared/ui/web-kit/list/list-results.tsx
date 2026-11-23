@@ -104,8 +104,8 @@ function Result({
   );
 }
 
-/** 표 컬럼 하나. sort를 주면 머리글이 그 정렬 키로 정렬한다. */
-export interface ListColumn<Row> {
+/** 표 컬럼 하나. sort를 주면 머리글이 그 정렬 키로 정렬한다. Sort를 정하면 그 이름만 받는다(List.of의 Table은 선언한 정렬 값으로 정한다). */
+export interface ListColumn<Row, Sort extends string = string> {
   readonly key: string;
   readonly header: ReactNode;
   readonly cell: (row: Row) => ReactNode;
@@ -113,7 +113,7 @@ export interface ListColumn<Row> {
    * 머리글이 맡는 정렬 키. 한 열이 여러 값을 함께 보이면(예: 수정일/등록일) 키 여러 개를 준다:
    * 그중 하나로 정렬 중이면 정렬된 머리글로 보이고 누르면 그 키의 방향만 바꾼다. 아니면 누를 때 첫 키로 정렬한다.
    */
-  readonly sort?: string | readonly [string, ...string[]];
+  readonly sort?: Sort | readonly [Sort, ...Sort[]];
   readonly className?: string;
 }
 

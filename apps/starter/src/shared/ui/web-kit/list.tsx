@@ -22,9 +22,11 @@ export type {
   FailurePlace,
   RenderFailure,
   KeywordEnterSearch,
+  RefusalNotice,
 } from './list/list-context';
 export { VIRTUALIZE_FROM_ROWS } from './list/list-results';
 export type { ListColumn } from './list/list-results';
+import type { ListColumn } from './list/list-results';
 export { useListModel, useListField } from '@boosterlab/web-kit/list';
 export type { ListModel, PeriodShortcut, DownloadControl } from '@boosterlab/web-kit/list';
 
@@ -54,8 +56,21 @@ type NamedLabels<
 type MultiMeta<M extends SearchMeta> = {
   [N in keyof M as M[N] extends { multiple: true } ? N : never]: M[N];
 };
-export type TypedList<M extends SearchMeta> = typeof ListRoot &
-  Omit<typeof List, 'of' | 'Keywords' | 'MultiSelect' | 'Period' | 'SortSelect' | 'Detail'> & {
+/** 선언한 정렬 값. 표 열의 sort에 쓸 수 있는 이름이다. */
+type SortValues<M extends SearchMeta> = M[Names<M, 'sort'>] extends {
+  values: readonly (infer V extends string)[];
+}
+  ? V
+  : never;
+/**
+ * M은 화면 칸 이름과 종류(선언의 meta), K는 확정 검색값의 이름(선언의 fields)이다. 둘은 다르다:
+ * 기간 칸 `period`는 M에만 있고 그 값은 K의 시작일·종료일·기준으로 나뉘며, 직접 선언한 칸은 K에만 있다.
+ */
+export type TypedList<M extends SearchMeta, K extends string = string> = typeof ListRoot &
+  Omit<
+    typeof List,
+    'of' | 'Keywords' | 'MultiSelect' | 'Period' | 'SortSelect' | 'Detail' | 'Table'
+  > & {
     readonly Keywords: (
       props: NamedLabels<M, 'keywords', Props<typeof Keywords>, 'choiceLabels', 'targets'>
     ) => ReactNode;
@@ -73,22 +88,28 @@ export type TypedList<M extends SearchMeta> = typeof ListRoot &
     ) => ReactNode;
     readonly SortSelect: (
       props: Omit<Props<typeof SortSelect>, 'options' | 'optionLabels'> & {
-        readonly optionLabels: Readonly<
-          Record<
-            M[Names<M, 'sort'>] extends { values: readonly (infer V extends string)[] } ? V : never,
-            string
-          >
-        >;
+        readonly optionLabels: Readonly<Record<SortValues<M>, string>>;
       }
     ) => ReactNode;
+    /** keys는 접힌 칸의 확정 검색값 이름이다(그중 하나라도 값이 있으면 처음부터 펼친다). */
     readonly Detail: (
-      props: Omit<Props<typeof Detail>, 'keys'> & { readonly keys: readonly (keyof M & string)[] }
+      props: Omit<Props<typeof Detail>, 'keys'> & { readonly keys: readonly K[] }
+    ) => ReactNode;
+    /** 열의 sort에는 선언한 정렬 값만 쓸 수 있다. */
+    readonly Table: <Row>(
+      props: Omit<Parameters<typeof Table<Row>>[0], 'columns'> & {
+        readonly columns: readonly ListColumn<Row, SortValues<M>>[];
+      }
     ) => ReactNode;
   };
 
 /** 목록 기본 UI. <List model={useList(...)}> 안에 부품을 원하는 배치로 둔다. */
 export const List = Object.assign(ListRoot, {
-  of: <S extends { readonly meta: SearchMeta }>() => List as unknown as TypedList<S['meta']>,
+  of: <S extends { readonly meta: SearchMeta }>() =>
+    List as unknown as TypedList<
+      S['meta'],
+      S extends { readonly fields: infer F } ? keyof F & string : string
+    >,
   Filter,
   Choice,
   FilterActions,

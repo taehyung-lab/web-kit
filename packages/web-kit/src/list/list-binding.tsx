@@ -131,7 +131,11 @@ export function useListDetailsBinding(model: ListModel, keys: readonly string[])
 }
 
 /** 확인 당시 결과·선택을 고정하고 실행 직전 검증과 단일 실행을 보장한다. */
-export function useBulkConfirmation<T, V = undefined>({ model, run, check, value }: { model: ListModel; run: (ids: readonly string[], value?: V) => Promise<{ completedIds: readonly string[]; value?: T }>; check?: (ids: readonly string[], value?: V) => string | undefined; value?: V }) {
+/**
+ * emptyRefusal을 주면 선택한 행이 없어도 실행 버튼을 잠그지 않고, 눌렀을 때 요청 없이 그 사유로 거절한다(업무 check의 거절과 같은 자리 error에 문자열로 남는다).
+ * 주지 않으면 선택한 행이 없는 동안 locked다. 거절을 확인한 뒤에는 dismiss로 거절과 열려 있던 확인을 함께 닫는다.
+ */
+export function useBulkConfirmation<T, V = undefined>({ model, run, check, value, emptyRefusal }: { model: ListModel; run: (ids: readonly string[], value?: V) => Promise<{ completedIds: readonly string[]; value?: T }>; check?: (ids: readonly string[], value?: V) => string | undefined; value?: V; emptyRefusal?: string }) {
   const [pending, setPending] = useState<{ ids: readonly string[]; page: unknown; value?: V }>();
   const [error, setError] = useState<unknown>();
   const running = useRef(false);
@@ -176,14 +180,24 @@ export function useBulkConfirmation<T, V = undefined>({ model, run, check, value
         if (recovered) { setPending(undefined); setError(undefined); }
       },
     },
-    locked: !model.isCurrent || model.selection.failure !== undefined || model.selection.selectedIds.length === 0 || model.selection.isRunning,
+    locked: !model.isCurrent || model.selection.failure !== undefined || (emptyRefusal === undefined && model.selection.selectedIds.length === 0) || model.selection.isRunning,
     open: () => {
       if (running.current || model.selection.isRunning || model.selection.failure !== undefined) return;
+      if (model.selection.selectedIds.length === 0) {
+        // 잠그지 않은 경우(emptyRefusal)에만 여기로 온다. 요청·확인창 없이 거절한다.
+        setError(emptyRefusal);
+        return;
+      }
       const refusal = value === undefined ? check?.(model.selection.selectedIds) : check?.(model.selection.selectedIds, value);
       setError(refusal);
       if (!refusal) setPending({ ids: [...model.selection.selectedIds], page: model.page, value });
     },
     cancel: () => { if (!running.current && !current.current.selection.isRecovering) setPending(undefined); },
+    /** 거절·실패 안내를 확인했다. 안내를 지우고, 실행 중이 아니면 열려 있던 확인도 닫는다. */
+    dismiss: () => {
+      setError(undefined);
+      if (!running.current && !current.current.selection.isRecovering) setPending(undefined);
+    },
   };
 }
 
@@ -275,14 +289,32 @@ export interface DownloadControl {
 
 
 /** 다운로드 종류 변경은 이전 실패를 지운 뒤 다음 선택을 반영한다. */
-export function useListDownloadBinding(control: DownloadControl, kinds: readonly DownloadKind[]) {
+/** 다운로드를 시작하지 않고 거절한 이유. 종류를 고르지 않았거나(no-kind) 선택 다운로드인데 고른 행이 없다(no-selection). */
+export type DownloadRefusal = 'no-kind' | 'no-selection';
+
+/**
+ * 다운로드 종류 선택과 실행 버튼의 연결. 기본은 종류를 고르지 않았거나 시작할 수 없으면 버튼을 잠근다(blocked).
+ * refuse를 켜면 진행 중·이전 결과 표시 중에만 잠그고, 종류 없음·선택 행 없음은 눌렀을 때 요청 없이 refusal로 알린다(dismiss로 지운다).
+ */
+export function useListDownloadBinding(control: DownloadControl, kinds: readonly DownloadKind[], options: { readonly refuse?: boolean } = {}) {
   const [kind, setKind] = useState<DownloadKind | ''>('');
-  return { kind, blocked: kind === '' || control.blockOf(kind) !== undefined,
+  const [refusal, setRefusal] = useState<DownloadRefusal>();
+  // 종류를 고르기 전에도 진행 중·이전 결과 표시 중인지는 알아야 해서 '전체' 기준으로 묻는다.
+  const block = control.blockOf(kind === '' ? 'all' : kind);
+  const refuse = options.refuse === true;
+  return { kind, refusal,
+    blocked: refuse ? block === 'running' || block === 'stale' : kind === '' || block !== undefined,
     change: (value: string) => {
       control.clear();
+      setRefusal(undefined);
       setKind(kinds.find((kind) => kind === value) ?? '');
     },
-    start: () => { if (kind !== '') void control.start(kind); },
+    start: () => {
+      if (refuse && kind === '') setRefusal('no-kind');
+      else if (refuse && block === 'no-selection') setRefusal('no-selection');
+      else if (kind !== '') void control.start(kind);
+    },
+    dismiss: () => setRefusal(undefined),
   };
 }
 

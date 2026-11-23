@@ -10,7 +10,7 @@ import { useState, type ReactNode } from 'react';
 import { cn } from 'cn';
 import { Button } from '@/shared/ui/button';
 import { SelectBox } from '../select-box';
-import { ConfirmDialog } from '../dialog';
+import { AlertDialog, ConfirmDialog } from '../dialog';
 import { Pending } from '../pending';
 import {
   useListContext,
@@ -49,6 +49,31 @@ function bulkErrorText(
   if (typeof error === 'string') return error;
   const custom = renderFailure(error, 'action');
   return custom === undefined ? copy.actionFailed : custom;
+}
+
+/**
+ * 요청 전 거절을 알림 창으로 보이는 방식(refusal="alert")에서, 문자열 거절(고른 행 없음·바꿀 값 없음·업무 check)을 꺼낸다.
+ * 그 밖의 실패(요청이 나간 뒤의 실패)와 inline 방식은 undefined라 기존 자리(확인창·버튼 옆)에 그대로 보인다.
+ */
+function alertRefusal(error: unknown, refusal: Context['refusal']): string | undefined {
+  return refusal === 'alert' && typeof error === 'string' ? error : undefined;
+}
+
+/** 요청 전 거절 알림 창. 사유 한 줄과 [확인]뿐이고, 확인하면 창만 닫는다. */
+function RefusalAlert({
+  message,
+  title,
+  onConfirm,
+}: {
+  readonly message: string | undefined;
+  readonly title: string;
+  readonly onConfirm: () => void;
+}) {
+  return (
+    <AlertDialog open={message !== undefined} title={title} onConfirm={onConfirm}>
+      <p>{message}</p>
+    </AlertDialog>
+  );
 }
 
 /** 일괄 작업 확인창과 확인창 밖 실패 줄. BulkAction·BulkSelectAction이 같은 모양을 쓴다. */
@@ -135,19 +160,22 @@ function BulkAction<T>({
   readonly cancelLabel?: string;
   readonly describe?: (ids: readonly string[]) => ReactNode;
 } & { readonly model?: ListModel }) {
-  const { model, copy, renderFailure } = useListContext(explicitModel);
-  const { pending, error, confirm, locked, open, cancel, recovery } = useBulkConfirmation({
+  const { model, copy, renderFailure, refusal } = useListContext(explicitModel);
+  const { pending, error, confirm, locked, open, cancel, dismiss, recovery } = useBulkConfirmation({
     model,
     run,
     check,
+    emptyRefusal: refusal === 'alert' ? copy.selectRows : undefined,
   });
+  const refused = alertRefusal(error, refusal);
   return (
     <>
       <Button type="button" variant="outline" disabled={locked} onClick={open}>
         {label}
       </Button>
+      <RefusalAlert message={refused} title={copy.refusalTitle} onConfirm={dismiss} />
       <BulkConfirm
-        open={pending !== undefined}
+        open={pending !== undefined && refused === undefined}
         title={title}
         running={model.selection.isRunning}
         confirmLabel={confirmLabel ?? copy.confirm}
@@ -159,7 +187,7 @@ function BulkAction<T>({
             ? null
             : (describe?.(pending.ids) ?? `${pending.ids.length}${copy.items}`)
         }
-        errorText={bulkErrorText(error, copy, renderFailure)}
+        errorText={refused === undefined ? bulkErrorText(error, copy, renderFailure) : null}
         recovery={recovery}
         reloadLabel={copy.reload ?? defaultMessages.reload}
         unknownMessage={copy.resultUnknown ?? defaultMessages.resultUnknown}
@@ -220,16 +248,20 @@ function BulkSelectAction<V extends string, T = unknown>({
   /** 묶음(fieldset)의 배치. */
   readonly className?: string;
 } & { readonly model?: ListModel }) {
-  const { model, copy, renderFailure } = useListContext(explicitModel);
+  const { model, copy, renderFailure, refusal } = useListContext(explicitModel);
   const [chosen, setChosen] = useState<V | null>(defaultValue ?? null);
   // 선택지가 바뀌어 고른 값이 사라졌거나 막혔으면 고르지 않은 것으로 본다.
   const value =
     chosen !== null && options.some((option) => option.value === chosen && option.disabled !== true)
       ? chosen
       : null;
-  const { pending, error, confirm, locked, open, cancel, recovery } = useBulkConfirmation<T, V>({
+  const { pending, error, confirm, locked, open, cancel, dismiss, recovery } = useBulkConfirmation<
+    T,
+    V
+  >({
     model,
     value: value ?? undefined,
+    emptyRefusal: refusal === 'alert' ? copy.selectRows : undefined,
     run: (ids, target) =>
       target === undefined ? Promise.reject(requiredMessage ?? copy.chooseValue) : run(ids, target),
     check: (ids, target) =>
@@ -238,6 +270,7 @@ function BulkSelectAction<V extends string, T = unknown>({
         ? requiredMessage || copy.chooseValue || defaultMessages.chooseValue
         : check?.(ids, target),
   });
+  const refused = alertRefusal(error, refusal);
   const fixed = pending?.value;
   const optionLabel = options.find((option) => option.value === fixed)?.label ?? fixed;
   return (
@@ -257,8 +290,9 @@ function BulkSelectAction<V extends string, T = unknown>({
       <Button type="button" variant="outline" disabled={locked} onClick={open}>
         {label}
       </Button>
+      <RefusalAlert message={refused} title={copy.refusalTitle} onConfirm={dismiss} />
       <BulkConfirm
-        open={pending !== undefined}
+        open={pending !== undefined && refused === undefined}
         title={title}
         running={model.selection.isRunning}
         confirmLabel={confirmLabel ?? copy.confirm}
@@ -271,7 +305,7 @@ function BulkSelectAction<V extends string, T = unknown>({
             : (describe?.(pending.ids, fixed) ??
               `${optionLabel}: ${pending.ids.length}${copy.items}`)
         }
-        errorText={bulkErrorText(error, copy, renderFailure)}
+        errorText={refused === undefined ? bulkErrorText(error, copy, renderFailure) : null}
         recovery={recovery}
         reloadLabel={copy.reload ?? defaultMessages.reload}
         unknownMessage={copy.resultUnknown ?? defaultMessages.resultUnknown}
@@ -291,8 +325,15 @@ function Download({
   readonly kinds?: readonly DownloadKind[];
   readonly label?: string;
 } & { readonly model?: ListModel }) {
-  const { copy, renderFailure } = useListContext(explicitModel);
-  const { kind, blocked, change, start } = useListDownloadBinding(control, kinds);
+  const { copy, renderFailure, refusal } = useListContext(explicitModel);
+  const {
+    kind,
+    blocked,
+    change,
+    start,
+    refusal: refused,
+    dismiss,
+  } = useListDownloadBinding(control, kinds, { refuse: refusal === 'alert' });
   const kindLabel = (value: DownloadKind) =>
     value === 'all' ? copy.downloadAll : copy.downloadSelected;
   const custom =
@@ -315,6 +356,17 @@ function Download({
       <Button type="button" variant="outline" disabled={blocked} onClick={start}>
         {label ?? copy.download}
       </Button>
+      <RefusalAlert
+        message={
+          refused === undefined
+            ? undefined
+            : refused === 'no-kind'
+              ? copy.chooseDownloadKind
+              : copy.selectRows
+        }
+        title={copy.refusalTitle}
+        onConfirm={dismiss}
+      />
       {/* 진행 중에는 종류·버튼을 잠그고 옆에 로딩 표시만 둔다. 문구는 화면 낭독기에만 읽힌다. */}
       {running && <Pending label={copy.downloading} />}
       {failure !== null && (

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // 파일 책임: 설치한 UI 복사본을 키트의 공통 단위 검사에 연결하고, 복사본의 앱 기본값·표시 입구를 확인한다.
-import { List, ListDefaults, useListField, type RenderFailure } from '../list';
+import { List, ListDefaults, useListField, useListModel, type RenderFailure } from '../list';
 import { Pending } from '../pending';
 import { DialogDefaults, defaultDialogLabels } from '../dialog';
 import { checkListUiConformance } from '@boosterlab/web-kit/testing/unit/list';
@@ -10,7 +10,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { useList, type ListPage } from '@boosterlab/web-kit/list';
+import { useList, useListDownload, type ListPage } from '@boosterlab/web-kit/list';
 import {
   arrayKeywordCodec,
   choices,
@@ -313,6 +313,182 @@ describe('List.BulkSelectAction', () => {
       [['r2'], 'on'],
       [['r2'], 'on'],
     ]);
+  });
+});
+
+describe('ListDefaults refusal="alert" (요청 전 거절을 알림 창으로)', () => {
+  const withAlert = (node: ReactNode) =>
+    withDialog(
+      <ListDefaults
+        refusal="alert"
+        messages={{
+          selectRows: 'Select rows',
+          refusalTitle: 'Notice',
+          chooseValue: 'Pick a value',
+        }}
+      >
+        {node}
+      </ListDefaults>
+    );
+  const table = (
+    <List.Result>
+      <List.Table
+        columns={[{ key: 'id', header: 'ID', cell: (row: CheckRow) => row.id }]}
+        rowId={(row: CheckRow) => row.id}
+        selectable
+      />
+    </List.Result>
+  );
+  /** 떠 있는 알림 창의 제목·사유를 확인하고 [확인]으로 닫는다. */
+  async function acknowledge(message: string) {
+    const alert = await screen.findByRole('alertdialog', { name: 'Notice' });
+    expect(alert.textContent).toContain(message);
+    await act(async () => fireEvent.click(within(alert).getByRole('button', { name: '확인' })));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+  }
+
+  it('BulkAction: with nothing selected the button stays enabled and pressing it shows the alert without a request, then runs after selecting', async () => {
+    const run = vi.fn(async (ids: readonly string[]) => ({ completedIds: ids }));
+    mountList(
+      <>
+        <List.BulkAction label="Remove" run={run} />
+        {table}
+      </>,
+      { outer: withAlert }
+    );
+    await screen.findByRole('cell', { name: 'r1' });
+    const button = screen.getByRole('button', { name: 'Remove' }) as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+    fireEvent.click(button);
+    await acknowledge('Select rows');
+    expect(run).not.toHaveBeenCalled();
+    // 거절을 그 자리 글로 다시 쓰지 않는다.
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    fireEvent.click(screen.getAllByRole('checkbox', { name: '행 선택' })[0]!);
+    fireEvent.click(button);
+    const confirm = await screen.findByRole('alertdialog', { name: 'Remove' });
+    await act(async () => fireEvent.click(within(confirm).getByRole('button', { name: '확인' })));
+    await waitFor(() => expect(run).toHaveBeenCalledWith(['r1']));
+  });
+
+  it('BulkSelectAction: asks for rows first, then for the value, each in the alert, and keeps the selection', async () => {
+    const run = vi.fn(async (ids: readonly string[]) => ({ completedIds: ids }));
+    mountList(
+      <>
+        <List.BulkSelectAction
+          label="Apply"
+          selectLabel="New state"
+          options={[{ value: 'off', label: 'Off' }]}
+          run={run}
+        />
+        {table}
+      </>,
+      { outer: withAlert }
+    );
+    await screen.findByRole('cell', { name: 'r1' });
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    await acknowledge('Select rows');
+
+    fireEvent.click(screen.getAllByRole('checkbox', { name: '행 선택' })[1]!);
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    await acknowledge('Pick a value');
+    expect(run).not.toHaveBeenCalled();
+    expect(
+      (screen.getAllByRole('checkbox', { name: '행 선택' })[1] as HTMLElement).getAttribute(
+        'aria-checked'
+      )
+    ).toBe('true');
+  });
+
+  it('BulkAction: a business refusal at confirm shows the alert and closes the confirmation, and a failed request still stays in the confirmation', async () => {
+    const check = vi
+      .fn<(ids: readonly string[]) => string | undefined>()
+      .mockReturnValueOnce(undefined)
+      .mockReturnValueOnce('Not allowed now');
+    const run = vi.fn(async (): Promise<{ completedIds: readonly string[] }> => {
+      throw new Error('server down');
+    });
+    mountList(
+      <>
+        <List.BulkAction label="Remove" run={run} check={check} />
+        {table}
+      </>,
+      { outer: withAlert }
+    );
+    await screen.findByRole('cell', { name: 'r1' });
+    fireEvent.click(screen.getAllByRole('checkbox', { name: '행 선택' })[0]!);
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
+    const confirm = await screen.findByRole('alertdialog', { name: 'Remove' });
+    await act(async () => fireEvent.click(within(confirm).getByRole('button', { name: '확인' })));
+    await acknowledge('Not allowed now');
+    expect(run).not.toHaveBeenCalled();
+
+    // 요청이 나간 뒤의 실패는 거절이 아니다. 기존처럼 확인창 안에 남는다.
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
+    const again = await screen.findByRole('alertdialog', { name: 'Remove' });
+    await act(async () => fireEvent.click(within(again).getByRole('button', { name: '확인' })));
+    await waitFor(() => expect(within(again).getByRole('alert')).toBeTruthy());
+    expect(screen.queryByRole('alertdialog', { name: 'Notice' })).toBeNull();
+  });
+
+  it('Download: no kind and no selected rows are refused in the alert without starting, and the selected download starts once rows are chosen', async () => {
+    const started: string[] = [];
+    function Download() {
+      const model = useListModel();
+      const control = useListDownload(model, {
+        run: async (target) => {
+          started.push(target.kind);
+        },
+      });
+      return <List.Download control={control} />;
+    }
+    mountList(
+      <>
+        <Download />
+        {table}
+      </>,
+      {
+        outer: (node) =>
+          withDialog(
+            <ListDefaults
+              refusal="alert"
+              messages={{
+                selectRows: 'Select rows',
+                refusalTitle: 'Notice',
+                chooseDownloadKind: 'Pick a kind',
+              }}
+            >
+              {node}
+            </ListDefaults>
+          ),
+      }
+    );
+    await screen.findByRole('cell', { name: 'r1' });
+    fireEvent.click(screen.getByRole('button', { name: '다운로드' }));
+    await acknowledge('Pick a kind');
+    await pick(screen.getByRole('combobox', { name: '다운로드 종류' }), '선택 다운로드');
+    fireEvent.click(screen.getByRole('button', { name: '다운로드' }));
+    await acknowledge('Select rows');
+    expect(started).toEqual([]);
+
+    fireEvent.click(screen.getAllByRole('checkbox', { name: '행 선택' })[0]!);
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: '다운로드' })));
+    await waitFor(() => expect(started).toEqual(['selected']));
+  });
+
+  it('without the setting the bulk button is disabled while nothing is selected', async () => {
+    mountList(
+      <>
+        <List.BulkAction label="Remove" run={async (ids) => ({ completedIds: ids })} />
+        {table}
+      </>,
+      { outer: withDialog }
+    );
+    await screen.findByRole('cell', { name: 'r1' });
+    expect((screen.getByRole('button', { name: 'Remove' }) as HTMLButtonElement).disabled).toBe(
+      true
+    );
   });
 });
 
