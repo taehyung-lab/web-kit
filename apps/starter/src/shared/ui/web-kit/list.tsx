@@ -17,7 +17,12 @@ import { Result, Table, Total, PageSize, SortSelect, Pagination } from './list/l
 import { Actions, BulkAction, BulkSelectAction, Download } from './list/list-actions';
 
 export { ListDefaults } from './list/list-context';
-export type { ListMessages, FailurePlace, RenderFailure } from './list/list-context';
+export type {
+  ListMessages,
+  FailurePlace,
+  RenderFailure,
+  KeywordEnterSearch,
+} from './list/list-context';
 export { VIRTUALIZE_FROM_ROWS } from './list/list-results';
 export type { ListColumn } from './list/list-results';
 export { useListModel, useListField } from '@boosterlab/web-kit/list';

@@ -33,6 +33,9 @@ const defaultMessages = {
   keywordTarget: '검색 대상',
   keywordAdd: '추가',
   keywordRemove: '제거',
+  /** 구분자가 있는 검색어 칸 아래 안내. separator는 선언의 구분자다. */
+  keywordHint: (separator: string) =>
+    `여러 검색어는 ${separator} 로 구분해 한 번에 넣을 수 있습니다.`,
   periodStart: '시작',
   periodEnd: '종료',
   periodType: '기간 기준',
@@ -55,8 +58,9 @@ const defaultMessages = {
 /** 뒤에 더한 문구(fieldOptionsFailed·chooseValue)는 선택이라, 전체 문구를 넘기던 앱이 키 추가로 깨지지 않는다. */
 export type ListMessages = Omit<
   typeof defaultMessages,
-  'fieldOptionsFailed' | 'chooseValue' | 'reload' | 'resultUnknown'
+  'fieldOptionsFailed' | 'chooseValue' | 'reload' | 'resultUnknown' | 'keywordHint'
 > & {
+  readonly keywordHint?: (separator: string) => string;
   readonly fieldOptionsFailed?: string;
   readonly chooseValue?: string;
   readonly reload?: string;
@@ -70,14 +74,21 @@ export type FailurePlace = 'list' | 'refresh' | 'action' | 'download';
  * refresh에서는 원인 뒤에 이전 결과 안내(messages.refreshFailed)를 붙이며 ''를 주면 원인 없이 안내만 보인다.
  */
 export type RenderFailure = (failure: unknown, place: FailurePlace) => ReactNode | null | undefined;
+/**
+ * 검색어 칸 Enter의 검색 실행. always: 입력을 추가하고 검색한다(기본).
+ * when-split: 입력을 추가하고, 입력에 구분자가 있을 때만 검색한다(검색어 하나 Enter는 추가만).
+ */
+export type KeywordEnterSearch = 'always' | 'when-split';
 type Context = {
   readonly copy: typeof defaultMessages;
   readonly renderFailure: RenderFailure;
+  readonly keywordEnterSearch: KeywordEnterSearch;
 };
 /** 앱이 ListDefaults로 준 기본값. 없으면 키트 기본 문구만 쓴다. */
 type Defaults = {
   readonly messages: Partial<ListMessages>;
   readonly renderFailure?: RenderFailure;
+  readonly keywordEnterSearch?: KeywordEnterSearch;
 };
 const DefaultsContext = createContext<Defaults>({ messages: {} });
 /** <List> 안의 표시 설정. 밖에서 명시 모델로 쓴 부품은 null을 보고 앱 기본값을 직접 읽는다. */
@@ -110,6 +121,7 @@ function usePresentation(messages?: Partial<ListMessages>, renderFailure?: Rende
   return {
     copy: { ...defaultMessages, ...defaults.messages, ...definedOnly(messages) },
     renderFailure: chainFailure(renderFailure, defaults.renderFailure) ?? (() => undefined),
+    keywordEnterSearch: defaults.keywordEnterSearch ?? 'always',
   };
 }
 
@@ -128,15 +140,19 @@ function useListContext(explicit?: ListModel) {
 export function ListDefaults({
   messages,
   renderFailure,
+  keywordEnterSearch,
   children,
 }: {
   readonly messages?: Partial<ListMessages>;
   readonly renderFailure?: RenderFailure;
+  /** 앱 전체 검색어 칸의 Enter 검색 실행(KeywordEnterSearch). 생략하면 바깥 값, 없으면 always. */
+  readonly keywordEnterSearch?: KeywordEnterSearch;
   readonly children: ReactNode;
 }) {
   const outer = useContext(DefaultsContext);
   const value: Defaults = {
     messages: { ...outer.messages, ...definedOnly(messages) },
+    keywordEnterSearch: keywordEnterSearch ?? outer.keywordEnterSearch,
     renderFailure: chainFailure(renderFailure, outer.renderFailure),
   };
   return <DefaultsContext.Provider value={value}>{children}</DefaultsContext.Provider>;
