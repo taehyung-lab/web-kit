@@ -1114,3 +1114,48 @@ it.each([
   expect(result.current.list.selection.selectedIds).toEqual([]);
   queryClient.clear();
 });
+
+it('bulk confirmation with emptyRefusal refuses an empty selection on open without locking, and dismiss clears the refusal and an open confirmation', async () => {
+  let binding!: ReturnType<typeof useBulkConfirmation<unknown, string>>;
+  const run = vi.fn(async (ids: readonly string[]) => ({ completedIds: ids }));
+  const check = vi.fn<(ids: readonly string[]) => string | undefined>(() => 'blocked by business');
+  function Bulk({ model }: { model: typeof latest }) {
+    binding = useBulkConfirmation({ model, run, check, emptyRefusal: 'select rows first' });
+    return null;
+  }
+  mount({ definition: makeDefinition(), initial: {}, fetchRows: async () => page('1', '2'), renderResult: model => <Bulk model={model} /> });
+  await flush();
+  // 고른 행이 없어도 잠그지 않는다. 누르면 업무 check·확인창·요청 없이 거절한다.
+  expect(binding.locked).toBe(false);
+  act(() => binding.open());
+  expect(binding.error).toBe('select rows first');
+  expect(binding.pending).toBeUndefined();
+  expect(check).not.toHaveBeenCalled();
+  act(() => binding.dismiss());
+  expect(binding.error).toBeUndefined();
+
+  // 실행 직전의 업무 거절을 확인(dismiss)하면 열려 있던 확인도 닫힌다.
+  check.mockReturnValueOnce(undefined);
+  act(() => latest.selection.toggleRow('1', true));
+  act(() => binding.open());
+  expect(binding.pending?.ids).toEqual(['1']);
+  await act(async () => { await binding.confirm(); });
+  expect(binding.error).toBe('blocked by business');
+  act(() => binding.dismiss());
+  expect(binding.error).toBeUndefined();
+  expect(binding.pending).toBeUndefined();
+  expect(run).not.toHaveBeenCalled();
+});
+
+it('bulk confirmation without emptyRefusal stays locked while nothing is selected', async () => {
+  let binding!: ReturnType<typeof useBulkConfirmation<unknown, string>>;
+  function Bulk({ model }: { model: typeof latest }) {
+    binding = useBulkConfirmation({ model, run: async (ids) => ({ completedIds: ids }) });
+    return null;
+  }
+  mount({ definition: makeDefinition(), initial: {}, fetchRows: async () => page('1'), renderResult: model => <Bulk model={model} /> });
+  await flush();
+  expect(binding.locked).toBe(true);
+  act(() => latest.selection.toggleRow('1', true));
+  expect(binding.locked).toBe(false);
+});
