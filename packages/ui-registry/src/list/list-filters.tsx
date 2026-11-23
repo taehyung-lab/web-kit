@@ -1,5 +1,18 @@
 // 파일 책임: 검색 제출·상세 조건·선택·기간·키워드 입력을 같은 목록 상태에 연결한다.
-import { useListField, useListFilterBinding, useListDetailsBinding, useListChoiceBinding, listChoiceValue, useListChoiceNormalization, useListMultiChoiceBinding, useListPeriodBinding, useListKeywordBinding, listFieldMeta, type PeriodShortcut, type ListModel } from '@boosterlab/web-kit/list';
+import {
+  useListField,
+  useListFilterBinding,
+  useListDetailsBinding,
+  useListChoiceBinding,
+  listChoiceValue,
+  useListChoiceNormalization,
+  useListMultiChoiceBinding,
+  useListPeriodBinding,
+  useListKeywordBinding,
+  listFieldMeta,
+  type PeriodShortcut,
+  type ListModel,
+} from '@boosterlab/web-kit/list';
 import { Choice as ChoiceInput, type ChoiceProps } from '../choice';
 import { useId, type ReactNode } from 'react';
 import { cn } from 'cn';
@@ -10,23 +23,29 @@ import type { Keyword } from '@boosterlab/web-kit/search';
 import { XIcon } from 'lucide-react';
 import { useListContext, Check, labelled, OptionSelect } from './list-context';
 
-
 /** 검색 영역. Enter·검색 버튼이 같은 확정(model.submit)을 부른다. */
-function Filter({ model: explicitModel, children, className }: { readonly children: ReactNode; readonly className?: string } & { readonly model?: ListModel }) {
+function Filter({
+  model: explicitModel,
+  children,
+  className,
+}: { readonly children: ReactNode; readonly className?: string } & { readonly model?: ListModel }) {
   const { model } = useListContext(explicitModel);
   const binding = useListFilterBinding(model);
   return (
-    <form
-      className={cn('grid gap-4', className)}
-      {...binding}
-    >
+    <form className={cn('grid gap-4', className)} {...binding}>
       {children}
     </form>
   );
 }
 
 /** 검색·초기화 버튼. Filter 안에 둔다. */
-function FilterActions({ model: explicitModel, className, children }: { readonly className?: string; readonly children?: ReactNode } & { readonly model?: ListModel }) {
+function FilterActions({
+  model: explicitModel,
+  className,
+  children,
+}: { readonly className?: string; readonly children?: ReactNode } & {
+  readonly model?: ListModel;
+}) {
   const { model, copy } = useListContext(explicitModel);
   const reasonId = useId();
   return (
@@ -36,10 +55,19 @@ function FilterActions({ model: explicitModel, className, children }: { readonly
         {copy.reset}
       </Button>
       {/* 막힌 검색도 초점을 받도록 aria-disabled로 잠근다(이유는 옆 문구가 읽힌다). */}
-      <Button type="submit" className="aria-disabled:opacity-50" aria-disabled={model.blockedReason !== undefined || undefined} aria-describedby={model.blockedReason === undefined ? undefined : reasonId}>
+      <Button
+        type="submit"
+        className="aria-disabled:opacity-50"
+        aria-disabled={model.blockedReason !== undefined || undefined}
+        aria-describedby={model.blockedReason === undefined ? undefined : reasonId}
+      >
         {copy.search}
       </Button>
-      {model.blockedReason !== undefined && <span id={reasonId} className="text-sm text-muted-foreground">{model.blockedReason}</span>}
+      {model.blockedReason !== undefined && (
+        <span id={reasonId} className="text-sm text-muted-foreground">
+          {model.blockedReason}
+        </span>
+      )}
     </div>
   );
 }
@@ -60,7 +88,14 @@ function Detail({
   const { open, id, toggle } = useListDetailsBinding(model, keys);
   return (
     <>
-      <Button type="button" variant="outline" className={cn('justify-self-start', triggerClassName)} aria-expanded={open} aria-controls={id} onClick={toggle}>
+      <Button
+        type="button"
+        variant="outline"
+        className={cn('justify-self-start', triggerClassName)}
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={toggle}
+      >
         {copy.detail}
       </Button>
       <div id={id} hidden={!open} className="grid gap-4">
@@ -71,31 +106,80 @@ function Detail({
 }
 
 /** 선택지 조회와 URL 확인이 같은 선언을 쓰는 목록 선택 칸. */
-function Choice({ model: explicitModel, name, searchName = name, nodes, ...props }: Omit<ChoiceProps, 'value' | 'onValueChange' | 'nodes'> & { readonly name: string; readonly searchName?: string; readonly nodes?: ChoiceProps['nodes'] } & { readonly model?: ListModel }) {
+function Choice({
+  model: explicitModel,
+  name,
+  searchName = name,
+  nodes,
+  ...props
+}: Omit<ChoiceProps, 'value' | 'onValueChange' | 'nodes'> & {
+  readonly name: string;
+  readonly searchName?: string;
+  readonly nodes?: ChoiceProps['nodes'];
+} & { readonly model?: ListModel }) {
   const field = useListField<ChoiceProps['value']>(name, searchName, explicitModel);
   const { model, copy } = useListContext(explicitModel);
   const id = useId();
-  const { check, options, choices, ready } = useListChoiceBinding(model, searchName, nodes, props.search !== undefined);
+  const { check, options, choices, ready } = useListChoiceBinding(
+    model,
+    searchName,
+    nodes,
+    props.search !== undefined
+  );
   useListChoiceNormalization(model, name, ready);
   const message = field.issues[0]?.message;
-  const rule = listChoiceValue(choices, { multiple: props.multiple, search: props.search, required: field.required });
-  return <div className="grid content-start gap-2">
-    <Label htmlFor={id}>{props.label}{field.required && <RequiredMark />}</Label>
-    <ChoiceInput {...props} id={id} nodes={choices} value={rule.view(field.value)} onValueChange={(next) => field.set(rule.commit(next, field.value))} aria-required={field.required} aria-invalid={message !== undefined} aria-describedby={message === undefined ? undefined : `${id}-error`} />
-    {check !== undefined && options.isFetching && <span role="status" className="text-sm text-muted-foreground">{copy.loading}</span>}
-    {check !== undefined && options.isError && <span role="alert" className="flex items-center gap-2 text-sm text-destructive">{copy.fieldOptionsFailed}<Button type="button" variant="outline" size="sm" onClick={() => void options.refetch()}>{copy.retry}</Button></span>}
-    {message !== undefined && <FieldMessage id={`${id}-error`}>{message}</FieldMessage>}
-  </div>;
+  const rule = listChoiceValue(choices, {
+    multiple: props.multiple,
+    search: props.search,
+    required: field.required,
+  });
+  return (
+    <div className="grid content-start gap-2">
+      <Label htmlFor={id}>
+        {props.label}
+        {field.required && <RequiredMark />}
+      </Label>
+      <ChoiceInput
+        {...props}
+        id={id}
+        nodes={choices}
+        value={rule.view(field.value)}
+        onValueChange={(next) => field.set(rule.commit(next, field.value))}
+        aria-required={field.required}
+        aria-invalid={message !== undefined}
+        aria-describedby={message === undefined ? undefined : `${id}-error`}
+      />
+      {check !== undefined && options.isFetching && (
+        <span role="status" className="text-sm text-muted-foreground">
+          {copy.loading}
+        </span>
+      )}
+      {check !== undefined && options.isError && (
+        <span role="alert" className="flex items-center gap-2 text-sm text-destructive">
+          {copy.fieldOptionsFailed}
+          <Button type="button" variant="outline" size="sm" onClick={() => void options.refetch()}>
+            {copy.retry}
+          </Button>
+        </span>
+      )}
+      {message !== undefined && <FieldMessage id={`${id}-error`}>{message}</FieldMessage>}
+    </div>
+  );
 }
 
 /** 문자열 입력 하나. 빈 값은 기본값이 없을 때 undefined로 둔다. */
-function Text({ model: explicitModel, name, label }: { readonly name: string; readonly label: string } & { readonly model?: ListModel }) {
+function Text({
+  model: explicitModel,
+  name,
+  label,
+}: { readonly name: string; readonly label: string } & { readonly model?: ListModel }) {
   const field = useListField<string | undefined>(name, name, explicitModel);
   const id = useId();
   return (
     <div className="grid content-start gap-2">
       <Label htmlFor={id}>
-        {label}{field.required && <RequiredMark />}
+        {label}
+        {field.required && <RequiredMark />}
       </Label>
       <Input
         id={id}
@@ -105,7 +189,9 @@ function Text({ model: explicitModel, name, label }: { readonly name: string; re
         value={field.value ?? ''}
         onChange={(event) => field.setText(event.target.value)}
       />
-      {field.issues[0]?.message !== undefined && <FieldMessage id={`${id}-error`}>{field.issues[0].message}</FieldMessage>}
+      {field.issues[0]?.message !== undefined && (
+        <FieldMessage id={`${id}-error`}>{field.issues[0].message}</FieldMessage>
+      )}
     </div>
   );
 }
@@ -131,7 +217,8 @@ function Select({
   return (
     <div className="grid content-start gap-2">
       <Label htmlFor={id}>
-        {label}{field.required && <RequiredMark />}
+        {label}
+        {field.required && <RequiredMark />}
       </Label>
       <OptionSelect
         id={id}
@@ -141,9 +228,13 @@ function Select({
         disabled={disabled}
         value={field.value ?? ''}
         onValueChange={(next) => field.setText(next)}
-        options={emptyLabel === undefined ? options : [{ value: '', label: emptyLabel }, ...options]}
+        options={
+          emptyLabel === undefined ? options : [{ value: '', label: emptyLabel }, ...options]
+        }
       />
-      {field.issues[0]?.message !== undefined && <FieldMessage id={`${id}-error`}>{field.issues[0].message}</FieldMessage>}
+      {field.issues[0]?.message !== undefined && (
+        <FieldMessage id={`${id}-error`}>{field.issues[0].message}</FieldMessage>
+      )}
     </div>
   );
 }
@@ -168,7 +259,8 @@ function MultiSelect({
   readonly allLabel?: string;
 } & { readonly model?: ListModel }) {
   const { model } = useListContext(explicitModel);
-  const options = given ?? labelled(listFieldMeta(model, 'choices', name).values, optionLabels, name);
+  const options =
+    given ?? labelled(listFieldMeta(model, 'choices', name).values, optionLabels, name);
   const values = options.map((option) => option.value);
   const { effective, set, toggle } = useListMultiChoiceBinding(name, values, explicitModel);
   return (
@@ -227,7 +319,10 @@ function Period({
   readonly now?: () => Date;
   readonly presets?: readonly PeriodShortcut[];
   /** 기간 기준 필드(공연일·등록일 등). */
-  readonly type?: { readonly name: string; readonly options: readonly { readonly value: string; readonly label: string }[] };
+  readonly type?: {
+    readonly name: string;
+    readonly options: readonly { readonly value: string; readonly label: string }[];
+  };
   /** 날짜 칸 이름. 생략하면 "{label} {messages.periodStart/End}". */
   readonly startLabel?: string;
   readonly endLabel?: string;
@@ -236,7 +331,8 @@ function Period({
   const meta = name === undefined ? undefined : listFieldMeta(model, 'dateRange', name);
   const from = meta?.keys.from ?? givenFrom;
   const to = meta?.keys.to ?? givenTo;
-  if (from === undefined || to === undefined) throw new Error('List.Period: give name (listSearch) or from/to');
+  if (from === undefined || to === undefined)
+    throw new Error('List.Period: give name (listSearch) or from/to');
   const type =
     meta === undefined
       ? givenType
@@ -282,18 +378,20 @@ function Period({
         <div className="flex flex-wrap items-center gap-2">
           {presets.map((preset) => {
             const range = rangeOf(preset);
-            const active = (range.from ?? '') === ((draft[from] as string | undefined) ?? '') && (range.to ?? '') === ((draft[to] as string | undefined) ?? '');
+            const active =
+              (range.from ?? '') === ((draft[from] as string | undefined) ?? '') &&
+              (range.to ?? '') === ((draft[to] as string | undefined) ?? '');
             return (
-            <Button
-              type="button"
-              variant={active ? 'secondary' : 'outline'}
-              size="sm"
-              key={preset.label}
-              aria-pressed={active}
-              onClick={() => set(rangeOf(preset))}
-            >
-              {preset.label}
-            </Button>
+              <Button
+                type="button"
+                variant={active ? 'secondary' : 'outline'}
+                size="sm"
+                key={preset.label}
+                aria-pressed={active}
+                onClick={() => set(rangeOf(preset))}
+              >
+                {preset.label}
+              </Button>
             );
           })}
         </div>
@@ -329,15 +427,25 @@ function Keywords({
   const { model, copy } = useListContext(explicitModel);
   const meta = givenChoices === undefined ? listFieldMeta(model, 'keywords', name) : undefined;
   const choices = givenChoices ?? labelled(meta!.targets, choiceLabels, name);
-  const { input, items, submit, remove } = useListKeywordBinding(model, name, choices.map((choice) => choice.value));
+  const { input, items, submit, remove } = useListKeywordBinding(
+    model,
+    name,
+    choices.map((choice) => choice.value)
+  );
   /** 선언의 구분자(없으면 기본 복사본의 `;`)로 여러 칩을 한 번에 추가한다. 검색 제출의 미추가 입력도 같은 구분자를 쓴다. */
   const separator = meta === undefined ? ';' : meta.split;
-  const add = () => input.addMany(separator === undefined ? [input.text] : input.text.split(separator));
+  const add = () =>
+    input.addMany(separator === undefined ? [input.text] : input.text.split(separator));
   return (
     <fieldset className="grid content-start gap-2">
       <legend className={legendClass}>{label}</legend>
       <div className="flex flex-wrap items-center gap-2">
-        <OptionSelect aria-label={targetLabel ?? `${label} ${copy.keywordTarget}`} value={input.choice} onValueChange={(next) => input.setChoice(next)} options={choices} />
+        <OptionSelect
+          aria-label={targetLabel ?? `${label} ${copy.keywordTarget}`}
+          value={input.choice}
+          onValueChange={(next) => input.setChoice(next)}
+          options={choices}
+        />
         <Input
           aria-label={inputLabel ?? label}
           className="w-auto min-w-48 flex-1"
@@ -357,21 +465,27 @@ function Keywords({
       {items.length > 0 && (
         <ul className="flex flex-wrap gap-1.5">
           {items.map((item, index) => {
-            const choiceLabel = choices.find((choice) => choice.value === item.field)?.label ?? item.field;
+            const choiceLabel =
+              choices.find((choice) => choice.value === item.field)?.label ?? item.field;
             return (
-            <li key={`${item.field}:${item.value}`} className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary py-0.5 pr-0.5 pl-2.5 text-xs text-secondary-foreground">
-              {choiceLabel}: {item.value}
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-xs"
-                className="rounded-full"
-                aria-label={removeLabel?.(item, choiceLabel) ?? `${item.value} ${copy.keywordRemove}`}
-                onClick={() => remove(index)}
+              <li
+                key={`${item.field}:${item.value}`}
+                className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary py-0.5 pr-0.5 pl-2.5 text-xs text-secondary-foreground"
               >
-                <XIcon aria-hidden="true" />
-              </Button>
-            </li>
+                {choiceLabel}: {item.value}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  className="rounded-full"
+                  aria-label={
+                    removeLabel?.(item, choiceLabel) ?? `${item.value} ${copy.keywordRemove}`
+                  }
+                  onClick={() => remove(index)}
+                >
+                  <XIcon aria-hidden="true" />
+                </Button>
+              </li>
             );
           })}
         </ul>

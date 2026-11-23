@@ -14,7 +14,7 @@ import {
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { normalizeChoiceValue, type ChoiceNode, type ChoiceValue } from '../choice-binding';
-import { isRequestFailure, type FieldError } from '../failure';
+import { isRequestFailure, type FieldError, type RequestFailure } from '../failure';
 import { useFullPageProgress } from '../full-page-progress';
 import type { CompletionStep } from '../completion';
 import { fieldIsHidden, projectConditionalFields, useConditionalFields, type ConditionalField } from './conditional';
@@ -62,6 +62,13 @@ export interface SaveFormOptions<
    * 돌려준 경로는 제출 때 기준이다. 그 뒤 키트 줄 작업으로 줄이 옮겨졌으면 키트가 지금 위치로 옮긴다.
    */
   readonly fieldError?: (error: FieldError) => { readonly field: DeepKeys<TInput>; readonly message: string } | undefined;
+  /**
+   * 서버가 칸 정보 없이 거절한 저장 실패를 칸과 표시 문구로 바꾼다(예: 결과 코드·세부 코드가 "이 아이디는 이미 있음").
+   * save가 던진 실패 가운데 반영되지 않은 것이 확정되고(resultUnknown 아님) 서버 필드 오류가 없는 것에만 부른다.
+   * 돌려준 칸에는 FormRejection과 같은 규칙으로 붙인다. 붙지 못하면(칸이 없거나 숨었거나 제출 뒤 값이 바뀜) 원래 실패를 폼 수준에 남긴다.
+   * undefined면 원래 실패 그대로다. save 안에서 같은 해석을 try/catch로 다시 하지 않는다.
+   */
+  readonly rejectedField?: (failure: RequestFailure) => { readonly field: DeepKeys<TInput>; readonly message: string } | undefined;
   /** 오류 필드가 접힌 영역에 있으면 focus 전에 펼친다. */
   readonly reveal?: (fields: readonly string[]) => void;
   /**
@@ -458,6 +465,13 @@ export function useSaveForm<
     return { attached, unattached, missed };
   }
 
+  /** 칸 정보 없는 서버 거절을 rejectedField로 칸 거절로 바꾼다. 반영 미확정·서버 필드 오류가 있는 실패는 바꾸지 않는다. */
+  function rejectionOfFailure(error: unknown): FormRejection | undefined {
+    if (!isRequestFailure(error) || error.resultUnknown || error.fieldErrors.length > 0) return undefined;
+    const target = latest.current.rejectedField?.(error);
+    return target === undefined ? undefined : new FormRejection([target]);
+  }
+
   /** 직접 값 변경도 두 저장 전에 같은 참조 무결성 검사로 거절한다. */
   function rejectReferences(submitted: TInput, mark: number): boolean {
     const issues = referenceIssues(submitted, latest.current.references ?? []);
@@ -498,8 +512,16 @@ export function useSaveForm<
       if (!current()) return;
       setStage({ kind: 'idle' });
       if (isRequestFailure(error) && error.kind === 'cancelled') return;
-      const { attached, unattached, missed } = attachFieldErrors(error, submitted, mark);
       const clearWhenEdited = latest.current.clearFailureOnEdit?.(error) === true ? { submitted } : undefined;
+      const fieldRejection = rejectionOfFailure(error);
+      if (fieldRejection !== undefined) {
+        const { attached, missed } = attachFieldErrors(fieldRejection, submitted, mark);
+        // 칸에 붙지 못한 거절은 해석 전 실패를 그대로 폼 수준에 남긴다(문구를 잃지 않는다).
+        setRejection({ failure: missed ? error : fieldRejection, unattached: [], missed: false, clearWhenEdited });
+        focusFirst(attached);
+        return;
+      }
+      const { attached, unattached, missed } = attachFieldErrors(error, submitted, mark);
       setRejection({ failure: error, unattached, missed, clearWhenEdited });
       focusFirst(attached);
       return;

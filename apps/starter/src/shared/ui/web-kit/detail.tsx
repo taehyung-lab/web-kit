@@ -21,10 +21,16 @@ export type DetailMessages = typeof defaultMessages;
 /** 실패가 보이는 자리. load는 내용 없는 실패, missing은 없음·이 조회의 거부, refresh는 내용을 보이는 중 재조회 실패다. */
 export type DetailFailurePlace = 'load' | 'missing' | 'refresh';
 /** 실패 문구. undefined면 키트 기본 문구, null이면 그 자리에 아무것도 그리지 않는다(앱 경계가 이미 알린 401·403 등). */
-export type RenderDetailFailure = (failure: unknown, place: DetailFailurePlace) => ReactNode | null | undefined;
+export type RenderDetailFailure = (
+  failure: unknown,
+  place: DetailFailurePlace
+) => ReactNode | null | undefined;
 
 /** 앱이 DetailDefaults로 준 기본값. 없으면 키트 기본 문구만 쓴다. */
-type Defaults = { readonly messages: Partial<DetailMessages>; readonly renderFailure?: RenderDetailFailure };
+type Defaults = {
+  readonly messages: Partial<DetailMessages>;
+  readonly renderFailure?: RenderDetailFailure;
+};
 const DefaultsContext = createContext<Defaults>({ messages: {} });
 /** Detail 안의 문구. Detail 밖에 둔 Field·History는 null을 보고 앱 기본값을 직접 읽는다. */
 const MessagesContext = createContext<DetailMessages | null>(null);
@@ -32,11 +38,16 @@ const MessagesContext = createContext<DetailMessages | null>(null);
 /** 값이 undefined인 키를 버린다. 「이 문구는 따로 정하지 않음」이 아래 단계의 문구를 지우지 않게 한다. */
 function definedOnly<T extends object>(value: T | undefined): Partial<T> {
   if (value === undefined) return {};
-  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as Partial<T>;
+  return Object.fromEntries(
+    Object.entries(value).filter(([, item]) => item !== undefined)
+  ) as Partial<T>;
 }
 
 /** 가까운 쪽 실패 문구를 먼저 묻고, undefined(정하지 않음)일 때만 다음 단계에 묻는다. null·''은 그 단계의 답으로 그대로 쓴다. */
-function chainFailure(first: RenderDetailFailure | undefined, next: RenderDetailFailure | undefined): RenderDetailFailure | undefined {
+function chainFailure(
+  first: RenderDetailFailure | undefined,
+  next: RenderDetailFailure | undefined
+): RenderDetailFailure | undefined {
   if (first === undefined) return next;
   if (next === undefined) return first;
   return (failure, place) => {
@@ -100,19 +111,26 @@ function DetailRoot<T>({
   const id = useId();
   const copy = useDetailCopy(messages);
   const defaults = useContext(DefaultsContext);
-  const renderFailure: RenderDetailFailure = chainFailure(localFailure, defaults.renderFailure) ?? (() => undefined);
+  const renderFailure: RenderDetailFailure =
+    chainFailure(localFailure, defaults.renderFailure) ?? (() => undefined);
   let body: ReactNode;
   if (state.kind === 'missing') {
     const text = renderFailure(state.failure, 'missing');
     body =
       text === null ? null : (
-        <div role="status" className="grid justify-items-center gap-3 py-8 text-sm text-muted-foreground">
+        <div
+          role="status"
+          className="grid justify-items-center gap-3 py-8 text-sm text-muted-foreground"
+        >
           {missing ?? <p>{text ?? copy.missing}</p>}
         </div>
       );
   } else {
     const loadText = state.kind === 'failed' ? renderFailure(state.failure, 'load') : undefined;
-    const refreshText = state.kind === 'ready' && state.refresh.failure !== undefined ? renderFailure(state.refresh.failure, 'refresh') : null;
+    const refreshText =
+      state.kind === 'ready' && state.refresh.failure !== undefined
+        ? renderFailure(state.refresh.failure, 'refresh')
+        : null;
     body =
       loadText === null ? null : (
         <RetryRegion
@@ -127,9 +145,17 @@ function DetailRoot<T>({
               {copy.loading}
             </p>
           ) : state.kind === 'ready' ? (
-            <section id={id} tabIndex={-1} aria-busy={state.refresh.refreshing} className="grid gap-4">
+            <section
+              id={id}
+              tabIndex={-1}
+              aria-busy={state.refresh.refreshing}
+              className="grid gap-4"
+            >
               {state.refresh.failure !== undefined && refreshText !== null ? (
-                <div role="alert" className="flex flex-wrap items-center gap-2 text-sm text-destructive">
+                <div
+                  role="alert"
+                  className="flex flex-wrap items-center gap-2 text-sm text-destructive"
+                >
                   {refreshText ?? copy.refreshFailed}
                   <Button type="button" variant="outline" size="sm" onClick={state.refresh.retry}>
                     {copy.retry}
@@ -146,18 +172,36 @@ function DetailRoot<T>({
 }
 
 /** 라벨·값 항목들의 묶음(dl). */
-function Fields({ children, className }: { readonly children: ReactNode; readonly className?: string }) {
-  return <dl className={cn('grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-x-4 gap-y-1', className)}>{children}</dl>;
+function Fields({
+  children,
+  className,
+}: {
+  readonly children: ReactNode;
+  readonly className?: string;
+}) {
+  return (
+    <dl
+      className={cn(
+        'grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-x-4 gap-y-1',
+        className
+      )}
+    >
+      {children}
+    </dl>
+  );
 }
 
 /** 라벨·값 한 칸. null·undefined·''만 빈 값 표시('-')이고 0은 그대로 보인다. 값의 의미·마스킹·포맷은 프로젝트가 정한다. */
 function Field({ label, children }: { readonly label: ReactNode; readonly children?: ReactNode }) {
   const copy = useFieldCopy();
-  const empty = children === null || children === undefined || children === '' || children === false;
+  const empty =
+    children === null || children === undefined || children === '' || children === false;
   return (
     <div className="min-w-0 py-2">
       <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="mt-1 text-sm [overflow-wrap:anywhere] whitespace-pre-line">{empty ? copy.empty : children}</dd>
+      <dd className="mt-1 text-sm [overflow-wrap:anywhere] whitespace-pre-line">
+        {empty ? copy.empty : children}
+      </dd>
     </div>
   );
 }
@@ -179,13 +223,18 @@ function History({
   headerClassName,
 }: {
   readonly entries: readonly RecordHistoryEntry[];
-  readonly labels: { readonly at: ReactNode; readonly changes: ReactNode; readonly actor: ReactNode };
+  readonly labels: {
+    readonly at: ReactNode;
+    readonly changes: ReactNode;
+    readonly actor: ReactNode;
+  };
   readonly empty?: ReactNode;
   /** 머리글(thead) 표면. 목록 표의 headerClassName과 같은 디자인을 맞출 때 쓴다. */
   readonly headerClassName?: string;
 }) {
   const copy = useFieldCopy();
-  if (entries.length === 0) return <p className="text-sm text-muted-foreground">{empty ?? copy.historyEmpty}</p>;
+  if (entries.length === 0)
+    return <p className="text-sm text-muted-foreground">{empty ?? copy.historyEmpty}</p>;
   return (
     <Table>
       <TableHeader className={headerClassName}>

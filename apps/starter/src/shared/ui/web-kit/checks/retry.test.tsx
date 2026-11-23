@@ -3,4 +3,7 @@
 import { RetryRegion } from '../retry';
 import { checkRetryConformance } from '@boosterlab/web-kit/testing/unit/primitives';
 import installation from '../../../../../registry-installation.json';
-checkRetryConformance({ RetryRegion }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });
+checkRetryConformance(
+  { RetryRegion },
+  { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit }
+);

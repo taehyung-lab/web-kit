@@ -17,6 +17,7 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
 - 쓰기 뒤 다시 읽을 조회는 mutation `meta: { invalidates: [key, …] }`로 선언한다. 성공했을 때와 `resultUnknown`일 때 실행된다.
 - 비밀번호처럼 보관하면 안 되는 입력값이 든 쓰기는 `meta: { sensitive: true }`로 선언한다. 성공이든 실패든 끝나면 요청 보관소의 기록이 지워진다(화면이 쓰기를 지켜보는 중이어도). 오류 전달과 다시 시도는 그대로다.
 - 문구는 `kind`와 `messageKey`로 고른다. 서버 resultMessage는 실패에 담기지 않는다.
+- 같은 결과 코드 안에서 이유를 나누는 서버 값은 `detailCode`(프로젝트 세부 코드)로 받는다. 키트는 그 값을 운반만 하고 뜻·문구·종류를 정하지 않는다. 같은 값이라도 프로젝트마다 뜻이 다를 수 있고, 프로젝트가 선언하지 않은 값일 수도 있다. 실패가 무엇인지는 `code`(결과 코드)와 `detailCode`로 묻고, 화면 문구 키(`messageKey`)를 비교해 실패를 알아보지 않는다. 세부 코드의 뜻과 화면 처리는 그 코드를 쓰는 업무가 선언하고, 선언하지 않은 값은 결과 코드의 기본 처리를 따른다.
 
 ## 키트 보장
 
@@ -112,7 +113,7 @@ E1(401이 업무 실행 전인가), E2(일반·재발급 요청의 status·resul
 
 `createHttp`의 `response`는 필수다. `response: { read(body, status, requestId) }`로 서버 형식·성공 판정·코드 의미를 프로젝트가 해석한다. 결과는 `{ ok: true, data }` 또는 `{ ok: false, failure: RequestFailure }`다. HTTP 거절은 성공으로 바꿀 수 없다. 네트워크·취소·타임아웃과 세션 회복은 키트가 맡는다. 같은 코드의 메시지 키도 프로젝트마다 다를 수 있으며 번역 문구는 키트에 넣지 않는다.
 
-Spring 봉투 서버는 `/http`의 `springEnvelope(results)`를 `response`에 전달한다. 이 선택 부품은 2xx에서 `header.resultCode` 200만 성공으로 보고 `data`를 풀며, 봉투가 아니면 contract로 거절한다. 다른 resultCode는 business로 분류하고, 2xx 밖 응답도 `(status, code)` 결과 코드 표의 종류·messageKey·endsSession을 적용한다. 표에 없는 실패는 HTTP 상태로 분류한다. `readEnvelope`·`toRequestFailure`는 이 부품의 낮은 수준 해석 도우미다.
+Spring 봉투 서버는 `/http`의 `springEnvelope(results)`를 `response`에 전달한다. 이 선택 부품은 2xx에서 `header.resultCode` 200만 성공으로 보고 `data`를 풀며, 봉투가 아니면 contract로 거절한다. 다른 resultCode는 business로 분류하고, 2xx 밖 응답도 `(status, code)` 결과 코드 표의 종류·messageKey·endsSession을 적용한다. 표에 없는 실패는 HTTP 상태로 분류한다. 둘째 인자 `{ detailCode }`로 응답 본문에서 프로젝트 세부 코드를 읽는 규칙(`(body) => string | undefined`)을 주면 실패의 `detailCode`에 싣는다. 세부 코드는 결과 코드 표의 종류·messageKey를 바꾸지 않으며, 세부 코드로 문구를 고르려고 `read` 결과의 messageKey를 덮어쓰지 않는다. `readEnvelope`·`toRequestFailure`는 이 부품의 낮은 수준 해석 도우미이고 같은 선택 입력을 받는다.
 
 요청은 실제 데이터 타입을 넘기는 `http.requestData<T>` 또는 메타도 받는 `requestWithResponse<T>`를 쓴다. 생성된 Spring 봉투 타입을 받는 orval mutator는 같은 `/http` 입구의 `SpringEnvelopeData<T>`로 타입을 고른 뒤 `http.requestData<SpringEnvelopeData<T>>(config, options)`로 연결한다. 일반 데이터의 `data` 속성은 `requestData`가 그대로 보존한다.
 

@@ -9,33 +9,112 @@ import { Label } from '@/components/ui/label';
 export interface AuthCodeFormProps {
   readonly model: ReturnType<typeof useAuthChallenge>;
   readonly codeLength: number;
-  readonly labels: { readonly code: string; readonly confirm: string; readonly resend: string;
-    readonly expired: string; readonly pending: string; readonly verifyFailure: string; readonly resendFailure: string; readonly invalidCode: string;
-    readonly remaining: (seconds: number) => string; readonly resendWait: (seconds: number) => string };
+  readonly validateCode?: (code: string) => boolean;
+  readonly inputMode?: 'numeric' | 'text';
+  /** null이면 최대 글자 수를 제한하지 않는다. */
+  readonly maxLength?: number | null;
+  readonly labels: {
+    readonly code: string;
+    readonly confirm: string;
+    readonly resend: string;
+    readonly expired: string;
+    readonly pending: string;
+    readonly verifyFailure: string;
+    readonly resendFailure: string;
+    readonly invalidCode: string;
+    readonly remaining: (seconds: number) => string;
+    readonly resendWait: (seconds: number) => string;
+  };
 }
 
 /** 기한 판정과 제출은 패키지 모델에 연결하고, 입력 모양·문구는 복사본이 맡는다. */
-export function AuthCodeForm({ model, codeLength, labels }: AuthCodeFormProps) {
+export function AuthCodeForm({
+  model,
+  codeLength,
+  labels,
+  validateCode = (value) => isAuthCode(value, codeLength),
+  inputMode = 'numeric',
+  maxLength = codeLength,
+}: AuthCodeFormProps) {
   const [code, setCode] = useState('');
   const [invalid, setInvalid] = useState(false);
   const errorId = useId();
-  return <form className="grid gap-3" onSubmit={(event) => { event.preventDefault();
-    if (!model.canSubmit) return;
-    const valid = model.awaitingCompletion || isAuthCode(code, codeLength);
-    setInvalid(!valid);
-    if (valid) void model.submit(code); }}>
-    <Label className="grid gap-2">{labels.code}<Input aria-label={labels.code} aria-invalid={invalid} aria-describedby={invalid ? errorId : undefined} inputMode="numeric" autoComplete="one-time-code"
-      maxLength={codeLength} value={code} onChange={(event) => setCode(event.target.value)} /></Label>
-    {invalid && <p id={errorId} role="alert" className="text-sm text-destructive">{labels.invalidCode}</p>}
-    {model.remainingSeconds !== undefined && <p role="timer" className="text-sm text-muted-foreground">{labels.remaining(model.remainingSeconds)}</p>}
-    {(model.expired || (model.codeExpired && !model.awaitingCompletion)) && <p role="alert" className="text-sm text-destructive">{labels.expired}</p>}
-    {model.verifyFailure !== undefined && <p role="alert" className="text-sm text-destructive">{labels.verifyFailure}</p>}
-    {model.pending !== null && <p role="status" className="text-sm text-muted-foreground">{labels.pending}</p>}
-    <div className="flex flex-wrap items-center gap-2">
-      <Button type="submit" disabled={!model.canSubmit}>{labels.confirm}</Button>
-      {model.resendable && <Button type="button" variant="outline" disabled={!model.canResend} onClick={() => { void model.resend(); }}>{labels.resend}</Button>}
-    </div>
-    {model.resendFailure !== undefined && <p role="alert" className="text-sm text-destructive">{labels.resendFailure}</p>}
-    {model.resendRemainingSeconds > 0 && <p aria-label="resend-wait" className="text-sm text-muted-foreground">{labels.resendWait(model.resendRemainingSeconds)}</p>}
-  </form>;
+  return (
+    <form
+      className="grid gap-3"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!model.canSubmit) return;
+        const valid = model.awaitingCompletion || validateCode(code);
+        setInvalid(!valid);
+        if (valid) void model.submit(code);
+      }}
+    >
+      <Label className="grid gap-2">
+        {labels.code}
+        <Input
+          aria-label={labels.code}
+          aria-invalid={invalid}
+          aria-describedby={invalid ? errorId : undefined}
+          inputMode={inputMode}
+          autoComplete="one-time-code"
+          maxLength={maxLength ?? undefined}
+          value={code}
+          onChange={(event) => setCode(event.target.value)}
+        />
+      </Label>
+      {invalid && (
+        <p id={errorId} role="alert" className="text-sm text-destructive">
+          {labels.invalidCode}
+        </p>
+      )}
+      {model.remainingSeconds !== undefined && (
+        <p role="timer" className="text-sm text-muted-foreground">
+          {labels.remaining(model.remainingSeconds)}
+        </p>
+      )}
+      {(model.expired || (model.codeExpired && !model.awaitingCompletion)) && (
+        <p role="alert" className="text-sm text-destructive">
+          {labels.expired}
+        </p>
+      )}
+      {model.verifyFailure !== undefined && (
+        <p role="alert" className="text-sm text-destructive">
+          {labels.verifyFailure}
+        </p>
+      )}
+      {model.pending !== null && (
+        <p role="status" className="text-sm text-muted-foreground">
+          {labels.pending}
+        </p>
+      )}
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="submit" disabled={!model.canSubmit}>
+          {labels.confirm}
+        </Button>
+        {model.resendable && (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!model.canResend}
+            onClick={() => {
+              void model.resend();
+            }}
+          >
+            {labels.resend}
+          </Button>
+        )}
+      </div>
+      {model.resendFailure !== undefined && (
+        <p role="alert" className="text-sm text-destructive">
+          {labels.resendFailure}
+        </p>
+      )}
+      {model.resendRemainingSeconds > 0 && (
+        <p aria-label="resend-wait" className="text-sm text-muted-foreground">
+          {labels.resendWait(model.resendRemainingSeconds)}
+        </p>
+      )}
+    </form>
+  );
 }

@@ -8,16 +8,50 @@ import type { FormHTMLAttributes, ReactNode } from 'react';
 import { cn } from 'cn';
 import { ConfirmDialog } from '../dialog';
 import {
-  FormContext, errorClass, useFormDefaults,
-  type AnyEditor, type FormConfirmContent, type FormContextValue, type FormSavedContent, type FormMessages, type FormatFieldError, type RenderFormFailure,
+  FormContext,
+  errorClass,
+  useFormDefaults,
+  type AnyEditor,
+  type FormConfirmContent,
+  type FormContextValue,
+  type FormSavedContent,
+  type FormMessages,
+  type FormatFieldError,
+  type RenderFormFailure,
 } from './form-context';
-import { Field, Text, TextArea, Select, Choice, Checkbox, FileField, ArrayField, type FormControl } from './form-fields';
+import {
+  Field,
+  Text,
+  TextArea,
+  Select,
+  Choice,
+  Checkbox,
+  FileField,
+  ArrayField,
+  type FormControl,
+} from './form-fields';
 import { Section } from './form-sections';
 import { Failure, Submit, Cancel, Confirm, Saved, FormDialog } from './form-actions';
 
 // 공개 이름은 예전 그대로 이 입구에서 내보낸다.
-export { defaultFormGuardMessages, FormGuard, useLeave, type FormGuardReasonMessages, type FormGuardMessages } from './form-actions';
-export { defaultFormMessages, FormDefaults, type FormMessages, type FormFailurePlace, type RenderFormFailure, type FormatFieldError, type FormDefaultsValue, type FormConfirmContent, type FormSavedContent } from './form-context';
+export {
+  defaultFormGuardMessages,
+  FormGuard,
+  useLeave,
+  type FormGuardReasonMessages,
+  type FormGuardMessages,
+} from './form-actions';
+export {
+  defaultFormMessages,
+  FormDefaults,
+  type FormMessages,
+  type FormFailurePlace,
+  type RenderFormFailure,
+  type FormatFieldError,
+  type FormDefaultsValue,
+  type FormConfirmContent,
+  type FormSavedContent,
+} from './form-context';
 export type { FormFieldProps, FormControl, OptionsStatus } from './form-fields';
 export { FormSection } from './form-sections';
 export { useFormEditor } from '@boosterlab/web-kit/form';
@@ -30,7 +64,9 @@ type StepsOf<E extends AnyEditor> = NonNullable<E['__steps']>;
 type FormStepProps<E extends AnyEditor> = (true extends StepsOf<E>['confirm']
   ? { readonly confirm: FormConfirmContent<E['baseline']> }
   : { readonly confirm?: never }) &
-  (true extends StepsOf<E>['acknowledge'] ? { readonly saved: FormSavedContent } : { readonly saved?: never });
+  (true extends StepsOf<E>['acknowledge']
+    ? { readonly saved: FormSavedContent }
+    : { readonly saved?: never });
 
 /** `<Form>`의 props. editor의 확인 단계에 따라 confirm·saved가 필수·금지로 갈린다. */
 export type FormProps<E extends AnyEditor> = {
@@ -52,42 +88,54 @@ export type FormProps<E extends AnyEditor> = {
  * protect={false}는 로그인처럼 이탈을 묻지 않는 제품 예외에만 쓴다.
  */
 function FormRoot<E extends AnyEditor>(props: FormProps<E>) {
-  const { editor, protect = true, messages, renderFailure, formatError, children, confirm, saved, ...formProps } = props as FormProps<AnyEditor> & {
+  const {
+    editor,
+    protect = true,
+    messages,
+    renderFailure,
+    formatError,
+    children,
+    confirm,
+    saved,
+    ...formProps
+  } = props as FormProps<AnyEditor> & {
     readonly confirm?: FormConfirmContent<unknown>;
     readonly saved?: FormSavedContent;
   };
   const defaults = useFormDefaults();
-  const { submitOrigin, formProps: binding, formatError: resolvedFormatError } = useFormRootBinding(editor, protect, formatError ?? defaults.formatError);
+  const {
+    submitOrigin,
+    formProps: binding,
+    formatError: resolvedFormatError,
+  } = useFormRootBinding(editor, protect, formatError ?? defaults.formatError);
   const value: FormContextValue = {
     copy: { ...defaults.messages, ...messages },
     renderFailure: renderFailure ?? defaults.renderFailure ?? (() => undefined),
     formatError: resolvedFormatError,
   };
   return (
-    <FormBindingProvider editor={editor} submitOrigin={submitOrigin}><FormContext.Provider value={value}>
-      <form
-        {...formProps}
-        className={cn('grid gap-4', formProps.className)}
-        {...binding}
-      >
-        {children}
-      </form>
-      <ConfirmDialog
-        open={editor.referenceChange !== undefined}
-        title={value.copy.referenceTitle(editor.referenceChange?.count ?? 0)}
-        confirmLabel={value.copy.referenceConfirm}
-        cancelLabel={value.copy.cancel}
-        onConfirm={() => editor.referenceChange?.confirm()}
-        onCancel={() => editor.referenceChange?.cancel()}
-      />
-      {editor.referenceFailure !== undefined && (
-        <p role="alert" className={errorClass}>
-          {value.formatError([editor.referenceFailure]) ?? editor.referenceFailure}
-        </p>
-      )}
-      <Confirm {...confirm} />
-      <Saved {...saved} />
-    </FormContext.Provider></FormBindingProvider>
+    <FormBindingProvider editor={editor} submitOrigin={submitOrigin}>
+      <FormContext.Provider value={value}>
+        <form {...formProps} className={cn('grid gap-4', formProps.className)} {...binding}>
+          {children}
+        </form>
+        <ConfirmDialog
+          open={editor.referenceChange !== undefined}
+          title={value.copy.referenceTitle(editor.referenceChange?.count ?? 0)}
+          confirmLabel={value.copy.referenceConfirm}
+          cancelLabel={value.copy.cancel}
+          onConfirm={() => editor.referenceChange?.confirm()}
+          onCancel={() => editor.referenceChange?.cancel()}
+        />
+        {editor.referenceFailure !== undefined && (
+          <p role="alert" className={errorClass}>
+            {value.formatError([editor.referenceFailure]) ?? editor.referenceFailure}
+          </p>
+        )}
+        <Confirm {...confirm} />
+        <Saved {...saved} />
+      </FormContext.Provider>
+    </FormBindingProvider>
   );
 }
 
@@ -124,7 +172,7 @@ export type TypedForm<T> = typeof FormRoot & {
   readonly Field: <K extends Keys<T>>(
     props: Named<Omit<PropsOf<typeof Field>, 'children'>, K> & {
       readonly children: (control: FormControl<DeepValue<T, K>>, labelId: string) => ReactNode;
-    },
+    }
   ) => ReactNode;
   readonly Text: (props: Named<PropsOf<typeof Text>, KeysOf<T, string>>) => ReactNode;
   readonly TextArea: (props: Named<PropsOf<typeof TextArea>, KeysOf<T, string>>) => ReactNode;
@@ -133,7 +181,7 @@ export type TypedForm<T> = typeof FormRoot & {
       (
         | { readonly name: KeysOf<T, string | undefined>; readonly multiple?: false }
         | { readonly name: KeysOf<T, readonly string[]>; readonly multiple: true }
-      ),
+      )
   ) => ReactNode;
   readonly Select: (props: Named<PropsOf<typeof Select>, KeysOf<T, string>>) => ReactNode;
   readonly Checkbox: (props: Named<PropsOf<typeof Checkbox>, KeysOf<T, boolean>>) => ReactNode;
@@ -142,7 +190,9 @@ export type TypedForm<T> = typeof FormRoot & {
     readonly name: K;
     readonly minItems?: number;
     readonly maxItems?: number;
-    readonly children: (rows: FormArrayRows<DeepValue<T, K> extends readonly (infer Item)[] ? Item : never>) => ReactNode;
+    readonly children: (
+      rows: FormArrayRows<DeepValue<T, K> extends readonly (infer Item)[] ? Item : never>
+    ) => ReactNode;
   }) => ReactNode;
   readonly Section: typeof Section;
   readonly Failure: typeof Failure;

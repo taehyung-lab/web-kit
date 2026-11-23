@@ -18,7 +18,11 @@ export function Spinner({ large = false }: { readonly large?: boolean }) {
 /** 진행 중 표시: 버튼 바로 뒤에 둔다. label은 화면 낭독기에만 읽히는 문구다. */
 export function Pending({ label }: { readonly label: string }) {
   return (
-    <span role="status" data-slot="pending" className="inline-flex items-center text-muted-foreground">
+    <span
+      role="status"
+      data-slot="pending"
+      className="inline-flex items-center text-muted-foreground"
+    >
       <Spinner />
       <span className="sr-only">{label}</span>
     </span>

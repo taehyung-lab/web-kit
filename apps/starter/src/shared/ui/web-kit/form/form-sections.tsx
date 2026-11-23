@@ -44,8 +44,13 @@ export function Section({
     );
   }
   return (
-    <fieldset data-slot="form-section" className={cn('grid min-w-0 gap-4 rounded-xl border border-border p-4', className)}>
-      {title === undefined ? null : <legend className={cn('px-1 text-sm font-medium', headingClassName)}>{title}</legend>}
+    <fieldset
+      data-slot="form-section"
+      className={cn('grid min-w-0 gap-4 rounded-xl border border-border p-4', className)}
+    >
+      {title === undefined ? null : (
+        <legend className={cn('px-1 text-sm font-medium', headingClassName)}>{title}</legend>
+      )}
       {children}
     </fieldset>
   );
@@ -81,7 +86,10 @@ export function FormSection({
   const section = useFormSection(form, fields);
   const contentId = useId();
   return (
-    <section data-slot="form-section" className={cn('min-w-0 rounded-xl border border-border', className)}>
+    <section
+      data-slot="form-section"
+      className={cn('min-w-0 rounded-xl border border-border', className)}
+    >
       <h2 className={cn('text-base font-medium', headingClassName)}>
         <button
           type="button"
@@ -92,7 +100,9 @@ export function FormSection({
         >
           {title}
           {section.errorCount > 0 ? ' ' : null}
-          {section.errorCount > 0 && errorMarker !== undefined ? errorMarker(section.errorCount) : null}
+          {section.errorCount > 0 && errorMarker !== undefined
+            ? errorMarker(section.errorCount)
+            : null}
           {section.errorCount > 0 && errorMarker === undefined ? (
             <span className="rounded-full bg-destructive px-2 text-xs text-white">
               <span aria-hidden="true">!</span>

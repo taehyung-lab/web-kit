@@ -2,7 +2,13 @@
 // 인증 기한·즉시 단일 요청·교체 뒤 응답 격리·세션 공유 시계를 검사한다.
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { createAuthChallengeStore, getAuthTiming, isAuthCode, remainingAuthSeconds, useAuthChallenge } from '../src/auth';
+import {
+  createAuthChallengeStore,
+  getAuthTiming,
+  isAuthCode,
+  remainingAuthSeconds,
+  useAuthChallenge,
+} from '../src/auth';
 import { createIdleTimer, createServerClock } from '../src/session/session-idle';
 import { createSession } from '../src/session/session';
 
@@ -10,164 +16,383 @@ import { createSession } from '../src/session/session';
 function deferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (error: unknown) => void;
-  const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no; });
+  const promise = new Promise<T>((yes, no) => {
+    resolve = yes;
+    reject = no;
+  });
   return { promise, resolve, reject };
 }
-beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(100000); localStorage.clear(); sessionStorage.clear(); });
-afterEach(() => { cleanup(); vi.useRealTimers(); });
+beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(100000);
+  localStorage.clear();
+  sessionStorage.clear();
+});
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 it('기한·초 경계·재전송 대기와 숫자 길이를 계산한다', () => {
   expect(remainingAuthSeconds(undefined, 0)).toBeUndefined();
   expect(remainingAuthSeconds(1001, 1)).toBe(1);
   expect(remainingAuthSeconds(1001, 1001)).toBe(0);
-  expect(getAuthTiming({ codeExpiresAt: 1, resendAvailableAt: 2 }, 1)).toMatchObject({ canSubmit: false, canResend: false, expired: false });
-  expect(getAuthTiming({ expiresAt: 1 }, 1)).toMatchObject({ canSubmit: false, canResend: false, expired: true });
+  expect(getAuthTiming({ codeExpiresAt: 1, resendAvailableAt: 2 }, 1)).toMatchObject({
+    canSubmit: false,
+    canResend: false,
+    expired: false,
+  });
+  expect(getAuthTiming({ expiresAt: 1 }, 1)).toMatchObject({
+    canSubmit: false,
+    canResend: false,
+    expired: true,
+  });
   expect(getAuthTiming({}, 1)).toMatchObject({ canSubmit: true, canResend: true });
   expect(isAuthCode('001234', 6)).toBe(true);
   expect(isAuthCode('abcdef', 6)).toBe(false);
   expect(isAuthCode('1234567', 6)).toBe(false);
 });
 it('같은 순간 중복 실행을 차단하고 만료 뒤 직접 호출도 차단한다', async () => {
-  const response = deferred<string>(); const verify = vi.fn(() => response.promise); const onVerified = vi.fn();
+  const response = deferred<string>();
+  const verify = vi.fn(() => response.promise);
+  const onVerified = vi.fn();
   const clock = createServerClock({ key: 'clock' });
-  const { result } = renderHook(() => useAuthChallenge({ scope: 'login', clock, codeLength: 6, codeExpiresAt: 105000, verify, onVerified }));
+  const { result } = renderHook(() =>
+    useAuthChallenge({
+      scope: 'login',
+      clock,
+      codeLength: 6,
+      codeExpiresAt: 105000,
+      verify,
+      onVerified,
+    })
+  );
   let pending!: Promise<void>;
-  act(() => { pending = result.current.submit('123456'); void result.current.submit('654321'); });
+  act(() => {
+    pending = result.current.submit('123456');
+    void result.current.submit('654321');
+  });
   expect(verify).toHaveBeenCalledTimes(1);
-  await act(async () => { response.resolve('ok'); await pending; });
-  expect(onVerified).toHaveBeenCalledWith('ok', expect.objectContaining({ isCurrent: expect.any(Function) }));
-  await act(async () => { await vi.advanceTimersByTimeAsync(5000); await result.current.submit('123456'); });
+  await act(async () => {
+    response.resolve('ok');
+    await pending;
+  });
+  expect(onVerified).toHaveBeenCalledWith(
+    'ok',
+    expect.objectContaining({ isCurrent: expect.any(Function) })
+  );
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(5000);
+    await result.current.submit('123456');
+  });
   expect(verify).toHaveBeenCalledTimes(1);
   expect(result.current.canSubmit).toBe(false);
 });
 it('전환 뒤 옛 성공·실패가 새 진행을 끄거나 결과를 적용하지 않는다', async () => {
-  const first = deferred<string>(); const second = deferred<string>(); const onVerified = vi.fn();
+  const first = deferred<string>();
+  const second = deferred<string>();
+  const onVerified = vi.fn();
   const verify = vi.fn().mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
   const clock = createServerClock({ key: 'clock' });
-  const { result, rerender } = renderHook(({ scope }) => useAuthChallenge({ scope, clock, codeLength: 6, verify, onVerified }), { initialProps: { scope: 'email' } });
-  let a!: Promise<void>; let b!: Promise<void>;
-  act(() => { a = result.current.submit('123456'); });
+  const { result, rerender } = renderHook(
+    ({ scope }) => useAuthChallenge({ scope, clock, codeLength: 6, verify, onVerified }),
+    { initialProps: { scope: 'email' } }
+  );
+  let a!: Promise<void>;
+  let b!: Promise<void>;
+  act(() => {
+    a = result.current.submit('123456');
+  });
   rerender({ scope: 'google' });
-  act(() => { b = result.current.submit('654321'); });
-  await act(async () => { first.reject(new Error('old')); await a; });
-  expect(result.current.pending).toBe('verify'); expect(result.current.verifyFailure).toBeUndefined(); expect(result.current.resendFailure).toBeUndefined();
-  await act(async () => { second.resolve('new'); await b; });
-  expect(onVerified).toHaveBeenCalledExactlyOnceWith('new', expect.objectContaining({ isCurrent: expect.any(Function) }));
+  act(() => {
+    b = result.current.submit('654321');
+  });
+  await act(async () => {
+    first.reject(new Error('old'));
+    await a;
+  });
+  expect(result.current.pending).toBe('verify');
+  expect(result.current.verifyFailure).toBeUndefined();
+  expect(result.current.resendFailure).toBeUndefined();
+  await act(async () => {
+    second.resolve('new');
+    await b;
+  });
+  expect(onVerified).toHaveBeenCalledExactlyOnceWith(
+    'new',
+    expect.objectContaining({ isCurrent: expect.any(Function) })
+  );
 });
 it('전체 기한 뒤와 unmount 뒤의 성공은 적용하지 않는다', async () => {
-  const response = deferred<string>(); const onVerified = vi.fn(); const clock = createServerClock({ key: 'clock' });
-  const { result, unmount } = renderHook(() => useAuthChallenge({ scope: 1, clock, codeLength: 6, expiresAt: 101000, verify: () => response.promise, onVerified }));
+  const response = deferred<string>();
+  const onVerified = vi.fn();
+  const clock = createServerClock({ key: 'clock' });
+  const { result, unmount } = renderHook(() =>
+    useAuthChallenge({
+      scope: 1,
+      clock,
+      codeLength: 6,
+      expiresAt: 101000,
+      verify: () => response.promise,
+      onVerified,
+    })
+  );
   let pending!: Promise<void>;
-  act(() => { pending = result.current.submit('123456'); });
-  await act(async () => { await vi.advanceTimersByTimeAsync(1000); response.resolve('late'); await pending; });
+  act(() => {
+    pending = result.current.submit('123456');
+  });
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000);
+    response.resolve('late');
+    await pending;
+  });
   expect(onVerified).not.toHaveBeenCalled();
   unmount();
 });
 it('재전송 대기와 즉시 중복 잠금을 hook 직접 호출에서도 지킨다', async () => {
-  const response = deferred<void>(); const resend = vi.fn(() => response.promise); const onResent = vi.fn();
+  const response = deferred<void>();
+  const resend = vi.fn(() => response.promise);
+  const onResent = vi.fn();
   const clock = createServerClock({ key: 'clock' });
-  const { result } = renderHook(() => useAuthChallenge({ scope: 1, clock, codeLength: 6, resendAvailableAt: 103000, verify: async () => undefined, onVerified: () => undefined, resend, onResent }));
-  await act(async () => result.current.resend()); expect(resend).not.toHaveBeenCalled();
-  await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+  const { result } = renderHook(() =>
+    useAuthChallenge({
+      scope: 1,
+      clock,
+      codeLength: 6,
+      resendAvailableAt: 103000,
+      verify: async () => undefined,
+      onVerified: () => undefined,
+      resend,
+      onResent,
+    })
+  );
+  await act(async () => result.current.resend());
+  expect(resend).not.toHaveBeenCalled();
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(3000);
+  });
   let pending!: Promise<void>;
-  act(() => { pending = result.current.resend(); void result.current.resend(); });
+  act(() => {
+    pending = result.current.resend();
+    void result.current.resend();
+  });
   expect(resend).toHaveBeenCalledTimes(1);
-  await act(async () => { response.resolve(); await pending; });
+  await act(async () => {
+    response.resolve();
+    await pending;
+  });
   expect(onResent).toHaveBeenCalledTimes(1);
 });
 it('로그인 전후가 같은 보정 시계를 쓰고 인증만으로 세션이 시작되지 않는다', () => {
   const clock = createServerClock({ key: 'shared:clock' });
-  const session = createSession({ store: { read: () => null, write: () => undefined, subscribe: () => () => undefined }, reissue: vi.fn() });
-  const idle = createIdleTimer({ session, key: 'shared', clock, policy: { warningMs: 1000, pendingAtDeadline: 'wait' }, extend: async () => null, environment: { locks: null } });
-  const { result } = renderHook(() => useAuthChallenge({ scope: 1, clock, codeLength: 6, codeExpiresAt: 110000, verify: vi.fn(), onVerified: vi.fn() }));
+  const session = createSession({
+    store: { read: () => null, write: () => undefined, subscribe: () => () => undefined },
+    reissue: vi.fn(),
+  });
+  const idle = createIdleTimer({
+    session,
+    key: 'shared',
+    clock,
+    policy: { warningMs: 1000, pendingAtDeadline: 'wait' },
+    extend: async () => null,
+    environment: { locks: null },
+  });
+  const { result } = renderHook(() =>
+    useAuthChallenge({
+      scope: 1,
+      clock,
+      codeLength: 6,
+      codeExpiresAt: 110000,
+      verify: vi.fn(),
+      onVerified: vi.fn(),
+    })
+  );
   expect(session.current()).toBeNull();
   clock.observe(2000);
   expect(getAuthTiming({ codeExpiresAt: 110000 }, clock.now()).remainingSeconds).toBe(8);
-  idle.start(); act(() => { session.start({ accessToken: 'test' }); idle.setProvisionalDeadline(session.current()!.sessionId, clock.now() + 10000); });
+  idle.start();
+  act(() => {
+    session.start({ accessToken: 'test' });
+    idle.setProvisionalDeadline(session.current()!.sessionId, clock.now() + 10000);
+  });
   expect(idle.remaining()).toBe(10000);
   act(() => idle.observe({ sentAt: 100000, clockOffsetMs: 3000 }));
   expect(result.current.remainingSeconds).toBe(7);
   expect(idle.remaining()).toBe(9000);
-  idle.stop(); session.dispose();
+  idle.stop();
+  session.dispose();
 });
 
-it.each(['verify', 'resend'] as const)('종류별 관문은 %s 대기 중 다른 종류를 허용하고 같은 종류 중복을 막는다', async (firstKind) => {
-  const verification = deferred<string>(); const sent = deferred<void>();
-  const verify = vi.fn(() => verification.promise); const resend = vi.fn(() => sent.promise);
-  const onVerified = vi.fn(); const onResent = vi.fn();
-  const clock = createServerClock({ key: 'clock' });
-  const { result } = renderHook(() => useAuthChallenge({ scope: 1, clock, codeLength: 6, verify, resend, onVerified, onResent }));
-  let checking!: Promise<void>; let sending!: Promise<void>;
-  act(() => {
-    if (firstKind === 'verify') checking = result.current.submit('123456');
-    else sending = result.current.resend();
-  });
-  expect(firstKind === 'verify' ? result.current.canResend : result.current.canSubmit).toBe(true);
-  act(() => {
-    if (firstKind === 'verify') sending = result.current.resend();
-    else checking = result.current.submit('123456');
-    void result.current.submit('123456'); void result.current.resend();
-  });
-  expect(verify).toHaveBeenCalledTimes(1); expect(resend).toHaveBeenCalledTimes(1);
-  expect(result.current.pending).toBe('both');
-  await act(async () => { sent.resolve(); await sending; });
-  expect(result.current.pending).toBe('verify');
-  expect(result.current.canSubmit).toBe(false); expect(result.current.canResend).toBe(true);
-  await act(async () => { verification.resolve('ok'); await checking; });
-  expect(onVerified).toHaveBeenCalledExactlyOnceWith('ok', expect.objectContaining({ isCurrent: expect.any(Function) })); expect(onResent).toHaveBeenCalledTimes(1);
-});
+it.each(['verify', 'resend'] as const)(
+  '종류별 관문은 %s 대기 중 다른 종류를 허용하고 같은 종류 중복을 막는다',
+  async (firstKind) => {
+    const verification = deferred<string>();
+    const sent = deferred<void>();
+    const verify = vi.fn(() => verification.promise);
+    const resend = vi.fn(() => sent.promise);
+    const onVerified = vi.fn();
+    const onResent = vi.fn();
+    const clock = createServerClock({ key: 'clock' });
+    const { result } = renderHook(() =>
+      useAuthChallenge({ scope: 1, clock, codeLength: 6, verify, resend, onVerified, onResent })
+    );
+    let checking!: Promise<void>;
+    let sending!: Promise<void>;
+    act(() => {
+      if (firstKind === 'verify') checking = result.current.submit('123456');
+      else sending = result.current.resend();
+    });
+    expect(firstKind === 'verify' ? result.current.canResend : result.current.canSubmit).toBe(true);
+    act(() => {
+      if (firstKind === 'verify') sending = result.current.resend();
+      else checking = result.current.submit('123456');
+      void result.current.submit('123456');
+      void result.current.resend();
+    });
+    expect(verify).toHaveBeenCalledTimes(1);
+    expect(resend).toHaveBeenCalledTimes(1);
+    expect(result.current.pending).toBe('both');
+    await act(async () => {
+      sent.resolve();
+      await sending;
+    });
+    expect(result.current.pending).toBe('verify');
+    expect(result.current.canSubmit).toBe(false);
+    expect(result.current.canResend).toBe(true);
+    await act(async () => {
+      verification.resolve('ok');
+      await checking;
+    });
+    expect(onVerified).toHaveBeenCalledExactlyOnceWith(
+      'ok',
+      expect.objectContaining({ isCurrent: expect.any(Function) })
+    );
+    expect(onResent).toHaveBeenCalledTimes(1);
+  }
+);
 
 it('다른 탭의 시계 보정이 유휴 단계·남은 시간과 인증 남은 초에 즉시 함께 반영된다', () => {
   const clock = createServerClock({ key: 'shared:clock' });
-  const session = createSession({ store: { read: () => null, write: () => undefined, subscribe: () => () => undefined }, reissue: vi.fn() });
-  const idle = createIdleTimer({ session, key: 'shared', clock, policy: { warningMs: 8000, pendingAtDeadline: 'wait' }, extend: async () => null, environment: { locks: null } });
-  idle.start(); session.start({ accessToken: 'test' }); idle.setProvisionalDeadline(session.current()!.sessionId, clock.now() + 10000);
-  const { result } = renderHook(() => useAuthChallenge({ scope: 1, clock, codeLength: 6, codeExpiresAt: 110000, verify: vi.fn(), onVerified: vi.fn() }));
-  expect(idle.remaining()).toBe(10000); expect(idle.state().phase).toBe('active');
+  const session = createSession({
+    store: { read: () => null, write: () => undefined, subscribe: () => () => undefined },
+    reissue: vi.fn(),
+  });
+  const idle = createIdleTimer({
+    session,
+    key: 'shared',
+    clock,
+    policy: { warningMs: 8000, pendingAtDeadline: 'wait' },
+    extend: async () => null,
+    environment: { locks: null },
+  });
+  idle.start();
+  session.start({ accessToken: 'test' });
+  idle.setProvisionalDeadline(session.current()!.sessionId, clock.now() + 10000);
+  const { result } = renderHook(() =>
+    useAuthChallenge({
+      scope: 1,
+      clock,
+      codeLength: 6,
+      codeExpiresAt: 110000,
+      verify: vi.fn(),
+      onVerified: vi.fn(),
+    })
+  );
+  expect(idle.remaining()).toBe(10000);
+  expect(idle.state().phase).toBe('active');
   expect(result.current.remainingSeconds).toBe(10);
   act(() => {
     localStorage.setItem('shared:clock', '3000');
     window.dispatchEvent(new StorageEvent('storage', { key: 'shared:clock', newValue: '3000' }));
   });
   expect(clock.now()).toBe(103000);
-  expect(idle.remaining()).toBe(7000); expect(idle.state().phase).toBe('warning');
+  expect(idle.remaining()).toBe(7000);
+  expect(idle.state().phase).toBe('warning');
   expect(result.current.remainingSeconds).toBe(7);
-  idle.stop(); session.dispose();
+  idle.stop();
+  session.dispose();
 });
 
 it('인증 hook 공개 결과는 종류별 실패 이름을 제공하고 공용 failure를 제거한다', () => {
   const clock = createServerClock({ key: 'clock' });
-  const { result } = renderHook(() => useAuthChallenge({ scope: 1, clock, codeLength: 6, verify: vi.fn(), onVerified: vi.fn() }));
-  expect(Object.keys(result.current).sort()).toEqual([
-    'remainingSeconds', 'challengeRemainingSeconds', 'resendRemainingSeconds', 'expired', 'codeExpired',
-    'canSubmit', 'canResend', 'resendable', 'pending', 'verifyFailure', 'resendFailure', 'awaitingCompletion', 'invalidate', 'submit', 'resend',
-  ].sort());
+  const { result } = renderHook(() =>
+    useAuthChallenge({ scope: 1, clock, codeLength: 6, verify: vi.fn(), onVerified: vi.fn() })
+  );
+  expect(Object.keys(result.current).sort()).toEqual(
+    [
+      'remainingSeconds',
+      'challengeRemainingSeconds',
+      'resendRemainingSeconds',
+      'expired',
+      'codeExpired',
+      'canSubmit',
+      'canResend',
+      'resendable',
+      'pending',
+      'verifyFailure',
+      'resendFailure',
+      'awaitingCompletion',
+      'invalidate',
+      'submit',
+      'resend',
+    ].sort()
+  );
 });
 
 const parseLogin = (value: unknown) =>
-  typeof value === 'object' && value !== null && typeof (value as { id?: unknown }).id === 'string' ? (value as { id: string }) : null;
+  typeof value === 'object' && value !== null && typeof (value as { id?: unknown }).id === 'string'
+    ? (value as { id: string })
+    : null;
 
 it('새로 고침해도 같은 scope와 코드 기한으로 이어 가고, 기한이 지나면 대기는 남긴 채 확인만 막는다', async () => {
   const clock = createServerClock({ key: 'clock' });
-  const started = createAuthChallengeStore({ key: 'pending', parse: parseLogin }).start({ id: 'user' }, { codeExpiresAt: 100000 + 300000 });
-  await act(async () => { await vi.advanceTimersByTimeAsync(120000); });
+  const started = createAuthChallengeStore({ key: 'pending', parse: parseLogin }).start(
+    { id: 'user' },
+    { codeExpiresAt: 100000 + 300000 }
+  );
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(120000);
+  });
   // 새로 고침: 새 저장소 객체가 같은 탭 저장소를 읽는다.
   const restored = createAuthChallengeStore({ key: 'pending', parse: parseLogin }).current();
   expect(restored).toEqual(started);
   const verify = vi.fn(async () => 'ok');
-  const { result } = renderHook(() => useAuthChallenge({ scope: restored!.scope, clock, codeLength: 6, codeExpiresAt: restored!.codeExpiresAt, verify, onVerified: vi.fn() }));
+  const { result } = renderHook(() =>
+    useAuthChallenge({
+      scope: restored!.scope,
+      clock,
+      codeLength: 6,
+      codeExpiresAt: restored!.codeExpiresAt,
+      verify,
+      onVerified: vi.fn(),
+    })
+  );
   expect(result.current.remainingSeconds).toBe(180);
   expect(result.current.canSubmit).toBe(true);
-  await act(async () => { await vi.advanceTimersByTimeAsync(180000); });
-  expect(createAuthChallengeStore({ key: 'pending', parse: parseLogin }).current()).toEqual(started);
-  expect(result.current).toMatchObject({ remainingSeconds: 0, codeExpired: true, canSubmit: false });
-  await act(async () => { await result.current.submit('123456'); });
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(180000);
+  });
+  expect(createAuthChallengeStore({ key: 'pending', parse: parseLogin }).current()).toEqual(
+    started
+  );
+  expect(result.current).toMatchObject({
+    remainingSeconds: 0,
+    codeExpired: true,
+    canSubmit: false,
+  });
+  await act(async () => {
+    await result.current.submit('123456');
+  });
   expect(verify).not.toHaveBeenCalled();
 });
 
 it('인증 대기 저장소는 새 로그인에 새 scope, 재전송에 같은 scope의 새 기한, 취소에 삭제를 적용한다', () => {
   const store = createAuthChallengeStore({ key: 'pending', parse: parseLogin });
   const first = store.start({ id: 'user' }, { codeExpiresAt: 1000 });
-  expect(store.update({ codeExpiresAt: 2000, resendAvailableAt: 1500 })).toEqual({ ...first, codeExpiresAt: 2000, resendAvailableAt: 1500 });
+  expect(store.update({ codeExpiresAt: 2000, resendAvailableAt: 1500 })).toEqual({
+    ...first,
+    codeExpiresAt: 2000,
+    resendAvailableAt: 1500,
+  });
   expect(store.current()?.scope).toBe(first.scope);
   expect(store.start({ id: 'user' }, { codeExpiresAt: 3000 }).scope).not.toBe(first.scope);
   store.clear();
@@ -178,56 +403,105 @@ it('인증 대기 저장소는 새 로그인에 새 scope, 재전송에 같은 s
 
 it('인증 대기 저장소는 형식이 다르거나 저장소를 쓸 수 없으면 대기 없음으로 본다', () => {
   const store = createAuthChallengeStore({ key: 'pending', parse: parseLogin });
-  for (const raw of ['{', 'null', '{"scope":1,"data":{"id":"u"}}', '{"scope":"s","data":{}}', '{"scope":"s","data":{"id":"u"},"codeExpiresAt":"x"}'] ) {
+  for (const raw of [
+    '{',
+    'null',
+    '{"scope":1,"data":{"id":"u"}}',
+    '{"scope":"s","data":{}}',
+    '{"scope":"s","data":{"id":"u"},"codeExpiresAt":"x"}',
+  ]) {
     sessionStorage.setItem('pending', raw);
     expect(store.current()).toBeNull();
   }
-  const broken = { getItem: () => { throw new Error('denied'); }, setItem: () => { throw new Error('denied'); }, removeItem: () => { throw new Error('denied'); } } as unknown as Storage;
-  const blocked = createAuthChallengeStore({ key: 'pending', parse: parseLogin, storage: () => broken });
+  const broken = {
+    getItem: () => {
+      throw new Error('denied');
+    },
+    setItem: () => {
+      throw new Error('denied');
+    },
+    removeItem: () => {
+      throw new Error('denied');
+    },
+  } as unknown as Storage;
+  const blocked = createAuthChallengeStore({
+    key: 'pending',
+    parse: parseLogin,
+    storage: () => broken,
+  });
   expect(blocked.start({ id: 'user' }, {}).data).toEqual({ id: 'user' });
   expect(blocked.current()).toBeNull();
   expect(() => blocked.clear()).not.toThrow();
 });
 
-
-it.each(['invalidate', 'scope', 'unmount', 'expires'] as const)('이미 시작한 완료도 %s 뒤의 효과를 적용하지 않도록 현재 시도를 전달한다', async (leave) => {
-  const later = deferred<void>();
-  const apply = vi.fn();
-  const clock = createServerClock({ key: 'completion-clock' });
-  let started = false;
-  const view = renderHook(({ scope }) => useAuthChallenge({
-    scope, clock, codeLength: 6, expiresAt: 101000,
-    verify: async () => 'accepted',
-    onVerified: async (_result, step) => {
-      started = true;
-      expect(step.isCurrent()).toBe(true);
-      await later.promise;
-      if (step.isCurrent()) apply();
-    },
-  }), { initialProps: { scope: 'first' } });
-  let pending!: Promise<void>;
-  await act(async () => { pending = view.result.current.submit('123456'); });
-  expect(started).toBe(true);
-  if (leave === 'invalidate') act(() => view.result.current.invalidate());
-  if (leave === 'scope') view.rerender({ scope: 'second' });
-  if (leave === 'unmount') view.unmount();
-  if (leave === 'expires') await act(async () => vi.advanceTimersByTimeAsync(1000));
-  await act(async () => { later.resolve(); await pending; });
-  expect(apply).not.toHaveBeenCalled();
-});
+it.each(['invalidate', 'scope', 'unmount', 'expires'] as const)(
+  '이미 시작한 완료도 %s 뒤의 효과를 적용하지 않도록 현재 시도를 전달한다',
+  async (leave) => {
+    const later = deferred<void>();
+    const apply = vi.fn();
+    const clock = createServerClock({ key: 'completion-clock' });
+    let started = false;
+    const view = renderHook(
+      ({ scope }) =>
+        useAuthChallenge({
+          scope,
+          clock,
+          codeLength: 6,
+          expiresAt: 101000,
+          verify: async () => 'accepted',
+          onVerified: async (_result, step) => {
+            started = true;
+            expect(step.isCurrent()).toBe(true);
+            await later.promise;
+            if (step.isCurrent()) apply();
+          },
+        }),
+      { initialProps: { scope: 'first' } }
+    );
+    let pending!: Promise<void>;
+    await act(async () => {
+      pending = view.result.current.submit('123456');
+    });
+    expect(started).toBe(true);
+    if (leave === 'invalidate') act(() => view.result.current.invalidate());
+    if (leave === 'scope') view.rerender({ scope: 'second' });
+    if (leave === 'unmount') view.unmount();
+    if (leave === 'expires') await act(async () => vi.advanceTimersByTimeAsync(1000));
+    await act(async () => {
+      later.resolve();
+      await pending;
+    });
+    expect(apply).not.toHaveBeenCalled();
+  }
+);
 
 it('재전송 완료도 무효화 뒤의 비동기 효과를 적용하지 않는다', async () => {
-  const later = deferred<void>(); const apply = vi.fn();
+  const later = deferred<void>();
+  const apply = vi.fn();
   const clock = createServerClock({ key: 'resent-completion-clock' });
-  const view = renderHook(() => useAuthChallenge({ scope: 1, clock, codeLength: 6,
-    verify: async () => undefined, onVerified: () => undefined,
-    resend: async () => undefined,
-    onResent: async (_result, step) => { await later.promise; if (step.isCurrent()) apply(); },
-  }));
+  const view = renderHook(() =>
+    useAuthChallenge({
+      scope: 1,
+      clock,
+      codeLength: 6,
+      verify: async () => undefined,
+      onVerified: () => undefined,
+      resend: async () => undefined,
+      onResent: async (_result, step) => {
+        await later.promise;
+        if (step.isCurrent()) apply();
+      },
+    })
+  );
   let pending!: Promise<void>;
-  await act(async () => { pending = view.result.current.resend(); });
+  await act(async () => {
+    pending = view.result.current.resend();
+  });
   act(() => view.result.current.invalidate());
-  await act(async () => { later.resolve(); await pending; });
+  await act(async () => {
+    later.resolve();
+    await pending;
+  });
   expect(apply).not.toHaveBeenCalled();
 });
 
@@ -235,46 +509,105 @@ it('완료가 실패하면 다음 제출은 코드를 다시 보내지 않고 �
   const clock = createServerClock({ key: 'retry-completion-clock' });
   const verify = vi.fn(async () => 'token');
   let attempts = 0;
-  const onVerified = vi.fn(async () => { attempts += 1; if (attempts === 1) throw new Error('profile'); });
-  const { result } = renderHook(() => useAuthChallenge({ scope: 1, clock, codeLength: 6, codeExpiresAt: 101000, verify, onVerified }));
-  await act(async () => { await result.current.submit('123456'); });
+  const onVerified = vi.fn(async () => {
+    attempts += 1;
+    if (attempts === 1) throw new Error('profile');
+  });
+  const { result } = renderHook(() =>
+    useAuthChallenge({ scope: 1, clock, codeLength: 6, codeExpiresAt: 101000, verify, onVerified })
+  );
+  await act(async () => {
+    await result.current.submit('123456');
+  });
   expect(result.current.verifyFailure).toEqual(new Error('profile'));
   expect(result.current.awaitingCompletion).toBe(true);
   // 코드 기한이 지나도 확인은 이미 성공했으므로 완료 다시 시도는 막지 않는다.
   await act(async () => vi.advanceTimersByTimeAsync(2000));
   expect(result.current.codeExpired).toBe(true);
   expect(result.current.canSubmit).toBe(true);
-  await act(async () => { await result.current.submit(''); });
+  await act(async () => {
+    await result.current.submit('');
+  });
   expect(verify).toHaveBeenCalledTimes(1);
   expect(onVerified).toHaveBeenCalledTimes(2);
-  expect(onVerified).toHaveBeenLastCalledWith('token', expect.objectContaining({ isCurrent: expect.any(Function) }));
+  expect(onVerified).toHaveBeenLastCalledWith(
+    'token',
+    expect.objectContaining({ isCurrent: expect.any(Function) })
+  );
   expect(result.current.verifyFailure).toBeUndefined();
   expect(result.current.awaitingCompletion).toBe(false);
 });
 
-it.each(['invalidate', 'scope'] as const)('완료 실패 뒤 %s 하면 보관한 확인 결과를 버리고 다음 제출은 코드를 다시 확인한다', async (leave) => {
-  const clock = createServerClock({ key: 'drop-completion-clock' });
-  const verify = vi.fn(async () => 'token');
-  const onVerified = vi.fn(async () => { throw new Error('profile'); });
-  const view = renderHook(({ scope }) => useAuthChallenge({ scope, clock, codeLength: 6, verify, onVerified }), { initialProps: { scope: 'email' } });
-  await act(async () => { await view.result.current.submit('123456'); });
-  expect(view.result.current.awaitingCompletion).toBe(true);
-  if (leave === 'invalidate') act(() => view.result.current.invalidate());
-  else view.rerender({ scope: 'google' });
-  expect(view.result.current.awaitingCompletion).toBe(false);
-  await act(async () => { await view.result.current.submit('654321'); });
-  expect(verify).toHaveBeenCalledTimes(2);
-  expect(verify).toHaveBeenLastCalledWith('654321');
-});
+it.each(['invalidate', 'scope'] as const)(
+  '완료 실패 뒤 %s 하면 보관한 확인 결과를 버리고 다음 제출은 코드를 다시 확인한다',
+  async (leave) => {
+    const clock = createServerClock({ key: 'drop-completion-clock' });
+    const verify = vi.fn(async () => 'token');
+    const onVerified = vi.fn(async () => {
+      throw new Error('profile');
+    });
+    const view = renderHook(
+      ({ scope }) => useAuthChallenge({ scope, clock, codeLength: 6, verify, onVerified }),
+      { initialProps: { scope: 'email' } }
+    );
+    await act(async () => {
+      await view.result.current.submit('123456');
+    });
+    expect(view.result.current.awaitingCompletion).toBe(true);
+    if (leave === 'invalidate') act(() => view.result.current.invalidate());
+    else view.rerender({ scope: 'google' });
+    expect(view.result.current.awaitingCompletion).toBe(false);
+    await act(async () => {
+      await view.result.current.submit('654321');
+    });
+    expect(verify).toHaveBeenCalledTimes(2);
+    expect(verify).toHaveBeenLastCalledWith('654321');
+  }
+);
 
 it('확인 요청 자체가 실패하면 완료 대기가 아니며 다음 제출은 코드를 다시 확인한다', async () => {
   const clock = createServerClock({ key: 'verify-failure-clock' });
   const verify = vi.fn().mockRejectedValueOnce(new Error('wrong')).mockResolvedValueOnce('token');
   const onVerified = vi.fn();
-  const { result } = renderHook(() => useAuthChallenge({ scope: 1, clock, codeLength: 6, verify, onVerified }));
-  await act(async () => { await result.current.submit('111111'); });
+  const { result } = renderHook(() =>
+    useAuthChallenge({ scope: 1, clock, codeLength: 6, verify, onVerified })
+  );
+  await act(async () => {
+    await result.current.submit('111111');
+  });
   expect(result.current.awaitingCompletion).toBe(false);
-  await act(async () => { await result.current.submit('222222'); });
+  await act(async () => {
+    await result.current.submit('222222');
+  });
   expect(verify).toHaveBeenLastCalledWith('222222');
   expect(onVerified).toHaveBeenCalledExactlyOnceWith('token', expect.anything());
+});
+
+it('uses the project code validation while retaining expiry protection', async () => {
+  const clock = createServerClock({ key: 'project-code-clock' });
+  const verify = vi.fn(async () => 'token');
+  const { result } = renderHook(() =>
+    useAuthChallenge({
+      scope: 'email',
+      clock,
+      codeLength: 6,
+      codeExpiresAt: 101000,
+      validateCode: (code: string) => code.length >= 6,
+      verify,
+      onVerified: vi.fn(),
+    })
+  );
+  await act(async () => {
+    await result.current.submit('A1234');
+  });
+  expect(verify).not.toHaveBeenCalled();
+  await act(async () => {
+    await result.current.submit('Ab1234567');
+  });
+  expect(verify).toHaveBeenCalledExactlyOnceWith('Ab1234567');
+  vi.setSystemTime(101000);
+  await act(async () => {
+    await result.current.submit('A12345');
+  });
+  expect(verify).toHaveBeenCalledTimes(1);
 });

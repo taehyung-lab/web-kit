@@ -11,7 +11,10 @@ export interface AuthDeadlines {
 }
 
 /** 절대 시각을 남은 초로 바꾸며, 기한이 없으면 시간 정책을 적용하지 않는다. */
-export function remainingAuthSeconds(expiresAt: number | undefined, now: number): number | undefined {
+export function remainingAuthSeconds(
+  expiresAt: number | undefined,
+  now: number
+): number | undefined {
   return expiresAt === undefined ? undefined : Math.max(0, Math.ceil((expiresAt - now) / 1000));
 }
 
@@ -21,10 +24,15 @@ export function getAuthTiming(deadlines: AuthDeadlines, now: number) {
   const challengeRemainingSeconds = remainingAuthSeconds(deadlines.expiresAt, now);
   const resendRemainingSeconds = remainingAuthSeconds(deadlines.resendAvailableAt, now) ?? 0;
   const expired = challengeRemainingSeconds === 0;
-  return { remainingSeconds, challengeRemainingSeconds, resendRemainingSeconds, expired,
+  return {
+    remainingSeconds,
+    challengeRemainingSeconds,
+    resendRemainingSeconds,
+    expired,
     codeExpired: remainingSeconds === 0,
     canSubmit: !expired && remainingSeconds !== 0,
-    canResend: !expired && resendRemainingSeconds === 0 };
+    canResend: !expired && resendRemainingSeconds === 0,
+  };
 }
 
 /** 프로젝트가 정한 자리수의 숫자만 서버에 보낸다. */
@@ -63,7 +71,11 @@ function deadlinesOf(value: Record<string, unknown>): AuthDeadlines | null {
  * 로그인 성공 전 인증 대기를 보관한다. 새로 고침해도 같은 `scope`와 절대 기한으로 이어 가며,
  * 기한이 지난 대기도 그대로 돌려준다(화면은 만료 안내와 막힌 확인 버튼을 보인다). 지우는 것은 취소·성공·새 로그인이다.
  */
-export function createAuthChallengeStore<Data>({ key, parse, storage = () => sessionStorage }: AuthChallengeStoreOptions<Data>) {
+export function createAuthChallengeStore<Data>({
+  key,
+  parse,
+  storage = () => sessionStorage,
+}: AuthChallengeStoreOptions<Data>) {
   function read(): StoredAuthChallenge<Data> | null {
     try {
       const raw = storage().getItem(key);
@@ -103,7 +115,9 @@ export function createAuthChallengeStore<Data>({ key, parse, storage = () => ses
       write(next);
       return next;
     },
-    clear(): void { write(null); },
+    clear(): void {
+      write(null);
+    },
   };
 }
 
@@ -114,6 +128,8 @@ export interface AuthChallengeOptions<Result, Resent> extends AuthDeadlines {
   readonly scope: unknown;
   readonly clock: ServerClock;
   readonly codeLength: number;
+  /** 생략하면 codeLength 자리 숫자를 검사한다. 다른 코드 형식은 소비 프로젝트가 정한다. */
+  readonly validateCode?: (code: string) => boolean;
   /** 서버 계정 잠금 등 프로젝트가 판정한 제출 차단이다. */
   readonly blocked?: boolean;
   readonly verify: (code: string) => Promise<Result>;
@@ -129,7 +145,9 @@ export interface AuthChallengeOptions<Result, Resent> extends AuthDeadlines {
 }
 
 /** 인증 화면 상위에서 사용한다. 인증 대기는 `createAuthChallengeStore`에서 읽어 넘기고, 세션 저장·이동은 유효 응답 콜백에 연결한다. */
-export function useAuthChallenge<Result, Resent = void>(options: AuthChallengeOptions<Result, Resent>) {
+export function useAuthChallenge<Result, Resent = void>(
+  options: AuthChallengeOptions<Result, Resent>
+) {
   const current = useRef(options);
   const active = useRef<{ verify: object | null; resend: object | null }>({
     verify: null,
@@ -190,14 +208,18 @@ export function useAuthChallenge<Result, Resent = void>(options: AuthChallengeOp
     if (!mounted.current || active.current[kind] !== null || input.blocked) return;
 
     const accepted = verified.current;
-    const retry = kind === 'verify' && accepted !== null && Object.is(accepted.scope, input.scope)
-      ? accepted
-      : null;
+    const retry =
+      kind === 'verify' && accepted !== null && Object.is(accepted.scope, input.scope)
+        ? accepted
+        : null;
     if (kind === 'verify') {
       // 완료만 다시 할 때는 코드가 필요 없으므로 전체 기한만 확인한다.
       if (retry !== null) {
         if (timing.expired) return;
-      } else if (!timing.canSubmit || !isAuthCode(code, input.codeLength)) {
+      } else if (
+        !timing.canSubmit ||
+        !(input.validateCode ?? ((value: string) => isAuthCode(value, input.codeLength)))(code)
+      ) {
         return;
       }
     } else if (!timing.canResend || input.resend === undefined) {
@@ -212,9 +234,13 @@ export function useAuthChallenge<Result, Resent = void>(options: AuthChallengeOp
 
     const isCurrent = () => {
       const latest = current.current;
-      return mounted.current && active.current[kind] === owner &&
-        Object.is(latest.scope, input.scope) && !latest.blocked &&
-        !getAuthTiming(latest, latest.clock.now()).expired;
+      return (
+        mounted.current &&
+        active.current[kind] === owner &&
+        Object.is(latest.scope, input.scope) &&
+        !latest.blocked &&
+        !getAuthTiming(latest, latest.clock.now()).expired
+      );
     };
 
     try {
@@ -247,8 +273,12 @@ export function useAuthChallenge<Result, Resent = void>(options: AuthChallengeOp
   const timing = getAuthTiming(options, options.clock.now());
   const canVerify = awaitingCompletion ? !timing.expired : timing.canSubmit;
   const pending = running.verify
-    ? (running.resend ? 'both' : 'verify')
-    : (running.resend ? 'resend' : null);
+    ? running.resend
+      ? 'both'
+      : 'verify'
+    : running.resend
+      ? 'resend'
+      : null;
   return {
     ...timing,
     pending,
@@ -260,7 +290,8 @@ export function useAuthChallenge<Result, Resent = void>(options: AuthChallengeOp
     /** 확인은 성공했고 완료가 실패해 다음 제출이 완료만 다시 실행한다. */
     awaitingCompletion,
     canSubmit: canVerify && !options.blocked && !running.verify,
-    canResend: timing.canResend && !options.blocked && !running.resend && options.resend !== undefined,
+    canResend:
+      timing.canResend && !options.blocked && !running.resend && options.resend !== undefined,
     submit: (code: string) => run('verify', code),
     resend: () => run('resend'),
   };

@@ -18,7 +18,7 @@
     },
     {
       "path": "packages/ui-registry/checks/checkbox-tree-focus.test.tsx",
-      "content": "// @vitest-environment jsdom\n// 파일 책임: 체크 트리 자체와 폼도 설치한 소비처의 오류 초점을 실제 복사본으로 검사한다.\nimport { CheckboxTree } from '../CheckboxTree';\nimport { checkCheckboxTreeConformance } from '@boosterlab/web-kit/testing/unit/checkbox-tree';\nimport installation from '../../../../../registry-installation.json';\nconst target = { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit };\ncheckCheckboxTreeConformance({ CheckboxTree }, target);\nif (installation.items.some((item) => item.name === 'form')) {\n  const { checkCheckboxTreeFocusConformance } = await import('@boosterlab/web-kit/testing/unit/combinations');\n  await checkCheckboxTreeFocusConformance({ CheckboxTree }, target);\n}\n",
+      "content": "// @vitest-environment jsdom\n// 파일 책임: 체크 트리 자체와 폼도 설치한 소비처의 오류 초점을 실제 복사본으로 검사한다.\nimport { CheckboxTree } from '../CheckboxTree';\nimport { checkCheckboxTreeConformance } from '@boosterlab/web-kit/testing/unit/checkbox-tree';\nimport installation from '../../../../../registry-installation.json';\nconst target = {\n  registryVersion: installation.sourceRef,\n  registryCommit: installation.sourceCommit,\n};\ncheckCheckboxTreeConformance({ CheckboxTree }, target);\nif (installation.items.some((item) => item.name === 'form')) {\n  const { checkCheckboxTreeFocusConformance } =\n    await import('@boosterlab/web-kit/testing/unit/combinations');\n  await checkCheckboxTreeFocusConformance({ CheckboxTree }, target);\n}\n",
       "type": "registry:file",
       "target": "~/src/shared/ui/web-kit/checks/checkbox-tree-focus.test.tsx"
     }

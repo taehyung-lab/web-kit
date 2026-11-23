@@ -10,6 +10,7 @@ import {
   readEnvelope,
   RequestFailure,
   toRequestFailure,
+  type ResponseReadOptions,
   type ResultCodeTable,
   type TransportOutcome,
 } from './failure';
@@ -107,12 +108,15 @@ export interface ResponseContract {
 /** Spring 생성 endpoint의 봉투 타입에서 실제 data 타입을 고른다. 요청 자체의 타입 규칙과 분리한다. */
 export type SpringEnvelopeData<T> = T extends { readonly data?: infer D } ? Exclude<D, undefined> : T;
 
-/** Spring 봉투와 결과 코드 표를 쓰는 서버가 명시적으로 선택하는 응답 계약이다. */
-export function springEnvelope(results: ResultCodeTable): ResponseContract {
+/**
+ * Spring 봉투와 결과 코드 표를 쓰는 서버가 명시적으로 선택하는 응답 계약이다.
+ * options.detailCode를 주면 실패 응답 본문에서 그 규칙으로 읽은 프로젝트 세부 코드를 실패의 detailCode로 싣는다.
+ */
+export function springEnvelope(results: ResultCodeTable, options?: ResponseReadOptions): ResponseContract {
   return {
     read: (body, status, requestId) => status >= 200 && status < 300
-      ? readEnvelope(body, results, requestId)
-      : { ok: false, failure: toRequestFailure({ type: 'response', body, status, requestId }, results) },
+      ? readEnvelope(body, results, requestId, options)
+      : { ok: false, failure: toRequestFailure({ type: 'response', body, status, requestId }, results, options) },
   };
 }
 
@@ -179,7 +183,7 @@ export function createHttp<C extends Credentials>({
     const failure = result.failure;
     return { ok: false as const, failure: new RequestFailure({
       kind: failure.kind, status, requestId: requestId ?? failure.requestId,
-      code: failure.code, messageKey: failure.messageKey, endsSession: failure.endsSession,
+      code: failure.code, detailCode: failure.detailCode, messageKey: failure.messageKey, endsSession: failure.endsSession,
       fieldErrors: failure.fieldErrors, resultUnknown: failure.resultUnknown,
     }) };
   }

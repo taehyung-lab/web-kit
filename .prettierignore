@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+.web-kit-results/
+vendor/
+public/r/
+pnpm-lock.yaml
+**/generated/
+**/routeTree.gen.ts
+packages/web-kit/references/
+work/

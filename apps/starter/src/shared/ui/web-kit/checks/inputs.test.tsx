@@ -5,4 +5,7 @@ import { Checkbox } from '@/shared/ui/checkbox';
 import { Input } from '@/shared/ui/input';
 import { checkInputsConformance } from '@boosterlab/web-kit/testing/unit/primitives';
 import installation from '../../../../../registry-installation.json';
-checkInputsConformance({ Button, Input, Checkbox }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });
+checkInputsConformance(
+  { Button, Input, Checkbox },
+  { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit }
+);

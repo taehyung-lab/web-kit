@@ -92,6 +92,12 @@ it('H1 봉투를 풀고 세션 토큰과 프로젝트 헤더를 싣는다. JSON�
   expect(sent[0]).toMatchObject({ authorization: 'Bearer t1', locale: 'ko' });
 });
 
+it('H1c springEnvelope의 세부 코드 규칙이 요청 실패에 프로젝트 세부 코드를 싣는다', async () => {
+  const { http } = setup(springEnvelope(table, { detailCode: (body) => (body as { data?: { code?: string } }).data?.code }));
+  replies = [{ status: 200, data: { header: { resultCode: 2100 }, data: { code: 'Z9' } } }];
+  await expect(http.requestData({ url: '/items' })).rejects.toMatchObject({ kind: 'business', code: '2100', detailCode: 'Z9', messageKey: 'notExist' });
+});
+
 it('H1b 파일로 받는 요청도 JSON 실패 응답은 resultCode로 해석한다(다운로드 실패 문구)', async () => {
   const { http } = setup();
   const json = (body: unknown) => new Blob([JSON.stringify(body)], { type: 'application/json' });

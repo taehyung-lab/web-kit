@@ -4,5 +4,14 @@ import { Form, FormDefaults, defaultFormMessages, defaultFormGuardMessages } fro
 import { DialogDefaults, defaultDialogLabels } from '../dialog';
 import { checkFormWorkflowsConformance } from '@boosterlab/web-kit/testing/unit/form';
 import installation from '../../../../../registry-installation.json';
-const copy = { FormDefaults, defaultFormMessages, defaultFormGuardMessages, DialogDefaults, defaultDialogLabels };
-checkFormWorkflowsConformance({ Form, ...copy }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });
+const copy = {
+  FormDefaults,
+  defaultFormMessages,
+  defaultFormGuardMessages,
+  DialogDefaults,
+  defaultDialogLabels,
+};
+checkFormWorkflowsConformance(
+  { Form, ...copy },
+  { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit }
+);
