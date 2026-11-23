@@ -23,7 +23,10 @@ import {
   paging,
   sort,
 } from '@boosterlab/web-kit/search';
-checkListUiConformance({ List, useListField, Pending, DialogDefaults, defaultDialogLabels }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });
+checkListUiConformance(
+  { List, useListField, Pending, DialogDefaults, defaultDialogLabels },
+  { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit }
+);
 
 // 아래는 이 복사본의 표시 입구(앱 기본 문구·실패 문구 단계, 값 고르는 일괄 작업, 머리글·버튼 모양 입구)를 실제 useList로 확인한다.
 
@@ -39,7 +42,8 @@ const checkSearch = defineSearch({
   },
   sortFirst: 'desc',
 });
-const rowsOf = (count: number) => Array.from({ length: count }, (_, index) => ({ id: `r${index + 1}` }));
+const rowsOf = (count: number) =>
+  Array.from({ length: count }, (_, index) => ({ id: `r${index + 1}` }));
 const clientsInUse: QueryClient[] = [];
 afterEach(() => {
   cleanup();
@@ -50,11 +54,15 @@ afterEach(() => {
 /** 실제 useList 하나를 바깥 감싸개(앱 기본값 등) 안에 그린다. */
 function mountList(
   body: ReactNode,
-  { fetch = async () => ({ rows: rowsOf(2), total: 2 }), outer = (node: ReactNode) => node, listProps = {} }: {
+  {
+    fetch = async () => ({ rows: rowsOf(2), total: 2 }),
+    outer = (node: ReactNode) => node,
+    listProps = {},
+  }: {
     readonly fetch?: () => Promise<ListPage<CheckRow>>;
     readonly outer?: (node: ReactNode) => ReactNode;
     readonly listProps?: Omit<Parameters<typeof List>[0], 'model' | 'children'>;
-  } = {},
+  } = {}
 ) {
   const request = vi.fn(fetch);
   function App() {
@@ -66,7 +74,11 @@ function mountList(
       query: (full) => ({ queryKey: ['check-rows', full], queryFn: () => request() }),
       rowId: (row) => row.id,
     });
-    return <List model={model} {...listProps}>{body}</List>;
+    return (
+      <List model={model} {...listProps}>
+        {body}
+      </List>
+    );
   }
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   clientsInUse.push(client);
@@ -83,7 +95,11 @@ describe('ListDefaults (앱 기본 문구 → 목록 문구, 실패 문구 단�
   it('uses app messages and app renderFailure when the list gives none, and ignores undefined local values', async () => {
     mountList(<List.Result>{null}</List.Result>, {
       fetch: failing,
-      outer: (node) => <ListDefaults messages={{ retry: 'Retry' }} renderFailure={appFailure}>{node}</ListDefaults>,
+      outer: (node) => (
+        <ListDefaults messages={{ retry: 'Retry' }} renderFailure={appFailure}>
+          {node}
+        </ListDefaults>
+      ),
       listProps: { messages: { retry: undefined } },
     });
     const alert = await screen.findByRole('alert');
@@ -91,15 +107,29 @@ describe('ListDefaults (앱 기본 문구 → 목록 문구, 실패 문구 단�
   });
 
   it('falls through a local undefined to the app layer, hides on null and keeps an empty string without falling back', async () => {
-    const outer = (node: ReactNode) => <ListDefaults renderFailure={appFailure}>{node}</ListDefaults>;
-    mountList(<List.Result>{null}</List.Result>, { fetch: failing, outer, listProps: { renderFailure: () => undefined } });
+    const outer = (node: ReactNode) => (
+      <ListDefaults renderFailure={appFailure}>{node}</ListDefaults>
+    );
+    mountList(<List.Result>{null}</List.Result>, {
+      fetch: failing,
+      outer,
+      listProps: { renderFailure: () => undefined },
+    });
     expect((await screen.findByRole('alert')).textContent).toContain('APP FAILURE');
     cleanup();
-    mountList(<List.Result>{null}</List.Result>, { fetch: failing, outer, listProps: { renderFailure: () => null } });
+    mountList(<List.Result>{null}</List.Result>, {
+      fetch: failing,
+      outer,
+      listProps: { renderFailure: () => null },
+    });
     await waitFor(() => expect(document.querySelector('section[aria-busy]')).toBeNull());
     expect(screen.queryByRole('alert')).toBeNull();
     cleanup();
-    mountList(<List.Result>{null}</List.Result>, { fetch: failing, outer, listProps: { renderFailure: () => '' } });
+    mountList(<List.Result>{null}</List.Result>, {
+      fetch: failing,
+      outer,
+      listProps: { renderFailure: () => '' },
+    });
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).not.toContain('APP FAILURE');
     expect(alert.textContent).not.toContain('목록을 불러오지 못했습니다.');
@@ -127,9 +157,18 @@ describe('ListDefaults (앱 기본 문구 → 목록 문구, 실패 문구 단�
 
 describe('List.Table headerClassName', () => {
   it('puts sticky opaque surface on the header itself when virtualized and the same headerClassName in both modes', async () => {
-    mountList(<List.Result><List.Table columns={[{ key: 'id', header: 'ID', cell: (row: CheckRow) => row.id }]} rowId={(row: CheckRow) => row.id} headerClassName="bg-muted" /></List.Result>, {
-      fetch: async () => ({ rows: rowsOf(60), total: 60 }),
-    });
+    mountList(
+      <List.Result>
+        <List.Table
+          columns={[{ key: 'id', header: 'ID', cell: (row: CheckRow) => row.id }]}
+          rowId={(row: CheckRow) => row.id}
+          headerClassName="bg-muted"
+        />
+      </List.Result>,
+      {
+        fetch: async () => ({ rows: rowsOf(60), total: 60 }),
+      }
+    );
     await waitFor(() => expect(document.querySelector('[data-virtual] thead')).not.toBeNull());
     const header = document.querySelector('thead')!;
     expect(header.className).toContain('sticky');
@@ -137,7 +176,15 @@ describe('List.Table headerClassName', () => {
     // 앱 색이 키트 기본 배경을 이긴다(합칠 때 같은 종류 클래스는 뒤의 것만 남는다).
     expect(header.className).not.toContain('bg-background');
     cleanup();
-    mountList(<List.Result><List.Table columns={[{ key: 'id', header: 'ID', cell: (row: CheckRow) => row.id }]} rowId={(row: CheckRow) => row.id} headerClassName="bg-muted" /></List.Result>);
+    mountList(
+      <List.Result>
+        <List.Table
+          columns={[{ key: 'id', header: 'ID', cell: (row: CheckRow) => row.id }]}
+          rowId={(row: CheckRow) => row.id}
+          headerClassName="bg-muted"
+        />
+      </List.Result>
+    );
     await screen.findByRole('cell', { name: 'r1' });
     expect(document.querySelector('[data-virtual]')).toBeNull();
     expect(document.querySelector('thead')!.className).toContain('bg-muted');
@@ -145,16 +192,30 @@ describe('List.Table headerClassName', () => {
   });
 
   it('keeps an opaque default background on the sticky header without headerClassName', async () => {
-    mountList(<List.Result><List.Table columns={[{ key: 'id', header: 'ID', cell: (row: CheckRow) => row.id }]} rowId={(row: CheckRow) => row.id} /></List.Result>, {
-      fetch: async () => ({ rows: rowsOf(60), total: 60 }),
-    });
+    mountList(
+      <List.Result>
+        <List.Table
+          columns={[{ key: 'id', header: 'ID', cell: (row: CheckRow) => row.id }]}
+          rowId={(row: CheckRow) => row.id}
+        />
+      </List.Result>,
+      {
+        fetch: async () => ({ rows: rowsOf(60), total: 60 }),
+      }
+    );
     await waitFor(() => expect(document.querySelector('[data-virtual] thead')).not.toBeNull());
     expect(document.querySelector('thead')!.className).toContain('bg-background');
   });
 });
 
 it('List.Detail triggerClassName styles only the toggle button and keeps its aria wiring', async () => {
-  mountList(<List.Filter><List.Detail keys={[]} triggerClassName="h-7 text-xs"><span>more</span></List.Detail></List.Filter>);
+  mountList(
+    <List.Filter>
+      <List.Detail keys={[]} triggerClassName="h-7 text-xs">
+        <span>more</span>
+      </List.Detail>
+    </List.Filter>
+  );
   const toggle = await screen.findByRole('button', { name: '상세 검색' });
   expect(toggle.className).toContain('h-7');
   expect(toggle.className).toContain('justify-self-start');
@@ -176,18 +237,43 @@ async function pick(trigger: HTMLElement, name: string) {
 }
 
 /** 확인창 버튼 문구는 앱 DialogDefaults가 준다. */
-const withDialog = (node: ReactNode) => <DialogDefaults labels={defaultDialogLabels}>{node}</DialogDefaults>;
+const withDialog = (node: ReactNode) => (
+  <DialogDefaults labels={defaultDialogLabels}>{node}</DialogDefaults>
+);
 
 describe('List.BulkSelectAction', () => {
   const options = [
     { value: 'on', label: 'On' },
     { value: 'off', label: 'Off' },
   ] as const;
-  function bulk(run: (ids: readonly string[], value: 'on' | 'off') => Promise<{ completedIds: readonly string[] }>, extra: { readonly requiredMessage?: string; readonly check?: (ids: readonly string[], value: 'on' | 'off') => string | undefined } = {}) {
+  function bulk(
+    run: (
+      ids: readonly string[],
+      value: 'on' | 'off'
+    ) => Promise<{ completedIds: readonly string[] }>,
+    extra: {
+      readonly requiredMessage?: string;
+      readonly check?: (ids: readonly string[], value: 'on' | 'off') => string | undefined;
+    } = {}
+  ) {
     return (
       <>
-        <List.BulkSelectAction label="Apply" selectLabel="New state" placeholder="Choose" options={options} run={run} describe={(ids, value) => `${ids.join(',')} -> ${value}`} {...extra} />
-        <List.Result><List.Table columns={[{ key: 'id', header: 'ID', cell: (row: CheckRow) => row.id }]} rowId={(row: CheckRow) => row.id} selectable /></List.Result>
+        <List.BulkSelectAction
+          label="Apply"
+          selectLabel="New state"
+          placeholder="Choose"
+          options={options}
+          run={run}
+          describe={(ids, value) => `${ids.join(',')} -> ${value}`}
+          {...extra}
+        />
+        <List.Result>
+          <List.Table
+            columns={[{ key: 'id', header: 'ID', cell: (row: CheckRow) => row.id }]}
+            rowId={(row: CheckRow) => row.id}
+            selectable
+          />
+        </List.Result>
       </>
     );
   }
@@ -223,10 +309,12 @@ describe('List.BulkSelectAction', () => {
     const dialog = await screen.findByRole('alertdialog');
     await act(async () => fireEvent.click(within(dialog).getByRole('button', { name: '확인' })));
     await waitFor(() => expect(run).toHaveBeenCalledTimes(1));
-    expect(check.mock.calls).toEqual([[['r2'], 'on'], [['r2'], 'on']]);
+    expect(check.mock.calls).toEqual([
+      [['r2'], 'on'],
+      [['r2'], 'on'],
+    ]);
   });
 });
-
 
 it('does not execute a value removed from the available options after confirmation opens', async () => {
   const run = vi.fn(async (ids: readonly string[]) => ({ completedIds: ids }));
@@ -234,9 +322,29 @@ it('does not execute a value removed from the available options after confirmati
   function DynamicBulk() {
     const [available, setAvailable] = useState(true);
     removeOption = () => setAvailable(false);
-    return <List.BulkSelectAction label="Apply" defaultValue="off" options={available ? [{ value: 'off', label: 'Off' }] : []} requiredMessage="Choose again" run={run} />;
+    return (
+      <List.BulkSelectAction
+        label="Apply"
+        defaultValue="off"
+        options={available ? [{ value: 'off', label: 'Off' }] : []}
+        requiredMessage="Choose again"
+        run={run}
+      />
+    );
   }
-  mountList(<><DynamicBulk /><List.Result><List.Table columns={[{ key: 'id', header: 'ID', cell: (row: CheckRow) => row.id }]} rowId={(row: CheckRow) => row.id} selectable /></List.Result></>, { outer: withDialog });
+  mountList(
+    <>
+      <DynamicBulk />
+      <List.Result>
+        <List.Table
+          columns={[{ key: 'id', header: 'ID', cell: (row: CheckRow) => row.id }]}
+          rowId={(row: CheckRow) => row.id}
+          selectable
+        />
+      </List.Result>
+    </>,
+    { outer: withDialog }
+  );
   await screen.findByRole('cell', { name: 'r1' });
   fireEvent.click(screen.getAllByRole('checkbox', { name: '행 선택' })[0]!);
   fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
@@ -267,7 +375,7 @@ describe('listSearch 선언을 이름으로 읽는 칸', () => {
         paging: paging(),
         sorting: sort({ values: ['created', 'name'], default: 'created' }),
       },
-    }),
+    })
   );
   function Declared({ body }: { readonly body: ReactNode }) {
     const [url, setUrl] = useState(() => declared.validateSearch({}));
@@ -275,7 +383,10 @@ describe('listSearch 선언을 이름으로 읽는 칸', () => {
       definition: declared,
       search: url,
       navigate: (next) => setUrl(next),
-      query: (full) => ({ queryKey: ['declared-rows', full], queryFn: async () => ({ rows: rowsOf(1), total: 1 }) }),
+      query: (full) => ({
+        queryKey: ['declared-rows', full],
+        queryFn: async () => ({ rows: rowsOf(1), total: 1 }),
+      }),
       rowId: (row: CheckRow) => row.id,
     });
     return <List model={model}>{body}</List>;
@@ -286,19 +397,31 @@ describe('listSearch 선언을 이름으로 읽는 칸', () => {
     return render(
       <QueryClientProvider client={client}>
         <Declared body={body} />
-      </QueryClientProvider>,
+      </QueryClientProvider>
     );
   }
 
   it('takes keys, targets, choices, sizes and sort values from the declaration and only labels from the screen', async () => {
     mount(
       <>
-        <List.Period name="period" label="Period" typeLabels={{ created: 'T-created', updated: 'T-updated' }} />
-        <List.Keywords name="search" label="Words" choiceLabels={{ name: 'K-name', code: 'K-code' }} />
-        <List.MultiSelect name="statuses" label="Status" optionLabels={{ on: 'S-on', off: 'S-off' }} />
+        <List.Period
+          name="period"
+          label="Period"
+          typeLabels={{ created: 'T-created', updated: 'T-updated' }}
+        />
+        <List.Keywords
+          name="search"
+          label="Words"
+          choiceLabels={{ name: 'K-name', code: 'K-code' }}
+        />
+        <List.MultiSelect
+          name="statuses"
+          label="Status"
+          optionLabels={{ on: 'S-on', off: 'S-off' }}
+        />
         <List.PageSize />
         <List.SortSelect optionLabels={{ created: 'O-created', name: 'O-name' }} />
-      </>,
+      </>
     );
     expect(await screen.findByRole('checkbox', { name: 'S-on' })).toBeDefined();
     expect(screen.getByRole('checkbox', { name: 'S-off' })).toBeDefined();
@@ -319,7 +442,9 @@ describe('listSearch 선언을 이름으로 읽는 칸', () => {
     mount(<List.Keywords name={name} label="Keywords" choiceLabels={choiceLabels} />);
     const target = screen.getByRole('combobox', { name: 'Keywords 검색 대상' });
     expect(target.textContent).toContain('Group name');
-    fireEvent.change(screen.getByRole('textbox', { name: 'Keywords' }), { target: { value: 'Booster' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Keywords' }), {
+      target: { value: 'Booster' },
+    });
     fireEvent.keyDown(screen.getByRole('textbox', { name: 'Keywords' }), { key: 'Enter' });
     expect(await screen.findByText('Group name: Booster')).toBeDefined();
     expect(target.textContent).toContain('Group name');
@@ -327,8 +452,12 @@ describe('listSearch 선언을 이름으로 읽는 칸', () => {
 
   it('refuses a name that is not that kind of field and a missing label instead of showing raw values', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    expect(() => mount(<List.Period name="statuses" label="Wrong" />)).toThrow(/"statuses" is not a dateRange field/);
-    expect(() => mount(<List.MultiSelect name="statuses" label="Status" optionLabels={{ on: 'S-on' }} />)).toThrow(/no label for "off"/);
+    expect(() => mount(<List.Period name="statuses" label="Wrong" />)).toThrow(
+      /"statuses" is not a dateRange field/
+    );
+    expect(() =>
+      mount(<List.MultiSelect name="statuses" label="Status" optionLabels={{ on: 'S-on' }} />)
+    ).toThrow(/no label for "off"/);
   });
 
   it('lets the table read rowId and selectable rows from the list model', async () => {
@@ -361,7 +490,10 @@ describe('List.Table column with several sort keys', () => {
           seen.push(next);
           setUrl(datedSearch.validateSearch(next));
         },
-        query: (full) => ({ queryKey: ['dated-rows', full], queryFn: async () => ({ rows: rowsOf(1), total: 1 }) }),
+        query: (full) => ({
+          queryKey: ['dated-rows', full],
+          queryFn: async () => ({ rows: rowsOf(1), total: 1 }),
+        }),
         rowId: (row: CheckRow) => row.id,
       });
       return (
@@ -370,7 +502,12 @@ describe('List.Table column with several sort keys', () => {
             <List.Table
               columns={[
                 { key: 'name', header: 'Name', cell: (row: CheckRow) => row.id, sort: 'name' },
-                { key: 'dates', header: 'Dates', cell: (row: CheckRow) => row.id, sort: ['updated', 'created'] },
+                {
+                  key: 'dates',
+                  header: 'Dates',
+                  cell: (row: CheckRow) => row.id,
+                  sort: ['updated', 'created'],
+                },
               ]}
             />
           </List.Result>
@@ -384,19 +521,25 @@ describe('List.Table column with several sort keys', () => {
         <DialogDefaults labels={defaultDialogLabels}>
           <App />
         </DialogDefaults>
-      </QueryClientProvider>,
+      </QueryClientProvider>
     );
     return seen;
   }
   // 주소는 기본값(sort=created, order=desc)을 생략하므로 기본값을 깔고 비교한다.
-  const datesHeader = async () => (await screen.findByRole('button', { name: /Dates/ })).closest('th')!;
+  const datesHeader = async () =>
+    (await screen.findByRole('button', { name: /Dates/ })).closest('th')!;
 
   it('sorts by the first key when another column is sorted', async () => {
     const seen = mountDated({ sort: 'name', order: 'asc' });
     const header = await datesHeader();
     expect(header.getAttribute('aria-sort')).toBeNull();
     fireEvent.click(within(header).getByRole('button'));
-    await waitFor(() => expect({ sort: 'created', order: 'desc', ...seen.at(-1) }).toMatchObject({ sort: 'updated', order: 'desc' }));
+    await waitFor(() =>
+      expect({ sort: 'created', order: 'desc', ...seen.at(-1) }).toMatchObject({
+        sort: 'updated',
+        order: 'desc',
+      })
+    );
   });
 
   it('shows the column as sorted for each of its keys and only flips the order', async () => {
@@ -404,12 +547,22 @@ describe('List.Table column with several sort keys', () => {
     const header = await datesHeader();
     expect(header.getAttribute('aria-sort')).toBe('descending');
     fireEvent.click(within(header).getByRole('button'));
-    await waitFor(() => expect({ sort: 'created', order: 'desc', ...seen.at(-1) }).toMatchObject({ sort: 'created', order: 'asc' }));
+    await waitFor(() =>
+      expect({ sort: 'created', order: 'desc', ...seen.at(-1) }).toMatchObject({
+        sort: 'created',
+        order: 'asc',
+      })
+    );
     cleanup();
     const again = mountDated({ sort: 'updated', order: 'asc' });
     const updated = await datesHeader();
     expect(updated.getAttribute('aria-sort')).toBe('ascending');
     fireEvent.click(within(updated).getByRole('button'));
-    await waitFor(() => expect({ sort: 'created', order: 'desc', ...again.at(-1) }).toMatchObject({ sort: 'updated', order: 'desc' }));
+    await waitFor(() =>
+      expect({ sort: 'created', order: 'desc', ...again.at(-1) }).toMatchObject({
+        sort: 'updated',
+        order: 'desc',
+      })
+    );
   });
 });

@@ -3,4 +3,7 @@
 import { Pending } from '../pending';
 import { checkPendingConformance } from '@boosterlab/web-kit/testing/unit/primitives';
 import installation from '../../../../../registry-installation.json';
-checkPendingConformance({ Pending }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });
+checkPendingConformance(
+  { Pending },
+  { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit }
+);

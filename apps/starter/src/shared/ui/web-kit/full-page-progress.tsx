@@ -43,7 +43,10 @@ export function FullPageProgress({
           aria-hidden="true"
           className="fixed inset-0 z-40 flex items-center justify-center bg-background/80 backdrop-blur-xs"
         >
-          <div data-slot="blocking-progress-box" className="flex flex-col items-center gap-6 text-center text-sm text-foreground">
+          <div
+            data-slot="blocking-progress-box"
+            className="flex flex-col items-center gap-6 text-center text-sm text-foreground"
+          >
             {indicator === undefined ? <Spinner large /> : indicator}
             <div className="grid gap-1">
               <p>{messages[kind!]}</p>
@@ -52,8 +55,16 @@ export function FullPageProgress({
           </div>
         </div>
       ) : null}
-      <div role="status" aria-live="polite" aria-atomic="true" data-slot="blocking-progress-status" className="sr-only">
-        {open ? [messages[kind!], messages.wait].filter((text) => text !== undefined).join(' ') : ''}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        data-slot="blocking-progress-status"
+        className="sr-only"
+      >
+        {open
+          ? [messages[kind!], messages.wait].filter((text) => text !== undefined).join(' ')
+          : ''}
       </div>
     </FullPageProgressProvider>
   );

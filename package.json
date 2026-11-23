@@ -7,7 +7,7 @@
     "node": ">=24.19.0 <25"
   },
   "scripts": {
-    "check": "pnpm --filter @boosterlab/web-kit check && node scripts/build-package-references.mjs && node --test --test-concurrency=1 scripts/*.test.mjs && pnpm registry:check && pnpm registry:lint",
+    "check": "pnpm format:check && pnpm --filter @boosterlab/web-kit check && node scripts/build-package-references.mjs && node --test --test-concurrency=1 scripts/*.test.mjs && pnpm registry:check && pnpm registry:lint",
     "starter:sync": "node scripts/sync-starter.mjs",
     "starter:check": "node scripts/sync-starter.mjs --frozen && pnpm --dir apps/starter check",
     "registry:build": "shadcn build registry.json --output public/r",
@@ -16,9 +16,14 @@
     "starter:create": "node scripts/create-starter.mjs",
     "consumer:minimal": "node scripts/check-minimal-consumers.mjs",
     "release:candidate": "node scripts/release-candidate.mjs",
-    "release:publish": "node scripts/release-publish.mjs"
+    "release:publish": "node scripts/release-publish.mjs",
+    "format:check": "prettier --check \"packages/ui-registry/{src,checks}/**/*.{ts,tsx}\" \"apps/starter/src/shared/ui/web-kit/**/*.{ts,tsx}\" packages/web-kit/src/auth.ts packages/web-kit/tests/auth.test.tsx",
+    "format:write": "prettier --write \"packages/ui-registry/{src,checks}/**/*.{ts,tsx}\" \"apps/starter/src/shared/ui/web-kit/**/*.{ts,tsx}\" packages/web-kit/src/auth.ts packages/web-kit/tests/auth.test.tsx"
   },
   "devDependencies": {
-    "shadcn": "4.19.1"
+    "shadcn": "4.19.1",
+    "prettier": "3.8.1",
+    "prettier-plugin-tailwindcss": "0.6.14",
+    "tailwindcss": "4.3.3"
   }
 }

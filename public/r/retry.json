@@ -22,7 +22,7 @@
     },
     {
       "path": "packages/ui-registry/checks/retry.test.tsx",
-      "content": "// @vitest-environment jsdom\n// 파일 책임: 설치한 retry 복사본을 키트 공통 단위 검사에 연결한다.\nimport { RetryRegion } from '../retry';\nimport { checkRetryConformance } from '@boosterlab/web-kit/testing/unit/primitives';\nimport installation from '../../../../../registry-installation.json';\ncheckRetryConformance({ RetryRegion }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });\n",
+      "content": "// @vitest-environment jsdom\n// 파일 책임: 설치한 retry 복사본을 키트 공통 단위 검사에 연결한다.\nimport { RetryRegion } from '../retry';\nimport { checkRetryConformance } from '@boosterlab/web-kit/testing/unit/primitives';\nimport installation from '../../../../../registry-installation.json';\ncheckRetryConformance(\n  { RetryRegion },\n  { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit }\n);\n",
       "type": "registry:file",
       "target": "~/src/shared/ui/web-kit/checks/retry.test.tsx"
     }

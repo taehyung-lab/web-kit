@@ -3,7 +3,12 @@
 import type { ComponentProps, ReactNode } from 'react';
 import { cn } from 'cn';
 import { ChevronDownIcon } from 'lucide-react';
-import { useChoiceBinding, type ChoiceBindingOptions, type ChoiceNode as ChoiceBindingNode, type ChoiceValue } from '@boosterlab/web-kit/choice';
+import {
+  useChoiceBinding,
+  type ChoiceBindingOptions,
+  type ChoiceNode as ChoiceBindingNode,
+  type ChoiceValue,
+} from '@boosterlab/web-kit/choice';
 import { treeLeaves, treeLeafNodes } from '@boosterlab/web-kit';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -18,7 +23,18 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Combobox, ComboboxCollection, ComboboxContent, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxLabel, ComboboxList, ComboboxTrigger } from '@/components/ui/combobox';
+import {
+  Combobox,
+  ComboboxCollection,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxGroup,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxLabel,
+  ComboboxList,
+  ComboboxTrigger,
+} from '@/components/ui/combobox';
 import { InputGroupAddon, InputGroupButton } from '@/components/ui/input-group';
 
 export type ChoiceNode = ChoiceBindingNode;
@@ -37,8 +53,8 @@ export function MixedCheckbox({ className, ...props }: ComponentProps<typeof Che
     <Checkbox
       {...props}
       className={cn(
-        'data-indeterminate:border-primary data-indeterminate:bg-primary data-indeterminate:text-primary-foreground data-indeterminate:[&_svg]:hidden data-indeterminate:before:h-0.5 data-indeterminate:before:w-2 data-indeterminate:before:rounded-full data-indeterminate:before:bg-current',
-        className,
+        'data-indeterminate:border-primary data-indeterminate:bg-primary data-indeterminate:text-primary-foreground data-indeterminate:before:h-0.5 data-indeterminate:before:w-2 data-indeterminate:before:rounded-full data-indeterminate:before:bg-current data-indeterminate:[&_svg]:hidden',
+        className
       )}
     />
   );
@@ -46,19 +62,29 @@ export function MixedCheckbox({ className, ...props }: ComponentProps<typeof Che
 
 type Leaf = { readonly value: string; readonly label: string };
 /** 가지 하나의 제목과 체크. targets는 그 가지 아래 모든 leaf다. */
-type BranchHead = { readonly label: string; readonly depth: number; readonly targets: readonly string[] };
+type BranchHead = {
+  readonly label: string;
+  readonly depth: number;
+  readonly targets: readonly string[];
+};
 /** 검색 상자의 한 묶음: 목록에 보이는 leaf 줄(items)과, 그 앞에 그리는 가지 제목들(heads). */
 type LeafGroup = { readonly heads: readonly BranchHead[]; readonly items: readonly Leaf[] };
 
 /** 가지 하나와 그 아래 가지를 위에서 아래 순서로 묶는다. items가 비어 있을 수 있다. */
-function branchGroups(node: Extract<ChoiceNode, { children: readonly ChoiceNode[] }>, depth: number): LeafGroup[] {
+function branchGroups(
+  node: Extract<ChoiceNode, { children: readonly ChoiceNode[] }>,
+  depth: number
+): LeafGroup[] {
   const own: Leaf[] = [];
   const below: LeafGroup[] = [];
   for (const child of node.children) {
     if (child.children === undefined) own.push({ value: child.value, label: child.label });
     else below.push(...branchGroups(child, depth + 1));
   }
-  return [{ heads: [{ label: node.label, depth, targets: treeLeaves(node.children) }], items: own }, ...below];
+  return [
+    { heads: [{ label: node.label, depth, targets: treeLeaves(node.children) }], items: own },
+    ...below,
+  ];
 }
 
 /**
@@ -66,7 +92,9 @@ function branchGroups(node: Extract<ChoiceNode, { children: readonly ChoiceNode[
  * 콤보박스가 빈 묶음을 감춰도 사라지지 않는다. 맨 위의 leaf는 제목 없는 묶음이다.
  */
 function leafGroups(nodes: readonly ChoiceNode[]): LeafGroup[] {
-  const top = nodes.filter((node) => node.children === undefined).map((node) => ({ value: node.value as string, label: node.label }));
+  const top = nodes
+    .filter((node) => node.children === undefined)
+    .map((node) => ({ value: node.value as string, label: node.label }));
   const raw = [
     ...(top.length > 0 ? [{ heads: [] as BranchHead[], items: top }] : []),
     ...nodes.flatMap((node) => (node.children === undefined ? [] : branchGroups(node, 0))),
@@ -86,7 +114,21 @@ function leafGroups(nodes: readonly ChoiceNode[]): LeafGroup[] {
 /** 같은 leaf 값 모델을 모든 모양에서 사용한다. 가지 ID는 저장하지 않는다. */
 export function Choice(props: ChoiceProps) {
   const { nodes, multiple = false, appearance = 'dropdown', disabled, label } = props;
-  const { id, text, setText, result, selected, names, summary, control, selection, toggle, toggleGroup, groupState, select } = useChoiceBinding(props);
+  const {
+    id,
+    text,
+    setText,
+    result,
+    selected,
+    names,
+    summary,
+    control,
+    selection,
+    toggle,
+    toggleGroup,
+    groupState,
+    select,
+  } = useChoiceBinding(props);
   /** 다중 가지는 삼상태, 단일 가지는 제목으로만 보여 준다. */
   function branch(node: ChoiceNode, key: number): ReactNode {
     const targets = node.children === undefined ? [node.value] : treeLeaves(node.children);
@@ -111,19 +153,34 @@ export function Choice(props: ChoiceProps) {
             {node.label}
           </label>
         )}
-        {node.children !== undefined && <ul className="grid gap-2 pl-6">{node.children.map(branch)}</ul>}
+        {node.children !== undefined && (
+          <ul className="grid gap-2 pl-6">{node.children.map(branch)}</ul>
+        )}
       </li>
     );
   }
   const clear =
     !multiple && props.clearLabel !== undefined && selected.length > 0 ? (
-      <Button type="button" variant="ghost" size="sm" disabled={disabled} onClick={() => select(undefined)}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled={disabled}
+        onClick={() => select(undefined)}
+      >
         {props.clearLabel}
       </Button>
     ) : null;
   const list = (
-    <ul className={appearance === 'horizontal' ? 'flex flex-wrap items-center gap-x-4 gap-y-2' : 'grid gap-2'}>
-      {(props.allLabel === undefined || !multiple ? nodes : [{ label: props.allLabel, children: nodes }]).map(branch)}
+    <ul
+      className={
+        appearance === 'horizontal' ? 'flex flex-wrap items-center gap-x-4 gap-y-2' : 'grid gap-2'
+      }
+    >
+      {(props.allLabel === undefined || !multiple
+        ? nodes
+        : [{ label: props.allLabel, children: nodes }]
+      ).map(branch)}
     </ul>
   );
   // 단일 선택은 라디오 묶음 하나로 같은 칸의 라디오만 서로 배타가 된다(id를 묶음 이름으로 쓴다).
@@ -133,7 +190,13 @@ export function Choice(props: ChoiceProps) {
       {multiple ? (
         list
       ) : (
-        <RadioGroup name={id} value={selected[0] ?? null} onValueChange={(value) => select(value as string)} disabled={disabled} className="block w-auto">
+        <RadioGroup
+          name={id}
+          value={selected[0] ?? null}
+          onValueChange={(value) => select(value as string)}
+          disabled={disabled}
+          className="block w-auto"
+        >
           {list}
         </RadioGroup>
       )}
@@ -153,7 +216,9 @@ export function Choice(props: ChoiceProps) {
     );
   }
   /** 팝업을 여는 버튼 모양. 내용은 지금 고른 값 요약이고 이름은 control의 aria-label이 맡는다. */
-  const triggerButton = <Button variant="outline" className="min-w-36 justify-between font-normal" />;
+  const triggerButton = (
+    <Button variant="outline" className="min-w-36 justify-between font-normal" />
+  );
   if (appearance === 'search') {
     const leaves = treeLeafNodes(result.nodes);
     const grouped = result.nodes.some((node) => node.children !== undefined);
@@ -171,7 +236,12 @@ export function Choice(props: ChoiceProps) {
       <div className="flex flex-wrap items-center gap-2">
         <ComboboxInput {...control} showTrigger={false} disabled={disabled}>
           <InputGroupAddon align="inline-end">
-            <InputGroupButton size="icon-xs" variant="ghost" render={<ComboboxTrigger aria-label={label} />} disabled={disabled} />
+            <InputGroupButton
+              size="icon-xs"
+              variant="ghost"
+              render={<ComboboxTrigger aria-label={label} />}
+              disabled={disabled}
+            />
           </InputGroupAddon>
         </ComboboxInput>
         <span aria-live="polite" className="text-sm text-muted-foreground">
@@ -185,7 +255,10 @@ export function Choice(props: ChoiceProps) {
             </p>
           )}
           {result.failed && (
-            <div role="alert" className="flex items-center gap-2 px-2 py-1.5 text-sm text-destructive">
+            <div
+              role="alert"
+              className="flex items-center gap-2 px-2 py-1.5 text-sm text-destructive"
+            >
               {props.messages?.failed ?? '선택지를 불러오지 못했습니다.'}
               <Button type="button" variant="outline" size="sm" onClick={result.retry}>
                 {props.messages?.retry ?? '다시 시도'}
@@ -196,11 +269,18 @@ export function Choice(props: ChoiceProps) {
           <ComboboxList>
             {grouped
               ? (group: LeafGroup) => (
-                  <ComboboxGroup key={`${group.heads.map((head) => head.label).join('/')}:${group.items[0]?.value ?? ''}`} items={group.items}>
+                  <ComboboxGroup
+                    key={`${group.heads.map((head) => head.label).join('/')}:${group.items[0]?.value ?? ''}`}
+                    items={group.items}
+                  >
                     {group.heads.map((head) => {
                       const state = groupState(head.targets);
                       return (
-                        <ComboboxLabel key={`${head.depth}:${head.label}`} className="flex items-center gap-2" style={{ paddingInlineStart: `${head.depth}rem` }}>
+                        <ComboboxLabel
+                          key={`${head.depth}:${head.label}`}
+                          className="flex items-center gap-2"
+                          style={{ paddingInlineStart: `${head.depth}rem` }}
+                        >
                           {multiple && (
                             <MixedCheckbox
                               aria-label={head.label}
@@ -233,11 +313,20 @@ export function Choice(props: ChoiceProps) {
       </div>
     );
     return multiple ? (
-      <Combobox {...common} multiple value={selectedItems} onValueChange={(items) => select(items.map((item) => item.value))}>
+      <Combobox
+        {...common}
+        multiple
+        value={selectedItems}
+        onValueChange={(items) => select(items.map((item) => item.value))}
+      >
         {parts}
       </Combobox>
     ) : (
-      <Combobox {...common} value={selectedItems[0] ?? null} onValueChange={(item) => select(item?.value)}>
+      <Combobox
+        {...common}
+        value={selectedItems[0] ?? null}
+        onValueChange={(item) => select(item?.value)}
+      >
         {parts}
       </Combobox>
     );
@@ -266,7 +355,11 @@ export function Choice(props: ChoiceProps) {
           {summary}
           <ChevronDownIcon aria-hidden="true" className="text-muted-foreground" />
         </PopoverTrigger>
-        <PopoverContent aria-label={label} align="start" className="max-h-96 w-auto min-w-(--anchor-width) overflow-auto">
+        <PopoverContent
+          aria-label={label}
+          align="start"
+          className="max-h-96 w-auto min-w-(--anchor-width) overflow-auto"
+        >
           {tree}
         </PopoverContent>
       </Popover>

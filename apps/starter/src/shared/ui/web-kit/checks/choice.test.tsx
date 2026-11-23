@@ -3,4 +3,7 @@
 import { Choice } from '../choice';
 import { checkChoiceConformance } from '@boosterlab/web-kit/testing/unit/choice';
 import installation from '../../../../../registry-installation.json';
-checkChoiceConformance({ Choice }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });
+checkChoiceConformance(
+  { Choice },
+  { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit }
+);

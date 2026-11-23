@@ -2,7 +2,17 @@
 import type { ReactNode } from 'react';
 import type { SearchMeta, SearchMetaEntry } from '@boosterlab/web-kit/search';
 import { ListRoot, Check } from './list/list-context';
-import { Filter, FilterActions, Detail, Choice, Text, Select, MultiSelect, Period, Keywords } from './list/list-filters';
+import {
+  Filter,
+  FilterActions,
+  Detail,
+  Choice,
+  Text,
+  Select,
+  MultiSelect,
+  Period,
+  Keywords,
+} from './list/list-filters';
 import { Result, Table, Total, PageSize, SortSelect, Pagination } from './list/list-results';
 import { Actions, BulkAction, BulkSelectAction, Download } from './list/list-actions';
 
@@ -18,24 +28,62 @@ type Props<C> = C extends (props: infer P) => unknown ? P : never;
 type Names<M extends SearchMeta, K extends SearchMetaEntry['kind']> = {
   [N in keyof M & string]: M[N]['kind'] extends K ? N : never;
 }[keyof M & string];
-type NamedLabels<M extends SearchMeta, K extends SearchMetaEntry['kind'], P, L extends string, V extends string> = {
-  [N in Names<M, K>]: Omit<P, 'name' | L | 'options' | 'choices' | 'from' | 'to' | 'type'> & { readonly name: N } &
-    { readonly [Label in L]: Readonly<Record<M[N] extends Record<V, readonly (infer Value extends string)[]> ? Value : never, string>> }
+type NamedLabels<
+  M extends SearchMeta,
+  K extends SearchMetaEntry['kind'],
+  P,
+  L extends string,
+  V extends string,
+> = {
+  [N in Names<M, K>]: Omit<P, 'name' | L | 'options' | 'choices' | 'from' | 'to' | 'type'> & {
+    readonly name: N;
+  } & {
+    readonly [Label in L]: Readonly<
+      Record<
+        M[N] extends Record<V, readonly (infer Value extends string)[]> ? Value : never,
+        string
+      >
+    >;
+  };
 }[Names<M, K>];
-type MultiMeta<M extends SearchMeta> = { [N in keyof M as M[N] extends { multiple: true } ? N : never]: M[N] };
-export type TypedList<M extends SearchMeta> = typeof ListRoot & Omit<typeof List, 'of' | 'Keywords' | 'MultiSelect' | 'Period' | 'SortSelect' | 'Detail'> & {
-  readonly Keywords: (props: NamedLabels<M, 'keywords', Props<typeof Keywords>, 'choiceLabels', 'targets'>) => ReactNode;
-  readonly MultiSelect: (props: NamedLabels<MultiMeta<M>, 'choices', Props<typeof MultiSelect>, 'optionLabels', 'values'>) => ReactNode;
-  readonly Period: (props: NamedLabels<M, 'dateRange', Props<typeof Period>, 'typeLabels', 'types'>) => ReactNode;
-  readonly SortSelect: (props: Omit<Props<typeof SortSelect>, 'options' | 'optionLabels'> & {
-    readonly optionLabels: Readonly<Record<M[Names<M, 'sort'>] extends { values: readonly (infer V extends string)[] } ? V : never, string>>;
-  }) => ReactNode;
-  readonly Detail: (props: Omit<Props<typeof Detail>, 'keys'> & { readonly keys: readonly (keyof M & string)[] }) => ReactNode;
+type MultiMeta<M extends SearchMeta> = {
+  [N in keyof M as M[N] extends { multiple: true } ? N : never]: M[N];
 };
+export type TypedList<M extends SearchMeta> = typeof ListRoot &
+  Omit<typeof List, 'of' | 'Keywords' | 'MultiSelect' | 'Period' | 'SortSelect' | 'Detail'> & {
+    readonly Keywords: (
+      props: NamedLabels<M, 'keywords', Props<typeof Keywords>, 'choiceLabels', 'targets'>
+    ) => ReactNode;
+    readonly MultiSelect: (
+      props: NamedLabels<
+        MultiMeta<M>,
+        'choices',
+        Props<typeof MultiSelect>,
+        'optionLabels',
+        'values'
+      >
+    ) => ReactNode;
+    readonly Period: (
+      props: NamedLabels<M, 'dateRange', Props<typeof Period>, 'typeLabels', 'types'>
+    ) => ReactNode;
+    readonly SortSelect: (
+      props: Omit<Props<typeof SortSelect>, 'options' | 'optionLabels'> & {
+        readonly optionLabels: Readonly<
+          Record<
+            M[Names<M, 'sort'>] extends { values: readonly (infer V extends string)[] } ? V : never,
+            string
+          >
+        >;
+      }
+    ) => ReactNode;
+    readonly Detail: (
+      props: Omit<Props<typeof Detail>, 'keys'> & { readonly keys: readonly (keyof M & string)[] }
+    ) => ReactNode;
+  };
 
 /** 목록 기본 UI. <List model={useList(...)}> 안에 부품을 원하는 배치로 둔다. */
 export const List = Object.assign(ListRoot, {
-  of: <S extends { readonly meta: SearchMeta },>() => List as unknown as TypedList<S['meta']>,
+  of: <S extends { readonly meta: SearchMeta }>() => List as unknown as TypedList<S['meta']>,
   Filter,
   Choice,
   FilterActions,

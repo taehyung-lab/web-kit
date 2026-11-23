@@ -1,9 +1,12 @@
 // 파일 책임: 목록 표시 설정의 단일 Context와 여러 목록 영역이 함께 쓰는 기본 UI.
-import { ListProvider as ModelProvider, useListModel, type ListModel } from '@boosterlab/web-kit/list';
+import {
+  ListProvider as ModelProvider,
+  useListModel,
+  type ListModel,
+} from '@boosterlab/web-kit/list';
 import { createContext, useContext, type ReactNode } from 'react';
 import { MixedCheckbox } from '../choice';
 import { SelectBox } from '../select-box';
-
 
 const defaultMessages = {
   search: '검색',
@@ -50,7 +53,15 @@ const defaultMessages = {
   chooseValue: '바꿀 값을 먼저 선택해 주세요.',
 };
 /** 뒤에 더한 문구(fieldOptionsFailed·chooseValue)는 선택이라, 전체 문구를 넘기던 앱이 키 추가로 깨지지 않는다. */
-export type ListMessages = Omit<typeof defaultMessages, 'fieldOptionsFailed' | 'chooseValue' | 'reload' | 'resultUnknown'> & { readonly fieldOptionsFailed?: string; readonly chooseValue?: string; readonly reload?: string; readonly resultUnknown?: string };
+export type ListMessages = Omit<
+  typeof defaultMessages,
+  'fieldOptionsFailed' | 'chooseValue' | 'reload' | 'resultUnknown'
+> & {
+  readonly fieldOptionsFailed?: string;
+  readonly chooseValue?: string;
+  readonly reload?: string;
+  readonly resultUnknown?: string;
+};
 
 /** 실패가 보이는 자리. list는 결과 없는 조회 실패, refresh는 이전 결과 유지 중 실패, action·download는 쓰기 실패다. */
 export type FailurePlace = 'list' | 'refresh' | 'action' | 'download';
@@ -64,7 +75,10 @@ type Context = {
   readonly renderFailure: RenderFailure;
 };
 /** 앱이 ListDefaults로 준 기본값. 없으면 키트 기본 문구만 쓴다. */
-type Defaults = { readonly messages: Partial<ListMessages>; readonly renderFailure?: RenderFailure };
+type Defaults = {
+  readonly messages: Partial<ListMessages>;
+  readonly renderFailure?: RenderFailure;
+};
 const DefaultsContext = createContext<Defaults>({ messages: {} });
 /** <List> 안의 표시 설정. 밖에서 명시 모델로 쓴 부품은 null을 보고 앱 기본값을 직접 읽는다. */
 const PresentationContext = createContext<Context | null>(null);
@@ -72,11 +86,16 @@ const PresentationContext = createContext<Context | null>(null);
 /** 값이 undefined인 키를 버린다. 「이 문구는 따로 정하지 않음」이 아래 단계의 문구를 지우지 않게 한다. */
 function definedOnly<T extends object>(value: T | undefined): Partial<T> {
   if (value === undefined) return {};
-  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as Partial<T>;
+  return Object.fromEntries(
+    Object.entries(value).filter(([, item]) => item !== undefined)
+  ) as Partial<T>;
 }
 
 /** 가까운 쪽 실패 문구를 먼저 묻고, undefined(정하지 않음)일 때만 다음 단계에 묻는다. null·''은 그 단계의 답으로 그대로 쓴다. */
-function chainFailure(first: RenderFailure | undefined, next: RenderFailure | undefined): RenderFailure | undefined {
+function chainFailure(
+  first: RenderFailure | undefined,
+  next: RenderFailure | undefined
+): RenderFailure | undefined {
   if (first === undefined) return next;
   if (next === undefined) return first;
   return (failure, place) => {
@@ -136,7 +155,11 @@ function ListRoot({
   readonly children: ReactNode;
 }) {
   const context = usePresentation(messages, renderFailure);
-  return <ModelProvider model={model}><PresentationContext.Provider value={context}>{children}</PresentationContext.Provider></ModelProvider>;
+  return (
+    <ModelProvider model={model}>
+      <PresentationContext.Provider value={context}>{children}</PresentationContext.Provider>
+    </ModelProvider>
+  );
 }
 
 /** 체크박스 하나(shadcn Checkbox). 일부 선택은 indeterminate로 보인다. */
@@ -174,7 +197,11 @@ function Check({
 }
 
 /** 선언한 값마다 화면 문구를 붙인다. 문구가 빠진 값이 있으면 값 그대로 보이지 않게 오류를 낸다. */
-function labelled(values: readonly string[], labels: Readonly<Record<string, string>> | undefined, field: string) {
+function labelled(
+  values: readonly string[],
+  labels: Readonly<Record<string, string>> | undefined,
+  field: string
+) {
   return values.map((value) => {
     const label = labels?.[value];
     if (label === undefined) throw new Error(`list: no label for "${value}" of "${field}"`);

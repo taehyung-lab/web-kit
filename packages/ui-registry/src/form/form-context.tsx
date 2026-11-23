@@ -53,7 +53,10 @@ export const defaultFormMessages: FormMessages = {
 /** 실패가 보이는 자리. save는 저장 실패 한 줄, completion은 저장 뒤 완료 처리 실패, options는 선택지 조회 실패다. */
 export type FormFailurePlace = 'save' | 'completion' | 'options';
 /** 실패 문구. undefined면 키트 기본 문구, null이면 그 자리에 아무것도 그리지 않는다(앱 경계가 이미 알린 실패 등). */
-export type RenderFormFailure = (failure: unknown, place: FormFailurePlace) => ReactNode | null | undefined;
+export type RenderFormFailure = (
+  failure: unknown,
+  place: FormFailurePlace
+) => ReactNode | null | undefined;
 
 /** 칸 오류 값(문자열·번역 참조 등)을 표시 문구로 바꾼다. undefined면 그 칸에 문구를 그리지 않는다. */
 export type FormatFieldError = (errors: readonly unknown[]) => string | undefined;
@@ -71,7 +74,10 @@ const FormDefaultsContext = createContext<FormDefaultsValue | undefined>(undefin
  * 화면의 `<Form>`이 준 messages는 그 폼에서만 키별로 앞서고, formatError·renderFailure는 그 폼에서 통째로 바뀐다.
  * 폼의 확인창은 대화창 부품을 쓰므로 DialogDefaults도 함께 둔다.
  */
-export function FormDefaults({ children, ...value }: FormDefaultsValue & { readonly children: ReactNode }) {
+export function FormDefaults({
+  children,
+  ...value
+}: FormDefaultsValue & { readonly children: ReactNode }) {
   return <FormDefaultsContext.Provider value={value}>{children}</FormDefaultsContext.Provider>;
 }
 

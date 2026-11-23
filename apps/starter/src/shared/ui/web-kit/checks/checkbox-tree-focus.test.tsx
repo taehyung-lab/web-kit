@@ -3,9 +3,13 @@
 import { CheckboxTree } from '../CheckboxTree';
 import { checkCheckboxTreeConformance } from '@boosterlab/web-kit/testing/unit/checkbox-tree';
 import installation from '../../../../../registry-installation.json';
-const target = { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit };
+const target = {
+  registryVersion: installation.sourceRef,
+  registryCommit: installation.sourceCommit,
+};
 checkCheckboxTreeConformance({ CheckboxTree }, target);
 if (installation.items.some((item) => item.name === 'form')) {
-  const { checkCheckboxTreeFocusConformance } = await import('@boosterlab/web-kit/testing/unit/combinations');
+  const { checkCheckboxTreeFocusConformance } =
+    await import('@boosterlab/web-kit/testing/unit/combinations');
   await checkCheckboxTreeFocusConformance({ CheckboxTree }, target);
 }

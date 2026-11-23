@@ -3,7 +3,10 @@
 import { ConfirmDialog, DialogDefaults, defaultDialogLabels } from '../dialog';
 import { checkDialogConformance } from '@boosterlab/web-kit/testing/unit/primitives';
 import installation from '../../../../../registry-installation.json';
-checkDialogConformance({ ConfirmDialog, DialogDefaults, defaultDialogLabels }, { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit });
+checkDialogConformance(
+  { ConfirmDialog, DialogDefaults, defaultDialogLabels },
+  { registryVersion: installation.sourceRef, registryCommit: installation.sourceCommit }
+);
 
 // 아래는 이 복사본의 확인창 앱 기본값(DialogDefaults confirmation)과 화면별 덮어쓰기를 실제 useConfirmationState로 확인한다.
 import { ConfirmationDialog } from '../dialog';
@@ -15,7 +18,11 @@ import { afterEach, expect, it } from 'vitest';
 afterEach(cleanup);
 
 /** 실행이 실패하는 확인 하나와 열기 버튼. */
-function FailingConfirmation({ renderFailure }: { readonly renderFailure?: (failure: string) => ReactNode }) {
+function FailingConfirmation({
+  renderFailure,
+}: {
+  readonly renderFailure?: (failure: string) => ReactNode;
+}) {
   const confirmation = useConfirmationState<number, string>({
     run: async () => {
       throw new Error('down');
@@ -24,7 +31,9 @@ function FailingConfirmation({ renderFailure }: { readonly renderFailure?: (fail
   });
   return (
     <>
-      <button type="button" onClick={() => confirmation.request(1)}>open</button>
+      <button type="button" onClick={() => confirmation.request(1)}>
+        open
+      </button>
       <ConfirmationDialog confirmation={confirmation} title="Delete" renderFailure={renderFailure}>
         <p>body</p>
       </ConfirmationDialog>
@@ -43,7 +52,9 @@ function CompletionFailingConfirmation() {
   });
   return (
     <>
-      <button type="button" onClick={() => confirmation.request(1)}>open</button>
+      <button type="button" onClick={() => confirmation.request(1)}>
+        open
+      </button>
       <ConfirmationDialog confirmation={confirmation} title="Delete">
         <p>body</p>
       </ConfirmationDialog>
@@ -94,7 +105,9 @@ it('fails loudly when neither the app nor the screen gives a failure renderer', 
     render(
       <DialogDefaults labels={defaultDialogLabels}>
         <FailingConfirmation />
-      </DialogDefaults>,
-    ),
-  ).toThrow('<ConfirmationDialog> requires renderFailure or <DialogDefaults confirmation> above it');
+      </DialogDefaults>
+    )
+  ).toThrow(
+    '<ConfirmationDialog> requires renderFailure or <DialogDefaults confirmation> above it'
+  );
 });

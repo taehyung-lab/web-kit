@@ -4,9 +4,19 @@
 // 버튼 기본 문구(닫기·확인·취소·처리 중)와 확인 수명 창(ConfirmationDialog)의 실패·완료 문구는 앱 맨 위의 DialogDefaults 한 곳에서 받는다.
 // 화면이 준 문구는 그 창에서만 앞선다.
 import { createContext, useContext, type ReactNode, type RefObject } from 'react';
-import { useDialogBinding, useConfirmBinding, useAcknowledgeBinding } from '@boosterlab/web-kit/dialog';
+import {
+  useDialogBinding,
+  useConfirmBinding,
+  useAcknowledgeBinding,
+} from '@boosterlab/web-kit/dialog';
 import { Button } from '@/components/ui/button';
-import { Dialog as DialogRoot, DialogClose, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog as DialogRoot,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import type { useConfirmationState } from '@boosterlab/web-kit/dialog';
 import { Pending } from './pending';
 
@@ -44,14 +54,20 @@ const ConfirmationDefaultsContext = createContext<ConfirmationDefaults>({});
  * confirmation을 주면 이 아래 모든 ConfirmationDialog의 실패·완료 문구가 된다(화면마다 같은 값을 넘기지 않는다).
  * 폼 기본 문구(FormDefaults)와 따로 두어, 폼 없이 대화창만 설치한 앱도 이것만으로 쓴다.
  */
-export function DialogDefaults({ labels, confirmation = {}, children }: {
+export function DialogDefaults({
+  labels,
+  confirmation = {},
+  children,
+}: {
   readonly labels: DialogLabels;
   readonly confirmation?: ConfirmationDefaults;
   readonly children: ReactNode;
 }) {
   return (
     <DialogLabelsContext.Provider value={labels}>
-      <ConfirmationDefaultsContext.Provider value={confirmation}>{children}</ConfirmationDefaultsContext.Provider>
+      <ConfirmationDefaultsContext.Provider value={confirmation}>
+        {children}
+      </ConfirmationDefaultsContext.Provider>
     </DialogLabelsContext.Provider>
   );
 }
@@ -94,7 +110,12 @@ export function Dialog({
   className,
 }: DialogProps) {
   const labels = useDialogLabels('Dialog');
-  const { rootProps, popupRef, popupProps } = useDialogBinding({ open, closable, onClose, returnFocus });
+  const { rootProps, popupRef, popupProps } = useDialogBinding({
+    open,
+    closable,
+    onClose,
+    returnFocus,
+  });
   return (
     <DialogRoot {...rootProps}>
       {/* 닫기 버튼은 아래 버튼 자리 하나로만 둔다(shadcn 기본 모서리 닫기 버튼을 끈다). 첫 포커스 순서가 창 안 내용부터 시작한다. */}
@@ -107,11 +128,19 @@ export function Dialog({
         aria-describedby={undefined}
       >
         <DialogTitle>{title}</DialogTitle>
-        {children === undefined ? null : <div data-slot="dialog-body" className="grid gap-3">{children}</div>}
+        {children === undefined ? null : (
+          <div data-slot="dialog-body" className="grid gap-3">
+            {children}
+          </div>
+        )}
         {footer === undefined && !closable ? null : (
           <DialogFooter className="items-center">
             {footer}
-            {closable && footer === undefined ? <DialogClose render={<Button variant="outline" />}>{closeLabel ?? labels.close}</DialogClose> : null}
+            {closable && footer === undefined ? (
+              <DialogClose render={<Button variant="outline" />}>
+                {closeLabel ?? labels.close}
+              </DialogClose>
+            ) : null}
           </DialogFooter>
         )}
       </DialogContent>
@@ -156,7 +185,12 @@ export function ConfirmDialog({
       returnFocus={returnFocus}
       footer={
         <>
-          <Button type="button" variant="outline" disabled={binding.locked} onClick={binding.cancel}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={binding.locked}
+            onClick={binding.cancel}
+          >
             {cancelLabel ?? labels.cancel}
           </Button>
           <Button type="button" disabled={binding.locked} onClick={binding.confirm}>
@@ -218,7 +252,13 @@ export function AlertDialog({
  * 확인 수명의 표현 연결. 오류 분류·실행·대상 결정은 호출자가 소유한다.
  * 실패·완료 문구는 화면 값 → DialogDefaults confirmation 순으로 고른다. 실패 문구가 어디에도 없으면 바로 오류다.
  */
-export function ConfirmationDialog<T, F>({ confirmation, renderFailure: screenFailure, completionMessage: screenCompletion, retryLabel: screenRetry, ...props }: {
+export function ConfirmationDialog<T, F>({
+  confirmation,
+  renderFailure: screenFailure,
+  completionMessage: screenCompletion,
+  retryLabel: screenRetry,
+  ...props
+}: {
   readonly confirmation: ReturnType<typeof useConfirmationState<T, F>>;
   /** 생략하면 DialogDefaults confirmation.renderFailure. */
   readonly renderFailure?: (failure: F) => ReactNode;
@@ -228,16 +268,33 @@ export function ConfirmationDialog<T, F>({ confirmation, renderFailure: screenFa
 } & Omit<Parameters<typeof ConfirmDialog>[0], 'open' | 'pending' | 'onConfirm' | 'onCancel'>) {
   const defaults = useContext(ConfirmationDefaultsContext);
   const renderFailure = screenFailure ?? defaults.renderFailure;
-  if (renderFailure === undefined) throw new Error('<ConfirmationDialog> requires renderFailure or <DialogDefaults confirmation> above it');
+  if (renderFailure === undefined)
+    throw new Error(
+      '<ConfirmationDialog> requires renderFailure or <DialogDefaults confirmation> above it'
+    );
   const completionMessage = screenCompletion ?? defaults.completionMessage;
   const retryLabel = screenRetry ?? defaults.retryLabel;
   const { state, covered, confirm, close } = confirmation;
   return (
-    <ConfirmDialog {...props} confirmLabel={state.kind === 'open' && state.completed ? retryLabel ?? props.confirmLabel : props.confirmLabel} open={state.kind === 'open' && !covered}
-      pending={state.kind === 'open' && state.pending} onConfirm={() => void confirm()} onCancel={close}>
-      {state.kind === 'open' && state.completed && completionMessage !== undefined ? completionMessage : props.children}
+    <ConfirmDialog
+      {...props}
+      confirmLabel={
+        state.kind === 'open' && state.completed
+          ? (retryLabel ?? props.confirmLabel)
+          : props.confirmLabel
+      }
+      open={state.kind === 'open' && !covered}
+      pending={state.kind === 'open' && state.pending}
+      onConfirm={() => void confirm()}
+      onCancel={close}
+    >
+      {state.kind === 'open' && state.completed && completionMessage !== undefined
+        ? completionMessage
+        : props.children}
       {state.kind === 'open' && state.failure !== undefined && (
-        <p role="alert" className="text-destructive">{renderFailure(state.failure)}</p>
+        <p role="alert" className="text-destructive">
+          {renderFailure(state.failure)}
+        </p>
       )}
     </ConfirmDialog>
   );

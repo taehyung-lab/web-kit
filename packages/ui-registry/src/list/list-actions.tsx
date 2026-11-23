@@ -1,26 +1,50 @@
 // 파일 책임: 선택 기반 작업·일괄 확인·값 선택 일괄 작업·다운로드를 연결한다.
-import { useBulkConfirmation, useListDownloadBinding, type DownloadControl, type DownloadKind, type ListModel } from '@boosterlab/web-kit/list';
+import {
+  useBulkConfirmation,
+  useListDownloadBinding,
+  type DownloadControl,
+  type DownloadKind,
+  type ListModel,
+} from '@boosterlab/web-kit/list';
 import { useState, type ReactNode } from 'react';
 import { cn } from 'cn';
 import { Button } from '@/components/ui/button';
 import { SelectBox } from '../select-box';
 import { ConfirmDialog } from '../dialog';
 import { Pending } from '../pending';
-import { useListContext, defaultMessages, OptionSelect, type Context, type RenderFailure } from './list-context';
-
+import {
+  useListContext,
+  defaultMessages,
+  OptionSelect,
+  type Context,
+  type RenderFailure,
+} from './list-context';
 
 /** 선택 기반 쓰기 액션 자리. 이전 조건 결과를 보이는 동안 통째로 잠근다. */
-function Actions({ model: explicitModel, children, className }: { readonly children: ReactNode; readonly className?: string } & { readonly model?: ListModel }) {
+function Actions({
+  model: explicitModel,
+  children,
+  className,
+}: { readonly children: ReactNode; readonly className?: string } & { readonly model?: ListModel }) {
   const { model } = useListContext(explicitModel);
   return (
-    <fieldset disabled={!model.isCurrent || model.selection.isRunning || model.selection.failure !== undefined} className={cn('flex min-w-0 flex-wrap items-center gap-2', className)}>
+    <fieldset
+      disabled={
+        !model.isCurrent || model.selection.isRunning || model.selection.failure !== undefined
+      }
+      className={cn('flex min-w-0 flex-wrap items-center gap-2', className)}
+    >
       {children}
     </fieldset>
   );
 }
 
 /** 일괄 작업 실패 문구. 업무 거절(string)은 그대로, 그 밖의 실패는 renderFailure → 기본 문구 순이다. null이면 그리지 않는다. */
-function bulkErrorText(error: unknown, copy: Context['copy'], renderFailure: RenderFailure): ReactNode | null {
+function bulkErrorText(
+  error: unknown,
+  copy: Context['copy'],
+  renderFailure: RenderFailure
+): ReactNode | null {
   if (error === undefined) return null;
   if (typeof error === 'string') return error;
   const custom = renderFailure(error, 'action');
@@ -57,7 +81,15 @@ function BulkConfirm({
 }) {
   return (
     <>
-      <ConfirmDialog open={open} title={title} pending={running || recovery?.pending} confirmLabel={recovery ? reloadLabel : confirmLabel} cancelLabel={cancelLabel} onConfirm={recovery ? () => void recovery.run() : onConfirm} onCancel={onCancel}>
+      <ConfirmDialog
+        open={open}
+        title={title}
+        pending={running || recovery?.pending}
+        confirmLabel={recovery ? reloadLabel : confirmLabel}
+        cancelLabel={cancelLabel}
+        onConfirm={recovery ? () => void recovery.run() : onConfirm}
+        onCancel={onCancel}
+      >
         {recovery ? <p>{unknownMessage}</p> : open ? body : null}
         {errorText !== null && (
           <p role="alert" className="text-sm text-destructive">
@@ -68,7 +100,9 @@ function BulkConfirm({
       {!open && recovery && (
         <div role="alert">
           <p>{unknownMessage}</p>
-          <Button type="button" disabled={recovery.pending} onClick={() => void recovery.run()}>{reloadLabel}</Button>
+          <Button type="button" disabled={recovery.pending} onClick={() => void recovery.run()}>
+            {reloadLabel}
+          </Button>
           {recovery.pending ? <Pending label={reloadLabel} /> : null}
         </div>
       )}
@@ -102,7 +136,11 @@ function BulkAction<T>({
   readonly describe?: (ids: readonly string[]) => ReactNode;
 } & { readonly model?: ListModel }) {
   const { model, copy, renderFailure } = useListContext(explicitModel);
-  const { pending, error, confirm, locked, open, cancel, recovery } = useBulkConfirmation({ model, run, check });
+  const { pending, error, confirm, locked, open, cancel, recovery } = useBulkConfirmation({
+    model,
+    run,
+    check,
+  });
   return (
     <>
       <Button type="button" variant="outline" disabled={locked} onClick={open}>
@@ -116,7 +154,11 @@ function BulkAction<T>({
         cancelLabel={cancelLabel ?? copy.cancel}
         onConfirm={() => void confirm()}
         onCancel={cancel}
-        body={pending === undefined ? null : (describe?.(pending.ids) ?? `${pending.ids.length}${copy.items}`)}
+        body={
+          pending === undefined
+            ? null
+            : (describe?.(pending.ids) ?? `${pending.ids.length}${copy.items}`)
+        }
         errorText={bulkErrorText(error, copy, renderFailure)}
         recovery={recovery}
         reloadLabel={copy.reload ?? defaultMessages.reload}
@@ -151,7 +193,11 @@ function BulkSelectAction<V extends string, T = unknown>({
 }: {
   /** 실행 버튼 문구. */
   readonly label: string;
-  readonly options: readonly { readonly value: V; readonly label: string; readonly disabled?: boolean }[];
+  readonly options: readonly {
+    readonly value: V;
+    readonly label: string;
+    readonly disabled?: boolean;
+  }[];
   /** 값을 고르기 전 선택 칸에 보이는 문구. */
   readonly placeholder?: string;
   /** 선택 칸의 접근성 이름. 생략하면 label. */
@@ -161,7 +207,10 @@ function BulkSelectAction<V extends string, T = unknown>({
   /** 값을 고르지 않고 눌렀을 때의 안내. 생략하면 messages.chooseValue. */
   readonly requiredMessage?: string;
   readonly defaultValue?: V;
-  readonly run: (ids: readonly string[], value: V) => Promise<{ completedIds: readonly string[]; value?: T }>;
+  readonly run: (
+    ids: readonly string[],
+    value: V
+  ) => Promise<{ completedIds: readonly string[]; value?: T }>;
   /** 업무상 거절 사유. 있으면 실행하지 않고 보인다. 여는 순간은 지금 고른 값, 실행 직전은 확인창에 고정한 값으로 묻는다. */
   readonly check?: (ids: readonly string[], value: V) => string | undefined;
   readonly title?: string;
@@ -174,21 +223,28 @@ function BulkSelectAction<V extends string, T = unknown>({
   const { model, copy, renderFailure } = useListContext(explicitModel);
   const [chosen, setChosen] = useState<V | null>(defaultValue ?? null);
   // 선택지가 바뀌어 고른 값이 사라졌거나 막혔으면 고르지 않은 것으로 본다.
-  const value = chosen !== null && options.some((option) => option.value === chosen && option.disabled !== true) ? chosen : null;
+  const value =
+    chosen !== null && options.some((option) => option.value === chosen && option.disabled !== true)
+      ? chosen
+      : null;
   const { pending, error, confirm, locked, open, cancel, recovery } = useBulkConfirmation<T, V>({
     model,
     value: value ?? undefined,
-    run: (ids, target) => target === undefined
-      ? Promise.reject(requiredMessage ?? copy.chooseValue)
-      : run(ids, target),
-    check: (ids, target) => target === undefined || !options.some(option => option.value === target && option.disabled !== true)
-      ? (requiredMessage || copy.chooseValue || defaultMessages.chooseValue)
-      : check?.(ids, target),
+    run: (ids, target) =>
+      target === undefined ? Promise.reject(requiredMessage ?? copy.chooseValue) : run(ids, target),
+    check: (ids, target) =>
+      target === undefined ||
+      !options.some((option) => option.value === target && option.disabled !== true)
+        ? requiredMessage || copy.chooseValue || defaultMessages.chooseValue
+        : check?.(ids, target),
   });
   const fixed = pending?.value;
   const optionLabel = options.find((option) => option.value === fixed)?.label ?? fixed;
   return (
-    <fieldset disabled={!model.isCurrent} className={cn('flex min-w-0 flex-wrap items-center gap-2', className)}>
+    <fieldset
+      disabled={!model.isCurrent}
+      className={cn('flex min-w-0 flex-wrap items-center gap-2', className)}
+    >
       <SelectBox
         aria-label={selectLabel ?? label}
         className={cn('min-w-32', selectClassName)}
@@ -209,7 +265,12 @@ function BulkSelectAction<V extends string, T = unknown>({
         cancelLabel={cancelLabel ?? copy.cancel}
         onConfirm={() => void confirm()}
         onCancel={cancel}
-        body={pending === undefined || fixed === undefined ? null : (describe?.(pending.ids, fixed) ?? `${optionLabel}: ${pending.ids.length}${copy.items}`)}
+        body={
+          pending === undefined || fixed === undefined
+            ? null
+            : (describe?.(pending.ids, fixed) ??
+              `${optionLabel}: ${pending.ids.length}${copy.items}`)
+        }
         errorText={bulkErrorText(error, copy, renderFailure)}
         recovery={recovery}
         reloadLabel={copy.reload ?? defaultMessages.reload}
@@ -232,9 +293,12 @@ function Download({
 } & { readonly model?: ListModel }) {
   const { copy, renderFailure } = useListContext(explicitModel);
   const { kind, blocked, change, start } = useListDownloadBinding(control, kinds);
-  const kindLabel = (value: DownloadKind) => (value === 'all' ? copy.downloadAll : copy.downloadSelected);
-  const custom = control.state.kind === 'failed' ? renderFailure(control.state.failure, 'download') : null;
-  const failure = control.state.kind !== 'failed' ? null : custom === undefined ? copy.downloadFailed : custom;
+  const kindLabel = (value: DownloadKind) =>
+    value === 'all' ? copy.downloadAll : copy.downloadSelected;
+  const custom =
+    control.state.kind === 'failed' ? renderFailure(control.state.failure, 'download') : null;
+  const failure =
+    control.state.kind !== 'failed' ? null : custom === undefined ? copy.downloadFailed : custom;
   const running = control.state.kind === 'running';
   return (
     <span className="inline-flex flex-wrap items-center gap-2" aria-busy={running || undefined}>
@@ -243,7 +307,10 @@ function Download({
         disabled={running}
         value={kind}
         onValueChange={(next) => change(next)}
-        options={[{ value: '', label: copy.downloadChoose }, ...kinds.map((value) => ({ value, label: kindLabel(value) }))]}
+        options={[
+          { value: '', label: copy.downloadChoose },
+          ...kinds.map((value) => ({ value, label: kindLabel(value) })),
+        ]}
       />
       <Button type="button" variant="outline" disabled={blocked} onClick={start}>
         {label ?? copy.download}

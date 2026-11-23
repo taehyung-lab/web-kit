@@ -7,14 +7,35 @@ import type { createFormProgressConformancePage as FormProgressPage } from '@boo
 import installation from '../../../../../registry-installation.json';
 // 프로젝트 테마 CSS(components.json의 tailwind.css = src/styles.css)로 실제 화면과 같은 층·모양에서 검사한다. 위치가 다르면 이 import를 고친다.
 import '@/styles.css';
-let Page = createProgressFeatureConformancePage({ FullPageProgress, Dialog, DialogDefaults, defaultDialogLabels });
-if (new URLSearchParams(location.search).get('mode') === 'error' && installation.items.some((item) => item.name === 'form')) {
+let Page = createProgressFeatureConformancePage({
+  FullPageProgress,
+  Dialog,
+  DialogDefaults,
+  defaultDialogLabels,
+});
+if (
+  new URLSearchParams(location.search).get('mode') === 'error' &&
+  installation.items.some((item) => item.name === 'form')
+) {
   const forms = import.meta.glob('../form/form.tsx');
   const load = forms['../form/form.tsx'];
   if (!load) throw new Error('form 설치 기록에 맞는 소비 복사본 없음');
   type FormParts = Parameters<typeof FormProgressPage>[0];
-  const { Form, FormDefaults, defaultFormMessages, defaultFormGuardMessages } = await load() as Pick<FormParts, 'Form' | 'FormDefaults' | 'defaultFormMessages' | 'defaultFormGuardMessages'>;
-  const { createFormProgressConformancePage } = await import('@boosterlab/web-kit/testing/fixtures/combinations');
-  Page = createFormProgressConformancePage({ Form, FullPageProgress, FormDefaults, defaultFormMessages, defaultFormGuardMessages, DialogDefaults, defaultDialogLabels });
+  const { Form, FormDefaults, defaultFormMessages, defaultFormGuardMessages } =
+    (await load()) as Pick<
+      FormParts,
+      'Form' | 'FormDefaults' | 'defaultFormMessages' | 'defaultFormGuardMessages'
+    >;
+  const { createFormProgressConformancePage } =
+    await import('@boosterlab/web-kit/testing/fixtures/combinations');
+  Page = createFormProgressConformancePage({
+    Form,
+    FullPageProgress,
+    FormDefaults,
+    defaultFormMessages,
+    defaultFormGuardMessages,
+    DialogDefaults,
+    defaultDialogLabels,
+  });
 }
 createRoot(document.getElementById('root')!).render(<Page />);

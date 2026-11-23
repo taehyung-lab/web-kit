@@ -3,5 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { createAuthConformancePage } from '@boosterlab/web-kit/testing/fixtures/auth';
 import { AuthCodeForm } from '../auth';
 import { SixDigitAuthCodeForm } from './auth-six';
-const Page = createAuthConformancePage(new URLSearchParams(location.search).has('six') ? SixDigitAuthCodeForm : AuthCodeForm);
+const Page = createAuthConformancePage(
+  new URLSearchParams(location.search).has('six') ? SixDigitAuthCodeForm : AuthCodeForm
+);
 createRoot(document.getElementById('root')!).render(<Page />);

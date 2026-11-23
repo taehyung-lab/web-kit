@@ -1,12 +1,12 @@
 // 파일 책임: 필드 라벨·설명·오류의 배치를 제공하고 패키지 접근성 연결을 사용한다.
 /** 필드의 라벨·설명·오류 접근성 구조를 렌더한다. 번역·필수 판정·스타일은 소비자가 제공한다. */
-import type { ReactNode } from "react";
-import { formFieldFeedback } from "@boosterlab/web-kit/form";
+import type { ReactNode } from 'react';
+import { formFieldFeedback } from '@boosterlab/web-kit/form';
 
 export interface FieldControlProps {
   readonly id: string;
-  readonly "aria-describedby"?: string;
-  readonly "aria-invalid": boolean;
+  readonly 'aria-describedby'?: string;
+  readonly 'aria-invalid': boolean;
 }
 
 /** 설명과 첫 표시 오류를 입력에 연결하고 오류 슬롯을 제공한다. */
@@ -21,10 +21,7 @@ export function FieldFeedback({
   readonly message?: string;
   readonly describedBy?: readonly string[];
   readonly errorClassName: string;
-  readonly children: (
-    control: FieldControlProps,
-    error: ReactNode,
-  ) => ReactNode;
+  readonly children: (control: FieldControlProps, error: ReactNode) => ReactNode;
 }) {
   const { errorId, control } = formFieldFeedback(id, message, describedBy);
   return children(
@@ -33,7 +30,7 @@ export function FieldFeedback({
       <p id={errorId} role="alert" className={errorClassName}>
         {message}
       </p>
-    ),
+    )
   );
 }
 
@@ -43,8 +40,8 @@ export function FieldFrame({
   label,
   required,
   description,
-  descriptionPosition = "afterControl",
-  labelTarget = "control",
+  descriptionPosition = 'afterControl',
+  labelTarget = 'control',
   message,
   classes,
   children,
@@ -53,8 +50,8 @@ export function FieldFrame({
   readonly label: string;
   readonly required: boolean;
   readonly description?: string;
-  readonly descriptionPosition?: "afterLabel" | "afterControl";
-  readonly labelTarget?: "control" | "group";
+  readonly descriptionPosition?: 'afterLabel' | 'afterControl';
+  readonly labelTarget?: 'control' | 'group';
   readonly message?: string;
   readonly classes: {
     readonly root: string;
@@ -66,8 +63,7 @@ export function FieldFrame({
   readonly children: (control: FieldControlProps, labelId: string) => ReactNode;
 }) {
   const labelId = `${id}-label`;
-  const descriptionId =
-    description === undefined ? undefined : `${id}-description`;
+  const descriptionId = description === undefined ? undefined : `${id}-description`;
   const labelText = (
     <>
       {label}
@@ -93,7 +89,7 @@ export function FieldFrame({
     >
       {(control, error) => (
         <div data-slot="form-field" className={classes.root}>
-          {labelTarget === "group" ? (
+          {labelTarget === 'group' ? (
             <span id={labelId} className={classes.label}>
               {labelText}
             </span>
@@ -102,9 +98,9 @@ export function FieldFrame({
               {labelText}
             </label>
           )}
-          {descriptionPosition === "afterLabel" ? descriptionNode : null}
+          {descriptionPosition === 'afterLabel' ? descriptionNode : null}
           {children(control, labelId)}
-          {descriptionPosition === "afterControl" ? descriptionNode : null}
+          {descriptionPosition === 'afterControl' ? descriptionNode : null}
           {error}
         </div>
       )}

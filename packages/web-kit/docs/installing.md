@@ -143,3 +143,9 @@ done
 3. `eslint.config.js`에서 TypeScript 파서 설정 뒤에 `...webKitStructure({ root: import.meta.dirname })`를 더한다(`import { webKitStructure } from '@boosterlab/web-kit/structure'`). 예: [starter lint 설정](../references/apps/starter/eslint.config.js.txt). 같은 뜻의 프로젝트 자체 규칙(shared import 금지·맨 HTML 금지·화면 zod 금지 등)은 지운다.
 4. 필수 CI의 `web-kit-check`에 `--structure web-kit.structure.json`을 붙인다([검사 안내](checking.md#구조-결과)).
 5. 기존 위반은 [이전 안내](migrating.md#구조-계약-채택)의 순서로 옮기고, 남은 것만 예외 목록에 둔다.
+
+## 복사본의 코드 정렬
+
+registry로 설치한 UI도 프로젝트 소스이므로 저장 시 정렬과 형식 검사에 포함한다. 키트 원본과 starter는 `.prettierrc`의 같은 설정(Prettier 3.8.1, Tailwind 플러그인 0.6.14)을 쓴다. 소비 앱도 같은 설정을 적용하고 `.prettierignore`에서 registry UI 폴더를 제외하지 않는다. Tailwind 클래스 정렬은 `tailwindStylesheet`에 각 앱의 실제 CSS 경로를 설정해 실행 위치에 따라 결과가 달라지지 않게 한다. VS Code의 `editor.formatOnSave`와 프로젝트 형식 검사에 같은 설정을 연결한다.
+
+갱신 비교에서는 이전 원본·새 원본·현재 복사본에 같은 정렬을 적용한 뒤 업무·디자인 변경을 대조한다. 정렬을 피하려고 복사본을 검사에서 빼지 않는다. 정렬 뒤 설치 기록의 `installedHash`를 실제 파일로 갱신하고 적합성 검사를 실행한다. 생성된 registry JSON은 `registry:build`로 다시 만든다.

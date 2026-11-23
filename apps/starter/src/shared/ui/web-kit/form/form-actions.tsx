@@ -1,12 +1,27 @@
 // 파일 책임: 이탈 보호(FormGuard)와 저장 흐름의 버튼·실패 줄·확인창(Submit·Cancel·Failure·Confirm·Saved)·대화창 안 폼(FormDialog).
-import { FormGuardProvider, FormDialogScopeProvider, useFormGuardBinding, useFormCancel, useFormDialogScope, useFormConfirmBinding, useFormSavedBinding, useFormSubmitBinding, FormRejection } from '@boosterlab/web-kit/form';
+import {
+  FormGuardProvider,
+  FormDialogScopeProvider,
+  useFormGuardBinding,
+  useFormCancel,
+  useFormDialogScope,
+  useFormConfirmBinding,
+  useFormSavedBinding,
+  useFormSubmitBinding,
+  FormRejection,
+} from '@boosterlab/web-kit/form';
 import type { NavigateOptions } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 import { cn } from 'cn';
 import { Button } from '@/shared/ui/button';
 import { AlertDialog, ConfirmDialog, Dialog } from '../dialog';
 import { Pending } from '../pending';
-import { errorClass, useFormContext, type FormConfirmContent, type FormSavedContent } from './form-context';
+import {
+  errorClass,
+  useFormContext,
+  type FormConfirmContent,
+  type FormSavedContent,
+} from './form-context';
 
 // ─── 이탈 보호 ───────────────────────────────────────────────────────────────
 
@@ -25,8 +40,18 @@ export interface FormGuardMessages {
 }
 /** 키트가 제공하는 한국어 이탈 문구. 한국어 앱은 이 값을 FormGuard에 그대로 넘긴다. */
 export const defaultFormGuardMessages: FormGuardMessages = {
-  navigate: { title: '입력을 버리고 이동할까요?', description: '저장하지 않은 변경이 있습니다.', confirm: '이동', keep: '계속 편집' },
-  cancel: { title: '작성을 취소할까요?', description: '입력한 내용은 저장되지 않습니다.', confirm: '취소하기', keep: '계속 작성' },
+  navigate: {
+    title: '입력을 버리고 이동할까요?',
+    description: '저장하지 않은 변경이 있습니다.',
+    confirm: '이동',
+    keep: '계속 편집',
+  },
+  cancel: {
+    title: '작성을 취소할까요?',
+    description: '입력한 내용은 저장되지 않습니다.',
+    confirm: '취소하기',
+    keep: '계속 작성',
+  },
   navigationFailed: '이동하지 못했습니다. 다시 시도해 주세요.',
 };
 
@@ -79,25 +104,41 @@ export { useLeave } from '@boosterlab/web-kit/form';
  */
 export function Failure({ className }: { readonly className?: string }) {
   const { editor, copy, renderFailure, formatError } = useFormContext();
-  const save = editor.formFailure === undefined ? undefined : renderFailure(editor.formFailure, 'save');
-  const completion = editor.completionFailure === undefined ? undefined : renderFailure(editor.completionFailure, 'completion');
-  const showCompletion = editor.completionFailure !== undefined && completion !== null && (!editor.acknowledge || editor.stage.kind === 'idle');
+  const save =
+    editor.formFailure === undefined ? undefined : renderFailure(editor.formFailure, 'save');
+  const completion =
+    editor.completionFailure === undefined
+      ? undefined
+      : renderFailure(editor.completionFailure, 'completion');
+  const showCompletion =
+    editor.completionFailure !== undefined &&
+    completion !== null &&
+    (!editor.acknowledge || editor.stage.kind === 'idle');
   return (
     <>
       {editor.formFailure !== undefined && save !== null ? (
         <p role="alert" data-slot="form-failure" className={cn(failureClass, className)}>
           {save ??
             (editor.formFailure instanceof FormRejection && editor.formFailure.root !== undefined
-              ? formatError([editor.formFailure.root]) ?? editor.formFailure.root
+              ? (formatError([editor.formFailure.root]) ?? editor.formFailure.root)
               : undefined) ??
             copy.saveFailed}
         </p>
       ) : null}
       {showCompletion ? (
-        <p role="alert" data-slot="form-failure" className={cn(failureClass, 'flex flex-wrap items-center gap-2', className)}>
+        <p
+          role="alert"
+          data-slot="form-failure"
+          className={cn(failureClass, 'flex flex-wrap items-center gap-2', className)}
+        >
           {completion ?? (editor.stage.kind === 'idle' ? copy.saveFailed : copy.completionFailed)}
           {editor.stage.kind === 'saved' ? (
-            <Button type="button" variant="outline" size="sm" onClick={() => void editor.complete()}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void editor.complete()}
+            >
               {copy.retry}
             </Button>
           ) : null}
@@ -126,15 +167,10 @@ export function Submit({
   const binding = useFormSubmitBinding(editor, submitOrigin, mode);
   return (
     <>
-      <Button
-        {...binding.buttonProps}
-        className={cn(lockedClass, className)}
-      >
+      <Button {...binding.buttonProps} className={cn(lockedClass, className)}>
         {children ?? copy.submit}
       </Button>
-      {binding.pending ? (
-        <Pending label={copy.saving} />
-      ) : null}
+      {binding.pending ? <Pending label={copy.saving} /> : null}
     </>
   );
 }
@@ -200,7 +236,10 @@ export function Confirm({ title, confirmLabel, cancelLabel, body }: FormConfirmC
 export function Saved({ title, confirmLabel, body }: FormSavedContent) {
   const { editor, copy, renderFailure } = useFormContext();
   const { attempt } = useFormSavedBinding(editor);
-  const failure = editor.completionFailure === undefined ? undefined : renderFailure(editor.completionFailure, 'completion');
+  const failure =
+    editor.completionFailure === undefined
+      ? undefined
+      : renderFailure(editor.completionFailure, 'completion');
   const stage = editor.stage;
   return (
     <AlertDialog

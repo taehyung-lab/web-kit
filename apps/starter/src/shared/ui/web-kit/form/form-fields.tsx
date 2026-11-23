@@ -1,7 +1,23 @@
 // 파일 책임: 칸 하나의 입력 부품(Field·Text·TextArea·Select·Choice·Checkbox·File·Array)과 선택지 지연·실패 자리. 모두 form-context의 같은 편집 상태를 읽는다.
-import { useFormFieldBinding, useFormChoiceBinding, formTextBinding, useOptionsRetryFocus, formFileBinding, FormArrayField, type FormArrayRows, type FormFileValue } from '@boosterlab/web-kit/form';
+import {
+  useFormFieldBinding,
+  useFormChoiceBinding,
+  formTextBinding,
+  useOptionsRetryFocus,
+  formFileBinding,
+  FormArrayField,
+  type FormArrayRows,
+  type FormFileValue,
+} from '@boosterlab/web-kit/form';
 import { Choice as ChoiceInput, type ChoiceProps } from '../choice';
-import { useEffect, useState, type HTMLAttributes, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
+import {
+  useEffect,
+  useState,
+  type HTMLAttributes,
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+} from 'react';
 import { cn } from 'cn';
 import { Button } from '@/shared/ui/button';
 import { Checkbox as CheckboxInput } from '@/shared/ui/checkbox';
@@ -70,7 +86,7 @@ export function Field<V = unknown>({
                 disabled,
                 'aria-required': isRequired,
               },
-              labelId,
+              labelId
             )
           }
         </FieldFrame>
@@ -80,7 +96,12 @@ export function Field<V = unknown>({
 }
 
 /** 선택 칸의 선택지 지연·실패 자리. Choice와 Select가 같은 모양·문구·재시도 버튼을 쓰고, onRetry가 없으면 다시 시도 버튼을 그리지 않는다. */
-function OptionsState({ status, labelId, control, onRetry }: {
+function OptionsState({
+  status,
+  labelId,
+  control,
+  onRetry,
+}: {
   readonly status: Exclude<OptionsStatus, 'ready'>;
   readonly labelId: string | undefined;
   readonly control: HTMLAttributes<HTMLDivElement>;
@@ -89,13 +110,25 @@ function OptionsState({ status, labelId, control, onRetry }: {
   const { copy, renderFailure } = useFormContext();
   const failureText = status === 'loading' ? undefined : renderFailure(status.failure, 'options');
   return (
-    <div {...control} role="group" tabIndex={-1} aria-labelledby={labelId} className={optionsStateClass}>
+    <div
+      {...control}
+      role="group"
+      tabIndex={-1}
+      aria-labelledby={labelId}
+      className={optionsStateClass}
+    >
       {status === 'loading' ? (
-        <span role="status" className="text-muted-foreground">{copy.loading}</span>
+        <span role="status" className="text-muted-foreground">
+          {copy.loading}
+        </span>
       ) : failureText === null ? null : (
         <span role="alert" className="flex flex-wrap items-center gap-2 text-destructive">
           {failureText ?? copy.optionsFailed}
-          {onRetry === undefined ? null : <Button type="button" variant="outline" size="sm" onClick={onRetry}>{copy.retry}</Button>}
+          {onRetry === undefined ? null : (
+            <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+              {copy.retry}
+            </Button>
+          )}
         </span>
       )}
     </div>
@@ -103,7 +136,13 @@ function OptionsState({ status, labelId, control, onRetry }: {
 }
 
 /** 선택지 재시도에 성공해 입력이 새로 그려지면, 재시도 버튼이 사라지며 잃은 포커스를 그 입력으로 돌려준다(Select의 triggerRef와 같은 보장). */
-function FocusAfterRetry({ id, focus }: { readonly id: string | undefined; readonly focus: (node: HTMLElement | null) => void }) {
+function FocusAfterRetry({
+  id,
+  focus,
+}: {
+  readonly id: string | undefined;
+  readonly focus: (node: HTMLElement | null) => void;
+}) {
   useEffect(() => {
     focus(id === undefined ? null : document.getElementById(id));
   });
@@ -111,15 +150,54 @@ function FocusAfterRetry({ id, focus }: { readonly id: string | undefined; reado
 }
 
 /** 폼 검증·필수 표시·오류 초점을 같은 선택 입력에 연결한다. */
-export function Choice({ name, description, status = 'ready', onRetry, ...props }: FormFieldProps & Omit<ChoiceProps, 'value' | 'onValueChange'> & { readonly status?: OptionsStatus; readonly onRetry?: () => void }) {
+export function Choice({
+  name,
+  description,
+  status = 'ready',
+  onRetry,
+  ...props
+}: FormFieldProps &
+  Omit<ChoiceProps, 'value' | 'onValueChange'> & {
+    readonly status?: OptionsStatus;
+    readonly onRetry?: () => void;
+  }) {
   const { editor } = useFormContext();
-  useFormChoiceBinding(editor, name, status === 'ready' && props.search === undefined ? props.nodes : undefined);
+  useFormChoiceBinding(
+    editor,
+    name,
+    status === 'ready' && props.search === undefined ? props.nodes : undefined
+  );
   const retry = useOptionsRetryFocus(onRetry);
   return (
-    <Field<ChoiceProps['value']> name={name} label={props.label} description={description} disabled={props.disabled} labelTarget={status === 'ready' ? 'control' : 'group'}>
+    <Field<ChoiceProps['value']>
+      name={name}
+      label={props.label}
+      description={description}
+      disabled={props.disabled}
+      labelTarget={status === 'ready' ? 'control' : 'group'}
+    >
       {({ value, change, blur, ...control }, labelId) => {
-        if (status === 'ready') return <><ChoiceInput {...props} {...control} value={value} onValueChange={change} onBlur={blur} /><FocusAfterRetry id={control.id} focus={retry.inputRef} /></>;
-        return <OptionsState status={status} labelId={labelId} control={control} onRetry={onRetry === undefined ? undefined : retry.onRetry} />;
+        if (status === 'ready')
+          return (
+            <>
+              <ChoiceInput
+                {...props}
+                {...control}
+                value={value}
+                onValueChange={change}
+                onBlur={blur}
+              />
+              <FocusAfterRetry id={control.id} focus={retry.inputRef} />
+            </>
+          );
+        return (
+          <OptionsState
+            status={status}
+            labelId={labelId}
+            control={control}
+            onRetry={onRetry === undefined ? undefined : retry.onRetry}
+          />
+        );
       }}
     </Field>
   );
@@ -141,7 +219,16 @@ export function Text({
   controlClassName,
   ...field
 }: FormFieldProps & {
-  readonly type?: 'text' | 'email' | 'password' | 'tel' | 'date' | 'time' | 'number' | 'url' | 'search';
+  readonly type?:
+    | 'text'
+    | 'email'
+    | 'password'
+    | 'tel'
+    | 'date'
+    | 'time'
+    | 'number'
+    | 'url'
+    | 'search';
   readonly placeholder?: string;
   readonly autoComplete?: string;
   readonly autoFocus?: boolean;
@@ -196,7 +283,12 @@ export function TextArea({
   maxLength,
   showCount = false,
   ...field
-}: FormFieldProps & { readonly placeholder?: string; readonly rows?: number; readonly maxLength?: number; readonly showCount?: boolean }) {
+}: FormFieldProps & {
+  readonly placeholder?: string;
+  readonly rows?: number;
+  readonly maxLength?: number;
+  readonly showCount?: boolean;
+}) {
   const { copy } = useFormContext();
   return (
     <Field<string> {...field}>
@@ -259,7 +351,19 @@ export function Select({
       {({ value, change, blur, ...control }, labelId) => {
         const selected = value === null || value === undefined ? '' : String(value);
         if (status !== 'ready') {
-          return <OptionsState key="state" status={status} labelId={labelId} control={{ id: control.id, 'aria-describedby': control['aria-describedby'], 'aria-invalid': control['aria-invalid'] }} onRetry={onRetry === undefined ? undefined : retry.onRetry} />;
+          return (
+            <OptionsState
+              key="state"
+              status={status}
+              labelId={labelId}
+              control={{
+                id: control.id,
+                'aria-describedby': control['aria-describedby'],
+                'aria-invalid': control['aria-invalid'],
+              }}
+              onRetry={onRetry === undefined ? undefined : retry.onRetry}
+            />
+          );
         }
         const { name, disabled, ...trigger } = control;
         return (
@@ -334,7 +438,10 @@ function SelectControl({
 }
 
 /** boolean 값 하나. 라벨이 체크박스 옆에 붙는다. onChange는 사용자가 바꾼 직후에만 부른다. */
-export function Checkbox({ onChange, ...field }: FormFieldProps & { readonly onChange?: (checked: boolean) => void }) {
+export function Checkbox({
+  onChange,
+  ...field
+}: FormFieldProps & { readonly onChange?: (checked: boolean) => void }) {
   const { editor, formatError } = useFormContext();
   const binding = useFormFieldBinding(editor, field.name, field.disabled === true);
   const id = editor.fieldId(field.name);
@@ -388,7 +495,9 @@ export function FileField({ accept, ...field }: FormFieldProps & { readonly acce
         const file = formFileBinding(value, change);
         const name = file.name;
         const nameId = `${control.id}-file`;
-        const describedBy = [control['aria-describedby'], name === undefined ? undefined : nameId].filter(Boolean).join(' ');
+        const describedBy = [control['aria-describedby'], name === undefined ? undefined : nameId]
+          .filter(Boolean)
+          .join(' ');
         return (
           <div className="flex flex-wrap items-center gap-2">
             <Input
@@ -406,8 +515,16 @@ export function FileField({ accept, ...field }: FormFieldProps & { readonly acce
             />
             {name === undefined ? null : (
               <>
-                <span id={nameId} className="text-sm">{name}</span>
-                <Button type="button" variant="ghost" size="sm" disabled={field.disabled} onClick={file.remove}>
+                <span id={nameId} className="text-sm">
+                  {name}
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={field.disabled}
+                  onClick={file.remove}
+                >
                   {copy.removeFile}
                 </Button>
               </>
