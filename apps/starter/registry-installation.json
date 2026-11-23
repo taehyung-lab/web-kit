@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "version": "8.1.0-rc.2",
-  "sourceRef": "v8.1.0-rc.2",
-  "sourceCommit": "a08a18dfae08995582b884caa26d41d511fcaa9a",
-  "sourceWorkingTree": "modified; fingerprints identify the candidate",
+  "version": "8.1.0-rc.3",
+  "sourceRef": "v8.1.0-rc.3",
+  "sourceCommit": "1fe83677fe88a187f29f345433a945f91c05fc36",
+  "sourceWorkingTree": "clean",
   "shadcn": "4.19.1",
   "method": "shadcn@4.19.1 add; installation recorded after review",
   "componentsHash": "7a33830cda235f6d2eecae7871d31a4e8d598f333545e705cdf6dfb79cbd0d2d",
