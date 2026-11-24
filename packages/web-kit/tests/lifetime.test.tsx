@@ -111,16 +111,37 @@ it('확인창: 방문이 바뀐 뒤 끝난 실패는 화면에 보이지 않고 
 it('로그인이 바뀐 뒤 끝난 실패와 취소는 앱에 알리지 않는다', () => {
   let generation = 0;
   let signedIn = false;
-  const lifetime = app(() => 'local', { session: { generation: () => generation, current: () => (signedIn ? {} : null) } });
-  // 로그인 없이 시작한 실행(로그인 요청)은 그 실행이 세션을 열어도 같은 실행이다.
+  const changes = new Set<() => void>();
+  const session = {
+    generation: () => generation,
+    current: () => (signedIn ? {} : null),
+    subscribe: (listener: () => void) => {
+      changes.add(listener);
+      return () => changes.delete(listener);
+    },
+  };
+  const change = (next: number, signed: boolean) => {
+    generation = next;
+    signedIn = signed;
+    for (const listener of [...changes]) listener();
+  };
+  const lifetime = app(() => 'local', { session });
+  // 로그인 없이 시작한 실행(로그인 요청)은 시작한 화면에 있는 동안 그 실행이 세션을 열어도 같은 실행이다.
   const signingIn = lifetime.lifetime.begin('action');
-  signedIn = true;
-  generation = 1;
+  // 화면을 떠난 로그인 시도는 그 뒤 열린 다른 로그인에 결과를 넘기지 않는다.
+  const abandoned = lifetime.lifetime.begin('action');
+  change(1, true);
   expect(signingIn.here()).toBe(true);
-  generation = 0;
+  lifetime.lifetime.leave();
+  expect(abandoned.fail(forbidden(), false)).toBe('handled');
+  expect(lifetime.reports).toEqual([]);
   const execution = lifetime.lifetime.begin('action');
+  const ended = vi.fn();
+  execution.onLoginEnd(ended);
+  expect(ended).not.toHaveBeenCalled();
   expect(execution.fail(new RequestFailure({ kind: 'cancelled' }), true)).toBe('local');
-  generation = 1;
+  change(2, true);
+  expect(ended).toHaveBeenCalledTimes(1);
   expect(execution.here()).toBe(false);
   expect(execution.fail(forbidden(), true)).toBe('handled');
   expect(lifetime.reports).toEqual([]);
@@ -310,6 +331,115 @@ it('일괄 작업: onCompleted는 결과가 이 화면에 전달될 때만 부�
   }
   expect(onCompleted).toHaveBeenCalledTimes(1);
   expect(onCompleted).toHaveBeenCalledWith({ completedIds: ['1'] });
+});
+
+it('확인창: 완료 처리가 화면을 옮기려다 실패하면(방문이 바뀌었다고 알린 뒤) 요청을 다시 보내지 않고 완료만 다시 시도한다', async () => {
+  const lifetime = app();
+  const run = vi.fn().mockResolvedValue('done');
+  let moves = 0;
+  const onSuccess = vi.fn(async () => {
+    lifetime.lifetime.leave();
+    moves += 1;
+    if (moves === 1) throw new Error('navigation failed');
+  });
+  const onError = vi.fn((failure: unknown) => ({ kind: 'show' as const, failure }));
+  const hook = renderHook(() => useConfirmationState({ run, onSuccess, onError }), { wrapper: lifetime.wrapper });
+  act(() => hook.result.current.request('target'));
+  await act(() => hook.result.current.confirm());
+  expect(hook.result.current.state).toMatchObject({ kind: 'open', completed: true, pending: false });
+  expect(lifetime.reports).toEqual([]);
+  await act(() => hook.result.current.confirm());
+  expect(run).toHaveBeenCalledTimes(1);
+  expect(onSuccess).toHaveBeenCalledTimes(2);
+  expect(hook.result.current.state.kind).toBe('closed');
+});
+
+it('다운로드: 로그인이 바뀌면 실행 함수의 신호가 끊기고, 방문이 바뀐 뒤의 취소는 실패로 남지 않는다', async () => {
+  let generation = 0;
+  const changes = new Set<() => void>();
+  const session = {
+    generation: () => generation,
+    current: () => ({}),
+    subscribe: (listener: () => void) => {
+      changes.add(listener);
+      return () => changes.delete(listener);
+    },
+  };
+  const lifetime = app(() => 'local', { session });
+  const pending = deferred<void>();
+  let signal: AbortSignal | undefined;
+  const list = { search: {}, isCurrent: true, selection: { selectedIds: [] } };
+  const hook = renderHook(
+    () =>
+      useListDownload(list, {
+        run: (_target, step) => {
+          signal = step.signal;
+          return pending.promise;
+        },
+      }),
+    { wrapper: lifetime.wrapper },
+  );
+  let starting!: Promise<boolean>;
+  act(() => {
+    starting = hook.result.current.start('all');
+  });
+  act(() => lifetime.lifetime.leave());
+  expect(signal?.aborted).toBe(false);
+  generation = 1;
+  for (const listener of [...changes]) listener();
+  expect(signal?.aborted).toBe(true);
+  await act(async () => {
+    pending.reject(new RequestFailure({ kind: 'cancelled' }));
+    await starting;
+  });
+  expect(hook.result.current.state).toEqual({ kind: 'idle' });
+  expect(lifetime.reports).toEqual([]);
+});
+
+it('저장 폼: 저장 중 방문이 바뀌었는데 폼이 남아 있으면 진행 상태가 풀리고 늦은 결과는 반영하지 않는다', async () => {
+  const lifetime = app();
+  const pending = deferred<void>();
+  const { hook, onSaved } = saveForm(lifetime, async () => {
+    await pending.promise;
+    return {};
+  });
+  let submitting!: Promise<void>;
+  act(() => {
+    submitting = hook.result.current.submit();
+  });
+  await waitFor(() => expect(hook.result.current.stage.kind).toBe('saving'));
+  act(() => lifetime.lifetime.leave());
+  expect(hook.result.current.stage.kind).toBe('idle');
+  await act(async () => {
+    pending.resolve();
+    await submitting;
+  });
+  expect(hook.result.current.stage.kind).toBe('idle');
+  expect(onSaved).not.toHaveBeenCalled();
+});
+
+it('조회: 연달아 두 번 이동해도 취소한 조회를 도착한 화면이 쓰면 다시 받는다', async () => {
+  const context = queries();
+  const first = deferred<string>();
+  const queryFn = vi.fn<() => Promise<string>>().mockReturnValueOnce(first.promise).mockResolvedValue('fresh');
+  const hook = renderHook(() => useQuery({ queryKey: ['list'], queryFn }), { wrapper: context.wrapper });
+  await waitFor(() => expect(queryFn).toHaveBeenCalledTimes(1));
+  act(() => context.lifetime.leave());
+  act(() => context.lifetime.leave());
+  act(() => context.lifetime.arrive());
+  await waitFor(() => expect(hook.result.current.data).toBe('fresh'));
+});
+
+it('조회: 이동 중에 시작해 실패한 조회는 알리지 않고, 도착한 화면이 쓰면 다시 받아 그 응답으로 판정한다', async () => {
+  const context = queries();
+  act(() => context.lifetime.leave());
+  const queryFn = vi.fn<() => Promise<string>>().mockRejectedValueOnce(forbidden()).mockResolvedValue('fresh');
+  const hook = renderHook(() => useQuery({ queryKey: ['list'], queryFn }), { wrapper: context.wrapper });
+  await waitFor(() => expect(hook.result.current.isError).toBe(true));
+  expect(context.reports).toEqual([]);
+  act(() => context.lifetime.arrive());
+  await waitFor(() => expect(hook.result.current.data).toBe('fresh'));
+  expect(context.reports).toEqual([]);
 });
 
 it('수명을 따로 만들면 서로의 방문을 공유하지 않는다', () => {

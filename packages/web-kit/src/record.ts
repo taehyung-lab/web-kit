@@ -3,7 +3,7 @@ import { keepPreviousData, useQuery, type QueryKey, type UseQueryOptions } from 
 import { useEffect, useRef } from 'react';
 import { isRequestFailure, type RequestFailure } from './failure';
 import { useFullPageProgress } from './full-page-progress';
-import { PAGE_QUERY_META } from './lifetime';
+import { PAGE_QUERY_META } from './page-query';
 
 /** 준비됨에만 딸리는 갱신 사실. 갱신 실패는 내용을 지우지 않는다. */
 export interface RecordRefresh {

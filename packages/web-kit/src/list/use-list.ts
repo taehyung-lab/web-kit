@@ -5,7 +5,8 @@ import { hashKey, useQueries, useQuery, type QueryKey, type UseQueryOptions } fr
 import { useEffect, useRef, useState } from 'react';
 import { isRequestFailure, RequestFailure } from '../failure';
 import { useFullPageProgress } from '../full-page-progress';
-import { PAGE_QUERY_META, useLifetime } from '../lifetime';
+import { useLifetime, useVisit } from '../lifetime';
+import { PAGE_QUERY_META } from '../page-query';
 import { validateDateRange } from '../date-range';
 import { sameSearchValue, type FullSearch, type SearchDefinition, type SearchField, type UrlSearch } from '../search/fields';
 import { addKeyword, nextSort, type Keyword } from '../search/interactions';
@@ -420,6 +421,14 @@ export function useList<
   // 결과를 모르는 쓰기는 같은 화면에서 재전송하지 않는다. 명시적 재조회 성공만 이 잠금을 푼다.
   const [actionFailure, setActionFailure] = useState<RequestFailure>();
   const uncertainAction = useRef<RequestFailure | undefined>(undefined);
+  // 결과 불명 잠금은 그 방문의 것이다. 방문이 바뀌면 새 목록은 서버에서 다시 읽으므로 잠금을 넘기지 않는다.
+  const visit = useVisit();
+  const [lockVisit, setLockVisit] = useState(visit);
+  if (lockVisit !== visit) {
+    setLockVisit(visit);
+    uncertainAction.current = undefined;
+    setActionFailure(undefined);
+  }
   const recoveryLock = useRef(false);
   // QueryObserver.refetch는 완료 시 다른 조회의 결과를 돌려줄 수 있다. 왕복 이동도 새 복구 문맥이다.
   const recoveryKey = hashKey([selectionLifetime, screenQuery.queryKey, enabled]);
@@ -495,14 +504,14 @@ export function useList<
         );
       return execution.here() ? result : undefined;
     } catch (failure) {
-      const shown = mounted.current && execution.here();
-      const answer = execution.fail(failure, shown);
-      // 떠난 화면에는 잠금도 실패도 남기지 않는다. 새 방문의 목록은 서버에서 다시 읽는다.
-      if (!shown) return undefined;
+      const here = execution.here();
+      const answer = execution.fail(failure, mounted.current && here);
+      // 방문이 바뀌었으면 잠금도 실패도 남기지 않는다(실패는 위에서 앱에 알렸다). 새 방문의 목록은 서버에서 다시 읽는다.
+      if (!here) return undefined;
       if (isRequestFailure(failure) && failure.resultUnknown) {
         uncertainAction.current = failure;
-        setActionFailure(failure);
-      } else if (answer === 'handled') return undefined;
+        if (mounted.current) setActionFailure(failure);
+      } else if (answer === 'handled' && mounted.current) return undefined;
       throw failure;
     } finally {
       actionLock.current = false;

@@ -16,7 +16,7 @@ import { flushSync } from 'react-dom';
 import { normalizeChoiceValue, type ChoiceNode, type ChoiceValue } from '../choice-binding';
 import { isRequestFailure, type FieldError, type RequestFailure } from '../failure';
 import { useFullPageProgress } from '../full-page-progress';
-import { useLifetime } from '../lifetime';
+import { useLifetime, useVisit } from '../lifetime';
 import type { CompletionStep } from '../completion';
 import { fieldIsHidden, projectConditionalFields, useConditionalFields, type ConditionalField } from './conditional';
 import { followRows, rowMark } from './rows';
@@ -546,7 +546,7 @@ export function useSaveForm<
     const previous = { baseline: baselineRef.current, baselineMark: baselineMark.current, inputBeforeSaved: form.state.values };
     const replaceInput = evaluate(project(form.state.values), submitted);
     savedResult.current = {
-      complete: (step) => (execution.here() ? onSaved?.(result, { ...step, isCurrent: () => step.isCurrent() && execution.here() }) : undefined), identity: identity.current, ...previous,
+      complete: (step) => onSaved?.(result, step), identity: identity.current, ...previous,
       inputAfterSaved: replaceInput ? saved : form.state.values, submitted,
     };
     flushSync(() => {
@@ -727,6 +727,24 @@ export function useSaveForm<
     decided.current = source.values;
     if (evaluate(project(form.state.values), projectChoices(baseline))) replace(source.values);
   });
+
+  // 확인 대기·저장 중·완료 확인 대기는 그 방문의 것이다. 방문이 바뀌었는데 이 폼이 남아 있으면 진행 상태를 풀고 안내를 지운다(입력은 둔다).
+  // 이미 보낸 저장은 끝까지 가고 결과는 반영하지 않는다(execute의 current). 완료 처리 중이면 그대로 둔다: 완료 처리가 스스로 화면을
+  // 옮기는 중이고, 이동이 실패하면 이 폼에서 완료만 다시 시도해야 한다.
+  const visit = useVisit();
+  const seenVisit = useRef(visit);
+  useLayoutEffect(() => {
+    if (seenVisit.current === visit) return;
+    seenVisit.current = visit;
+    const now = stageRef.current;
+    if (now.kind === 'saved' && now.completing) return;
+    submission.current = undefined;
+    pendingSave.current = undefined;
+    savedResult.current = undefined;
+    if (now.kind !== 'idle') setStage({ kind: 'idle' });
+    setRejection(undefined);
+    setCompletionRejection(undefined);
+  }, [visit]);
 
   function replace(next: TInput) {
     defaults.current = next;

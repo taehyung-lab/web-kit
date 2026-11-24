@@ -20,6 +20,15 @@ export interface DownloadSource<S> {
   readonly selection: { readonly selectedIds: readonly string[] };
 }
 
+/** 실행 함수가 받는 진행 도구. */
+export interface DownloadStep {
+  /**
+   * 시작한 로그인이 끝나거나 바뀌면 끊긴다(실행 수명을 연결한 앱). 요청에 넘기고, 받은 파일을 쓰기 직전에도 `signal.aborted`를 확인해
+   * 이전 로그인의 파일을 저장하지 않는다. 화면(방문)이 바뀌는 것으로는 끊기지 않는다.
+   */
+  readonly signal: AbortSignal;
+}
+
 /** 다운로드 진행 상태. failed는 다음 시작이나 clear 전까지 남는다. */
 export type DownloadState = { readonly kind: 'idle' } | { readonly kind: 'running' } | { readonly kind: 'failed'; readonly failure: unknown };
 
@@ -32,7 +41,10 @@ export type DownloadBlock = 'running' | 'stale' | 'no-selection';
  * 실행 수명(lifetime.ts)을 따른다: 방문이 바뀌어도 실행은 끝까지 가고(받은 파일은 run이 저장한다), 실패는 앱에 알린다.
  * 앱이 직접 알렸거나('handled') 방문이 바뀌었으면 여기 state에 실패를 남기지 않는다. 남아 있던 실패도 방문이 바뀌면 지운다.
  */
-export function useListDownload<S>(list: DownloadSource<S>, options: { readonly run: (target: DownloadTarget<S>) => Promise<void> }) {
+export function useListDownload<S>(
+  list: DownloadSource<S>,
+  options: { readonly run: (target: DownloadTarget<S>, step: DownloadStep) => Promise<void> },
+) {
   const [state, setState] = useState<DownloadState>({ kind: 'idle' });
   const lock = useRef(false);
   const mounted = useRef(true);
@@ -69,15 +81,20 @@ export function useListDownload<S>(list: DownloadSource<S>, options: { readonly 
     lock.current = true;
     setState({ kind: 'running' });
     const execution = lifetime.begin('download');
+    const login = new AbortController();
+    const stopWatching = execution.onLoginEnd(() => login.abort());
     try {
-      await latest.current.options.run(target);
+      await latest.current.options.run(target, { signal: login.signal });
       if (mounted.current) setState({ kind: 'idle' });
       return true;
     } catch (failure) {
-      const answer = execution.fail(failure, mounted.current);
-      if (mounted.current) setState(answer === 'handled' ? { kind: 'idle' } : { kind: 'failed', failure });
+      // 이 화면이 아직 그 실패를 보일 수 있는가. 방문이 바뀌었으면 같은 부품이 남아 있어도 새 방문에 실패를 쓰지 않는다.
+      const shown = mounted.current && execution.here();
+      const answer = execution.fail(failure, shown);
+      if (mounted.current) setState(shown && answer !== 'handled' ? { kind: 'failed', failure } : { kind: 'idle' });
       return false;
     } finally {
+      stopWatching();
       lock.current = false;
     }
   }

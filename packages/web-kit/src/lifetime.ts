@@ -5,6 +5,7 @@
 // onFailure로 실패 하나를 직접 맡을지('handled') 그 자리에 둘지('local') 답한다. 연결하지 않으면 방문은 바뀌지 않고 실패는 그 자리에 남는다.
 import { createContext, createElement, useContext, useSyncExternalStore, type ReactNode } from 'react';
 import { isRequestFailure } from './failure';
+import { PAGE_QUERY_META } from './page-query';
 
 /** 수명이 조회 보관소에서 쓰는 만큼의 모양. 폼만 쓰는 소비자가 조회 라이브러리를 끌어오지 않도록 타입을 직접 적는다(TanStack QueryClient가 맞는다). */
 interface LifetimeQuery {
@@ -47,6 +48,11 @@ export interface Execution {
    * 취소와 이전 로그인의 실패는 앱에 알리지 않는다.
    */
   readonly fail: (failure: unknown, shown: boolean) => FailureAnswer;
+  /**
+   * 시작한 로그인이 끝나거나 바뀌면 한 번 부른다(이미 끝났으면 바로). 돌려준 함수로 그만 듣는다.
+   * 파일처럼 화면 밖에 남는 결과를 로그인이 바뀐 뒤 전달하지 않게 할 때 쓴다.
+   */
+  readonly onLoginEnd: (listener: () => void) => () => void;
 }
 
 export interface Lifetime {
@@ -63,9 +69,6 @@ export interface Lifetime {
   readonly isHandled: (failure: unknown) => boolean;
 }
 
-/** 본문 조회 표시. `progress: 'page'`로 선언한 useList·useRecord가 조회 meta에 붙인다. */
-export const PAGE_QUERY_META = { lifetimePlace: 'page' } as const;
-
 function isCancelled(failure: unknown): boolean {
   return isRequestFailure(failure) && failure.kind === 'cancelled';
 }
@@ -80,7 +83,11 @@ export function createLifetime({
   queryClient,
   onFailure,
 }: {
-  readonly session?: { readonly generation: () => number; readonly current: () => unknown };
+  readonly session?: {
+    readonly generation: () => number;
+    readonly current: () => unknown;
+    readonly subscribe: (listener: () => void) => () => void;
+  };
   readonly queryClient?: LifetimeQueryClient;
   readonly onFailure?: (failure: unknown, report: FailureReport) => FailureAnswer;
 } = {}): Lifetime {
@@ -108,8 +115,13 @@ export function createLifetime({
     // 지금 화면이 쓰는 조회가 이 방문에서 시작해 이 방문에서 실패한 것만 알린다.
     // 이동 중(새 화면이 자리 잡기 전)에 끝난 실패는 떠나는 화면의 것이다. 새 화면이 그 조회를 쓰면 다시 받아 그 응답으로 판정한다.
     if (action.type !== 'error' || isCancelled(action.error)) return;
-    if (!query.isActive() || !settled || fetchVisit.get(query) !== visit) return;
-    report(action.error, query.meta?.['lifetimePlace'] === 'page' ? 'page' : 'detail', true);
+    if (!settled) {
+      // 이동 중에 실패한 조회는 새 화면이 자리 잡은 뒤 그 화면이 쓰면 다시 받아, 그 응답으로 판정한다.
+      leftBehind.add(query);
+      return;
+    }
+    if (!query.isActive() || fetchVisit.get(query) !== visit) return;
+    report(action.error, query.meta?.[PAGE_QUERY_KEY] === PAGE_QUERY_META[PAGE_QUERY_KEY] ? 'page' : 'detail', true);
   });
 
   return {
@@ -117,14 +129,10 @@ export function createLifetime({
       visit += 1;
       settled = false;
       if (queryClient !== undefined) {
-        leftBehind = new Set(
-          queryClient
-            .getQueryCache()
-            .getAll()
-            .filter((query) => fetchVisit.get(query) !== visit)
-            .filter((query) => query.state.fetchStatus !== 'idle' || query.state.status === 'error'),
-        );
-        for (const query of leftBehind) {
+        // 연달아 이동해도 도착할 때까지 정리한 조회를 모아 둔다. 도착한 화면이 쓰는 것만 다시 받는다.
+        for (const query of queryClient.getQueryCache().getAll()) {
+          if (query.state.fetchStatus === 'idle' && query.state.status !== 'error') continue;
+          leftBehind.add(query);
           // 진행 중이거나 연결을 기다리는 실행은 취소한다. 이어지면 이전 방문의 결과가 새 방문의 결과가 된다.
           if (query.state.fetchStatus !== 'idle') void query.cancel({ revert: true });
           else query.reset();
@@ -151,8 +159,12 @@ export function createLifetime({
     begin(place) {
       const startedVisit = visit;
       const startedLogin = login();
-      // 로그인 없이 시작한 실행(로그인 화면의 요청)은 그 실행이 세션을 여는 것이라 로그인으로 가르지 않는다.
-      const sameLogin = () => startedLogin === undefined || login() === startedLogin;
+      // 로그인 없이 시작한 실행(로그인 화면의 요청)은 그 실행이 세션을 여는 것이다. 세션이 열려도 시작한 화면에 있는 동안은
+      // 같은 실행이고, 화면을 떠난 뒤 열린 세션은 다른 로그인이다(떠난 로그인 시도의 늦은 결과를 다음 로그인에 넘기지 않는다).
+      const sameLogin = () => {
+        const now = login();
+        return startedLogin === undefined ? now === undefined || visit === startedVisit : now === startedLogin;
+      };
       const here = () => visit === startedVisit && sameLogin();
       return {
         here,
@@ -162,6 +174,19 @@ export function createLifetime({
           if (!sameLogin()) return 'handled';
           return report(failure, place, shown && here());
         },
+        onLoginEnd(listener) {
+          if (!sameLogin()) {
+            listener();
+            return () => undefined;
+          }
+          if (session === undefined) return () => undefined;
+          const stop = session.subscribe(() => {
+            if (sameLogin()) return;
+            stop();
+            listener();
+          });
+          return stop;
+        },
       };
     },
     isHandled: (failure) => typeof failure === 'object' && failure !== null && handled.has(failure),
@@ -170,6 +195,7 @@ export function createLifetime({
 
 /** 연결하지 않은 앱의 수명: 방문은 바뀌지 않고 실패는 그 자리에 남는다(이전 동작). */
 const detached = createLifetime();
+const PAGE_QUERY_KEY = 'lifetimePlace';
 const LifetimeContext = createContext<Lifetime>(detached);
 
 /** 앱 조립에 한 번 둔다. 이 아래의 키트 hook(저장 폼·확인창·목록·다운로드·단건)이 이 수명을 따른다. */

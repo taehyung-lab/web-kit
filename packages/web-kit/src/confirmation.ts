@@ -55,14 +55,25 @@ export function useConfirmationState<T, F, R = unknown>({
   const lifetime = useLifetime();
   const visit = useVisit();
   const seenVisit = useRef(visit);
+  /** 진행 중인 실행을 시작한 방문. */
+  const pendingVisit = useRef(visit);
   useLayoutEffect(() => {
     latest.current = { run, onError, onSuccess };
-    if (!Object.is(scope.current.identity, identity) || seenVisit.current !== visit) {
-      seenVisit.current = visit;
+    if (!Object.is(scope.current.identity, identity)) {
       scope.current = { identity, generation: scope.current.generation + 1 };
       committed.current = undefined;
       current.current = { kind: "closed" };
       setState(current.current);
+    }
+    if (seenVisit.current !== visit) {
+      seenVisit.current = visit;
+      // 열어 둔 확인은 그 방문의 것이라 닫는다(close와 같다: 같은 대상의 완료 기록은 남긴다).
+      // 실행 중이면 그대로 둔다. 그 실행이 끝날 때 시작한 방문을 보고 스스로 정리한다(아래 confirm).
+      if (!isPending() && current.current.kind === "open") {
+        scope.current.generation++;
+        current.current = { kind: "closed" };
+        setState(current.current);
+      }
     }
   }, [identity, visit, run, onError, onSuccess]);
   useLayoutEffect(() => {
@@ -106,12 +117,14 @@ export function useConfirmationState<T, F, R = unknown>({
     if (requested.kind !== "open" || requested.pending) return;
     const generation = scope.current.generation;
     const execution = lifetime.begin("action");
-    const isCurrent = () =>
-      mounted.current &&
-      scope.current.generation === generation &&
-      execution.here();
+    pendingVisit.current = lifetime.visit();
+    /** 이 확인이 아직 이 부품의 현재 확인인가(대상·닫기·부품 수명). 방문은 보지 않는다. */
+    const sameScope = () =>
+      mounted.current && scope.current.generation === generation;
+    /** 결과를 화면에 전달해도 되는가: 현재 확인이고 시작한 방문·로그인이 그대로다. */
+    const isCurrent = () => sameScope() && execution.here();
     const callbacks = latest.current;
-    // 요청(run)의 실패만 앱에 알린다. 완료 처리(onSuccess)의 실패는 이 창이 다시 시도하게 한다.
+    // 요청(run) 단계인가. 완료 처리(onSuccess) 단계의 실패는 요청이 아니라 이 창이 다시 시도하게 한다.
     let requesting = false;
     update({ ...requested, pending: true, failure: undefined });
     try {
@@ -119,7 +132,11 @@ export function useConfirmationState<T, F, R = unknown>({
         requesting = true;
         const result = await callbacks.run(requested.values);
         requesting = false;
-        if (!isCurrent()) return;
+        if (!isCurrent()) {
+          // 실행 중 방문이 바뀌었다. 요청은 끝까지 갔고(데이터 반영은 run 안에서 한다) 화면 효과는 없다.
+          if (sameScope()) update({ kind: "closed" });
+          return;
+        }
         committed.current = {
           values: requested.values,
           result,
@@ -128,21 +145,27 @@ export function useConfirmationState<T, F, R = unknown>({
       }
       const saved = committed.current;
       await saved.complete?.(saved.result, { isCurrent });
-      if (isCurrent()) {
+      // 완료 처리가 스스로 화면을 옮기면 방문이 바뀐다. 부품이 남아 있으면 닫는다.
+      if (sameScope()) {
         committed.current = undefined;
         update({ kind: "closed" });
       }
     } catch (error: unknown) {
-      if (!isCurrent()) {
-        if (requesting) execution.fail(error, false);
-        return;
-      }
-      if (requesting && execution.fail(error, true) === "handled") {
-        update({ kind: "closed" });
-        return;
-      }
+      if (requesting) {
+        const shown = isCurrent();
+        const answer = execution.fail(error, shown);
+        if (!shown) {
+          if (sameScope()) update({ kind: "closed" });
+          return;
+        }
+        if (answer === "handled") {
+          update({ kind: "closed" });
+          return;
+        }
+      } else if (!sameScope()) return;
+      // 완료 처리의 실패(예: 이동 실패)는 방문이 바뀌었다고 알렸어도 이 부품이 남아 있으면 이 창에서 다시 시도한다.
       const result = callbacks.onError(error);
-      if (!isCurrent()) return;
+      if (!sameScope()) return;
       if (result.kind === "close") {
         update({ kind: "closed" });
       } else
@@ -156,8 +179,11 @@ export function useConfirmationState<T, F, R = unknown>({
     }
   }
   // 전환 렌더에서는 이전 대상의 창을 노출하지 않는다. ref 변경은 commit에서만 한다.
+  // 실행 중에 방문이 바뀌었으면 그 창은 떠난 방문의 것이라 그리지 않는다(실행은 끝까지 간다).
+  const leftWhilePending =
+    state.kind === "open" && state.pending && pendingVisit.current !== visit;
   const visibleState: ConfirmationState<T, F> =
-    Object.is(scope.current.identity, identity) && seenVisit.current === visit
+    Object.is(scope.current.identity, identity) && !leftWhilePending
       ? state
       : { kind: "closed" };
   const covered =

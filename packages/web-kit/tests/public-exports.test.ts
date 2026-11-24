@@ -11,7 +11,7 @@ import * as search from '../src/search';
 import * as auth from '../src/auth';
 const entries = { core, form, list, dialog, choice, auth, search, progress, lifetime };
 const expected = {
-  "lifetime": ["LifetimeProvider", "PAGE_QUERY_META", "createLifetime", "useLifetime", "useVisit"],
+  "lifetime": ["LifetimeProvider", "createLifetime", "useLifetime", "useVisit"],
   "progress": ["FullPageProgressProvider", "useFullPageProgress", "useFullPageProgressBinding"],
   "search": ["addKeyword", "arrayKeywordCodec", "calendarDate", "choices", "commitFilterSelection", "connectSearch", "dateRange", "definePolicy", "defineSearch", "keywords", "listSearch", "nextSort", "normalizeFilterSelection", "paging", "sameSearchValue", "shiftCalendarDate", "sort", "viewFilterSelection"],
   "auth": ["createAuthChallengeStore", "getAuthTiming", "isAuthCode", "remainingAuthSeconds", "useAuthChallenge"],
