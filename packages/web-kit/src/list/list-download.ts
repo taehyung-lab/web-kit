@@ -1,6 +1,7 @@
 // 파일 책임: 목록 다운로드(엑셀 등)의 흐름 — 누른 순간 대상(선택 ID 또는 확정 검색)을 고정하고, 진행 중 재실행을 막고, 실패를 보존한다.
 // 무엇을 요청할지(서버 요청 변환)·파일 이름·저장·완료 안내는 소비자의 run이 맡는다.
 import { useEffect, useRef, useState } from 'react';
+import { useLifetime, useVisit } from '../lifetime';
 
 /**
  * 다운로드 대상. search는 마지막으로 확정(조회)한 검색 값이며 입력만 하고 검색하지 않은 초안은 들어가지 않는다.
@@ -28,6 +29,8 @@ export type DownloadBlock = 'running' | 'stale' | 'no-selection';
 /**
  * 목록 하나의 다운로드 흐름. run은 고정된 대상을 받아 파일을 받고 저장까지 끝낸 뒤 resolve한다(실패는 throw).
  * 이전 조건 결과를 보이는 동안(isCurrent 거짓)은 대상이 지금 화면과 달라 시작하지 않는다.
+ * 실행 수명(lifetime.ts)을 따른다: 방문이 바뀌어도 실행은 끝까지 가고(받은 파일은 run이 저장한다), 실패는 앱에 알린다.
+ * 앱이 직접 알렸거나('handled') 방문이 바뀌었으면 여기 state에 실패를 남기지 않는다. 남아 있던 실패도 방문이 바뀌면 지운다.
  */
 export function useListDownload<S>(list: DownloadSource<S>, options: { readonly run: (target: DownloadTarget<S>) => Promise<void> }) {
   const [state, setState] = useState<DownloadState>({ kind: 'idle' });
@@ -35,6 +38,13 @@ export function useListDownload<S>(list: DownloadSource<S>, options: { readonly 
   const mounted = useRef(true);
   const latest = useRef({ list, options });
   latest.current = { list, options };
+  const lifetime = useLifetime();
+  const visit = useVisit();
+  const [seenVisit, setSeenVisit] = useState(visit);
+  if (seenVisit !== visit) {
+    setSeenVisit(visit);
+    if (state.kind === 'failed') setState({ kind: 'idle' });
+  }
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -58,12 +68,14 @@ export function useListDownload<S>(list: DownloadSource<S>, options: { readonly 
       kind === 'selected' ? { kind, ids: [...source.selection.selectedIds], search: source.search } : { kind, search: source.search };
     lock.current = true;
     setState({ kind: 'running' });
+    const execution = lifetime.begin('download');
     try {
       await latest.current.options.run(target);
       if (mounted.current) setState({ kind: 'idle' });
       return true;
     } catch (failure) {
-      if (mounted.current) setState({ kind: 'failed', failure });
+      const answer = execution.fail(failure, mounted.current);
+      if (mounted.current) setState(answer === 'handled' ? { kind: 'idle' } : { kind: 'failed', failure });
       return false;
     } finally {
       lock.current = false;

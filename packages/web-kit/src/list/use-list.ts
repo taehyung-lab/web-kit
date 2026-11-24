@@ -5,6 +5,7 @@ import { hashKey, useQueries, useQuery, type QueryKey, type UseQueryOptions } fr
 import { useEffect, useRef, useState } from 'react';
 import { isRequestFailure, RequestFailure } from '../failure';
 import { useFullPageProgress } from '../full-page-progress';
+import { PAGE_QUERY_META, useLifetime } from '../lifetime';
 import { validateDateRange } from '../date-range';
 import { sameSearchValue, type FullSearch, type SearchDefinition, type SearchField, type UrlSearch } from '../search/fields';
 import { addKeyword, nextSort, type Keyword } from '../search/interactions';
@@ -236,7 +237,9 @@ export function useList<
   }
 
   // ── 조회 ──
-  const screenQuery = options.query(full);
+  const declaredQuery = options.query(full);
+  // 페이지의 주 목록 조회는 본문 조회다. 실행 수명이 이 표시로 실패가 난 자리를 구분한다.
+  const screenQuery = options.progress === 'page' ? { ...declaredQuery, meta: { ...declaredQuery.meta, ...PAGE_QUERY_META } } : declaredQuery;
   const screenEnabled = screenQuery.enabled;
   const ready = screenEnabled !== false;
   /** 선언된 필수 조건을 URL 조회와 검색 확정에 똑같이 적용한다. */
@@ -461,7 +464,14 @@ export function useList<
     });
   }
 
-  /** 시작 순간의 선택 ID로 실행하고, 같은 선택 수명일 때만 성공 뒤 선택을 비운다. */
+  const executionLifetime = useLifetime();
+
+  /**
+   * 시작 순간의 선택 ID로 실행하고, 같은 선택 수명일 때만 성공 뒤 선택을 비운다.
+   * 실행 수명(lifetime.ts)을 따른다: 실행 중 방문이 바뀌면 action은 끝까지 가지만 결과는 화면에 전달하지 않고 undefined로 끝난다
+   * (실패는 앱에 알린다). 같은 방문의 실패를 앱이 직접 알렸으면('handled') 던지지 않고 undefined로 끝나 선택이 남는다.
+   * 반영 여부를 모르는 실패는 앱이 알렸어도 던지고 재조회 전까지 잠근다.
+   */
   async function run<T extends { readonly completedIds: readonly string[] }>(
     action: (ids: readonly string[]) => Promise<T>,
   ): Promise<T | undefined> {
@@ -472,6 +482,7 @@ export function useList<
     setRunningAction(true);
     const ids = selectedIds;
     const lifetime = selectionLifetime;
+    const execution = executionLifetime.begin('action');
     try {
       const result = await action(ids);
       // completedIds는 업무 결과이고, 선택 수명 적용은 이 module이 맡는다.
@@ -482,12 +493,16 @@ export function useList<
         setSelection((prev) =>
           prev.lifetime === lifetime ? { ...prev, selected: new Set([...prev.selected].filter((id) => !completed.includes(id))) } : prev,
         );
-      return result;
+      return execution.here() ? result : undefined;
     } catch (failure) {
+      const shown = mounted.current && execution.here();
+      const answer = execution.fail(failure, shown);
+      // 떠난 화면에는 잠금도 실패도 남기지 않는다. 새 방문의 목록은 서버에서 다시 읽는다.
+      if (!shown) return undefined;
       if (isRequestFailure(failure) && failure.resultUnknown) {
         uncertainAction.current = failure;
-        if (mounted.current) setActionFailure(failure);
-      }
+        setActionFailure(failure);
+      } else if (answer === 'handled') return undefined;
       throw failure;
     } finally {
       actionLock.current = false;

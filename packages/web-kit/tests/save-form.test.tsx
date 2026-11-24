@@ -145,7 +145,7 @@ it('S2 저장 중 다시 제출해도 요청은 한 번이고, 검증한 값(출
   await submit();
   await submit();
   expect(save).toHaveBeenCalledTimes(1);
-  expect(save).toHaveBeenCalledWith({ name: 'B', email: 'a@x' }, { name: ' B ', email: 'a@x' }, { waitForUser: expect.any(Function) });
+  expect(save).toHaveBeenCalledWith({ name: 'B', email: 'a@x' }, { name: ' B ', email: 'a@x' }, { waitForUser: expect.any(Function), isCurrent: expect.any(Function) });
   expect(state().stage).toBe('saving');
   await act(async () => pending.resolve(undefined));
   expect(state().stage).toBe('idle');
@@ -167,7 +167,7 @@ it('S3 확인 관문: 보여 준 S로 실행하고, 취소하면 저장하지 �
     fireEvent.click(screen.getByText('ok'));
   });
   expect(save).toHaveBeenCalledTimes(1);
-  expect(save).toHaveBeenCalledWith({ name: 'B', email: 'a@x' }, { name: 'B', email: 'a@x' }, { waitForUser: expect.any(Function) });
+  expect(save).toHaveBeenCalledWith({ name: 'B', email: 'a@x' }, { name: 'B', email: 'a@x' }, { waitForUser: expect.any(Function), isCurrent: expect.any(Function) });
   expect(state().dirty).toBe(true);
 });
 

@@ -16,6 +16,7 @@ import { flushSync } from 'react-dom';
 import { normalizeChoiceValue, type ChoiceNode, type ChoiceValue } from '../choice-binding';
 import { isRequestFailure, type FieldError, type RequestFailure } from '../failure';
 import { useFullPageProgress } from '../full-page-progress';
+import { useLifetime } from '../lifetime';
 import type { CompletionStep } from '../completion';
 import { fieldIsHidden, projectConditionalFields, useConditionalFields, type ConditionalField } from './conditional';
 import { followRows, rowMark } from './rows';
@@ -98,6 +99,11 @@ export interface SaveFormOptions<
 export interface SaveStep {
   /** 저장 도중 사용자에게 묻는 동안(확인창) 진행 덮개를 내리고, 물음의 답을 그대로 돌려준다. */
   readonly waitForUser: <T>(question: Promise<T>) => Promise<T>;
+  /**
+   * 이 저장이 아직 현재 제출이고 시작한 화면에 있는가. 저장 함수가 사전 조회 뒤에 쓰기를 보낼 때(아이디 확인 → 등록),
+   * 거짓이면 아직 보내지 않은 쓰기를 시작하지 않는다.
+   */
+  readonly isCurrent: () => boolean;
 }
 
 export type SaveStage<TInput> =
@@ -381,6 +387,7 @@ export function useSaveForm<
   }
 
   /** 제출이 시작된 폼 수명과 현재 대상이 같은지 비동기 경계마다 확인한다. */
+  const lifetime = useLifetime();
   function isCurrent(token: object) {
     return mounted.current && submission.current === token && Object.is(identity.current, latest.current.source.id);
   }
@@ -502,16 +509,22 @@ export function useSaveForm<
     mark: number,
     onSaved?: (result: TActionResult, step: CompletionStep) => unknown,
   ) {
-    const current = () => isCurrent(token);
+    // 실행 수명(lifetime.ts): 방문이 바뀌면 결과(기준선·오류·완료 처리)를 반영하지 않고, 실패는 앱에 알린다.
+    const execution = lifetime.begin('action');
+    const current = () => isCurrent(token) && execution.here();
     if (!current()) return;
     setStage({ kind: 'saving', values: submitted });
     let result: TActionResult;
     try {
-      result = await run({ waitForUser: (question) => waitForUser(token, question) });
+      result = await run({ waitForUser: (question) => waitForUser(token, question), isCurrent: current });
     } catch (error: unknown) {
+      // 화면 절차의 칸 거절(FormRejection)은 요청 실패가 아니라 앱에 알리지 않는다.
+      const answer = error instanceof FormRejection ? 'local' : execution.fail(error, current());
       if (!current()) return;
       setStage({ kind: 'idle' });
       if (isRequestFailure(error) && error.kind === 'cancelled') return;
+      // 앱이 직접 알린 실패는 폼에 다시 그리지 않는다. 입력은 그대로다.
+      if (answer === 'handled') return;
       const clearWhenEdited = latest.current.clearFailureOnEdit?.(error) === true ? { submitted } : undefined;
       const fieldRejection = rejectionOfFailure(error);
       if (fieldRejection !== undefined) {
@@ -533,7 +546,7 @@ export function useSaveForm<
     const previous = { baseline: baselineRef.current, baselineMark: baselineMark.current, inputBeforeSaved: form.state.values };
     const replaceInput = evaluate(project(form.state.values), submitted);
     savedResult.current = {
-      complete: (step) => onSaved?.(result, step), identity: identity.current, ...previous,
+      complete: (step) => (execution.here() ? onSaved?.(result, { ...step, isCurrent: () => step.isCurrent() && execution.here() }) : undefined), identity: identity.current, ...previous,
       inputAfterSaved: replaceInput ? saved : form.state.values, submitted,
     };
     flushSync(() => {

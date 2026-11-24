@@ -3,6 +3,7 @@ import { keepPreviousData, useQuery, type QueryKey, type UseQueryOptions } from 
 import { useEffect, useRef } from 'react';
 import { isRequestFailure, type RequestFailure } from './failure';
 import { useFullPageProgress } from './full-page-progress';
+import { PAGE_QUERY_META } from './lifetime';
 
 /** 준비됨에만 딸리는 갱신 사실. 갱신 실패는 내용을 지우지 않는다. */
 export interface RecordRefresh {
@@ -38,6 +39,7 @@ function failureOf(error: unknown): unknown {
  * 숨김 근거는 이 조회의 실패뿐이다. 다른 요청(보조 선택지·저장)의 실패는 여기에 들어오지 않는다.
  * `progress: 'page'`는 이 조회가 페이지 진입 조회라는 선언이다. 보일 내용이 없고 조회 중인 동안 화면 전체 진행 덮개(registry FullPageProgress)를 띄운다.
  * 언어 전환·재조회(내용 있음), 실패·취소·비활성은 덮지 않는다. 대화창 안 조회는 선언하지 않는다.
+ * 이 선언이 있는 조회는 본문 조회로 표시되어, 실행 수명(lifetime.ts)이 실패가 난 자리를 page로 앱에 알린다.
  */
 export function useRecord<TQueryFnData, TError = unknown, TData = TQueryFnData, TQueryKey extends QueryKey = QueryKey>(
   options: UseQueryOptions<TQueryFnData, TError, TData, TQueryKey>,
@@ -49,6 +51,7 @@ export function useRecord<TQueryFnData, TError = unknown, TData = TQueryFnData, 
   const wasReady = readyFor.current !== undefined && Object.is(readyFor.current.identity, identity);
   const query = useQuery({
     ...options,
+    ...(declaration?.progress === 'page' ? { meta: { ...options.meta, ...PAGE_QUERY_META } } : {}),
     // 마지막으로 준비된 내용이 같은 식별일 때만(언어 등 key의 나머지만 바뀜) 이전 내용을 이어 보인다.
     // 다른 식별의 내용은 다시 그려져도 보이지 않는다. 화면이 넘긴 값은 쓰지 않는다.
     placeholderData: wasReady ? keepPreviousData : undefined,

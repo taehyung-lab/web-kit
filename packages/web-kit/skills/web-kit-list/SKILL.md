@@ -67,6 +67,7 @@ description: 목록 필터·기간 프리셋·날짜 검색의 시간대/UTC 경
 - **일괄 결과 불확실:** 서버 반영 여부를 모르는 실패(`RequestFailure.resultUnknown`)면 `selection.run`이 재실행과 선택 변경을 잠근다. 응답 해석을 맡는 소비자도 이미 전송한 결과를 해석할 수 없으면 이 표식을 붙인다. `selection.recover()`는 현재 조건을 다시 조회하고 성공할 때만 잠금을 풀고 선택을 비운다. 조회 실패·검색 변경·확인창 재열기만으로 잠금을 풀지 않는다. 복구 중 조회 문맥이 바뀌면 원래 주소로 돌아와도 이전 완료가 잠금을 풀지 않는다. `BulkAction`·`BulkSelectAction`은 확인 대신 재조회 동작과 안내를 표시한다. 일반 거절은 기존처럼 선택을 유지하고 재시도할 수 있다.
 
 - **다운로드:** `useListDownload(list, { run })`은 누른 순간 대상(`{ kind: 'all', search }` 또는 `{ kind: 'selected', ids, search }`)을 고정해 `run`에 넘긴다. `search`는 마지막으로 확정한 URL 조건이며 입력만 하고 검색하지 않은 초안은 들어가지 않는다. 진행 중 재실행, 이전 조건 결과를 보이는 동안(`isCurrent` 거짓), 선택 0건의 선택 다운로드는 시작하지 않는다(`blockOf`). 실패는 `state`에 남는다. 서버 요청 변환·파일 이름·저장·완료 안내는 `run` 안에서 소비자가 한다.
+- **실행 수명:** 실행 수명을 연결한 앱(web-kit-http 「실행 수명」)에서 일괄 작업·다운로드는 방문이 바뀌어도 끝까지 간다. `selection.run`은 실행 중 방문이 바뀌었거나 앱이 실패를 직접 알렸으면(`'handled'`, 반영 여부 미확정 제외) `undefined`로 끝난다: 확인창은 닫히고 선택은 남는다. 완료·부분 결과 안내는 `BulkAction`·`BulkSelectAction`(`useBulkConfirmation`)의 `onCompleted(result)`에 둔다. 결과가 이 화면에 전달될 때만 불리므로 `run` 안에서 방문을 비교하지 않는다. 열어 둔 확인·거절·실패 안내와 다운로드의 실패 상태는 방문이 바뀌면 지워진다.
 
 ## registry 목록과 제품 선언
 

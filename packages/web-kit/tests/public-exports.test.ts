@@ -5,11 +5,13 @@ import * as form from '../src/form';
 import * as list from '../src/list/index';
 import * as dialog from '../src/confirmation';
 import * as progress from '@boosterlab/web-kit/progress';
+import * as lifetime from '@boosterlab/web-kit/lifetime';
 import * as choice from '../src/choice-binding';
 import * as search from '../src/search';
 import * as auth from '../src/auth';
-const entries = { core, form, list, dialog, choice, auth, search, progress };
+const entries = { core, form, list, dialog, choice, auth, search, progress, lifetime };
 const expected = {
+  "lifetime": ["LifetimeProvider", "PAGE_QUERY_META", "createLifetime", "useLifetime", "useVisit"],
   "progress": ["FullPageProgressProvider", "useFullPageProgress", "useFullPageProgressBinding"],
   "search": ["addKeyword", "arrayKeywordCodec", "calendarDate", "choices", "commitFilterSelection", "connectSearch", "dateRange", "definePolicy", "defineSearch", "keywords", "listSearch", "nextSort", "normalizeFilterSelection", "paging", "sameSearchValue", "shiftCalendarDate", "sort", "viewFilterSelection"],
   "auth": ["createAuthChallengeStore", "getAuthTiming", "isAuthCode", "remainingAuthSeconds", "useAuthChallenge"],
@@ -98,12 +100,12 @@ const expected = {
     "useDialogBinding"
   ]
 };
-it.each(['core', 'form', 'list', 'dialog', 'choice', 'auth', 'search', 'progress'] as const)('%s 공개 이름은 승인된 목록과 정확히 같다', (name) => {
+it.each(['core', 'form', 'list', 'dialog', 'choice', 'auth', 'search', 'progress', 'lifetime'] as const)('%s 공개 이름은 승인된 목록과 정확히 같다', (name) => {
   expect(Object.keys(entries[name]).sort()).toEqual(expected[name]);
 });
 
 /** 공개 입구에서 시각 UI 경로가 다시 늘어나지 않게 고정한다. */
-it('패키지 subpath는 승인된 38개 입구만 공개한다', () => {
+it('패키지 subpath는 승인된 39개 입구만 공개한다', () => {
   const manifest = Object.values((import.meta as unknown as { glob: (pattern: string, options: object) => Record<string, string> }).glob('../package.json', { query: '?raw', import: 'default', eager: true }))[0]!;
   expect(Object.keys(JSON.parse(manifest).exports).sort()).toEqual([
   ".",
@@ -114,6 +116,7 @@ it('패키지 subpath는 승인된 38개 입구만 공개한다', () => {
   "./failure",
   "./form",
   "./http",
+  "./lifetime",
   "./list",
   "./permission",
   "./progress",
