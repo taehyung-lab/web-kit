@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "version": "8.3.0-rc.1",
-  "sourceRef": "v8.3.0-rc.1",
-  "sourceCommit": "1d792c96e64b0287aac91eabfff6302a83487c11",
+  "version": "8.4.0-rc.1",
+  "sourceRef": "v8.4.0-rc.1",
+  "sourceCommit": "bcb693d44703ad491583a43f7a2975e5e3adc389",
   "sourceWorkingTree": "clean",
   "shadcn": "4.19.1",
   "method": "shadcn@4.19.1 add; installation recorded after review",
@@ -294,7 +294,7 @@
     },
     {
       "name": "list",
-      "artifactHash": "3ecea906b3b2239886c5a745f0ff74646d1dbef31653342a831918047886b1cb",
+      "artifactHash": "24a01fbbf1b8c4ee965aa54d9b5b954021bc37f0775461feba262c290558154f",
       "files": [
         {
           "source": "packages/ui-registry/src/list.tsx",
@@ -335,8 +335,8 @@
           "source": "packages/ui-registry/src/list/list-actions.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/list/list-actions.tsx",
           "installed": "src/shared/ui/web-kit/list/list-actions.tsx",
-          "sourceHash": "083072898331813e84430b4fd564fab30827436ce015bb489e5d59ec6877ac70",
-          "installedHash": "ae3aab3e6a4d7ed6a81e524c8f6d275c99798a22f82ec97aa9402565d67a566b"
+          "sourceHash": "508d4330eebbe8ea5a778c41718d94f570c5c6c4fa03ef9a3e759adfaafed189",
+          "installedHash": "a68025d3f90905ee6fdded86e7c6974adc180238c957ea1dea535e0c9d3074e5"
         }
       ]
     },
