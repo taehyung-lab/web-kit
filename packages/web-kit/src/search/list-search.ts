@@ -48,7 +48,7 @@ export interface ListSearchPolicy {
    * 검색어. split은 입력 한 번에 여러 검색어를 넣는 구분자(화면의 추가와 검색 제출이 같은 규칙).
    * pending이 include면 [추가]를 누르지 않은 입력도 검색할 때 포함한다.
    */
-  readonly keywords: { readonly codec: KeywordCodec; readonly split?: string; readonly pending: 'include' | 'exclude' };
+  readonly keywords: { readonly maxTotal?: number; readonly codec: KeywordCodec; readonly split?: string; readonly pending: 'include' | 'exclude' };
   /** 다중 선택 주소 표현. comma는 `a,b`, array는 배열. allToken이 오면 조건 없음이다. */
   readonly choices: { readonly format: 'comma' | 'array'; readonly allToken?: string };
   /**
@@ -65,6 +65,9 @@ export interface ListSearchPolicy {
 export function definePolicy<const P extends ListSearchPolicy>(policy: P): P {
   if (!policy.paging.sizes.includes(policy.paging.defaultSize))
     throw new Error(`definePolicy: paging.defaultSize ${policy.paging.defaultSize} is not one of paging.sizes`);
+  const limit = policy.keywords.maxTotal;
+  if (limit !== undefined && (!Number.isSafeInteger(limit) || limit < 1))
+    throw new Error('definePolicy: keywords.maxTotal must be a positive integer');
   return policy;
 }
 
@@ -101,7 +104,18 @@ export interface SortKind<S extends string = string> {
   readonly default: S;
   readonly order: 'asc' | 'desc';
 }
-type Kind = KeywordsKind | ChoicesKind | DateRangeKind | PagingKind | SortKind;
+interface ServerChoicesKind<F extends SearchField<any> = SearchField<any>> {
+  readonly kind: 'serverChoices';
+  readonly field: F;
+  readonly multiple: boolean;
+}
+
+/** 직접 선언한 주소 필드를 서버 선택지 칸에 연결한다. 조회는 connectSearch의 checks에서 받는다. */
+export function serverChoices<const F extends SearchField<any>>(field: F, options: { readonly multiple: boolean }): ServerChoicesKind<F> {
+  return { kind: 'serverChoices', field, multiple: options.multiple };
+}
+
+type Kind = ServerChoicesKind | KeywordsKind | ChoicesKind | DateRangeKind | PagingKind | SortKind;
 
 /** 검색어 칩. targets는 고를 수 있는 검색 대상이고 첫 항목이 기본이다. */
 export function keywords<const T extends string>(options: { readonly targets: readonly [T, ...T[]] }): KeywordsKind<T> {
@@ -145,7 +159,8 @@ export function sort<const S extends string>(options: {
 
 /** 칸 이름별 종류 정보. 화면 부품은 이것을 읽어 주소 키·선택지를 다시 받지 않는다. */
 export type SearchMetaEntry =
-  | { readonly kind: 'keywords'; readonly targets: readonly string[]; readonly split?: string; readonly pending: 'include' | 'exclude' }
+  | { readonly kind: 'serverChoices'; readonly multiple: boolean }
+  | { readonly kind: 'keywords'; readonly maxTotal?: number; readonly targets: readonly string[]; readonly split?: string; readonly pending: 'include' | 'exclude' }
   | { readonly kind: 'choices'; readonly key: string; readonly values: readonly string[]; readonly multiple: boolean }
   | { readonly kind: 'dateRange'; readonly keys: DateKeys; readonly types: readonly string[] }
   | { readonly kind: 'paging'; readonly sizes: readonly number[] }
@@ -156,6 +171,7 @@ export type SearchMeta = Readonly<Record<string, SearchMetaEntry>>;
 export type ListSearchMeta<F, P extends ListSearchPolicy> = {
   readonly [N in keyof F & string as F[N] extends Kind ? N : never]:
     F[N] extends KeywordsKind<infer T> ? Extract<SearchMetaEntry, { kind: 'keywords' }> & { readonly targets: readonly T[] }
+    : F[N] extends ServerChoicesKind ? Extract<SearchMetaEntry, { kind: 'serverChoices' }>
     : F[N] extends ChoicesKind<infer T, infer M> ? { readonly kind: 'choices'; readonly key: N; readonly values: readonly T[]; readonly multiple: M }
     : F[N] extends DateRangeKind<infer T, infer K> ? { readonly kind: 'dateRange'; readonly keys: KeysOf<K, P>; readonly types: readonly T[] }
     : F[N] extends PagingKind<infer S> ? { readonly kind: 'paging'; readonly sizes: readonly ([S] extends [never] ? P['paging']['sizes'][number] : S)[] }
@@ -176,6 +192,7 @@ type DateFields<T extends string, D extends DateKeys> = { readonly [_ in D['from
 type FieldsOfKind<N extends string, K, P extends ListSearchPolicy> =
   K extends KeywordsKind
     ? { readonly [_ in N]: RequiredField<readonly Keyword[]> }
+    : K extends ServerChoicesKind<infer Field> ? { readonly [_ in N]: Field }
     : K extends ChoicesKind<infer T, infer M>
       ? [M] extends [true]
         ? { readonly [_ in N]: RequiredField<readonly T[]> }
@@ -247,6 +264,10 @@ export function listSearch<const P extends ListSearchPolicy, const F extends Rec
       continue;
     }
     switch (entry.kind) {
+      case 'serverChoices':
+        put(name, entry.field);
+        meta[name] = { kind: 'serverChoices', multiple: entry.multiple };
+        break;
       case 'keywords': {
         const targets: readonly string[] = entry.targets;
         const { codec } = policy.keywords;
@@ -265,7 +286,7 @@ export function listSearch<const P extends ListSearchPolicy, const F extends Rec
           default: [] as readonly Keyword[],
           encode: (items: readonly Keyword[]) => codec.format(items),
         });
-        meta[name] = { kind: 'keywords', targets, split: policy.keywords.split, pending: policy.keywords.pending };
+        meta[name] = { kind: 'keywords', targets, split: policy.keywords.split, pending: policy.keywords.pending, ...(policy.keywords.maxTotal === undefined ? {} : { maxTotal: policy.keywords.maxTotal }) };
         break;
       }
       case 'choices': {

@@ -9,6 +9,7 @@ import { useLifetime, useVisit } from '../lifetime';
 import { PAGE_QUERY_META } from '../page-query';
 import { validateDateRange } from '../date-range';
 import { sameSearchValue, type FullSearch, type SearchDefinition, type SearchField, type UrlSearch } from '../search/fields';
+import { keywordLimitIssues } from '../search/filter-layout';
 import { addKeyword, nextSort, type Keyword } from '../search/interactions';
 
 type AnyFields = Record<string, SearchField<any>>;
@@ -370,10 +371,11 @@ export function useList<
     setSubmitVersion((version) => version + 1);
     const merged = withPendingKeywords(draftLatest.current);
     const draft = withValidPeriods(merged.draft);
-    const issues = [...requiredIssues({ ...full, ...codec.to(draft) }), ...(latest.current.validateDraft?.(draft) ?? [])];
+    const criteria = { ...full, ...codec.to(draft) };
+    const issues = [...requiredIssues(criteria), ...keywordLimitIssues(definition.meta ?? {}, criteria), ...(latest.current.validateDraft?.(draft) ?? [])];
     setDraft({ ...merged, draft, issues });
     if (issues.length > 0) return;
-    const next = { ...full, ...codec.to(draft), ...firstPage(), searched: true };
+    const next = { ...criteria, ...firstPage(), searched: true };
     // 비동기 Router 이동이 현재 URL로 한 번 더 렌더해도 입력을 지우지 않는다.
     const nextFilterKey = JSON.stringify(filterOf(definition.canonical(next)));
     submittedInputs.current = nextFilterKey === filterKey ? undefined : { key: nextFilterKey, inputs: merged.inputs };
