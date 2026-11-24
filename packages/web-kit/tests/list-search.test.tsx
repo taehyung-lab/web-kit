@@ -1,9 +1,16 @@
 // @vitest-environment jsdom
 // 파일 책임: 칸 종류 선언(listSearch)이 주소 복구·제출 정리·정책(키·표현·미추가 검색어)·route 순서를 한 선언에서 지키는지 검사한다.
-import { act, cleanup, renderHook } from '@testing-library/react';
+import { act, cleanup, render, renderHook, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { isRedirect } from '@tanstack/react-router';
-import type { ReactNode } from 'react';
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  isRedirect,
+  RouterProvider,
+} from '@tanstack/react-router';
+import { useState, type ReactNode } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { connectSearch } from '../src/search/fields';
 import {
@@ -217,5 +224,46 @@ describe('useList 제출', () => {
     act(() => result.current.keywordInput('search', ['name']).setText('Alpha'));
     act(() => result.current.submit());
     expect(navigations).toEqual([]);
+  });
+});
+
+describe('listSearch route와 화면 부품', () => {
+  it('목록 route는 자기 검색이 바뀌어도 같은 화면 부품을 이어 쓰고, 경로 값이 바뀌면 새로 그린다', async () => {
+    // 앱은 "주소가 바뀌면 새로 그린다"를 router 기본값으로 둘 수 있다. 목록은 검색이 자기 상태라 이 기본값에서 빠진다.
+    const mounts = { list: 0, other: 0 };
+    function ListScreen() {
+      useState(() => (mounts.list += 1));
+      return <p>list</p>;
+    }
+    function OtherScreen() {
+      useState(() => (mounts.other += 1));
+      return <p>other</p>;
+    }
+    const root = createRootRoute();
+    const list = createRoute({ getParentRoute: () => root, path: '/lists/$group', ...search.route(), component: ListScreen });
+    const other = createRoute({
+      getParentRoute: () => root,
+      path: '/other',
+      validateSearch: (raw: Record<string, unknown>) => ({ from: typeof raw.from === 'string' ? raw.from : undefined }),
+      component: OtherScreen,
+    });
+    const router = createRouter({
+      routeTree: root.addChildren([list, other]),
+      history: createMemoryHistory({ initialEntries: ['/lists/a'] }),
+      defaultRemountDeps: ({ params, search: shown }) => ({ params, search: shown }),
+    });
+    render(<RouterProvider router={router} />);
+    await screen.findByText('list');
+    await act(() => router.navigate({ to: '/lists/$group', params: { group: 'a' }, search: { statuses: 'inactive' } }));
+    await act(() => router.navigate({ to: '/lists/$group', params: { group: 'a' }, search: { statuses: 'active' } }));
+    expect(router.state.location.search).toEqual({ statuses: 'active' });
+    expect(mounts.list).toBe(1);
+    await act(() => router.navigate({ to: '/lists/$group', params: { group: 'b' } }));
+    expect(mounts.list).toBe(2);
+    // 대조: 검색을 자기 상태로 쓰지 않는 화면은 앱 기본값대로 검색이 바뀌면 새로 그린다.
+    await act(() => router.navigate({ to: '/other', search: { from: 'x' } }));
+    await screen.findByText('other');
+    await act(() => router.navigate({ to: '/other', search: { from: 'y' } }));
+    expect(mounts.other).toBe(2);
   });
 });

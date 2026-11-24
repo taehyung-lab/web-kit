@@ -213,10 +213,15 @@ export function defineSearch<const F extends AnyFields>(spec: {
   };
 }
 
-/** route 연결. guard(권한 확인 등)는 주소 교정보다 먼저 실행해 거부된 진입에서 주소를 바꾸지 않는다. */
+/**
+ * route 연결. guard(권한 확인 등)는 주소 교정보다 먼저 실행해 거부된 진입에서 주소를 바꾸지 않는다.
+ * remountDeps: 목록의 검색 조건은 그 화면의 상태(useList)라 검색이 바뀌어도 같은 화면 부품을 이어 쓴다. 경로 값(params)이
+ * 바뀌면 다른 목록이라 새로 그린다. 앱이 router `defaultRemountDeps`로 "주소가 바뀌면 새로 그린다"를 정해도 목록은 이 값이 앞선다.
+ */
 export interface SearchRoute {
   readonly validateSearch: (raw: Record<string, unknown>) => UrlSearch;
   readonly beforeLoad: (args: { readonly location: { readonly pathname: string; readonly search: unknown } }) => void;
+  readonly remountDeps: (args: { readonly params: unknown }) => unknown;
 }
 
 /** listSearch 선언을 주소에 연결한 검색. useList의 definition으로 쓰고 route는 route()를 펼친다. */
@@ -248,6 +253,7 @@ export function connectSearch<F extends AnyFields, M extends SearchMeta>(
         guard?.();
         definition.beforeLoad(args);
       },
+      remountDeps: ({ params }) => params,
     }),
   };
 }
