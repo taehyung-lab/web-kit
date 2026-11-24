@@ -1,6 +1,6 @@
 {
   "name": "@boosterlab/web-kit",
-  "version": "8.3.0-rc.1",
+  "version": "8.4.0-rc.1",
   "private": true,
   "type": "module",
   "sideEffects": false,
