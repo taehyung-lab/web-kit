@@ -9,6 +9,7 @@ import { RequestFailure } from '../src/failure';
 import { defineSearch, type FieldCheck, type SparseSearch } from '../src/search/fields';
 import { useList, type ListPage } from '../src/list/use-list';
 import { useBulkConfirmation } from '../src/list/list-binding';
+import { createLifetime, LifetimeProvider } from '../src/lifetime';
 
 interface Row {
   readonly id: string;
@@ -1158,4 +1159,47 @@ it('bulk confirmation without emptyRefusal stays locked while nothing is selecte
   expect(binding.locked).toBe(true);
   act(() => latest.selection.toggleRow('1', true));
   expect(binding.locked).toBe(false);
+});
+
+it('실행 수명을 연결하지 않은 앱: 일괄 작업 중 부품이 내려가도 실패는 호출자에게 그대로 던져진다', async () => {
+  const view = mount({ definition: makeDefinition(), initial: {}, fetchRows: async () => page('1', '2') });
+  await flush();
+  act(() => latest.selection.toggleRow('1', true));
+  const failure = new RequestFailure({ kind: 'server-error' });
+  let reject!: (reason: unknown) => void;
+  const running = latest.selection.run(() => new Promise<{ completedIds: string[] }>((_, fail) => { reject = fail; }));
+  view.unmount();
+  reject(failure);
+  await expect(running).rejects.toBe(failure);
+});
+
+it('결과 불명 뒤에는 그 뒤에 서버에서 받은 행만 고를 수 있다: 방문이 바뀌면 실패 안내는 지워지고, 스스로 다시 받아 답이 온 뒤에 풀린다', async () => {
+  const lifetime = createLifetime();
+  client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 60_000 } } });
+  let release: (() => void) | undefined;
+  const fetchRows = vi.fn(async () => page('1', '2'));
+  render(
+    <QueryClientProvider client={client}>
+      <LifetimeProvider lifetime={lifetime}>
+        <Harness definition={makeDefinition()} initial={{}} fetchRows={fetchRows} />
+      </LifetimeProvider>
+    </QueryClientProvider>,
+  );
+  await flush();
+  act(() => latest.selection.toggleRow('1', true));
+  const failure = new RequestFailure({ kind: 'contract', resultUnknown: true });
+  await act(async () => { await expect(latest.selection.run(async () => { throw failure; })).rejects.toBe(failure); });
+  expect(latest.selection.failure).toBe(failure);
+  expect(fetchRows).toHaveBeenCalledTimes(1);
+  fetchRows.mockImplementationOnce(() => new Promise((resolve) => { release = () => resolve(page('1', '2')); }));
+  act(() => lifetime.leave());
+  expect(latest.selection.failure).toBeUndefined();
+  await waitFor(() => expect(fetchRows).toHaveBeenCalledTimes(2));
+  // 서버가 답하기 전: 받아 둔 행은 고를 수 없다.
+  act(() => latest.selection.toggleRow('2', true));
+  expect(latest.selection.selectedIds).not.toContain('2');
+  await act(async () => { release?.(); });
+  await flush();
+  act(() => latest.selection.toggleRow('2', true));
+  expect(latest.selection.selectedIds).toContain('2');
 });

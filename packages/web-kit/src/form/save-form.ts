@@ -16,6 +16,7 @@ import { flushSync } from 'react-dom';
 import { normalizeChoiceValue, type ChoiceNode, type ChoiceValue } from '../choice-binding';
 import { isRequestFailure, type FieldError, type RequestFailure } from '../failure';
 import { useFullPageProgress } from '../full-page-progress';
+import { useLifetime, useVisit } from '../lifetime';
 import type { CompletionStep } from '../completion';
 import { fieldIsHidden, projectConditionalFields, useConditionalFields, type ConditionalField } from './conditional';
 import { followRows, rowMark } from './rows';
@@ -98,6 +99,11 @@ export interface SaveFormOptions<
 export interface SaveStep {
   /** 저장 도중 사용자에게 묻는 동안(확인창) 진행 덮개를 내리고, 물음의 답을 그대로 돌려준다. */
   readonly waitForUser: <T>(question: Promise<T>) => Promise<T>;
+  /**
+   * 이 저장이 아직 현재 제출이고 시작한 화면에 있는가. 저장 함수가 사전 조회 뒤에 쓰기를 보낼 때(아이디 확인 → 등록),
+   * 거짓이면 아직 보내지 않은 쓰기를 시작하지 않는다.
+   */
+  readonly isCurrent: () => boolean;
 }
 
 export type SaveStage<TInput> =
@@ -273,6 +279,8 @@ export function useSaveForm<
   /** 저장이 성공해 완료 처리를 기다리는 결과. 완료 처리를 다시 시도할 때 같은 결과를 쓴다. */
   const savedResult = useRef<{
     readonly complete: (step: CompletionStep) => unknown;
+    /** 이 저장을 시작한 방문·로그인이 그대로인가. 아니면 완료 처리를 하지 않는다. */
+    readonly here: () => boolean;
     readonly identity: unknown;
     readonly baseline: TInput;
     readonly baselineMark: number;
@@ -381,6 +389,7 @@ export function useSaveForm<
   }
 
   /** 제출이 시작된 폼 수명과 현재 대상이 같은지 비동기 경계마다 확인한다. */
+  const lifetime = useLifetime();
   function isCurrent(token: object) {
     return mounted.current && submission.current === token && Object.is(identity.current, latest.current.source.id);
   }
@@ -502,16 +511,22 @@ export function useSaveForm<
     mark: number,
     onSaved?: (result: TActionResult, step: CompletionStep) => unknown,
   ) {
-    const current = () => isCurrent(token);
+    // 실행 수명(lifetime.ts): 방문이 바뀌면 결과(기준선·오류·완료 처리)를 반영하지 않고, 실패는 앱에 알린다.
+    const execution = lifetime.begin('action');
+    const current = () => isCurrent(token) && execution.here();
     if (!current()) return;
     setStage({ kind: 'saving', values: submitted });
     let result: TActionResult;
     try {
-      result = await run({ waitForUser: (question) => waitForUser(token, question) });
+      result = await run({ waitForUser: (question) => waitForUser(token, question), isCurrent: current });
     } catch (error: unknown) {
+      // 화면 절차의 칸 거절(FormRejection)은 요청 실패가 아니라 앱에 알리지 않는다.
+      const answer = error instanceof FormRejection ? 'local' : execution.fail(error, current());
       if (!current()) return;
       setStage({ kind: 'idle' });
       if (isRequestFailure(error) && error.kind === 'cancelled') return;
+      // 앱이 직접 알린 실패는 폼에 다시 그리지 않는다. 입력은 그대로다.
+      if (answer === 'handled') return;
       const clearWhenEdited = latest.current.clearFailureOnEdit?.(error) === true ? { submitted } : undefined;
       const fieldRejection = rejectionOfFailure(error);
       if (fieldRejection !== undefined) {
@@ -533,7 +548,7 @@ export function useSaveForm<
     const previous = { baseline: baselineRef.current, baselineMark: baselineMark.current, inputBeforeSaved: form.state.values };
     const replaceInput = evaluate(project(form.state.values), submitted);
     savedResult.current = {
-      complete: (step) => onSaved?.(result, step), identity: identity.current, ...previous,
+      complete: (step) => onSaved?.(result, step), here: execution.here, identity: identity.current, ...previous,
       inputAfterSaved: replaceInput ? saved : form.state.values, submitted,
     };
     flushSync(() => {
@@ -552,10 +567,16 @@ export function useSaveForm<
     const pending = savedResult.current;
     const now = stageRef.current;
     if (pending === undefined || now.kind !== 'saved' || now.completing) return;
+    // 저장한 로그인이 끝났거나 방문이 바뀌었으면 완료 처리(이동·안내)의 주인이 없다. 조용히 대기 상태로 돌아간다.
+    if (!pending.here()) {
+      savedResult.current = undefined;
+      setStage({ kind: 'idle' });
+      return;
+    }
     const attempt = {};
     completingAttempt.current = attempt;
     const stillHere = () => mounted.current && completingAttempt.current === attempt &&
-      savedResult.current === pending && Object.is(identity.current, pending.identity);
+      savedResult.current === pending && Object.is(identity.current, pending.identity) && pending.here();
     setStage({ kind: 'saved', completing: true });
     setCompletionRejection(undefined);
     let outcome: unknown;
@@ -714,6 +735,23 @@ export function useSaveForm<
     decided.current = source.values;
     if (evaluate(project(form.state.values), projectChoices(baseline))) replace(source.values);
   });
+
+  // 확인 대기·저장 중·완료 확인·실패 안내는 그 방문의 것이다. 방문이 끝났는데(앱이 leave로 알린 순간 주소는 이미 바뀌었다)
+  // 이 폼이 남아 있으면 진행 상태를 풀고 안내와 서버 칸 오류를 지운다. 입력은 둔다. 이미 보낸 저장은 끝까지 가고 결과는 반영하지 않는다.
+  const visit = useVisit();
+  const seenVisit = useRef(visit);
+  useLayoutEffect(() => {
+    if (seenVisit.current === visit) return;
+    seenVisit.current = visit;
+    submission.current = undefined;
+    pendingSave.current = undefined;
+    savedResult.current = undefined;
+    completingAttempt.current = undefined;
+    if (stageRef.current.kind !== 'idle') setStage({ kind: 'idle' });
+    setRejection(undefined);
+    setCompletionRejection(undefined);
+    clearServerErrors();
+  }, [visit]);
 
   function replace(next: TInput) {
     defaults.current = next;

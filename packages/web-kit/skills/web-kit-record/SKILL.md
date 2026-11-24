@@ -31,6 +31,8 @@ description: 상세·수정 원본 같은 단건 조회의 대기·없음·실�
 - 숨김 근거는 이 조회의 실패뿐이다. 보조 선택지·저장·연관 목록의 forbidden은 상세를 숨기지 않는다.
 - 취소는 실패로 보이지 않는다.
 
+- `progress: 'page'`로 선언한 조회는 화면 본문 조회로 표시된다. 실행 수명을 연결한 앱(web-kit-http 「실행 수명」)은 이 조회의 실패를 `page` 자리로 받아 다른 조회·동작의 실패와 다르게 알릴 수 있다(예: 본문 권한 없음은 화면을 떠나는 안내). 방문이 바뀌면 이전 방문의 진행 중 조회는 취소되고 오류 상태는 지워진다.
+
 ## registry 표시
 
 실제 조립 예: [apps/starter/src/features/products/ui/detail/ProductDetailPage.tsx](../../references/apps/starter/src/features/products/ui/detail/ProductDetailPage.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.

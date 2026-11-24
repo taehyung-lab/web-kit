@@ -103,3 +103,13 @@ export function createQueryClient<C extends Credentials>({
   }, 'cleanup');
   return queryClient;
 }
+
+/**
+ * 쓰기가 성공한 직후 그 업무의 조회를 모두 새로 받게 한다: 진행 중인 조회를 먼저 끊고 무효화한다.
+ * 끊는 이유: TanStack은 데이터가 없는 첫 조회를 무효화로 끊지 않아, 쓰기 전에 시작된 조회의 옛 응답이 그대로 결과가 된다.
+ * 요청 함수 안에서 성공 바로 뒤에 부른다. 그 함수는 화면을 떠나도 끝까지 실행되므로 지금 보는 화면의 데이터가 갱신된다.
+ */
+export async function refreshAfterWrite(queryClient: QueryClient, queryKey: QueryKey): Promise<void> {
+  await queryClient.cancelQueries({ queryKey });
+  await queryClient.invalidateQueries({ queryKey });
+}

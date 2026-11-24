@@ -11,6 +11,7 @@ import { createContext, useContext, useEffect, useId, useRef, useState, type Rea
 import type { FieldCheck, ViewKeys } from '../search/fields';
 import type { SearchMeta, SearchMetaEntry } from '../search/list-search';
 import type { DraftIssue, KeywordInput, ListStatus } from './use-list';
+import { useVisit } from '../lifetime';
 
 /** 기본 UI가 읽는 목록 상태(useList 결과와 같은 모양). */
 export interface ListModel<Row = any, D extends object = any> {
@@ -134,13 +135,22 @@ export function useListDetailsBinding(model: ListModel, keys: readonly string[])
 /**
  * emptyRefusal을 주면 선택한 행이 없어도 실행 버튼을 잠그지 않고, 눌렀을 때 요청 없이 그 사유로 거절한다(업무 check의 거절과 같은 자리 error에 문자열로 남는다).
  * 주지 않으면 선택한 행이 없는 동안 locked다. 거절을 확인한 뒤에는 dismiss로 거절과 열려 있던 확인을 함께 닫는다.
+ * 열린 확인·거절·실패 안내는 그 방문의 것이다. 방문이 바뀌면(lifetime.ts) 닫는다.
+ * onCompleted는 실행 결과가 이 화면에 전달될 때만 부른다(부분 결과 안내 등). 실행 중 방문이 바뀌었으면 부르지 않는다.
  */
-export function useBulkConfirmation<T, V = undefined>({ model, run, check, value, emptyRefusal }: { model: ListModel; run: (ids: readonly string[], value?: V) => Promise<{ completedIds: readonly string[]; value?: T }>; check?: (ids: readonly string[], value?: V) => string | undefined; value?: V; emptyRefusal?: string }) {
+export function useBulkConfirmation<T, V = undefined>({ model, run, check, value, emptyRefusal, onCompleted }: { model: ListModel; run: (ids: readonly string[], value?: V) => Promise<{ completedIds: readonly string[]; value?: T }>; check?: (ids: readonly string[], value?: V) => string | undefined; value?: V; emptyRefusal?: string; onCompleted?: (result: { completedIds: readonly string[]; value?: T }) => void }) {
   const [pending, setPending] = useState<{ ids: readonly string[]; page: unknown; value?: V }>();
   const [error, setError] = useState<unknown>();
   const running = useRef(false);
   const current = useRef(model);
   current.current = model;
+  const visit = useVisit();
+  const [seenVisit, setSeenVisit] = useState(visit);
+  if (seenVisit !== visit) {
+    setSeenVisit(visit);
+    setPending(undefined);
+    setError(undefined);
+  }
   const stale = (snapshot: { ids: readonly string[]; page: unknown }, now: ListModel) =>
     snapshot.page !== now.page ||
     JSON.stringify(snapshot.ids) !== JSON.stringify(now.selection.selectedIds) ||
@@ -164,7 +174,8 @@ export function useBulkConfirmation<T, V = undefined>({ model, run, check, value
     running.current = true;
     setError(undefined);
     try {
-      await now.selection.run((ids) => pending.value === undefined ? run(ids) : run(ids, pending.value));
+      const result = await now.selection.run((ids) => pending.value === undefined ? run(ids) : run(ids, pending.value));
+      if (result !== undefined) onCompleted?.(result);
       setPending(undefined);
     } catch (failure) {
       setError(failure);
@@ -295,10 +306,17 @@ export type DownloadRefusal = 'no-kind' | 'no-selection';
 /**
  * 다운로드 종류 선택과 실행 버튼의 연결. 기본은 종류를 고르지 않았거나 시작할 수 없으면 버튼을 잠근다(blocked).
  * refuse를 켜면 진행 중·이전 결과 표시 중에만 잠그고, 종류 없음·선택 행 없음은 눌렀을 때 요청 없이 refusal로 알린다(dismiss로 지운다).
+ * 거절 안내는 그 방문의 것이라 방문이 바뀌면(lifetime.ts) 지운다.
  */
 export function useListDownloadBinding(control: DownloadControl, kinds: readonly DownloadKind[], options: { readonly refuse?: boolean } = {}) {
   const [kind, setKind] = useState<DownloadKind | ''>('');
   const [refusal, setRefusal] = useState<DownloadRefusal>();
+  const visit = useVisit();
+  const [seenVisit, setSeenVisit] = useState(visit);
+  if (seenVisit !== visit) {
+    setSeenVisit(visit);
+    setRefusal(undefined);
+  }
   // 종류를 고르기 전에도 진행 중·이전 결과 표시 중인지는 알아야 해서 '전체' 기준으로 묻는다.
   const block = control.blockOf(kind === '' ? 'all' : kind);
   const refuse = options.refuse === true;

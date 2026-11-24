@@ -145,6 +145,7 @@ function BulkAction<T>({
   model: explicitModel,
   label,
   run,
+  onCompleted,
   check,
   title = label,
   confirmLabel,
@@ -153,6 +154,8 @@ function BulkAction<T>({
 }: {
   readonly label: string;
   readonly run: (ids: readonly string[]) => Promise<{ completedIds: readonly string[]; value?: T }>;
+  /** 실행 결과가 이 화면에 전달될 때 한 번(완료·부분 결과 안내). 실행 중 화면을 떠났으면 부르지 않는다. */
+  readonly onCompleted?: (result: { completedIds: readonly string[]; value?: T }) => void;
   /** 업무상 거절 사유. 있으면 실행하지 않고 보인다. */
   readonly check?: (ids: readonly string[]) => string | undefined;
   readonly title?: string;
@@ -164,6 +167,7 @@ function BulkAction<T>({
   const { pending, error, confirm, locked, open, cancel, dismiss, recovery } = useBulkConfirmation({
     model,
     run,
+    onCompleted,
     check,
     emptyRefusal: refusal === 'alert' ? copy.selectRows : undefined,
   });
@@ -212,6 +216,7 @@ function BulkSelectAction<V extends string, T = unknown>({
   requiredMessage,
   defaultValue,
   run,
+  onCompleted,
   check,
   title = label,
   confirmLabel,
@@ -239,6 +244,8 @@ function BulkSelectAction<V extends string, T = unknown>({
     ids: readonly string[],
     value: V
   ) => Promise<{ completedIds: readonly string[]; value?: T }>;
+  /** 실행 결과가 이 화면에 전달될 때 한 번(완료·부분 결과 안내). 실행 중 화면을 떠났으면 부르지 않는다. */
+  readonly onCompleted?: (result: { completedIds: readonly string[]; value?: T }) => void;
   /** 업무상 거절 사유. 있으면 실행하지 않고 보인다. 여는 순간은 지금 고른 값, 실행 직전은 확인창에 고정한 값으로 묻는다. */
   readonly check?: (ids: readonly string[], value: V) => string | undefined;
   readonly title?: string;
@@ -261,6 +268,7 @@ function BulkSelectAction<V extends string, T = unknown>({
   >({
     model,
     value: value ?? undefined,
+    onCompleted,
     emptyRefusal: refusal === 'alert' ? copy.selectRows : undefined,
     run: (ids, target) =>
       target === undefined ? Promise.reject(requiredMessage ?? copy.chooseValue) : run(ids, target),
