@@ -274,6 +274,10 @@ export function useList<
   }, [searchExecution, urlKey, enabled]);
   const previous = useRef<TPage | undefined>(undefined);
   const resultCurrent = enabled && query.data !== undefined && !query.isPlaceholderData;
+  // 반영 여부를 모르는 쓰기가 있었다면, 그 뒤에 서버에서 받은 행만 고르고 실행할 수 있다. 그 전에 받아 둔 행(다른 검색의 캐시 포함)은
+  // 방문이 바뀌어도 읽기용이다. 실패 안내가 떠 있는 동안은 사용자가 다시 조회하고, 안내가 없으면(방문이 바뀜) 스스로 다시 받는다.
+  const [uncertainAt, setUncertainAt] = useState<number>();
+  const trusted = uncertainAt === undefined || query.dataUpdatedAt > uncertainAt;
   const isCurrent = resultCurrent && searchExecution === undefined;
   if (resultCurrent) previous.current = query.data;
   const page = isCurrent ? query.data : previous.current;
@@ -421,7 +425,7 @@ export function useList<
   // 결과를 모르는 쓰기는 같은 화면에서 재전송하지 않는다. 명시적 재조회 성공만 이 잠금을 푼다.
   const [actionFailure, setActionFailure] = useState<RequestFailure>();
   const uncertainAction = useRef<RequestFailure | undefined>(undefined);
-  // 결과 불명 잠금은 그 방문의 것이다. 방문이 바뀌면 새 목록은 서버에서 다시 읽으므로 잠금을 넘기지 않는다.
+  // 결과 불명의 실패 안내(다시 조회 버튼)는 그 방문의 것이라 방문이 바뀌면 지운다. 행을 고를 수 있는지는 위 trusted가 따로 지킨다.
   const visit = useVisit();
   const [lockVisit, setLockVisit] = useState(visit);
   if (lockVisit !== visit) {
@@ -429,6 +433,10 @@ export function useList<
     uncertainAction.current = undefined;
     setActionFailure(undefined);
   }
+  const awaitingFresh = enabled && !trusted && actionFailure === undefined && !query.isFetching && !query.isError;
+  useEffect(() => {
+    if (awaitingFresh) void query.refetch();
+  }, [awaitingFresh, query]);
   const recoveryLock = useRef(false);
   // QueryObserver.refetch는 완료 시 다른 조회의 결과를 돌려줄 수 있다. 왕복 이동도 새 복구 문맥이다.
   const recoveryKey = hashKey([selectionLifetime, screenQuery.queryKey, enabled]);
@@ -459,7 +467,7 @@ export function useList<
 
   /** 현재 조건의 선택 가능한 행에만 반영한다. */
   function toggle(ids: readonly string[], on: boolean) {
-    if (executionLock.current || uncertainAction.current || !isCurrent) return;
+    if (executionLock.current || uncertainAction.current || !isCurrent || !trusted) return;
     if (actionLock.current && actionLifetime.current === selectionLifetime) return;
     setSelection((prev) => {
       if (prev.lifetime !== selectionLifetime) return prev;
@@ -486,6 +494,7 @@ export function useList<
   ): Promise<T | undefined> {
     if (actionLock.current || executionLock.current || !isCurrent || selectedIds.length === 0) return undefined;
     if (uncertainAction.current) throw uncertainAction.current;
+    if (!trusted) return undefined;
     actionLock.current = true;
     actionLifetime.current = selectionLifetime;
     setRunningAction(true);
@@ -506,8 +515,12 @@ export function useList<
     } catch (failure) {
       const here = execution.here();
       const answer = execution.fail(failure, mounted.current && here);
-      // 방문이 바뀌었으면 잠금도 실패도 남기지 않는다(실패는 위에서 앱에 알렸다). 새 방문의 목록은 서버에서 다시 읽는다.
-      if (!here) return undefined;
+      const unknown = isRequestFailure(failure) && failure.resultUnknown;
+      if (unknown && mounted.current) setUncertainAt(Date.now());
+      // 방문이 바뀌었으면 실패 안내는 남기지 않는다(실패는 위에서 앱에 알렸다). 받아 둔 행은 다시 받을 때까지 고를 수 없다.
+      if (!here) {
+        return undefined;
+      }
       if (isRequestFailure(failure) && failure.resultUnknown) {
         uncertainAction.current = failure;
         if (mounted.current) setActionFailure(failure);
@@ -620,7 +633,7 @@ export function useList<
     },
     selection: {
       selectedIds,
-      canSelect: (id: string) => !actionFailure && allowed.includes(id),
+      canSelect: (id: string) => !actionFailure && trusted && allowed.includes(id),
       isChecked: (id: string) => selectedIds.includes(id),
       isAllChecked: allowed.length > 0 && selectedIds.length === allowed.length,
       isMixed: selectedIds.length > 0 && selectedIds.length < allowed.length,

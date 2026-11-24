@@ -9,7 +9,8 @@ import { PAGE_QUERY_META } from './page-query';
 
 /** 수명이 조회 보관소에서 쓰는 만큼의 모양. 폼만 쓰는 소비자가 조회 라이브러리를 끌어오지 않도록 타입을 직접 적는다(TanStack QueryClient가 맞는다). */
 interface LifetimeQuery {
-  readonly state: { readonly fetchStatus: string; readonly status: string };
+  readonly state: { readonly fetchStatus: string; readonly status: string; readonly data?: unknown };
+  readonly setState: (state: never) => void;
   readonly meta?: Record<string, unknown>;
   readonly isActive: () => boolean;
   readonly cancel: (options: { revert: boolean }) => Promise<unknown>;
@@ -137,7 +138,9 @@ export function createLifetime({
           leftBehind.add(query);
           // 진행 중이거나 연결을 기다리는 실행은 취소한다. 이어지면 이전 방문의 결과가 새 방문의 결과가 된다.
           if (query.state.fetchStatus !== 'idle') void query.cancel({ revert: true });
-          else query.reset();
+          // 오류로 끝난 조회는 오류 상태를 지운다. 받아 둔 내용이 있으면 내용은 두고 오류만 지운다(도착한 화면이 쓰면 다시 받는다).
+          else if (query.state.data === undefined) query.reset();
+          else query.setState({ ...query.state, status: 'success', error: null, fetchFailureCount: 0, fetchFailureReason: null } as never);
         }
       }
       for (const listener of [...listeners]) listener();

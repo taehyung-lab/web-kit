@@ -535,6 +535,22 @@ it('조회: 이동 중에 다시 받아 성공한 조회는 도착 때 또 받�
   expect(queryFn).toHaveBeenCalledTimes(2);
 });
 
+it('조회: 내용이 있는 채 다시 받기가 실패한 조회는 방문이 바뀌어도 내용을 지우지 않고 오류만 지운다', async () => {
+  const context = queries();
+  const queryFn = vi.fn<() => Promise<string>>().mockResolvedValueOnce('good').mockRejectedValueOnce(forbidden()).mockResolvedValue('fresh');
+  const hook = renderHook(() => useQuery({ queryKey: ['record'], queryFn }), { wrapper: context.wrapper });
+  await waitFor(() => expect(hook.result.current.data).toBe('good'));
+  await act(async () => {
+    await hook.result.current.refetch();
+  });
+  await waitFor(() => expect(context.queryClient.getQueryState(['record'])?.status).toBe('error'));
+  act(() => context.lifetime.leave());
+  expect(context.queryClient.getQueryData(['record'])).toBe('good');
+  expect(context.queryClient.getQueryState(['record'])?.status).toBe('success');
+  act(() => context.lifetime.arrive());
+  await waitFor(() => expect(hook.result.current.data).toBe('fresh'));
+});
+
 it('수명을 따로 만들면 서로의 방문을 공유하지 않는다', () => {
   const first: Lifetime = createLifetime();
   const second: Lifetime = createLifetime();
