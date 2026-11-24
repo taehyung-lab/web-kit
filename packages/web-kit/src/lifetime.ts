@@ -112,6 +112,8 @@ export function createLifetime({
     const { query, action } = event;
     if (event.type !== 'updated' || action === undefined) return;
     if (action.type === 'fetch') fetchVisit.set(query, visit);
+    // 다시 받아 성공한 조회는 도착 때 또 받을 필요가 없다.
+    if (action.type === 'success') leftBehind.delete(query);
     // 지금 화면이 쓰는 조회가 이 방문에서 시작해 이 방문에서 실패한 것만 알린다.
     // 이동 중(새 화면이 자리 잡기 전)에 끝난 실패는 떠나는 화면의 것이다. 새 화면이 그 조회를 쓰면 다시 받아 그 응답으로 판정한다.
     if (action.type !== 'error' || isCancelled(action.error)) return;

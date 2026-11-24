@@ -333,15 +333,10 @@ it('일괄 작업: onCompleted는 결과가 이 화면에 전달될 때만 부�
   expect(onCompleted).toHaveBeenCalledWith({ completedIds: ['1'] });
 });
 
-it('확인창: 완료 처리가 화면을 옮기려다 실패하면(방문이 바뀌었다고 알린 뒤) 요청을 다시 보내지 않고 완료만 다시 시도한다', async () => {
+it('확인창: 완료 처리가 화면을 옮기지 못하고 실패하면(방문은 그대로) 요청을 다시 보내지 않고 완료만 다시 시도한다', async () => {
   const lifetime = app();
   const run = vi.fn().mockResolvedValue('done');
-  let moves = 0;
-  const onSuccess = vi.fn(async () => {
-    lifetime.lifetime.leave();
-    moves += 1;
-    if (moves === 1) throw new Error('navigation failed');
-  });
+  const onSuccess = vi.fn().mockRejectedValueOnce(new Error('navigation failed')).mockResolvedValue(undefined);
   const onError = vi.fn((failure: unknown) => ({ kind: 'show' as const, failure }));
   const hook = renderHook(() => useConfirmationState({ run, onSuccess, onError }), { wrapper: lifetime.wrapper });
   act(() => hook.result.current.request('target'));
@@ -352,6 +347,88 @@ it('확인창: 완료 처리가 화면을 옮기려다 실패하면(방문이 �
   expect(run).toHaveBeenCalledTimes(1);
   expect(onSuccess).toHaveBeenCalledTimes(2);
   expect(hook.result.current.state.kind).toBe('closed');
+});
+
+it('확인창: 방문이 끝나면 진행 중이던 확인과 완료 기록을 버린다. 새 방문은 바로 다른 대상을 확인할 수 있고 이전 완료의 늦은 실패는 창을 다시 열지 않는다', async () => {
+  const lifetime = app();
+  const completing = deferred<void>();
+  const onSuccess = vi.fn(() => completing.promise);
+  const onError = vi.fn((failure: unknown) => ({ kind: 'show' as const, failure }));
+  const hook = renderHook(() => useConfirmationState({ run: async () => 'done', onSuccess, onError }), {
+    wrapper: lifetime.wrapper,
+  });
+  act(() => hook.result.current.request('A'));
+  let confirming!: Promise<void>;
+  await act(async () => {
+    confirming = hook.result.current.confirm();
+    await Promise.resolve();
+  });
+  act(() => lifetime.lifetime.leave());
+  act(() => lifetime.lifetime.arrive());
+  expect(hook.result.current.state.kind).toBe('closed');
+  act(() => hook.result.current.request('B'));
+  expect(hook.result.current.state).toMatchObject({ kind: 'open', values: 'B', pending: false });
+  await act(async () => {
+    completing.reject(new Error('late'));
+    await confirming;
+  });
+  expect(onError).not.toHaveBeenCalled();
+  expect(hook.result.current.state).toMatchObject({ kind: 'open', values: 'B', pending: false });
+  expect(hook.result.current.state).not.toHaveProperty('completed');
+});
+
+it('저장 폼: 완료 처리 도중 방문이 끝나면 step.isCurrent가 거짓이 되고, 저장한 로그인이 바뀌면 완료 확인을 눌러도 완료 처리를 하지 않는다', async () => {
+  const lifetime = app();
+  let completionCurrent: (() => boolean) | undefined;
+  const waiting = deferred<void>();
+  const first = renderHook(
+    () =>
+      useSaveForm({
+        schema,
+        source: { id: 1, values: { name: 'A' } },
+        save: async () => ({}),
+        onSaved: async (_result, step) => {
+          completionCurrent = step.isCurrent;
+          await waiting.promise;
+        },
+      }),
+    { wrapper: lifetime.wrapper },
+  );
+  let submitting!: Promise<void>;
+  act(() => {
+    submitting = first.result.current.submit();
+  });
+  await waitFor(() => expect(completionCurrent?.()).toBe(true));
+  act(() => lifetime.lifetime.leave());
+  expect(completionCurrent?.()).toBe(false);
+  await act(async () => {
+    waiting.resolve();
+    await submitting;
+  });
+  expect(first.result.current.stage.kind).toBe('idle');
+
+  let generation = 0;
+  const changes = new Set<() => void>();
+  const session = {
+    generation: () => generation,
+    current: () => ({}),
+    subscribe: (listener: () => void) => {
+      changes.add(listener);
+      return () => changes.delete(listener);
+    },
+  };
+  const signedIn = app(() => 'local', { session });
+  const onSaved = vi.fn();
+  const second = renderHook(
+    () => useSaveForm({ schema, source: { id: 1, values: { name: 'A' } }, save: async () => ({}), onSaved, acknowledge: true }),
+    { wrapper: signedIn.wrapper },
+  );
+  await act(() => second.result.current.submit());
+  expect(second.result.current.stage.kind).toBe('saved');
+  generation = 1;
+  await act(() => second.result.current.complete());
+  expect(onSaved).not.toHaveBeenCalled();
+  expect(second.result.current.stage.kind).toBe('idle');
 });
 
 it('다운로드: 로그인이 바뀌면 실행 함수의 신호가 끊기고, 방문이 바뀐 뒤의 취소는 실패로 남지 않는다', async () => {
@@ -440,6 +517,22 @@ it('조회: 이동 중에 시작해 실패한 조회는 알리지 않고, 도착
   act(() => context.lifetime.arrive());
   await waitFor(() => expect(hook.result.current.data).toBe('fresh'));
   expect(context.reports).toEqual([]);
+});
+
+it('조회: 이동 중에 다시 받아 성공한 조회는 도착 때 또 받지 않는다', async () => {
+  const context = queries();
+  const first = deferred<string>();
+  const queryFn = vi.fn<() => Promise<string>>().mockReturnValueOnce(first.promise).mockResolvedValue('fresh');
+  const hook = renderHook(() => useQuery({ queryKey: ['list'], queryFn }), { wrapper: context.wrapper });
+  await waitFor(() => expect(queryFn).toHaveBeenCalledTimes(1));
+  act(() => context.lifetime.leave());
+  await act(async () => {
+    await hook.result.current.refetch();
+  });
+  await waitFor(() => expect(hook.result.current.data).toBe('fresh'));
+  act(() => context.lifetime.arrive());
+  await act(() => new Promise((done) => setTimeout(done, 20)));
+  expect(queryFn).toHaveBeenCalledTimes(2);
 });
 
 it('수명을 따로 만들면 서로의 방문을 공유하지 않는다', () => {

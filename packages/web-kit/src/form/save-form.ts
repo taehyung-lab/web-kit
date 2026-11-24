@@ -279,6 +279,8 @@ export function useSaveForm<
   /** 저장이 성공해 완료 처리를 기다리는 결과. 완료 처리를 다시 시도할 때 같은 결과를 쓴다. */
   const savedResult = useRef<{
     readonly complete: (step: CompletionStep) => unknown;
+    /** 이 저장을 시작한 방문·로그인이 그대로인가. 아니면 완료 처리를 하지 않는다. */
+    readonly here: () => boolean;
     readonly identity: unknown;
     readonly baseline: TInput;
     readonly baselineMark: number;
@@ -546,7 +548,7 @@ export function useSaveForm<
     const previous = { baseline: baselineRef.current, baselineMark: baselineMark.current, inputBeforeSaved: form.state.values };
     const replaceInput = evaluate(project(form.state.values), submitted);
     savedResult.current = {
-      complete: (step) => onSaved?.(result, step), identity: identity.current, ...previous,
+      complete: (step) => onSaved?.(result, step), here: execution.here, identity: identity.current, ...previous,
       inputAfterSaved: replaceInput ? saved : form.state.values, submitted,
     };
     flushSync(() => {
@@ -565,10 +567,16 @@ export function useSaveForm<
     const pending = savedResult.current;
     const now = stageRef.current;
     if (pending === undefined || now.kind !== 'saved' || now.completing) return;
+    // 저장한 로그인이 끝났거나 방문이 바뀌었으면 완료 처리(이동·안내)의 주인이 없다. 조용히 대기 상태로 돌아간다.
+    if (!pending.here()) {
+      savedResult.current = undefined;
+      setStage({ kind: 'idle' });
+      return;
+    }
     const attempt = {};
     completingAttempt.current = attempt;
     const stillHere = () => mounted.current && completingAttempt.current === attempt &&
-      savedResult.current === pending && Object.is(identity.current, pending.identity);
+      savedResult.current === pending && Object.is(identity.current, pending.identity) && pending.here();
     setStage({ kind: 'saved', completing: true });
     setCompletionRejection(undefined);
     let outcome: unknown;
@@ -728,22 +736,21 @@ export function useSaveForm<
     if (evaluate(project(form.state.values), projectChoices(baseline))) replace(source.values);
   });
 
-  // 확인 대기·저장 중·완료 확인 대기는 그 방문의 것이다. 방문이 바뀌었는데 이 폼이 남아 있으면 진행 상태를 풀고 안내를 지운다(입력은 둔다).
-  // 이미 보낸 저장은 끝까지 가고 결과는 반영하지 않는다(execute의 current). 완료 처리 중이면 그대로 둔다: 완료 처리가 스스로 화면을
-  // 옮기는 중이고, 이동이 실패하면 이 폼에서 완료만 다시 시도해야 한다.
+  // 확인 대기·저장 중·완료 확인·실패 안내는 그 방문의 것이다. 방문이 끝났는데(앱이 leave로 알린 순간 주소는 이미 바뀌었다)
+  // 이 폼이 남아 있으면 진행 상태를 풀고 안내와 서버 칸 오류를 지운다. 입력은 둔다. 이미 보낸 저장은 끝까지 가고 결과는 반영하지 않는다.
   const visit = useVisit();
   const seenVisit = useRef(visit);
   useLayoutEffect(() => {
     if (seenVisit.current === visit) return;
     seenVisit.current = visit;
-    const now = stageRef.current;
-    if (now.kind === 'saved' && now.completing) return;
     submission.current = undefined;
     pendingSave.current = undefined;
     savedResult.current = undefined;
-    if (now.kind !== 'idle') setStage({ kind: 'idle' });
+    completingAttempt.current = undefined;
+    if (stageRef.current.kind !== 'idle') setStage({ kind: 'idle' });
     setRejection(undefined);
     setCompletionRejection(undefined);
+    clearServerErrors();
   }, [visit]);
 
   function replace(next: TInput) {
