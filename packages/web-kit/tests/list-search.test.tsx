@@ -12,6 +12,7 @@ import {
 } from '@tanstack/react-router';
 import { useState, type ReactNode } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
+import { listFilterLayout } from '../src/search/filter-layout';
 import { connectSearch } from '../src/search/fields';
 import {
   arrayKeywordCodec,
@@ -266,4 +267,20 @@ describe('listSearch route와 화면 부품', () => {
     await act(() => router.navigate({ to: '/other', search: { from: 'y' } }));
     expect(mounts.other).toBe(2);
   });
+});
+
+it('keeps presentation order and expands a date filter using its declared address keys', () => {
+  const search = listSearch({ policy, fields: {
+    label: keywords({ targets: ['name'] }),
+    dates: dateRange({ types: ['created'], defaultType: 'created', keys: { from: 'since', to: 'until' } }),
+    groups: choices({ values: ['one'], multiple: true }), paging: paging(),
+  } });
+  const layout = listFilterLayout(search.meta, {
+    label: { section: 'basic', labels: { name: 'Name' } },
+    groups: { section: 'detail', label: 'Groups', labels: { one: 'One' } },
+    dates: { section: 'detail', labels: { created: 'Created' } },
+  });
+  expect(layout.basic.map(field => field.name)).toEqual(['label']);
+  expect(layout.detail.map(field => field.name)).toEqual(['groups', 'dates']);
+  expect(layout.detailKeys).toEqual(['groups', 'since', 'until', 'dateType']);
 });

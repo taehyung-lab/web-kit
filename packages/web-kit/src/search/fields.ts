@@ -234,10 +234,15 @@ export interface ConnectedSearch<F extends AnyFields, M extends SearchMeta = Sea
  * listSearch 선언을 주소(Router)에 연결한다. 엔진은 defineSearch와 같다. checks는 서버 선택지 확인으로,
  * 선택지 query가 실행 층(api)에 있으므로 순수 선언 밖에서 붙인다.
  */
+type ServerChoiceKeys<M> = { [K in keyof M]: M[K] extends { kind: 'serverChoices' } ? K : never }[keyof M];
+type Checks<F> = { readonly [K in keyof F]?: FieldCheck };
 export function connectSearch<F extends AnyFields, M extends SearchMeta>(
   search: ListSearch<F, M>,
-  options: { readonly checks?: { readonly [K in keyof F]?: FieldCheck } } = {},
+  ...args: [ServerChoiceKeys<NoInfer<M>>] extends [never]
+    ? [options?: { readonly checks?: Checks<F> }]
+    : [options: { readonly checks: Checks<F> & Record<ServerChoiceKeys<NoInfer<M>>, FieldCheck> }]
 ): ConnectedSearch<F, M> {
+  const options = args[0] ?? {};
   const fields = { ...search.fields } as Record<string, SearchField<any>>;
   for (const [key, check] of Object.entries(options.checks ?? {})) {
     if (!(key in fields)) throw new Error(`connectSearch: unknown check field "${key}"`);

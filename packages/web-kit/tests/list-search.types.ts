@@ -51,3 +51,27 @@ connectSearch(declaration, {
   // @ts-expect-error 없는 칸
   checks: { missing: undefined },
 });
+
+// 화면 배치는 표시할 모든 검색 칸을 한 번씩 받는다. 페이지·정렬은 표의 도구다.
+import { type ListFilterLayout, serverChoices } from '../src/search';
+const filterSearch = listSearch({
+  policy,
+  fields: {
+    term: keywords({ targets: ['name'] }),
+    group: serverChoices({ schema: declaration.fields.statuses.schema, default: [], encode: String }, { multiple: true }),
+    paging: paging(),
+  },
+});
+type Layout = ListFilterLayout<typeof filterSearch.meta>;
+const layout: Layout = {
+  term: { section: 'basic', labels: { name: 'Name' } },
+  group: { section: 'detail', label: 'Group' },
+};
+void layout;
+// @ts-expect-error 서버 선택지 칸의 배치 누락
+const missingFilter: Layout = { term: layout.term };
+// @ts-expect-error 검색 대상 이름 오타
+const wrongLabel: Layout = { ...layout, term: { section: 'basic', labels: { neme: 'Name' } } };
+// @ts-expect-error 서버 선택지 조회 연결 누락
+connectSearch(filterSearch);
+void [missingFilter, wrongLabel];

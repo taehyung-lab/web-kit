@@ -13,7 +13,7 @@ const entries = { core, form, list, dialog, choice, auth, search, progress, life
 const expected = {
   "lifetime": ["LifetimeProvider", "createLifetime", "useLifetime", "useVisit"],
   "progress": ["FullPageProgressProvider", "useFullPageProgress", "useFullPageProgressBinding"],
-  "search": ["addKeyword", "arrayKeywordCodec", "calendarDate", "choices", "commitFilterSelection", "connectSearch", "dateRange", "definePolicy", "defineSearch", "keywords", "listSearch", "nextSort", "normalizeFilterSelection", "paging", "sameSearchValue", "shiftCalendarDate", "sort", "viewFilterSelection"],
+  "search": ["addKeyword", "arrayKeywordCodec", "calendarDate", "choices", "commitFilterSelection", "connectSearch", "dateRange", "definePolicy", "defineSearch", "keywordLimitIssues", "keywords", "listFilterLayout", "listSearch", "nextSort", "normalizeFilterSelection", "paging", "sameSearchValue", "serverChoices", "shiftCalendarDate", "sort", "viewFilterSelection"],
   "auth": ["createAuthChallengeStore", "getAuthTiming", "isAuthCode", "remainingAuthSeconds", "useAuthChallenge"],
   "choice": ["normalizeChoiceValue", "useChoiceBinding"],
   "core": [

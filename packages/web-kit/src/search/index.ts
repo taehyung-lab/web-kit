@@ -3,3 +3,5 @@ export * from './fields';
 export * from './list-search';
 
 export * from './interactions';
+
+export * from './filter-layout';
