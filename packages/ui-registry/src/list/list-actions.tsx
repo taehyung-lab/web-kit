@@ -9,7 +9,7 @@ import {
   type ListModel,
 } from '@boosterlab/web-kit/list';
 import { cn } from 'cn';
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode, type RefObject } from 'react';
 import { AlertDialog, ConfirmDialog } from '../dialog';
 import { Pending } from '../pending';
 import { SelectBox } from '../select-box';
@@ -117,6 +117,7 @@ function BulkConfirm({
   unknownMessage,
   result,
   onAcknowledge,
+  returnFocus,
 }: {
   readonly open: boolean;
   readonly title: string;
@@ -132,6 +133,7 @@ function BulkConfirm({
   readonly unknownMessage: string;
   readonly result?: BulkResultAlert;
   readonly onAcknowledge: () => void;
+  readonly returnFocus: RefObject<HTMLButtonElement | null>;
 }) {
   return (
     <>
@@ -140,6 +142,7 @@ function BulkConfirm({
         title={result?.title ?? title}
         pending={result === undefined && (running || recovery?.pending)}
         acknowledge={result !== undefined}
+        returnFocus={returnFocus}
         confirmLabel={recovery ? reloadLabel : confirmLabel}
         cancelLabel={cancelLabel}
         onConfirm={
@@ -205,6 +208,7 @@ function BulkAction<T>({
   readonly describe?: (ids: readonly string[]) => ReactNode;
 } & { readonly model?: ListModel }) {
   const { model, copy, renderFailure, refusal } = useListContext(explicitModel);
+  const trigger = useRef<HTMLButtonElement>(null);
   const result = useBulkResultAlert(onCompleted, reportResult);
   const { pending, error, confirm, locked, open, cancel, dismiss, recovery } = useBulkConfirmation({
     model,
@@ -216,7 +220,7 @@ function BulkAction<T>({
   const refused = alertRefusal(error, refusal);
   return (
     <>
-      <Button type="button" variant="outline" disabled={locked} onClick={open}>
+      <Button ref={trigger} type="button" variant="outline" disabled={locked} onClick={open}>
         {label}
       </Button>
       <RefusalAlert message={refused} title={copy.refusalTitle} onConfirm={dismiss} />
@@ -239,6 +243,7 @@ function BulkAction<T>({
         unknownMessage={copy.resultUnknown ?? defaultMessages.resultUnknown}
         result={result.alert}
         onAcknowledge={result.acknowledge}
+        returnFocus={trigger}
       />
     </>
   );
@@ -309,6 +314,7 @@ function BulkSelectAction<V extends string, T = unknown>({
     chosen !== null && options.some((option) => option.value === chosen && option.disabled !== true)
       ? chosen
       : null;
+  const trigger = useRef<HTMLButtonElement>(null);
   const result = useBulkResultAlert(onCompleted, reportResult);
   const { pending, error, confirm, locked, open, cancel, dismiss, recovery } = useBulkConfirmation<
     T,
@@ -343,7 +349,7 @@ function BulkSelectAction<V extends string, T = unknown>({
         disabled={!model.isCurrent || model.selection.isRunning}
         onValueChange={(next) => setChosen(next as V | null)}
       />
-      <Button type="button" variant="outline" disabled={locked} onClick={open}>
+      <Button ref={trigger} type="button" variant="outline" disabled={locked} onClick={open}>
         {label}
       </Button>
       <RefusalAlert message={refused} title={copy.refusalTitle} onConfirm={dismiss} />
@@ -367,6 +373,7 @@ function BulkSelectAction<V extends string, T = unknown>({
         unknownMessage={copy.resultUnknown ?? defaultMessages.resultUnknown}
         result={result.alert}
         onAcknowledge={result.acknowledge}
+        returnFocus={trigger}
       />
     </fieldset>
   );

@@ -331,7 +331,8 @@ it.each(['button', 'select'] as const)(
     async function submit() {
       const selectAll = screen.getByRole('checkbox', { name: '이 페이지 전체 선택' });
       if (!checked(selectAll)) fireEvent.click(selectAll);
-      start.focus();
+      // 포인터로 실행 버튼을 눌러도 시작 직전 초점이 다른 곳에 있을 수 있다.
+      selectAll.focus();
       fireEvent.click(start);
       const confirm = await screen.findByRole('alertdialog', { name: '일괄 적용' });
       await act(async () => {
