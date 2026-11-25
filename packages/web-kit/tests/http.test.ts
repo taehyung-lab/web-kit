@@ -18,7 +18,7 @@ const table = createResultCodeTable([
 ]);
 
 let replies: Reply[];
-let sent: { url?: string; method?: string; authorization?: string; locale?: string; path?: string }[];
+let sent: { url?: string; method?: string; authorization?: string; locale?: string; screen?: string }[];
 
 /** 순서대로 준비한 응답을 돌려주는 가짜 전송. 보낸 헤더를 기록한다. */
 const adapter: AxiosAdapter = async (config: InternalAxiosRequestConfig) => {
@@ -28,7 +28,7 @@ const adapter: AxiosAdapter = async (config: InternalAxiosRequestConfig) => {
     method: config.method,
     authorization: headers.get('Authorization') as string | undefined,
     locale: headers.get('Accept-Language') as string | undefined,
-    path: headers.get('X-Client-Path') as string | undefined,
+    screen: headers.get('X-Screen') as string | undefined,
   });
   if (config.signal?.aborted) throw new AxiosError('canceled', AxiosError.ERR_CANCELED, config);
   const reply = replies.shift() ?? { status: 200, data: { header: { resultCode: 200 }, data: null } };
@@ -437,9 +437,9 @@ it('H20 재전송은 첫 시도의 운영 헤더를 그대로 쓴다(prepare는 
   reissue = vi.fn(async () => ({ accessToken: 't2' }));
   const session = createSession<Credentials>({ store: store(), reissue: (c) => reissue(c) });
   session.start({ accessToken: 't1' });
-  let screen = '/organizations/new';
+  let screen = '/items/new';
   const prepare = vi.fn((headers: AxiosHeaders) => {
-    if (!headers.has('X-Client-Path')) headers.set('X-Client-Path', screen);
+    if (!headers.has('X-Screen')) headers.set('X-Screen', screen);
   });
   const http = createHttp({
     session,
@@ -450,14 +450,14 @@ it('H20 재전송은 첫 시도의 운영 헤더를 그대로 쓴다(prepare는 
     defaults: {
       adapter: async (config) => {
         // 첫 응답을 기다리는 동안 사용자가 다른 화면으로 이동했다.
-        screen = '/organizations';
+        screen = '/items';
         return adapter(config);
       },
     },
   });
   replies = [fail(401, 4002), ok('done')];
   await expect(http.requestData({ url: '/items', method: 'POST', headers: { 'Content-Type': 'application/json' } })).resolves.toBe('done');
-  expect(sent.map((request) => request.path)).toEqual(['/organizations/new', '/organizations/new']);
+  expect(sent.map((request) => request.screen)).toEqual(['/items/new', '/items/new']);
   expect(sent.map((request) => request.authorization)).toEqual(['Bearer t1', 'Bearer t2']);
   expect(prepare).toHaveBeenCalledTimes(1);
 });
