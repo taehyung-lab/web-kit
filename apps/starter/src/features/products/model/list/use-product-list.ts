@@ -6,22 +6,22 @@ import { productListQuery, useDeactivateProducts } from '../../api/products';
 import { productListSearch, toListProductsParams } from './product-list-search';
 import { useCategoryOptions } from '../use-category-options';
 
-/** search·navigate는 route가 URL에서 읽어 넘긴다. */
+/** urlSearch(주소 검색값)·navigate는 route가 URL에서 읽어 넘긴다. */
 export function useProductList({
-  search,
+  urlSearch,
   navigate,
 }: {
-  readonly search: UrlSearch;
+  readonly urlSearch: UrlSearch;
   readonly navigate: (next: UrlSearch, options: { readonly replace: boolean }) => void;
 }) {
   const list = useList({
     definition: productListSearch,
-    search,
+    urlSearch,
     navigate,
     progress: 'page',
     query: (full) => productListQuery(toListProductsParams(full)),
     rowId: (row) => row.id,
-    selectable: (row) => row.status !== 'INACTIVE',
+    isRowSelectable: (row) => row.status !== 'INACTIVE',
   });
   const categories = useCategoryOptions();
   const deactivate = useDeactivateProducts();
@@ -30,7 +30,7 @@ export function useProductList({
   async function deactivateSelected(ids: readonly string[]) {
     const count = await deactivate.mutateAsync(ids);
     setDeactivated(count);
-    return { completedIds: count === ids.length ? ids : [], value: count };
+    return { completedIds: count === ids.length ? ids : [], details: count };
   }
   return { list, categoryName: categories.nameOf, deactivateSelected, deactivated };
 }

@@ -4,18 +4,18 @@ import { useEffect, useRef, useState } from 'react';
 import { useLifetime, useVisit } from '../lifetime';
 
 /**
- * 다운로드 대상. search는 마지막으로 확정(조회)한 검색 값이며 입력만 하고 검색하지 않은 초안은 들어가지 않는다.
- * selected의 ids는 누른 순간의 선택(화면 행 순서)이다. 서버가 선택 다운로드에도 조건을 받으면 search를 함께 쓴다.
+ * 다운로드 대상. criteria는 마지막으로 확정(조회)한 조건이며 입력만 하고 검색하지 않은 초안은 들어가지 않는다.
+ * selected의 ids는 누른 순간의 선택(화면 행 순서)이다. 서버가 선택 다운로드에도 조건을 받으면 criteria를 함께 쓴다.
  */
 export type DownloadTarget<S> =
-  | { readonly kind: 'selected'; readonly ids: readonly string[]; readonly search: S }
-  | { readonly kind: 'all'; readonly search: S };
+  | { readonly kind: 'selected'; readonly ids: readonly string[]; readonly criteria: S }
+  | { readonly kind: 'all'; readonly criteria: S };
 
 export type DownloadKind = DownloadTarget<unknown>['kind'];
 
 /** 다운로드가 읽는 목록 상태(useList 결과의 일부). */
 export interface DownloadSource<S> {
-  readonly search: S;
+  readonly criteria: S;
   readonly isCurrent: boolean;
   readonly selection: { readonly selectedIds: readonly string[] };
 }
@@ -77,7 +77,7 @@ export function useListDownload<S>(
     const source = latest.current.list;
     if (blockOf(kind, source) !== undefined) return false;
     const target: DownloadTarget<S> =
-      kind === 'selected' ? { kind, ids: [...source.selection.selectedIds], search: source.search } : { kind, search: source.search };
+      kind === 'selected' ? { kind, ids: [...source.selection.selectedIds], criteria: source.criteria } : { kind, criteria: source.criteria };
     lock.current = true;
     setState({ kind: 'running' });
     const execution = lifetime.begin('download');

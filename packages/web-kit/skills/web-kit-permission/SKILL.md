@@ -24,7 +24,7 @@ starter 실제 예 없음(검사하지 않음). 연결 위치 참고: [apps/star
 
 - 닫힘이 기본이다: Provider 없음, 불러오는 중, 조회 실패, 판정 대상 없음(정책 해석 실패), 판정 함수가 던짐은 모두 허용이 아니다.
 - 진입·메뉴·버튼이 같은 `allows`를 쓰게 해 "메뉴는 보이는데 들어가면 거부" 같은 어긋남을 막는다.
-- 목록·폼(`/list`·`/form`과 registry `list`·`form`)은 이 module을 import하지 않는다. 화면이 판정 결과를 부품 속성(`selectable`, 버튼 표시)으로 넘긴다.
+- 목록·폼(`/list`·`/form`과 registry `list`·`form`)은 이 module을 import하지 않는다. 화면이 판정 결과를 목록·부품 입력(`useList`의 `isRowSelectable`, 버튼 표시)으로 넘긴다.
 
 ## 확인 방법
 

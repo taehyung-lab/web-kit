@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 // 파일 책임: 공개 연결 hook을 실제 요소와 연결해 포커스·잠금·요청·목록 동등성을 검사한다.
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { ListProvider, useListModel, useList, type ListModel } from '../src/list/index';
+import { ListProvider, useListModel, useList, useListDetailsBinding, type ListModel } from '../src/list/index';
 import { List, type ListColumn } from '../../ui-registry/src/list';
 import { defineSearch } from '../src/search';
 import { useDialogBinding, useConfirmBinding, useAcknowledgeBinding } from '../src/confirmation';
@@ -24,7 +24,7 @@ function ListScreen({ mode, children }: { mode: 'context' | 'props'; children?: 
     from: { schema: z.string(), default: undefined }, to: { schema: z.string(), default: undefined },
   } });
   const [url, navigate] = useState(() => definition.validateSearch({}));
-  const list = useList({ definition, search: url, navigate: (next) => {
+  const list = useList({ definition, urlSearch: url, navigate: (next) => {
       navigate(next);
       window.history.replaceState(null, '', '?' + new URLSearchParams(Object.entries(next).map(([key, value]) => [key, String(value)])));
     }, rowId: (row: { id: string }) => row.id,
@@ -34,7 +34,7 @@ function ListScreen({ mode, children }: { mode: 'context' | 'props'; children?: 
   const columns: readonly ListColumn<{ id: string }>[] = [{ key: 'id', header: '번호', cell: (row) => row.id }];
   const body = <>
     <List.Filter {...props}><List.Text {...props} name="q" label="검색어" /><List.FilterActions {...props} /></List.Filter>
-    <List.Table {...props} columns={columns} rowId={(row) => row.id} selectable />
+    <List.Table {...props} columns={columns} rowId={(row) => row.id} selectionColumn />
     <List.Pagination {...props} />
     <output data-testid="url">{JSON.stringify(url)}</output><output data-testid="selection">{list.selection.selectedIds.join(',')}</output>
     {children}
@@ -73,6 +73,20 @@ function PeriodScreen({ fixed = false }: { fixed?: boolean }) {
   return <List.Period model={model} from="from" to="to" label="기간"
     {...(fixed ? { timeZone: 'America/Los_Angeles', now: () => new Date('2026-01-01T01:00:00Z'), presets: [{ label: '오늘', value: { unit: 'day' as const, amount: 0 } }] } : {})} />;
 }
+it('상세검색 펼침은 칸 이름을 받고 기간 칸의 주소 키(시작·끝)를 선언에서 푼다', () => {
+  const meta = { period: { kind: 'dateRange', keys: { type: 'dateType', from: 'startDate', to: 'endDate' }, types: [] } } as const;
+  const model = (criteria: Record<string, unknown>, issues: ListModel['issues'] = [], submitVersion = 0) =>
+    ({ meta, criteria, issues, resetVersion: 0, submitVersion }) as unknown as ListModel;
+  expect(renderHook(() => useListDetailsBinding(model({}), ['period'])).result.current.open).toBe(false);
+  expect(renderHook(() => useListDetailsBinding(model({ endDate: '2026-01-31' }), ['period'])).result.current.open).toBe(true);
+  // 선언에 없는 이름(직접 선언한 칸)은 이름이 곧 주소 키다.
+  expect(renderHook(() => useListDetailsBinding(model({ memo: 'x' }), ['memo'])).result.current.open).toBe(true);
+  // 기간 칸의 검증 오류(시작 키에 붙는다)도 칸 이름으로 펼친다.
+  const hook = renderHook(({ current }) => useListDetailsBinding(current, ['period']), { initialProps: { current: model({}) } });
+  hook.rerender({ current: model({}, [{ field: 'startDate', code: 'range' }], 1) });
+  expect(hook.result.current.open).toBe(true);
+});
+
 it('기간은 단축·시간대·시계를 생략해도 직접 입력한다', () => {
   render(<PeriodScreen />);
   fireEvent.change(screen.getByLabelText('기간 시작'), { target: { value: '2026-05-02' } });

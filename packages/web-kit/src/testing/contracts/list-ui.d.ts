@@ -78,9 +78,9 @@ declare function FilterActions({ model: explicitModel, className, children }: {
 } & {
     readonly model?: ListModel;
 }): import("react").JSX.Element;
-/** 접을 수 있는 상세 필터. 접어도 입력은 초안에 남는다. keys 중 확정 값이 있으면 펼친 채 시작한다. */
-declare function FilterDetails({ model: explicitModel, keys, children }: {
-    readonly keys: readonly string[];
+/** 접을 수 있는 상세 필터. 접어도 입력은 초안에 남는다. names(칸 이름) 중 확정 값이 있으면 펼친 채 시작한다. */
+declare function FilterDetails({ model: explicitModel, names, children }: {
+    readonly names: readonly string[];
     readonly children: ReactNode;
 } & {
     readonly model?: ListModel;
@@ -192,11 +192,11 @@ export interface ListColumn<Row> {
 /** 이 행 수부터 화면에 보이는 행만 그린다. */
 export declare const VIRTUALIZE_FROM_ROWS = 50;
 /** 결과 표: 선택 열·정렬 머리글·행 이동(클릭·Enter)·많은 행의 가상화. 이전 조건 결과는 선택할 수 없다. */
-declare function Table<Row>({ model: explicitModel, columns, rowId, onOpen, selectable, rowLabel, virtualizeFrom, className, }: {
+declare function Table<Row>({ model: explicitModel, columns, rowId, onOpen, selectionColumn, rowLabel, virtualizeFrom, className, }: {
     readonly columns: readonly ListColumn<Row>[];
     readonly rowId: (row: Row) => string;
     readonly onOpen?: (row: Row) => void;
-    readonly selectable?: boolean;
+    readonly selectionColumn?: boolean;
     /** 행 선택 체크박스의 이름. */
     readonly rowLabel?: (row: Row) => string;
     readonly virtualizeFrom?: number;
@@ -238,33 +238,36 @@ declare function Actions({ model: explicitModel, children, className }: {
 } & {
     readonly model?: ListModel;
 }): import("react").JSX.Element;
-type BulkResult<T> = {
+type BulkRunResult<T> = {
     readonly completedIds: readonly string[];
-    readonly value?: T;
+    readonly details?: T;
 };
-type BulkResultAlert = {
+type BulkResult<T> = BulkRunResult<T> & {
+    readonly requestedIds: readonly string[];
+};
+type BulkResultDialog = {
     readonly title: string;
     readonly body: ReactNode;
 };
 declare function BulkAction<T>(props: {
     readonly label: string;
-    readonly run: (ids: readonly string[]) => Promise<BulkResult<T>>;
+    readonly run: (ids: readonly string[]) => Promise<BulkRunResult<T>>;
     readonly onCompleted?: (result: BulkResult<T>) => void;
-    readonly reportResult?: (result: BulkResult<T>) => BulkResultAlert | undefined;
-    readonly check?: (ids: readonly string[]) => string | undefined;
+    readonly resultDialog?: (result: BulkResult<T>) => BulkResultDialog | undefined;
+    readonly refusalReason?: (ids: readonly string[]) => string | undefined;
     readonly title?: string;
     readonly confirmLabel?: string;
     readonly cancelLabel?: string;
-    readonly describe?: (ids: readonly string[]) => ReactNode;
+    readonly confirmMessage?: (ids: readonly string[]) => ReactNode;
     readonly model?: ListModel;
 }): import("react").JSX.Element;
 declare function BulkSelectAction<V extends string, T = unknown>(props: {
     readonly label: string;
     readonly options: readonly { readonly value: V; readonly label: string }[];
-    readonly defaultValue?: V;
-    readonly run: (ids: readonly string[], value: V) => Promise<BulkResult<T>>;
+    readonly defaultChoice?: V;
+    readonly run: (ids: readonly string[], choice: V) => Promise<BulkRunResult<T>>;
     readonly onCompleted?: (result: BulkResult<T>) => void;
-    readonly reportResult?: (result: BulkResult<T>) => BulkResultAlert | undefined;
+    readonly resultDialog?: (result: BulkResult<T>) => BulkResultDialog | undefined;
     readonly model?: ListModel;
 }): import("react").JSX.Element;
 export type { DownloadControl } from '@boosterlab/web-kit/list';

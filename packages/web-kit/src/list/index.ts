@@ -11,5 +11,5 @@ export {
   useListMultiChoiceBinding, listChoiceValue, useListPeriodBinding, useListDownloadBinding,
   useListKeywordBinding, useListVirtualRows,
   listPaginationBinding, listViewBinding, listRowBinding, listFieldMeta,
-  type ListModel, type PeriodShortcut, type DownloadControl, type DownloadRefusal, type BulkRefusal,
+  type ListModel, type PeriodShortcut, type DownloadControl, type DownloadRefusal, type BulkRefusal, type BulkResult, type BulkRunResult,
 } from './list-binding';

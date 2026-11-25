@@ -193,7 +193,7 @@ describe('useList 제출', () => {
       () =>
         useList({
           definition: search,
-          search: {},
+          urlSearch: {},
           navigate: (next) => navigations.push(next),
           query: (full) => ({ queryKey: ['rows', full], queryFn: async () => ({ rows: [], total: 0 }) }),
           rowId: (row: { id: string }) => row.id,
@@ -215,7 +215,7 @@ describe('useList 제출', () => {
       () =>
         useList({
           definition: exclude,
-          search: {},
+          urlSearch: {},
           navigate: (next) => navigations.push(next),
           query: (full) => ({ queryKey: ['rows-ex', full], queryFn: async () => ({ rows: [], total: 0 }) }),
           rowId: (row: { id: string }) => row.id,
@@ -269,18 +269,18 @@ describe('listSearch route와 화면 부품', () => {
   });
 });
 
-it('keeps presentation order and expands a date filter using its declared address keys', () => {
+it('keeps presentation order and splits basic and detail fields by name', () => {
   const search = listSearch({ policy, fields: {
     label: keywords({ targets: ['name'] }),
     dates: dateRange({ types: ['created'], defaultType: 'created', keys: { from: 'since', to: 'until' } }),
     groups: choices({ values: ['one'], multiple: true }), paging: paging(),
   } });
   const layout = listFilterLayout(search.meta, {
-    label: { section: 'basic', labels: { name: 'Name' } },
-    groups: { section: 'detail', label: 'Groups', labels: { one: 'One' } },
-    dates: { section: 'detail', labels: { created: 'Created' } },
+    label: { section: 'basic', valueLabels: { name: 'Name' } },
+    groups: { section: 'detail', title: 'Groups', valueLabels: { one: 'One' } },
+    dates: { section: 'detail', valueLabels: { created: 'Created' } },
   });
   expect(layout.basic.map(field => field.name)).toEqual(['label']);
   expect(layout.detail.map(field => field.name)).toEqual(['groups', 'dates']);
-  expect(layout.detailKeys).toEqual(['groups', 'since', 'until', 'dateType']);
+  expect(layout.detail[0]).toMatchObject({ title: 'Groups', valueLabels: { one: 'One' } });
 });

@@ -69,7 +69,7 @@ function mountList(
     const [url, setUrl] = useState(() => checkSearch.validateSearch({}));
     const model = useList({
       definition: checkSearch,
-      search: url,
+      urlSearch: url,
       navigate: (next) => setUrl(next),
       query: (full) => ({ queryKey: ['check-rows', full], queryFn: () => request() }),
       rowId: (row) => row.id,
@@ -211,7 +211,7 @@ describe('List.Table headerClassName', () => {
 it('List.FilterDetails triggerClassName styles only the toggle button and keeps its aria wiring', async () => {
   mountList(
     <List.Filter>
-      <List.FilterDetails keys={[]} triggerClassName="h-7 text-xs">
+      <List.FilterDetails names={[]} triggerClassName="h-7 text-xs">
         <span>more</span>
       </List.FilterDetails>
     </List.Filter>
@@ -249,11 +249,11 @@ describe('List.BulkSelectAction', () => {
   function bulk(
     run: (
       ids: readonly string[],
-      value: 'on' | 'off'
+      choice: 'on' | 'off'
     ) => Promise<{ completedIds: readonly string[] }>,
     extra: {
-      readonly requiredMessage?: string;
-      readonly check?: (ids: readonly string[], value: 'on' | 'off') => string | undefined;
+      readonly noChoiceMessage?: string;
+      readonly refusalReason?: (ids: readonly string[], choice: 'on' | 'off') => string | undefined;
     } = {}
   ) {
     return (
@@ -264,23 +264,23 @@ describe('List.BulkSelectAction', () => {
           placeholder="Choose"
           options={options}
           run={run}
-          describe={(ids, value) => `${ids.join(',')} -> ${value}`}
+          confirmMessage={(ids, choice) => `${ids.join(',')} -> ${choice}`}
           {...extra}
         />
         <List.Result>
           <List.Table
             columns={[{ key: 'id', header: 'ID', cell: (row: CheckRow) => row.id }]}
             rowId={(row: CheckRow) => row.id}
-            selectable
+            selectionColumn
           />
         </List.Result>
       </>
     );
   }
 
-  it('refuses without a value using requiredMessage, then runs ids and the value fixed at open and keeps the value after success', async () => {
+  it('refuses without a choice using noChoiceMessage, then runs ids and the choice fixed at open and keeps the choice after success', async () => {
     const run = vi.fn(async (ids: readonly string[]) => ({ completedIds: ids }));
-    mountList(bulk(run, { requiredMessage: 'Pick a state' }), { outer: withDialog });
+    mountList(bulk(run, { noChoiceMessage: 'Pick a state' }), { outer: withDialog });
     await screen.findByRole('cell', { name: 'r1' });
     fireEvent.click(screen.getAllByRole('checkbox', { name: '행 선택' })[0]!);
     fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
@@ -298,10 +298,10 @@ describe('List.BulkSelectAction', () => {
     expect(select.textContent).toContain('Off');
   });
 
-  it('asks the business check with the current value at open and the fixed value at confirm', async () => {
+  it('asks the business refusalReason with the current choice at open and the fixed choice at confirm', async () => {
     const run = vi.fn(async (ids: readonly string[]) => ({ completedIds: ids }));
     const check = vi.fn(() => undefined);
-    mountList(bulk(run, { check }), { outer: withDialog });
+    mountList(bulk(run, { refusalReason: check }), { outer: withDialog });
     await screen.findByRole('cell', { name: 'r1' });
     fireEvent.click(screen.getAllByRole('checkbox', { name: '행 선택' })[1]!);
     await pick(screen.getByRole('combobox', { name: 'New state' }), 'On');
@@ -335,7 +335,7 @@ describe('ListDefaults refusal="alert" (요청 전 거절을 알림 창으로)',
       <List.Table
         columns={[{ key: 'id', header: 'ID', cell: (row: CheckRow) => row.id }]}
         rowId={(row: CheckRow) => row.id}
-        selectable
+        selectionColumn
       />
     </List.Result>
   );
@@ -411,7 +411,7 @@ describe('ListDefaults refusal="alert" (요청 전 거절을 알림 창으로)',
     });
     mountList(
       <>
-        <List.BulkAction label="Remove" run={run} check={check} />
+        <List.BulkAction label="Remove" run={run} refusalReason={check} />
         {table}
       </>,
       { outer: withAlert }
@@ -501,9 +501,9 @@ it('does not execute a value removed from the available options after confirmati
     return (
       <List.BulkSelectAction
         label="Apply"
-        defaultValue="off"
+        defaultChoice="off"
         options={available ? [{ value: 'off', label: 'Off' }] : []}
-        requiredMessage="Choose again"
+        noChoiceMessage="Choose again"
         run={run}
       />
     );
@@ -515,7 +515,7 @@ it('does not execute a value removed from the available options after confirmati
         <List.Table
           columns={[{ key: 'id', header: 'ID', cell: (row: CheckRow) => row.id }]}
           rowId={(row: CheckRow) => row.id}
-          selectable
+          selectionColumn
         />
       </List.Result>
     </>,
@@ -557,7 +557,7 @@ describe('listSearch 선언을 이름으로 읽는 칸', () => {
     const [url, setUrl] = useState(() => declared.validateSearch({}));
     const model = useList({
       definition: declared,
-      search: url,
+      urlSearch: url,
       navigate: (next) => setUrl(next),
       query: (full) => ({
         queryKey: ['declared-rows', full],
@@ -586,20 +586,20 @@ describe('listSearch 선언을 이름으로 읽는 칸', () => {
         <List.Period
           name="period"
           label="Period"
-          typeLabels={{ created: 'T-created', updated: 'T-updated' }}
+          valueLabels={{ created: 'T-created', updated: 'T-updated' }}
         />
         <List.Keywords
           name="search"
           label="Words"
-          choiceLabels={{ name: 'K-name', code: 'K-code' }}
+          valueLabels={{ name: 'K-name', code: 'K-code' }}
         />
         <List.MultiSelect
           name="statuses"
           label="Status"
-          optionLabels={{ on: 'S-on', off: 'S-off' }}
+          valueLabels={{ on: 'S-on', off: 'S-off' }}
         />
         <List.PageSize />
-        <List.SortSelect optionLabels={{ created: 'O-created', name: 'O-name' }} />
+        <List.SortSelect valueLabels={{ created: 'O-created', name: 'O-name' }} />
       </>
     );
     expect(await screen.findByRole('checkbox', { name: 'S-on' })).toBeDefined();
@@ -617,8 +617,8 @@ describe('listSearch 선언을 이름으로 읽는 칸', () => {
   it.each([
     ['singleSearch', { name: 'Group name' }],
     ['search', { name: 'Group name', code: 'Code' }],
-  ])('always shows the selected keyword target for %s', async (name, choiceLabels) => {
-    mount(<List.Keywords name={name} label="Keywords" choiceLabels={choiceLabels} />);
+  ])('always shows the selected keyword target for %s', async (name, valueLabels) => {
+    mount(<List.Keywords name={name} label="Keywords" valueLabels={valueLabels} />);
     const target = screen.getByRole('combobox', { name: 'Keywords 검색 대상' });
     expect(target.textContent).toContain('Group name');
     fireEvent.change(screen.getByRole('textbox', { name: 'Keywords' }), {
@@ -632,7 +632,7 @@ describe('listSearch 선언을 이름으로 읽는 칸', () => {
   const keywordBox = () => screen.getByRole('textbox', { name: 'Words' });
   const searched = () => screen.getByTestId('searched').textContent;
   const words = (
-    <List.Keywords name="search" label="Words" choiceLabels={{ name: 'K-name', code: 'K-code' }} />
+    <List.Keywords name="search" label="Words" valueLabels={{ name: 'K-name', code: 'K-code' }} />
   );
 
   it('keeps the typed text when only the keyword target changes and adds it to the new target', async () => {
@@ -684,14 +684,14 @@ describe('listSearch 선언을 이름으로 읽는 칸', () => {
       /"statuses" is not a dateRange field/
     );
     expect(() =>
-      mount(<List.MultiSelect name="statuses" label="Status" optionLabels={{ on: 'S-on' }} />)
+      mount(<List.MultiSelect name="statuses" label="Status" valueLabels={{ on: 'S-on' }} />)
     ).toThrow(/no label for "off"/);
   });
 
-  it('lets the table read rowId and selectable rows from the list model', async () => {
+  it('lets the table read rowId and isRowSelectable from the list model', async () => {
     mount(<List.Table columns={[{ key: 'id', header: 'Id', cell: (row: CheckRow) => row.id }]} />);
     expect(await screen.findByText('r1')).toBeDefined();
-    // useList에 selectable을 선언하지 않았으므로 선택 칸이 없다.
+    // useList에 isRowSelectable을 선언하지 않았으므로 선택 칸 열이 없다.
     expect(screen.queryByRole('checkbox')).toBeNull();
   });
 });
@@ -713,7 +713,7 @@ describe('List.Table column with several sort keys', () => {
       const [url, setUrl] = useState(() => datedSearch.validateSearch(initial));
       const model = useList({
         definition: datedSearch,
-        search: url,
+        urlSearch: url,
         navigate: (next) => {
           seen.push(next);
           setUrl(datedSearch.validateSearch(next));

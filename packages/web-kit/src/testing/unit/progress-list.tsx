@@ -79,7 +79,7 @@ function ListScreen({ fetchRows, progress }: { readonly fetchRows: () => Promise
   const [search, setSearch] = useState(() => definition.validateSearch({}));
   const list = useList({
     definition,
-    search,
+    urlSearch: search,
     navigate: (next) => setSearch(definition.validateSearch(next as Record<string, unknown>)),
     query: (full) => ({ queryKey: ['rows', full], queryFn: fetchRows }),
     rowId: (row) => row.id,

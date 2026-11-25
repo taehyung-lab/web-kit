@@ -83,7 +83,7 @@ function mount(
     const [url, setUrl] = useState(() => def.validateSearch(options.initial ?? {}));
     model = useList({
       definition: def,
-      search: url,
+      urlSearch: url,
       navigate: (next) => {
         navigations.push(next);
         setUrl(next);
@@ -131,7 +131,7 @@ function topLayout() {
       </List.Filter>
       <List.Total />
       <List.Result>
-        <List.Table columns={columns} rowId={(row) => row.id} selectable />
+        <List.Table columns={columns} rowId={(row) => row.id} selectionColumn />
       </List.Result>
     </>
   );
@@ -187,6 +187,16 @@ it(title('keyword-separators', '추가와 Enter는 세미콜론 조각을 trim·
   await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ keywords: [
     { field: 'name', value: '홍길동' }, { field: 'name', value: '김철수' }, { field: 'name', value: '이영희' },
   ] })));
+});
+
+it(title('list-empty-filtered', '0건은 조건이 없으면 empty, 거르는 조건이 걸려 있으면 noMatches 문구로 보인다'), async () => {
+  mount(topLayout, { fetch: async () => ({ rows: [], total: 0 }) });
+  expect(await screen.findByText('조회 결과가 없습니다.')).toBeTruthy();
+  fireEvent.change(screen.getByRole('textbox', { name: '키워드' }), { target: { value: '없는 이름' } });
+  fireEvent.click(screen.getByRole('button', { name: '추가' }));
+  fireEvent.click(screen.getByRole('button', { name: '검색' }));
+  expect(await screen.findByText('검색 조건에 맞는 결과가 없습니다.')).toBeTruthy();
+  expect(screen.queryByText('조회 결과가 없습니다.')).toBeNull();
 });
 
 it(title('G092', '반례: 키워드 UI를 숨겨도 추가하지 않은 글자는 검색에서 제외한다'), async () => {
@@ -285,7 +295,7 @@ it(title('G096', '일괄 요청 실패는 확인창과 선택을 보존하고 �
       <List.Actions>
         <List.BulkAction label="일괄 저장" run={run} />
       </List.Actions>
-      <List.Table columns={columns} rowId={(row) => row.id} selectable />
+      <List.Table columns={columns} rowId={(row) => row.id} selectionColumn />
     </List.Result>
   ));
   await screen.findByText('a');
@@ -303,27 +313,27 @@ it.each(['button', 'select'] as const)(
   title('bulk-result-notice', '같은 창에서 결과를 확인하고 방문을 벗어나면 안내를 닫는다 (%s)'),
   async (kind) => {
     const lifetime = createLifetime();
-    const partial = { completedIds: ['a'], value: 'b를 처리하지 못했습니다.' };
+    const partial = { completedIds: ['a'], details: 'b를 처리하지 못했습니다.' };
     let deliverLate!: (result: typeof partial) => void;
     const late = new Promise<typeof partial>((resolve) => { deliverLate = resolve; });
-    const run = vi.fn<() => Promise<{ completedIds: string[]; value?: string }>>()
+    const run = vi.fn<() => Promise<{ completedIds: string[]; details?: string }>>()
       .mockResolvedValueOnce(partial)
       .mockResolvedValueOnce(partial)
       .mockResolvedValueOnce({ completedIds: ['a', 'b'] })
       .mockReturnValueOnce(late);
     const onCompleted = vi.fn();
-    const reportResult = vi.fn(({ value }: { value?: string }) =>
-      value === undefined ? undefined : { title: '일괄 결과', body: <p>{value}</p> }
+    const resultDialog = vi.fn(({ details }: { details?: string }) =>
+      details === undefined ? undefined : { title: '일괄 결과', body: <p>{details}</p> }
     );
-    const action = { label: '일괄 적용', run, onCompleted, reportResult };
+    const action = { label: '일괄 적용', run, onCompleted, resultDialog };
     mount(() => (
       <List.Result>
         {kind === 'button' ? (
           <List.BulkAction {...action} />
         ) : (
-          <List.BulkSelectAction {...action} options={[{ value: 'off', label: '사용안함' }]} defaultValue="off" />
+          <List.BulkSelectAction {...action} options={[{ value: 'off', label: '사용안함' }]} defaultChoice="off" />
         )}
-        <List.Table columns={columns} rowId={(row) => row.id} selectable />
+        <List.Table columns={columns} rowId={(row) => row.id} selectionColumn />
       </List.Result>
     ), { lifetime });
     await screen.findByText('a');
@@ -345,9 +355,11 @@ it.each(['button', 'select'] as const)(
     const result = await screen.findByRole('alertdialog', { name: '일괄 결과' });
     expect(screen.getAllByRole('alertdialog')).toEqual([confirm]);
     expect(result).toBe(confirm);
-    expect(within(result).getByText(partial.value)).toBeTruthy();
-    expect(onCompleted).toHaveBeenCalledWith(partial);
-    expect(reportResult).toHaveBeenCalledWith(partial);
+    expect(within(result).getByText(partial.details)).toBeTruthy();
+    // 결과에는 확인창에 고정한 요청 행(requestedIds)이 함께 온다. 업무 run이 요청 건수를 따로 싣지 않는다.
+    const delivered = { requestedIds: ['a', 'b'], ...partial };
+    expect(onCompleted).toHaveBeenCalledWith(delivered);
+    expect(resultDialog).toHaveBeenCalledWith(delivered);
     expect(run).toHaveBeenCalledWith(...(kind === 'button' ? [['a', 'b']] : [['a', 'b'], 'off']));
     const acknowledge = within(result).getByRole('button', { name: '확인' });
     expect(document.activeElement).toBe(acknowledge);
@@ -366,7 +378,7 @@ it.each(['button', 'select'] as const)(
 
     await submit();
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
-    expect(reportResult).toHaveBeenCalledTimes(3);
+    expect(resultDialog).toHaveBeenCalledTimes(3);
     expect(onCompleted).toHaveBeenCalledTimes(3);
 
     await submit();
@@ -374,7 +386,7 @@ it.each(['button', 'select'] as const)(
     act(() => { lifetime.leave(); lifetime.arrive(); });
     await act(async () => { deliverLate(partial); });
     expect(screen.queryByRole('alertdialog')).toBeNull();
-    expect(reportResult).toHaveBeenCalledTimes(3);
+    expect(resultDialog).toHaveBeenCalledTimes(3);
     expect(onCompleted).toHaveBeenCalledTimes(3);
   }
 );
@@ -389,7 +401,7 @@ it(title('G097', '이전 조건 결과를 보이는 동안 총건수는 …, 선
           <button type="button">쓰기</button>
         </List.Actions>
         <List.Result>
-          <List.Table columns={columns} rowId={(row) => row.id} selectable />
+          <List.Table columns={columns} rowId={(row) => row.id} selectionColumn />
         </List.Result>
       </>
     ),
@@ -467,7 +479,7 @@ it(title('G100', '상세 기본 조건은 초기화 뒤에도 보이고 접어�
     const [url, setUrl] = useState(() => def.validateSearch({}));
     const list = useList({
       definition: def,
-      search: url,
+      urlSearch: url,
       navigate: (next) => setUrl(next),
       query: (full) => ({ queryKey: ['detail', full], queryFn: async () => ({ rows: [] as Row[], total: 0 }) }),
       rowId: (row) => row.id,
@@ -475,7 +487,7 @@ it(title('G100', '상세 기본 조건은 초기화 뒤에도 보이고 접어�
     return (
       <List model={list}>
         <List.Filter>
-          <List.FilterDetails keys={['q']}>
+          <List.FilterDetails names={['q']}>
             <List.Text name="q" label="상세 조건" />
           </List.FilterDetails>
           <List.FilterActions />
@@ -514,7 +526,7 @@ it(title('G101', '반례: 필터를 왼쪽으로 옮기는 배치만 바꿔도 �
         </aside>
         <main>
           <List.Result>
-            <List.Table columns={columns} rowId={(row) => row.id} selectable />
+            <List.Table columns={columns} rowId={(row) => row.id} selectionColumn />
           </List.Result>
           <List.Total />
         </main>
@@ -577,7 +589,7 @@ it(title('G103', '다운로드: 누른 순간의 확정 조건·선택을 고정
         <DownloadPart />
       </List.Actions>
       <List.Result>
-        <List.Table columns={columns} rowId={(row) => row.id} selectable />
+        <List.Table columns={columns} rowId={(row) => row.id} selectionColumn />
       </List.Result>
     </>
   ));
@@ -591,7 +603,7 @@ it(title('G103', '다운로드: 누른 순간의 확정 조건·선택을 고정
   fireEvent.click(button);
   fireEvent.click(button);
   await waitFor(() => expect(targets).toHaveLength(1));
-  expect(targets[0]).toEqual({ kind: 'all', search: expect.objectContaining({ keywords: [] }) });
+  expect(targets[0]).toEqual({ kind: 'all', criteria: expect.objectContaining({ keywords: [] }) });
   expect(button.disabled).toBe(true);
   // 진행 중: 종류·버튼 잠금, 옆에는 로딩 표시만(문구는 화면 낭독기용).
   expect(kind.hasAttribute('disabled')).toBe(true);
@@ -609,7 +621,7 @@ it(title('G103', '다운로드: 누른 순간의 확정 조건·선택을 고정
   fireEvent.click(button);
   fireEvent.click(screen.getAllByRole('checkbox', { name: '행 선택' })[0]!);
   await waitFor(() => expect(targets).toHaveLength(2));
-  expect(targets[1]).toEqual({ kind: 'selected', ids: ['b'], search: expect.objectContaining({ keywords: [] }) });
+  expect(targets[1]).toEqual({ kind: 'selected', ids: ['b'], criteria: expect.objectContaining({ keywords: [] }) });
   await act(async () => finish());
 });
 
@@ -642,7 +654,7 @@ it(title('G105', '필수 필터는 별표·aria와 안내를 연결하며 검색
     () => (
       <List.Filter>
         <List.Text name="to" label="다른 조건" />
-        <List.FilterDetails keys={['from']}>
+        <List.FilterDetails names={['from']}>
           <List.Text name="from" label="시작" />
         </List.FilterDetails>
         <List.FilterActions />
@@ -685,7 +697,7 @@ it(title('list-search-lock', '같은 조건 검색은 체크·확인·작업·�
     <List.Actions><List.BulkAction label="변경" run={run} /><button>쓰기</button></List.Actions>
     <Downloads model={model} />
     <output aria-label="선택 수">{model.selection.selectedIds.length}</output>
-    <List.Result><List.Table columns={columns} rowId={row => row.id} selectable /></List.Result>
+    <List.Result><List.Table columns={columns} rowId={row => row.id} selectionColumn /></List.Result>
   </>, { fetch: async () => ++count === 1 ? { rows: [{ id: 'a' }], total: 1 } : new Promise(resolve => { release = () => resolve({ rows: [{ id: 'a' }], total: 1 }); }) });
   await screen.findByText('a');
   const searchButton = screen.getByRole('button', { name: '검색' });

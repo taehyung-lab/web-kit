@@ -19,7 +19,10 @@ const defaultMessages = {
   fieldOptionsFailed: '선택지를 불러오지 못했습니다.',
   loading: '불러오는 중입니다.',
   failed: '목록을 불러오지 못했습니다.',
+  /** 조건 없이 조회했는데 0건. */
   empty: '조회 결과가 없습니다.',
+  /** 걸린 검색 조건에 맞는 결과가 0건. */
+  noMatches: '검색 조건에 맞는 결과가 없습니다.',
   refreshFailed: '최신 내용을 불러오지 못해 이전 결과를 보여 줍니다.',
   selectPage: '이 페이지 전체 선택',
   selectRow: '행 선택',
@@ -59,10 +62,11 @@ const defaultMessages = {
   selectRows: '항목을 먼저 선택해 주세요.',
   chooseDownloadKind: '다운로드 종류를 먼저 선택해 주세요.',
 };
-/** 뒤에 더한 문구(fieldOptionsFailed·chooseValue·알림 창 문구 등)는 선택이라, 전체 문구를 넘기던 앱이 키 추가로 깨지지 않는다. */
+/** 뒤에 더한 문구(fieldOptionsFailed·chooseValue·noMatches·알림 창 문구 등)는 선택이라, 전체 문구를 넘기던 앱이 키 추가로 깨지지 않는다. */
 export type ListMessages = Omit<
   typeof defaultMessages,
   | 'fieldOptionsFailed'
+  | 'noMatches'
   | 'chooseValue'
   | 'reload'
   | 'resultUnknown'
@@ -71,6 +75,7 @@ export type ListMessages = Omit<
   | 'selectRows'
   | 'chooseDownloadKind'
 > & {
+  readonly noMatches?: string;
   readonly refusalTitle?: string;
   readonly selectRows?: string;
   readonly chooseDownloadKind?: string;
@@ -94,7 +99,7 @@ export type RenderFailure = (failure: unknown, place: FailurePlace) => ReactNode
  */
 export type KeywordEnterSearch = 'always' | 'when-split';
 /**
- * 요청을 보내기 전에 막은 일(고른 행 없음·바꿀 값 없음·업무 check의 거절·다운로드 종류 없음)을 알리는 방식.
+ * 요청을 보내기 전에 막은 일(고른 행 없음·바꿀 값 없음·업무 거절 사유·다운로드 종류 없음)을 알리는 방식.
  * inline: 고른 행이 없으면 실행 버튼을 잠그고, 그 밖의 거절은 버튼 옆 글로 보인다(기본).
  * alert: 버튼을 잠그지 않고, 누르면 요청 없이 알림 창 하나로 사유를 보인다. [확인]은 창만 닫고 선택·입력은 그대로다.
  */

@@ -67,9 +67,10 @@ function Result({
         </div>
       );
   } else if (status.kind === 'empty') {
+    // 조건 없이 0건(empty)과 걸린 조건에 맞는 것이 없는 0건(noMatches)을 가른다.
     body = (
       <p role="status" className={stateClass}>
-        {copy.empty}
+        {status.filtered ? copy.noMatches : copy.empty}
       </p>
     );
   } else body = children;
@@ -132,7 +133,7 @@ function Table<Row>({
   columns,
   rowId: givenRowId,
   onOpen,
-  selectable: givenSelectable,
+  selectionColumn: givenSelectionColumn,
   rowLabel,
   virtualizeFrom = VIRTUALIZE_FROM_ROWS,
   className,
@@ -142,8 +143,8 @@ function Table<Row>({
   /** 생략하면 useList의 rowId. */
   readonly rowId?: (row: Row) => string;
   readonly onOpen?: (row: Row) => void;
-  /** 선택 칸. 생략하면 useList에 selectable을 선언했고 지금 행 중 선택할 수 있는 행이 있을 때 보인다. */
-  readonly selectable?: boolean;
+  /** 선택 칸 열을 보일지. 생략하면 useList에 isRowSelectable을 선언했고 지금 행 중 고를 수 있는 행이 있을 때 보인다. */
+  readonly selectionColumn?: boolean;
   /** 행 선택 체크박스의 이름. */
   readonly rowLabel?: (row: Row) => string;
   readonly virtualizeFrom?: number;
@@ -159,11 +160,12 @@ function Table<Row>({
   const rowId = givenRowId ?? (model.rowId as ((row: Row) => string) | undefined);
   if (rowId === undefined) throw new Error('List.Table: give rowId or declare it in useList');
   const isSelectable = model.isSelectable as ((row: Row) => boolean) | undefined;
-  const selectable = givenSelectable ?? (isSelectable !== undefined && rows.some(isSelectable));
+  const selectionColumn =
+    givenSelectionColumn ?? (isSelectable !== undefined && rows.some(isSelectable));
   const viewport = useRef<HTMLDivElement>(null);
   const virtualize = rows.length >= virtualizeFrom;
   const { sortKey, order, locked } = listViewBinding(model);
-  const columnCount = columns.length + (selectable ? 1 : 0);
+  const columnCount = columns.length + (selectionColumn ? 1 : 0);
 
   /** 행 하나. 가상화 중이면 측정 ref와 위치를 받는다. */
   const renderRow = (
@@ -189,7 +191,7 @@ function Table<Row>({
         onClick={binding.onClick}
         onKeyDown={binding.onKeyDown}
       >
-        {selectable && (
+        {selectionColumn && (
           <TableCell className="w-px">
             <Check
               label={rowLabel?.(row) ?? copy.selectRow}
@@ -224,7 +226,7 @@ function Table<Row>({
           className={cn(virtualize && 'sticky top-0 z-10 bg-background', headerClassName)}
         >
           <TableRow>
-            {selectable && (
+            {selectionColumn && (
               <TableHead scope="col" className="w-px">
                 <Check
                   label={copy.selectPage}
@@ -369,15 +371,15 @@ function PageSize({
 function SortSelect({
   model: explicitModel,
   options: givenOptions,
-  optionLabels,
+  valueLabels,
 }: {
   readonly options?: readonly { readonly value: string; readonly label: string }[];
   /** listSearch면 정렬 값은 선언에서 읽고 값별 문구만 준다. 선언한 값마다 있어야 한다. */
-  readonly optionLabels?: Readonly<Record<string, string>>;
+  readonly valueLabels?: Readonly<Record<string, string>>;
 } & { readonly model?: ListModel }) {
   const { model, copy } = useListContext(explicitModel);
   const options =
-    givenOptions ?? labelled(listFieldMeta(model, 'sort').values, optionLabels, 'sort');
+    givenOptions ?? labelled(listFieldMeta(model, 'sort').values, valueLabels, 'sort');
   const binding = listViewBinding(model);
   return (
     <OptionSelect

@@ -56,14 +56,14 @@ function Harness(props: {
   setUrl = (next) => setSearch(props.definition.validateSearch(next as Record<string, unknown>));
   latest = useList({
     definition: props.definition,
-    search,
+    urlSearch: search,
     navigate: (next, options) => {
       navigations.push({ next, replace: options.replace });
       setSearch(props.definition.validateSearch(next as Record<string, unknown>));
     },
     query: (full) => ({ queryKey: ['rows', full], queryFn: () => props.fetchRows(full), enabled: props.ready ?? true }),
     rowId: (row) => row.id,
-    selectable: (row) => row.id !== 'locked',
+    isRowSelectable: (row) => row.id !== 'locked',
     validateDraft: props.validateDraft,
   });
   return props.renderResult?.(latest) ?? null;
@@ -401,16 +401,16 @@ it('L14 일괄 작업은 시작 순간의 선택 ID로 실행하고, 같은 선�
     latest.selection.toggleRow('1', true);
     latest.selection.toggleRow('2', true);
   });
-  const work = deferred<{ completedIds: readonly string[]; value: string }>();
+  const work = deferred<{ completedIds: readonly string[]; details: string }>();
   const action = vi.fn((_ids: readonly string[]) => work.promise);
-  let result!: Promise<{ completedIds: readonly string[]; value: string } | undefined>;
+  let result!: Promise<{ completedIds: readonly string[]; details: string } | undefined>;
   act(() => {
     result = latest.selection.run(action);
   });
   act(() => latest.selection.toggleRow('3', true));
   expect(action).toHaveBeenCalledWith(['1', '2']);
-  await act(async () => work.resolve({ completedIds: ['1', '2'], value: 'done' }));
-  await expect(result).resolves.toEqual({ completedIds: ['1', '2'], value: 'done' });
+  await act(async () => work.resolve({ completedIds: ['1', '2'], details: 'done' }));
+  await expect(result).resolves.toEqual({ completedIds: ['1', '2'], details: 'done' });
   expect(latest.selection.selectedIds).toEqual([]);
 
   act(() => latest.selection.toggleRow('1', true));
@@ -494,7 +494,7 @@ it('L19 보기 키 이름은 선언을 따른다(pageSize)', async () => {
     const [search, setSearch] = useState(() => definition.validateSearch({ page: 3 }));
     current = useList({
       definition,
-      search,
+      urlSearch: search,
       navigate: (next) => {
         navigations.push({ next, replace: false });
         setSearch(definition.validateSearch(next as Record<string, unknown>));
@@ -521,7 +521,7 @@ it('L20 TanStack queryOptions() 결과(튜플 key·DataTag)를 그대로 query�
     const [search] = useState(() => definition.validateSearch({}));
     useList({
       definition,
-      search,
+      urlSearch: search,
       navigate: () => undefined,
       query: (full) => queryOptions({ queryKey: ['typed', full.q] as const, queryFn: async () => page('1') }),
       rowId: (row) => row.id,
@@ -545,7 +545,7 @@ it('L21 초안 모양이 URL과 달라도(기간 preset) 변환으로 다루고,
     const [search, setSearch] = useState(() => definition.validateSearch({ from: '2026-10-01', to: '2026-10-23' }));
     current = useList({
       definition,
-      search,
+      urlSearch: search,
       navigate: (next) => {
         navigations.push({ next, replace: false });
         setSearch(definition.validateSearch(next as Record<string, unknown>));
@@ -626,7 +626,7 @@ it('L24 목록 응답에 다른 필드가 함께 있으면 page로 그대로 노
     const [search] = useState(() => definition.validateSearch({}));
     current = useList({
       definition,
-      search,
+      urlSearch: search,
       navigate: () => undefined,
       query: () =>
         queryOptions({
@@ -655,17 +655,17 @@ it('L25 일괄 작업 실행 중 다시 run을 부르면 두 번째 작업은 �
     await vi.waitFor(() => expect(latest.status.kind).toBe('rows'));
   });
   act(() => latest.selection.toggleRow('1', true));
-  const work = deferred<{ completedIds: readonly string[]; value: string }>();
+  const work = deferred<{ completedIds: readonly string[]; details: string }>();
   const first = vi.fn(() => work.promise);
-  const second = vi.fn(async () => ({ completedIds: [], value: 'second' }));
-  let again!: Promise<{ completedIds: readonly string[]; value: string } | undefined>;
+  const second = vi.fn(async () => ({ completedIds: [], details: 'second' }));
+  let again!: Promise<{ completedIds: readonly string[]; details: string } | undefined>;
   act(() => {
     void latest.selection.run(first);
     again = latest.selection.run(second);
   });
   await expect(again).resolves.toBeUndefined();
   expect(second).not.toHaveBeenCalled();
-  await act(async () => work.resolve({ completedIds: ['1'], value: 'done' }));
+  await act(async () => work.resolve({ completedIds: ['1'], details: 'done' }));
   expect(first).toHaveBeenCalledTimes(1);
 });
 
@@ -740,7 +740,7 @@ function KeywordHarness(props: { onSearch: (search: unknown) => void; delayed?: 
   const [search, setSearch] = useState(() => definition.validateSearch({}));
   keywordLatest = useList({
     definition,
-    search,
+    urlSearch: search,
     navigate: (next) => {
       const apply = () => setSearch(definition.validateSearch(next as Record<string, unknown>));
       if (props.delayed) setTimeout(apply, 0);
@@ -856,7 +856,7 @@ it('초안 키가 다른 codec에서도 하위만 정리하고 다른 입력은 
   let mapped!: ReturnType<typeof useList<Definition['fields'], Row, Error, readonly string[], { parent: string; childValue: string; note: string }>>;
   /** 확정 검색과 다른 이름을 쓰는 소비자의 연결을 재현한다. */
   function Mapped() {
-    mapped = useList({ definition, search: { code: 'A', child: 'old' }, navigate: () => undefined,
+    mapped = useList({ definition, urlSearch: { code: 'A', child: 'old' }, navigate: () => undefined,
       query: () => ({queryKey: ['mapped-rows'], queryFn: async () => page('one')}), rowId: (row: Row) => row.id,
       draft: { from: (value) => ({parent: value.code, childValue: value.child, note: value.q}), to: (draft) => ({code: draft.parent, child: draft.childValue, q: draft.note}) },
     });
@@ -925,7 +925,7 @@ it('S1 선택지 확인이 검색 URL을 복구한 뒤에도 응답을 받으면
   act(() => latest.submit());
   await flush();
   await flush();
-  expect(latest.search.code).toBe('');
+  expect(latest.criteria.code).toBe('');
   expect(fetchRows).toHaveBeenCalled();
   expect(latest.isCurrent).toBe(true);
 });
@@ -937,7 +937,7 @@ it('K1 필수 검색어는 추가 전에는 막히며 같은 이벤트의 추가
   /** 칩을 직접 추가하는 소비자의 이벤트 연결을 재현한다. */
   function RequiredWords() {
     const [url, setUrl] = useState({});
-    current = useList({ definition, search: url, navigate: setUrl, query: (full) => ({ queryKey: ['required-words', full], queryFn: () => fetch(full) }), rowId: (row) => row.id });
+    current = useList({ definition, urlSearch: url, navigate: setUrl, query: (full) => ({ queryKey: ['required-words', full], queryFn: () => fetch(full) }), rowId: (row) => row.id });
     return null;
   }
   const client = new QueryClient();
@@ -961,7 +961,7 @@ it('K1 Router처럼 URL 반영이 늦어도 검색 뒤 입력 중 글자를 유�
 });
 
 
-it('bulk confirmation fixes both ids and value, preserving failed rows after partial success', async () => {
+it('bulk confirmation fixes both ids and choice, preserving failed rows after partial success', async () => {
   let binding!: ReturnType<typeof useBulkConfirmation<unknown, string>>;
   let changeValue!: (value: string) => void;
   const run = vi.fn(async (_ids: readonly string[], _value?: string) => ({ completedIds: ['1'] }));
@@ -969,7 +969,7 @@ it('bulk confirmation fixes both ids and value, preserving failed rows after par
   function Bulk({ model }: { model: typeof latest }) {
     const [value, setValue] = useState('inactive');
     changeValue = setValue;
-    binding = useBulkConfirmation({ model, run, check, value });
+    binding = useBulkConfirmation({ model, run, refusalReason: check, choice: value });
     return null;
   }
   mount({ definition: makeDefinition(), initial: {}, fetchRows: async () => page('1', '2'), renderResult: model => <Bulk model={model} /> });
@@ -983,11 +983,28 @@ it('bulk confirmation fixes both ids and value, preserving failed rows after par
   expect(latest.selection.selectedIds).toEqual(['2']);
 });
 
-it('bulk confirmation rejects changed selection before running a captured value', async () => {
+it('bulk confirmation hands onCompleted the ids it requested, the ids the run completed, and the run details', async () => {
+  let binding!: ReturnType<typeof useBulkConfirmation<{ reason: string }, string>>;
+  const run = vi.fn(async (_ids: readonly string[], _choice?: string) => ({ completedIds: ['1'], details: { reason: 'locked row' } }));
+  const onCompleted = vi.fn();
+  function Bulk({ model }: { model: typeof latest }) {
+    binding = useBulkConfirmation({ model, run, choice: 'inactive', onCompleted });
+    return null;
+  }
+  mount({ definition: makeDefinition(), initial: {}, fetchRows: async () => page('1', '2'), renderResult: model => <Bulk model={model} /> });
+  await flush();
+  act(() => latest.selection.togglePage(true));
+  act(() => binding.open());
+  await act(async () => { await binding.confirm(); });
+  // 요청 건수는 업무가 따로 싣지 않아도 확인창에 고정한 행에서 온다.
+  expect(onCompleted).toHaveBeenCalledWith({ requestedIds: ['1', '2'], completedIds: ['1'], details: { reason: 'locked row' } });
+});
+
+it('bulk confirmation rejects changed selection before running a captured choice', async () => {
   let binding!: ReturnType<typeof useBulkConfirmation<unknown, string>>;
   const run = vi.fn(async () => ({ completedIds: ['1'] }));
   function Bulk({ model }: { model: typeof latest }) {
-    binding = useBulkConfirmation({ model, run, value: 'inactive' });
+    binding = useBulkConfirmation({ model, run, choice: 'inactive' });
     return null;
   }
   mount({ definition: makeDefinition(), initial: {}, fetchRows: async () => page('1', '2'), renderResult: model => <Bulk model={model} /> });
@@ -1017,7 +1034,7 @@ it.each([false, true])('검색 선언 기간은 codec의 검색 키로 복구하
   function Period() {
     current = useList({
       definition,
-      search: { from: '2026-03-01', to: '2026-03-31' },
+      urlSearch: { from: '2026-03-01', to: '2026-03-31' },
       navigate,
       query: (full) => ({ queryKey: ['period-codec', full], queryFn: async () => page('1') }),
       rowId: (row) => row.id,
@@ -1084,7 +1101,7 @@ it.each([
   const { result } = renderHook(() => {
     const [url, move] = useState({ q: 'A' });
     return { move, list: useList({
-      definition, search: url, navigate: (next) => move({ q: String(next.q ?? 'A') }),
+      definition, urlSearch: url, navigate: (next) => move({ q: String(next.q ?? 'A') }),
       query: ({ q }) => ({ queryKey: ['recovery', q], queryFn: () => q === 'A'
         ? (++aCalls === 2 ? oldRecovery.promise : Promise.resolve(page('1')))
         : (++bCalls === 1 ? nextQuery.promise : Promise.resolve(page('1'))), staleTime: 0 }),
@@ -1121,7 +1138,7 @@ it('bulk confirmation reports refusals as values: an empty selection is unavaila
   const run = vi.fn(async (ids: readonly string[]) => ({ completedIds: ids }));
   const check = vi.fn<(ids: readonly string[]) => string | undefined>(() => 'blocked by business');
   function Bulk({ model }: { model: typeof latest }) {
-    binding = useBulkConfirmation({ model, run, check });
+    binding = useBulkConfirmation({ model, run, refusalReason: check });
     return null;
   }
   mount({ definition: makeDefinition(), initial: {}, fetchRows: async () => page('1', '2'), renderResult: model => <Bulk model={model} /> });

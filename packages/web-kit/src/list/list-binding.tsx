@@ -15,12 +15,13 @@ import { useVisit } from '../lifetime';
 
 /** 기본 UI가 읽는 목록 상태(useList 결과와 같은 모양). */
 export interface ListModel<Row = any, D extends object = any> {
-  readonly search: Readonly<Record<string, unknown>>;
+  /** 확정 조건: 주소 검색값을 기본값으로 채운 값(주소 키별). */
+  readonly criteria: Readonly<Record<string, unknown>>;
   readonly defaults: Readonly<Record<string, unknown>>;
   readonly view: ViewKeys;
   /** listSearch 선언의 칸 종류 정보(defineSearch로 선언했으면 없다). */
   readonly meta?: SearchMeta;
-  /** useList의 rowId·selectable. 표가 행 규칙을 다시 받지 않도록 낸다. */
+  /** useList의 rowId·isRowSelectable. 표가 행 규칙을 다시 받지 않도록 낸다. */
   readonly rowId?: (row: Row) => string;
   readonly isSelectable?: (row: Row) => boolean;
   readonly draft: D;
@@ -108,13 +109,24 @@ export function useListFilterBinding(model: ListModel) {
   return { noValidate: true, onSubmit: (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); model.submit(); } };
 }
 
-/** 검색 확정·초기화·검증 사건에 맞춰 상세 필터를 펼친다. */
-export function useListDetailsBinding(model: ListModel, keys: readonly string[]) {
+/**
+ * 칸 이름 하나가 쓰는 주소 키. 기간 칸은 시작·끝(기간 기준이 있으면 기준까지) 키를 갖고,
+ * 그 밖의 칸과 listSearch 없이 선언한 칸은 이름이 곧 주소 키다.
+ */
+function searchKeysOf(model: ListModel, name: string): readonly string[] {
+  const entry = model.meta?.[name];
+  if (entry?.kind !== 'dateRange') return [name];
+  return entry.types.length > 0 ? [entry.keys.from, entry.keys.to, entry.keys.type] : [entry.keys.from, entry.keys.to];
+}
+
+/** 검색 확정·초기화·검증 사건에 맞춰 상세 필터를 펼친다. names는 접힌 칸의 이름이고 주소 키는 선언에서 푼다. */
+export function useListDetailsBinding(model: ListModel, names: readonly string[]) {
+  const keys = names.flatMap((name) => searchKeysOf(model, name));
   const hasValue = (value: unknown) =>
     value !== undefined && value !== null && value !== '' && value !== false && (!Array.isArray(value) || value.length > 0);
   const invalid = keys.some((key) => model.issues.some((issue) => issue.field === key));
-  const signature = JSON.stringify([keys.map((key) => model.search[key]), model.resetVersion]);
-  const active = keys.some((key) => hasValue(model.search[key]));
+  const signature = JSON.stringify([keys.map((key) => model.criteria[key]), model.resetVersion]);
+  const active = keys.some((key) => hasValue(model.criteria[key]));
   const [open, setOpen] = useState(active);
   const [seen, setSeen] = useState(signature);
   const id = useId();
@@ -131,20 +143,39 @@ export function useListDetailsBinding(model: ListModel, keys: readonly string[])
   return { open, id, toggle: () => setOpen(!open) };
 }
 
-/** 일괄 작업을 요청 없이 거절한 이유. 고른 행이 없거나(no-selection) 업무 check가 거절했다(check, message는 check가 돌려준 사유). */
+/** 일괄 작업을 요청 없이 거절한 이유. 고른 행이 없거나(no-selection) 업무 거절 사유(refusalReason)가 있다(check, message는 그 사유). */
 export type BulkRefusal = { readonly reason: 'no-selection' } | { readonly reason: 'check'; readonly message: string };
+
+/** 업무 실행(run)이 돌려주는 값. completedIds는 실제로 처리된 행, details는 화면에 보일 업무 결과(실패 사유 등)다. */
+export interface BulkRunResult<T = unknown> {
+  readonly completedIds: readonly string[];
+  readonly details?: T;
+}
+
+/** 일괄 작업 결과(onCompleted·결과 창이 받는 값). requestedIds는 확인창에 고정해 요청한 행이다. */
+export interface BulkResult<T = unknown> extends BulkRunResult<T> {
+  readonly requestedIds: readonly string[];
+}
 
 /**
  * 확인 당시 결과·선택을 고정하고 실행 직전 검증과 단일 실행을 보장한다.
  * 상태만 값으로 돌려주고 보이는 방식(버튼 잠금·알림 창·문구)은 복사형 UI가 정한다.
+ * - choice: 사용자가 고른 값(값을 골라 바꾸는 일괄 작업). 확인창을 여는 순간 고정해 refusalReason·run에 넘긴다.
  * - locked: 지금은 어떤 경우에도 실행할 수 없다(이전 결과 표시 중·실행 중·반영 여부 확인 필요).
  * - unavailable: 눌러도 요청 없이 거절될 이유(고른 행 없음). 잠글지, 눌렀을 때 refusal로 알릴지는 UI가 고른다.
- * - refusal: open·confirm이 요청 없이 거절한 이유(업무 check 포함). failure: 실행 뒤 실패.
+ * - refusal: open·confirm이 요청 없이 거절한 이유(업무 거절 사유 포함). failure: 실행 뒤 실패.
  * 열린 확인·거절·실패 안내는 그 방문의 것이다. 방문이 바뀌면(lifetime.ts) 닫는다.
  * onCompleted는 실행 결과가 이 화면에 전달될 때만 부른다(부분 결과 안내 등). 실행 중 방문이 바뀌었으면 부르지 않는다.
  */
-export function useBulkConfirmation<T, V = undefined>({ model, run, check, value, onCompleted }: { model: ListModel; run: (ids: readonly string[], value?: V) => Promise<{ completedIds: readonly string[]; value?: T }>; check?: (ids: readonly string[], value?: V) => string | undefined; value?: V; onCompleted?: (result: { completedIds: readonly string[]; value?: T }) => void }) {
-  const [pending, setPending] = useState<{ ids: readonly string[]; page: unknown; value?: V }>();
+export function useBulkConfirmation<T, V = undefined>({ model, run, refusalReason, choice, onCompleted }: {
+  model: ListModel;
+  run: (ids: readonly string[], choice?: V) => Promise<BulkRunResult<T>>;
+  /** 업무상 거절 사유. 있으면 실행하지 않는다. 여는 순간은 지금 고른 값, 실행 직전은 확인창에 고정한 값으로 묻는다. */
+  refusalReason?: (ids: readonly string[], choice?: V) => string | undefined;
+  choice?: V;
+  onCompleted?: (result: BulkResult<T>) => void;
+}) {
+  const [pending, setPending] = useState<{ ids: readonly string[]; page: unknown; choice?: V }>();
   const [failure, setFailure] = useState<unknown>();
   const [refusal, setRefusal] = useState<BulkRefusal>();
   const running = useRef(false);
@@ -165,7 +196,7 @@ export function useBulkConfirmation<T, V = undefined>({ model, run, check, value
     snapshot.ids.some((id) => !now.selection.canSelect(id));
   if (!running.current && model.selection.failure === undefined && pending !== undefined && stale(pending, model)) setPending(undefined);
   const checked = (ids: readonly string[], input: V | undefined): BulkRefusal | undefined => {
-    const message = input === undefined ? check?.(ids) : check?.(ids, input);
+    const message = input === undefined ? refusalReason?.(ids) : refusalReason?.(ids, input);
     return message ? { reason: 'check', message } : undefined;
   };
 
@@ -177,7 +208,7 @@ export function useBulkConfirmation<T, V = undefined>({ model, run, check, value
       setPending(undefined);
       return;
     }
-    const refused = checked(pending.ids, pending.value);
+    const refused = checked(pending.ids, pending.choice);
     if (refused) {
       setRefusal(refused);
       return;
@@ -185,8 +216,9 @@ export function useBulkConfirmation<T, V = undefined>({ model, run, check, value
     running.current = true;
     setFailure(undefined);
     try {
-      const result = await now.selection.run((ids) => pending.value === undefined ? run(ids) : run(ids, pending.value));
-      if (result !== undefined) onCompleted?.(result);
+      const result = await now.selection.run((ids) => pending.choice === undefined ? run(ids) : run(ids, pending.choice));
+      if (result !== undefined)
+        onCompleted?.({ requestedIds: pending.ids, completedIds: result.completedIds, details: result.details });
       setPending(undefined);
     } catch (caught) {
       setFailure(caught);
@@ -211,10 +243,10 @@ export function useBulkConfirmation<T, V = undefined>({ model, run, check, value
         setRefusal({ reason: 'no-selection' });
         return;
       }
-      const refused = checked(model.selection.selectedIds, value);
+      const refused = checked(model.selection.selectedIds, choice);
       setRefusal(refused);
       setFailure(undefined);
-      if (!refused) setPending({ ids: [...model.selection.selectedIds], page: model.page, value });
+      if (!refused) setPending({ ids: [...model.selection.selectedIds], page: model.page, choice });
     },
     cancel: () => { if (!running.current && !current.current.selection.isRecovering) setPending(undefined); },
     /** 거절·실패 안내를 확인했다. 안내를 지우고, 실행 중이 아니면 열려 있던 확인도 닫는다. */
@@ -298,9 +330,9 @@ function pageWindow(page: number, last: number): readonly number[] {
 
 /** 페이지 번호의 끝 경계와 현재 페이지를 계산한다. */
 export function listPaginationBinding(model: ListModel) {
-  const size = Math.max(1, Number(model.search[model.view.size]) || 1);
+  const size = Math.max(1, Number(model.criteria[model.view.size]) || 1);
   const last = Math.max(1, Math.ceil(model.total / size));
-  const page = Math.min(Math.max(Number(model.search[model.view.page]) || 1, 1), last);
+  const page = Math.min(Math.max(Number(model.criteria[model.view.page]) || 1, 1), last);
   return { page, last, pages: pageWindow(page, last), visible: last > 1 && model.rows.length > 0 };
 }
 
@@ -362,13 +394,13 @@ export function useListKeywordBinding(model: ListModel, name: string, choices: r
 /** 최신 결과 여부와 페이지 크기·같은 정렬 키의 입력 처리를 연결한다. */
 export function listViewBinding(model: ListModel) {
   const shown = model.status.kind === 'rows' || model.status.kind === 'empty' || (model.status.kind === 'pending' && model.rows.length > 0);
-  const sortKey = model.search[model.view.sort];
+  const sortKey = model.criteria[model.view.sort];
   const sort = String(sortKey ?? '');
   return {
-    sortKey, sort, order: model.search[model.view.order] === 'asc' ? 'asc' as const : 'desc' as const,
+    sortKey, sort, order: model.criteria[model.view.order] === 'asc' ? 'asc' as const : 'desc' as const,
     locked: !model.isCurrent || model.selection.isRunning || model.selection.failure !== undefined,
     total: !shown ? 0 : model.isCurrent ? model.total : undefined,
-    size: Number(model.search[model.view.size]),
+    size: Number(model.criteria[model.view.size]),
     setSize: (value: string) => model.setSize(Number(value)),
     setSort: (value: string) => { if (value !== sort) model.toggleSort(value); },
   };

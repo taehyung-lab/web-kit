@@ -89,7 +89,7 @@ pnpm exec web-kit-registry record --source /path/to/same-version-web-kit --items
 
 ### 일괄 작업 결과 알림
 
-**복사본 교정 필요.** `list`의 `list/list-actions.tsx`와 `dialog`의 `dialog.tsx`를 함께 갱신한다. 결과를 안내할 작업만 `reportResult`를 추가하고, 현재 방문에 도착한 결과에서 알림 내용을 반환하면 실행 확인창이 결과 알림으로 바뀐다. 다른 완료 콜백은 기존 `onCompleted`를 쓴다. [목록 사용 계약](../skills/web-kit-list/SKILL.md)을 따른다.
+**복사본 교정 필요.** `list`의 `list/list-actions.tsx`와 `dialog`의 `dialog.tsx`를 함께 갱신한다. 결과를 안내할 작업만 `resultDialog`를 추가하고, 현재 방문에 도착한 결과에서 결과 창 내용을 반환하면 실행 확인창이 결과 창으로 바뀐다. 다른 완료 콜백은 기존 `onCompleted`를 쓴다. [목록 사용 계약](../skills/web-kit-list/SKILL.md)을 따른다.
 
 ### 복사본 갱신
 

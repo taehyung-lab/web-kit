@@ -1,5 +1,39 @@
 # 시험판에서 옮겨 오기
 
+## 11.0.0-rc.1
+
+목록 검색·빈 결과·일괄 작업의 이름을 하나의 말로 맞췄다. 옛 이름 별칭은 없으므로 아래 표대로 바꾸고 타입·lint·적합성 검사를 다시 실행한다. 주소 키(URL)와 "칸 이름 = 주소 키" 구조는 그대로다. registry `list`의 `list.tsx`·`list/list-filters.tsx`·`list/list-results.tsx`·`list/list-actions.tsx`·`list/list-context.tsx` **복사본 교정 필요**(새 후보 원본과 이전 원본을 같은 CLI로 설치해 비교한 뒤 프로젝트 수정과 함께 옮긴다).
+
+| 자리 | 이전 | 새 이름 |
+| --- | --- | --- |
+| `useList` 옵션 | `search`(주소 원본값) | `urlSearch` |
+| `useList` 옵션 | `selectable` | `isRowSelectable` |
+| `useList` 결과·`ListModel` | `search`(기본값을 채운 확정 조건) | `criteria` |
+| `useListDownload` 대상(`DownloadTarget`)·`DownloadSource` | `search` | `criteria` |
+| `ListStatus` | `{ kind: 'empty' }` | `{ kind: 'empty'; filtered: boolean }` |
+| `ListFilterLayout` 칸 | `label` | `title` |
+| `ListFilterLayout` 칸 | `labels` | `valueLabels` |
+| `listFilterLayout()` 결과 | `detailKeys` | 없음. 상세 칸의 `name`을 `FilterDetails names`에 넘긴다 |
+| `List.FilterDetails`·`useListDetailsBinding` | `keys`(주소 키 목록) | `names`(칸 이름 목록. 기간 칸은 `period` 같은 칸 이름 하나) |
+| `List.MultiSelect` | `optionLabels` | `valueLabels` |
+| `List.Period` | `typeLabels` | `valueLabels` |
+| `List.Keywords` | `choiceLabels` | `valueLabels` |
+| `List.SortSelect` | `optionLabels` | `valueLabels` |
+| `List.Table` | `selectable`(선택 칸 열 표시) | `selectionColumn` |
+| `BulkAction`·`BulkSelectAction` | `describe` | `confirmMessage` |
+| `BulkSelectAction` | `requiredMessage` | `noChoiceMessage` |
+| `BulkSelectAction` | `defaultValue` | `defaultChoice` |
+| `BulkAction`·`BulkSelectAction` | `reportResult` | `resultDialog` |
+| `BulkAction`·`BulkSelectAction`·`useBulkConfirmation` | `check` | `refusalReason` |
+| `useBulkConfirmation` | `value`(사용자가 고른 값) | `choice` |
+| 일괄 작업 `run`의 반환 | `{ completedIds, value? }` | `{ completedIds, details? }`(`BulkRunResult`) |
+| `onCompleted`·결과 창이 받는 값 | `{ completedIds, value? }` | `{ requestedIds, completedIds, details? }`(`BulkResult`) |
+| 목록 문구 | `empty` 하나 | `empty`(조건 없이 0건) + 새 `noMatches`(조건이 걸린 0건, 선택 키) |
+
+- `run`의 결과에 요청 건수를 따로 싣고 있었다면 지운다. 결과의 `requestedIds`는 확인창에 고정한 요청 행이다.
+- 0건 문구가 "조건에 맞는 결과가 없습니다"처럼 조건을 전제했다면 그 문구를 `noMatches`로 옮기고 `empty`에는 조건 없이 0건일 때의 문구를 준다. `filtered`의 판단 규칙은 web-kit-list 「조회 상태」가 정본이다.
+- 적합성 검사에 `list-empty-filtered`가 더해졌다. 새 후보의 검사 연결로 다시 실행한다.
+
 ## 10.0.0-rc.1
 
 - `useBulkConfirmation`은 `emptyRefusal`을 받지 않고, `error` 대신 `refusal`(`{ reason: 'no-selection' }`·`{ reason: 'check', message }`)과 `failure`(요청이 나간 뒤 실패)를 나눠 돌려준다. `locked`는 고른 행 수와 무관하고, 고른 행이 없으면 `unavailable: 'no-selection'`이다. 고른 행이 없을 때 버튼을 잠그려면 `locked || unavailable !== undefined`로 잠근다.
