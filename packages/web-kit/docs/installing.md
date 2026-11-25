@@ -27,7 +27,7 @@ pnpm add @boosterlab/web-kit@file:vendor/boosterlab-web-kit.tgz
 | 위치 | 내용 | 출처 |
 |---|---|---|
 | `src/shared/ui/<부품>.tsx` (예: `button.tsx`·`select.tsx`) | shadcn 기본 부품 | shadcn 공식 registry(키트 항목의 `registryDependencies`로 함께 설치) |
-| `src/shared/ui/web-kit/…` | 키트 묶음 부품(Form·List·Detail·Dialog·Choice…)과 검사 연결 | `@web-kit` registry |
+| `src/shared/ui/web-kit/…` | 키트 묶음 부품(Form·List·RecordView·Detail·Dialog·Choice…)과 검사 연결 | `@web-kit` registry |
 
 4. shadcn 4.19.1 CLI로 필요한 항목을 먼저 확인한 뒤 설치한다. 항목은 검사 도구(vitest·Testing Library·Playwright)를 정확한 버전의 devDependencies로 설치해 기존 버전을 바꿀 수 있으므로, `shadcn add --dry-run`으로 바뀔 의존 버전과 lockfile 영향을 먼저 확인한다. 기존 프로젝트는 자기 변경과 차이를 확인한다. `--overwrite`를 갱신 기본값으로 쓰지 않는다.
 

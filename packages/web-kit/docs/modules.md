@@ -25,7 +25,7 @@
 | 루트 `calendarDayBounds` | 명시한 날짜·시간대의 시작/다음 날 시작, 입력 오류·없는 날짜 구별 | 시간대 선택·표시·서버 종료 정밀도·실패 연결 |
 | 루트 + registry `checkbox-tree`·`filter-error` | 순수 기간·트리 계산과 오류/트리 표현 연결 | checkbox·문구·스타일 |
 | `/form` · `/dialog` + registry `form`·`dialog` | 제출·확인·저장·기준선·오류·늦은 결과·이탈의 hook/Provider; 복사본 Form·FormGuard·Dialog | schema·원본·저장·완료 동작·배치·문구 |
-| `/record` + registry `record`·`retry` | 단건 상태·갱신 실패·재시도 focus·마스킹; 복사본 Detail·항목·이력 | queryOptions·항목·노출 정책·실패 문구 |
+| `/record` + registry `record`·`retry` | 단건 상태·갱신 실패·재시도 focus·마스킹; 복사본 RecordView(조회 상태)·Detail(항목·이력) | queryOptions·항목·노출 정책·실패 문구 |
 | `/choice` · `/dialog` + registry `choice`·`dialog`·`pending`(기본 부품은 shadcn base-nova, 검사 연결 `inputs`) | 공통 선택·검색·대화창 포커스 hook과 기본 부품 조합 | 값·문구·업무 행동·테마 |
 | `/progress` + registry `blocking-progress`의 `FullPageProgress` | 진행 등록·해제·우선순위, 본문 잠금과 초점 복원 | 사용할 조회·저장 선언, 감쌀 본문·문구·표시 모양 |
 | `/api` | Spring query 직렬화 | 적용 endpoint |

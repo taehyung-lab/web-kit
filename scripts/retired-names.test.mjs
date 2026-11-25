@@ -15,7 +15,7 @@ const RETIRED = [
   [/\b(?:RecordFailurePlace|DetailFailurePlace)\b/, 'RecordViewFailurePlace'],
   [/<(?:Record|Detail)[\s>]|<\/(?:Record|Detail)>/, 'RecordView'],
   [/\bRecord\.(Fields|Field|History)\b/, 'Detail'],
-  [/\bList\.Detail\b/, 'List.FilterDetails'],
+  [/\bList\.Detail\b|`Detail (?:keys|triggerClassName)\b/, 'List.FilterDetails'],
   [/\b(?:list-ui|detail-ui)\.tsx\b|web-kit\/(?:list-ui|detail-ui|form\/ui)\b|\bform\/ui\.tsx\b/, 'list·detail·form/form 파일 이름'],
 ];
 const GUIDE_ROOTS = ['packages/web-kit/skills', 'packages/web-kit/docs', 'packages/web-kit/README.md', 'README.md', 'apps/starter/docs'];
