@@ -31,6 +31,7 @@
 | `/api` | Spring query 직렬화 | 적용 endpoint |
 | `/testing` · `/testing/unit`(기능별 하위 입구 포함) · `/testing/browser` · `/testing/fixtures` | adapter 검사, 복사본 단위·브라우저 적합성 기준·검사 화면 | 실제 복사본·연결 파일·실행 대상 버전 |
 | `/structure`(개발 도구) · bin `web-kit-structure`·`web-kit-new` | 실제 import 대상을 해소한 구조 역할 판정(ESLint 규칙), 구조 결과, 완료를 만들지 않는 화면 골격 | `web-kit.structure.json`의 경로·별칭·생성 코드·예외. 선택 peer `eslint`·`typescript`·`typescript-eslint` |
+| `/testing/render-watch` | 조작 한 번에 다시 그린 컴포넌트를 key로 세기(`watchRenders`). 검사 설정 setupFiles 맨 앞 | 셀 컴포넌트 이름·고유 key·기대값 |
 | `/testing/session` | 저장 실패·다른 탭 변경·종료의 adapter 검사(React/Form import 없음) | 자기 저장 adapter와 격리된 검사 환경 |
 
 ### 선택 규칙(전체·부모·자식·빈 선택)을 쓰려면

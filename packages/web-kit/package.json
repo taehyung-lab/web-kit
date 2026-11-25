@@ -1,6 +1,6 @@
 {
   "name": "@boosterlab/web-kit",
-  "version": "8.4.0-rc.3",
+  "version": "8.4.0-rc.4",
   "private": true,
   "type": "module",
   "sideEffects": false,
@@ -23,6 +23,7 @@
     "./session/idle": "./src/session/session-idle.ts",
     "./session/activity": "./src/session/session-activity.ts",
     "./choice": "./src/choice-binding.ts",
+    "./testing/render-watch": "./src/testing/render-watch.ts",
     "./testing/unit": "./src/testing/unit.ts",
     "./testing/browser": "./src/testing/browser.mjs",
     "./testing/fixtures": "./src/testing/fixtures.tsx",

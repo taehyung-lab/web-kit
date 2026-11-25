@@ -135,6 +135,7 @@ it('패키지 subpath는 승인된 39개 입구만 공개한다', () => {
   "./testing/fixtures/combinations",
   "./testing/fixtures/dialog",
   "./testing/fixtures/progress",
+  "./testing/render-watch",
   "./testing/session",
   "./testing/unit",
   "./testing/unit/auth",
