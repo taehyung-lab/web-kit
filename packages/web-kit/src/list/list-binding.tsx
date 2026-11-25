@@ -11,7 +11,7 @@ import { createContext, useContext, useEffect, useId, useRef, useState, type Rea
 import type { FieldCheck, ViewKeys } from '../search/fields';
 import type { SearchMeta, SearchMetaEntry } from '../search/list-search';
 import type { DraftIssue, KeywordInput, ListStatus } from './use-list';
-import { useVisit } from '../lifetime';
+import { useVisit, type ActionDescription } from '../lifetime';
 import { filterFieldKeys, isFieldFiltered } from './filtered';
 
 /** 기본 UI가 읽는 목록 상태(useList 결과와 같은 모양). */
@@ -63,8 +63,10 @@ export interface ListModel<Row = any, D extends object = any> {
     readonly isChecked: (id: string) => boolean;
     readonly toggleRow: (id: string, on: boolean) => void;
     readonly togglePage: (on: boolean) => void;
+    /** description: 무슨 작업인지. 화면을 떠난 뒤 실패하면 앱 알림에 실린다(lifetime ActionDescription). */
     readonly run: <T extends { readonly completedIds: readonly string[] }>(
       action: (ids: readonly string[]) => Promise<T>,
+      description?: ActionDescription,
     ) => Promise<T | undefined>;
   };
 }
@@ -194,7 +196,8 @@ export function useBulkConfirmation<T, V = undefined>({ model, run, refusalReaso
   };
 
   /** 마지막 순간에도 결과·선택 snapshot과 업무 조건을 다시 확인한다. */
-  async function confirm() {
+  /** description: 무슨 작업인지(일괄 작업 이름·실패 문구). 화면을 떠난 뒤 실패하면 앱 알림에 실린다. */
+  async function confirm(description?: ActionDescription) {
     if (running.current || pending === undefined || current.current.selection.failure !== undefined) return;
     const now = current.current;
     if (stale(pending, now)) {
@@ -209,7 +212,10 @@ export function useBulkConfirmation<T, V = undefined>({ model, run, refusalReaso
     running.current = true;
     setFailure(undefined);
     try {
-      const result = await now.selection.run((ids) => pending.choice === undefined ? run(ids) : run(ids, pending.choice));
+      const result = await now.selection.run(
+        (ids) => (pending.choice === undefined ? run(ids) : run(ids, pending.choice)),
+        description,
+      );
       if (result !== undefined)
         onCompleted?.({ requestedIds: pending.ids, completedIds: result.completedIds, details: result.details });
       setPending(undefined);

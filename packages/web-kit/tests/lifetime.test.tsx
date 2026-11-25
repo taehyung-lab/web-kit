@@ -108,6 +108,26 @@ it('확인창: 방문이 바뀐 뒤 끝난 실패는 화면에 보이지 않고 
   expect(lifetime.reports).toEqual([{ place: 'action', here: false }]);
 });
 
+it('확인창: confirm에 넘긴 작업 설명(label·describe)을 방문이 바뀐 뒤의 실패 알림에 그대로 싣는다', async () => {
+  const lifetime = app(() => 'local');
+  const pending = deferred<string>();
+  const { hook } = confirmation(lifetime, () => pending.promise);
+  const action = { label: '항목 삭제', describe: (failure: unknown) => `문구:${String((failure as RequestFailure).kind)}` };
+  act(() => hook.result.current.request('target'));
+  let confirming!: Promise<void>;
+  act(() => {
+    confirming = hook.result.current.confirm(action);
+  });
+  act(() => lifetime.lifetime.leave());
+  await act(async () => {
+    pending.reject(new RequestFailure({ kind: 'server-error' }));
+    await confirming;
+  });
+  expect(lifetime.reports).toHaveLength(1);
+  expect(lifetime.reports[0]).toMatchObject({ place: 'action', here: false });
+  expect(lifetime.reports[0]?.action).toBe(action);
+});
+
 it('로그인이 바뀐 뒤 끝난 실패와 취소는 앱에 알리지 않는다', () => {
   let generation = 0;
   let signedIn = false;
@@ -313,6 +333,18 @@ it('일괄 작업: 열어 둔 거절 안내는 방문이 바뀌면 닫힌다', (
   expect(hook.result.current.refusal).toEqual({ reason: 'no-selection' });
   act(() => lifetime.lifetime.leave());
   expect(hook.result.current.refusal).toBeUndefined();
+});
+
+it('일괄 작업: confirm에 넘긴 작업 설명을 선택 실행에 넘긴다', async () => {
+  const lifetime = app();
+  const run = vi.fn().mockResolvedValue({ completedIds: ['1'] });
+  const list = model(run);
+  const selected = { ...list, selection: { ...list.selection, selectedIds: ['1'] } } as ListModel;
+  const hook = renderHook(() => useBulkConfirmation({ model: selected, run: vi.fn() }), { wrapper: lifetime.wrapper });
+  const action = { label: '사용상태 변경' };
+  act(() => hook.result.current.open());
+  await act(() => hook.result.current.confirm(action));
+  expect(run).toHaveBeenCalledWith(expect.any(Function), action);
 });
 
 it('일괄 작업: onCompleted는 결과가 이 화면에 전달될 때만 부른다', async () => {

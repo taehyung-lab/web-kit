@@ -1,7 +1,7 @@
 /** 확인 대상과 실행 상태를 소유하고 오류 정책·다이얼로그 표현은 프로젝트에 맡긴다. */
 import { useLayoutEffect, useRef, useState } from "react";
 import { useFullPageProgress } from "./full-page-progress";
-import { useLifetime, useVisit } from "./lifetime";
+import { useLifetime, useVisit, type ActionDescription } from "./lifetime";
 
 type ConfirmationState<T, F> =
   | { readonly kind: "closed" }
@@ -106,11 +106,12 @@ export function useConfirmationState<T, F, R = unknown>({
     // 후속 처리 실패를 닫아도 같은 대상의 완료 기록은 남긴다.
     update({ kind: "closed" });
   }
-  async function confirm() {
+  /** action: 무슨 작업인지(확인창 제목·실패 문구). 화면을 떠난 뒤 실패하면 앱 알림에 실린다(lifetime ActionDescription). */
+  async function confirm(action?: ActionDescription) {
     const requested = current.current;
     if (requested.kind !== "open" || requested.pending) return;
     const generation = scope.current.generation;
-    const execution = lifetime.begin("action");
+    const execution = lifetime.begin("action", action);
     /** 결과를 이 창에 전달해도 되는가: 아직 현재 확인이고, 시작한 방문·로그인이 그대로다. */
     const isCurrent = () =>
       mounted.current &&

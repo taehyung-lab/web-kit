@@ -5,7 +5,7 @@ import { hashKey, useQueries, useQuery, type QueryKey, type UseQueryOptions } fr
 import { useEffect, useRef, useState } from 'react';
 import { isRequestFailure, RequestFailure } from '../failure';
 import { useFullPageProgress } from '../full-page-progress';
-import { useLifetime, useVisit } from '../lifetime';
+import { useLifetime, useVisit, type ActionDescription } from '../lifetime';
 import { PAGE_QUERY_META } from '../page-query';
 import { validateDateRange } from '../date-range';
 import { sameSearchValue, type FullSearch, type SearchDefinition, type SearchField, type UrlSearch } from '../search/fields';
@@ -495,6 +495,7 @@ export function useList<
    */
   async function run<T extends { readonly completedIds: readonly string[] }>(
     action: (ids: readonly string[]) => Promise<T>,
+    description?: ActionDescription,
   ): Promise<T | undefined> {
     if (actionLock.current || executionLock.current || !isCurrent || selectedIds.length === 0) return undefined;
     if (uncertainAction.current) throw uncertainAction.current;
@@ -504,7 +505,7 @@ export function useList<
     setRunningAction(true);
     const ids = selectedIds;
     const lifetime = selectionLifetime;
-    const execution = executionLifetime.begin('action');
+    const execution = executionLifetime.begin('action', description);
     try {
       const result = await action(ids);
       // completedIds는 업무 결과이고, 선택 수명 적용은 이 module이 맡는다.

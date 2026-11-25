@@ -39,7 +39,7 @@ test('terms create confirms, saves once, acknowledges and opens the detail', asy
   expect(posts).toHaveLength(1);
 });
 
-// 새로 고침 직후 첫 요청이 쓰기여도 mock 서버가 발급한 토큰을 기억해야 한다(실제 서버처럼). 잊으면 쓰기 401 → "저장 결과를 확인할 수 없습니다".
+// 새로 고침 직후 첫 요청이 쓰기여도 mock 서버가 발급한 토큰을 기억해야 한다(실제 서버처럼). 잊으면 쓰기마다 401 → 재발급 → 재전송이 끼어든다.
 test('terms saved right after a full reload are saved once and open the detail', async ({ page }) => {
   await page.goto('/login');
   await page.getByLabel('아이디').fill('admin');

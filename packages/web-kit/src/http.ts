@@ -16,13 +16,6 @@ import {
 } from './failure';
 import type { Credentials, Session } from './session/session';
 
-/**
- * E1(인증 필터가 업무 실행 전에 401로 거절하는가)의 키트 기본값. 쓰기의 401은 재전송하지 않고 반영 여부 미확정으로 돌려준다.
- * 실행 전 거절 여부는 서버마다 다른 사실이라, 한 서버에서 확인돼도 이 값을 바꾸지 않는다.
- * 확인한 서버를 쓰는 프로젝트만 켤 수 있게 그때 `createHttp` 입력을 추가한다(결정 기록 0003 「전송과 회복의 선택 이유」).
- */
-const AUTH_REJECTS_BEFORE_EXECUTION = false;
-
 /** 전송 시도 하나의 관찰. response가 없으면 서버에 닿지 못했다(network·timeout). */
 export interface TransportEvent {
   readonly url: string | undefined;
@@ -123,12 +116,13 @@ export function springEnvelope(results: ResultCodeTable, options?: ResponseReadO
 /**
  * 요청 처리를 만든다. isPublic은 세션에 속하지 않는 요청(로그인 전·재발급·로그아웃)을 가린다:
  * 토큰을 자동으로 싣지 않고, 그 실패는 세션을 건드리지 않고 그대로 돌려준다.
- * prepare는 프로젝트 운영 헤더(언어·메뉴 등)를 붙인다.
+ * prepare는 프로젝트 운영 헤더(언어·메뉴 등)를 요청 하나에 한 번 붙인다. 재전송은 첫 시도의 헤더를 그대로 쓴다.
  */
 export function createHttp<C extends Credentials>({
   session,
   response: contract,
   isPublic,
+  authRejectsBeforeExecution,
   prepare,
   observe,
   defaults,
@@ -137,6 +131,12 @@ export function createHttp<C extends Credentials>({
   /** 서버 응답 형식·성공 코드·업무 실패를 해석할 계약을 반드시 선택한다. */
   readonly response: ResponseContract;
   readonly isPublic: (config: AxiosRequestConfig) => boolean;
+  /**
+   * 이 서버가 인증 거절(401)을 업무 실행 전에만 내는가(결정 기록 0003의 E1). 서버마다 다른 사실이라 프로젝트가 정한다.
+   * true면 쓰기(POST·PUT·PATCH·DELETE)도 401 뒤 재발급하고 원 요청을 한 번 다시 보낸다. 401은 반영되지 않은 요청이기 때문이다.
+   * false면 쓰기는 재발급만 하고 다시 보내지 않으며, 원 실패를 반영 여부 미확정(resultUnknown)으로 돌려준다.
+   */
+  readonly authRejectsBeforeExecution: boolean;
   readonly prepare?: (headers: AxiosHeaders, config: AxiosRequestConfig) => void;
   /** 전송 시도마다(재전송·공개 요청 포함, 취소 제외) 한 번. 연결 상태·서버 시각 같은 프로젝트 관찰용이다. */
   readonly observe?: (event: TransportEvent) => void;
@@ -151,8 +151,7 @@ export function createHttp<C extends Credentials>({
 
   /** 전송 한 번과 그 관찰. 응답이 없으면 response가 없다. */
   async function attempt(config: AxiosRequestConfig): Promise<AxiosResponse> {
-    const headers = AxiosHeaders.from((config.headers ?? {}) as never);
-    prepare?.(headers, config);
+    const headers = new AxiosHeaders((config.headers ?? {}) as never);
     const sentAt = Date.now();
     const report = (response: AxiosResponse | undefined) =>
       observe?.({
@@ -204,7 +203,8 @@ export function createHttp<C extends Credentials>({
    * 세션 요청의 실패 하나를 처리한다. 인증 거절(401 또는 종료 행)은 이 순서로 본다:
    * 1. 요청이 쓴 토큰이 그 사이 회전됐으면 옛 토큰에 대한 응답이다 → 현재 토큰으로 다시 보낸다(새 근거가 있을 때만 반복).
    * 2. 종료 행이면 세션을 끝낸다(인증 계약). 3. 그 밖의 첫 401은 재발급 뒤 한 번 다시 보낸다.
-   * 쓰기는 E1 전제 없이는 다시 보내지 않고 반영 여부 미확정으로 돌려준다.
+   * 쓰기는 authRejectsBeforeExecution이 켜져 있을 때만 다시 보내고, 1과 3을 합쳐 추가 전송은 한 번뿐이다(같은 쓰기가 여러 번 나가지 않게).
+   * 꺼져 있으면 쓰기는 다시 보내지 않고 반영 여부 미확정으로 돌려준다.
    */
   async function recover(
     failure: RequestFailure,
@@ -217,12 +217,18 @@ export function createHttp<C extends Credentials>({
     if (stale()) throw cancelled();
     if (failure.kind === 'cancelled') throw failure;
     const read = isRead(config);
-    const resendable = read || AUTH_REJECTS_BEFORE_EXECUTION;
+    const resendable = read || authRejectsBeforeExecution;
     const rejected = failure.rejectsAuthentication;
     if (rejected && token !== undefined) {
       const now = session.current()?.credentials.accessToken;
       if (now !== undefined && now !== token) {
-        if (resendable) return send(config, generation, resent);
+        // 조회는 토큰이 새로 바뀔 때마다 다시 보낸다. 쓰기는 이미 한 번 다시 보냈으면 멈춘다(반영 안 됨).
+        // 쓰기는 HTTP 401일 때만 다시 보낸다. 업무 실행 전 거절이라는 근거(E1)는 401에만 있고, 200 봉투의 종료 행은 업무 뒤일 수 있다.
+        if (read) return send(config, generation, resent);
+        if (resendable && failure.status === 401) {
+          if (resent) throw failure;
+          return send(config, generation, true);
+        }
         throw failure.withResultUnknown();
       }
     }
@@ -244,11 +250,13 @@ export function createHttp<C extends Credentials>({
   }
 
   async function send(config: AxiosRequestConfig, generation: number, resent: boolean): Promise<unknown> {
+    // 재발급을 기다리는 사이 로그아웃·계정 교체가 있었으면 옛 로그인의 요청을 새 로그인의 토큰으로 보내지 않는다.
+    if (generation !== session.generation()) throw cancelled();
     const token = session.current()?.credentials.accessToken;
     const authorized =
       token === undefined
         ? config
-        : { ...config, headers: AxiosHeaders.from((config.headers ?? {}) as never).set('Authorization', `Bearer ${token}`) };
+        : { ...config, headers: new AxiosHeaders((config.headers ?? {}) as never).set('Authorization', `Bearer ${token}`) };
     let response: AxiosResponse;
     try {
       response = await attempt(authorized);
@@ -270,7 +278,11 @@ export function createHttp<C extends Credentials>({
   /** 호출마다 최종 성공 응답의 메타를 돌려준다. */
   async function requestWithResponse<T>(config: AxiosRequestConfig, options?: AxiosRequestConfig): Promise<HttpResponse<T>> {
     const merged = { ...config, ...options };
-    return (!isPublic(merged) ? send(merged, session.generation(), false) : sendPublic(merged)) as Promise<HttpResponse<T>>;
+    // 운영 헤더는 요청 하나에 한 번 정한다. 재전송도 이 값을 쓴다(첫 시도 때의 화면·언어).
+    const headers = new AxiosHeaders((merged.headers ?? {}) as never);
+    prepare?.(headers, merged);
+    const prepared = { ...merged, headers };
+    return (!isPublic(prepared) ? send(prepared, session.generation(), false) : sendPublic(prepared)) as Promise<HttpResponse<T>>;
   }
 
   return {

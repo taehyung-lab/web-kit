@@ -30,10 +30,23 @@ interface LifetimeQueryClient {
  */
 export type FailurePlace = 'page' | 'detail' | 'action' | 'download';
 
+/**
+ * 실행 한 건이 무슨 작업인지와 그 실패를 화면에서 어떻게 설명하는지. 확인창·일괄 작업 UI가 실행을 시작할 때 넘긴다.
+ * 키트는 내용을 해석하지 않고, 화면을 떠난 뒤 끝난 실패의 알림(FailureReport.action)에 그대로 실어 앱이 "무슨 작업의 어떤 실패"인지 알리게 한다.
+ */
+export interface ActionDescription {
+  /** 작업 이름(예: 확인창 제목 "항목 삭제"). */
+  readonly label: string;
+  /** 그 작업 화면이 실패를 보일 때 쓰는 문구. 화면 안 문구와 떠난 뒤 알림이 같은 설명을 쓰게 한다. */
+  readonly describe?: (failure: unknown) => ReactNode;
+}
+
 export interface FailureReport {
   readonly place: FailurePlace;
   /** 이 실패를 시작한 화면이 지금도 보이는가. false면 화면은 이미 떠났고 그 자리에 보일 곳이 없다. */
   readonly here: boolean;
+  /** 실행을 시작한 UI가 넘긴 작업 설명. 넘기지 않았으면 없다. */
+  readonly action?: ActionDescription;
 }
 
 /** handled: 앱이 직접 알렸다(그 자리에 다시 그리지 않는다). local: 그 자리의 기본 표시에 맡긴다. */
@@ -65,7 +78,8 @@ export interface Lifetime {
   readonly visit: () => number;
   /** 방문이 바뀌면 부른다. */
   readonly subscribe: (listener: () => void) => () => void;
-  readonly begin: (place: FailurePlace) => Execution;
+  /** 실행 한 건을 시작한다. action은 그 실행이 무슨 작업인지(떠난 뒤 실패 알림에 실린다). */
+  readonly begin: (place: FailurePlace, action?: ActionDescription) => Execution;
   /** 앱이 직접 알린 실패인가. 실패 문구를 고르는 자리가 다시 그리지 않으려고 묻는다. */
   readonly isHandled: (failure: unknown) => boolean;
 }
@@ -99,8 +113,8 @@ export function createLifetime({
   /** 지금 로그인. 로그인하지 않았으면 undefined다. */
   const login = () => (session === undefined || session.current() === null ? undefined : session.generation());
 
-  function report(failure: unknown, place: FailurePlace, here: boolean): FailureAnswer {
-    const answer = onFailure?.(failure, { place, here }) ?? 'local';
+  function report(failure: unknown, place: FailurePlace, here: boolean, action: ActionDescription | undefined): FailureAnswer {
+    const answer = onFailure?.(failure, action === undefined ? { place, here } : { place, here, action }) ?? 'local';
     if (answer === 'handled' && typeof failure === 'object' && failure !== null) handled.add(failure);
     return here ? answer : 'handled';
   }
@@ -124,7 +138,7 @@ export function createLifetime({
       return;
     }
     if (!query.isActive() || fetchVisit.get(query) !== visit) return;
-    report(action.error, query.meta?.[PAGE_QUERY_KEY] === PAGE_QUERY_META[PAGE_QUERY_KEY] ? 'page' : 'detail', true);
+    report(action.error, query.meta?.[PAGE_QUERY_KEY] === PAGE_QUERY_META[PAGE_QUERY_KEY] ? 'page' : 'detail', true, undefined);
   });
 
   return {
@@ -161,7 +175,7 @@ export function createLifetime({
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
-    begin(place) {
+    begin(place, action) {
       const startedVisit = visit;
       const startedLogin = login();
       // 로그인 없이 시작한 실행(로그인 화면의 요청)은 그 실행이 세션을 여는 것이다. 세션이 열려도 시작한 화면에 있는 동안은
@@ -177,7 +191,7 @@ export function createLifetime({
           if (isCancelled(failure)) return 'local';
           // 로그인이 바뀌었으면 받을 사람이 없다. 어디에도 전달하지 않는다.
           if (!sameLogin()) return 'handled';
-          return report(failure, place, shown && here());
+          return report(failure, place, shown && here(), action);
         },
         onLoginEnd(listener) {
           if (!sameLogin()) {

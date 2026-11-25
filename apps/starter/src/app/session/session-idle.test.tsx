@@ -18,7 +18,7 @@ function fixture() {
   const session = createSession({ store: { read: () => current, write: (v) => { current = v; }, subscribe: () => () => undefined }, reissue: vi.fn() });
   const adapter: AxiosAdapter = async (config) => ({ config, status: 200, statusText: '', data: null,
     headers: { 'content-type': 'text/plain', 'x-synthetic-deadline': '130000' } });
-  const http = createHttp({ session, response: springEnvelope({ lookup: () => undefined }), isPublic: () => false, defaults: { adapter } });
+  const http = createHttp({ session, response: springEnvelope({ lookup: () => undefined }), isPublic: () => false, authRejectsBeforeExecution: false, defaults: { adapter } });
   const idle = createStarterIdle({ session, http, key: 'starter-idle-fixture', policy: { warningMs: 1000, pendingAtDeadline: 'wait' },
     request: { url: '/synthetic-session-extension', method: 'POST' },
     sample: ({ sentAt, response }) => ({ sentAt, deadline: Number(response.header('x-synthetic-deadline')) }),

@@ -36,11 +36,19 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
   - 원 요청 없이도(SSE 등) 재발급할 수 있다.
   - 기다리던 요청 하나가 취소되면 그 요청만 끝나고 재발급은 계속된다.
 - **요청 처리:**
-  - 인증 거절(401 또는 종료 행)이 왔는데 요청이 쓴 토큰이 그 사이 회전돼 있으면, 그것은 옛 토큰에 대한 응답이다. 재발급·종료 없이 현재 토큰으로 다시 보내고, 토큰이 또 바뀌었을 때만 반복한다. 쓰기는 E1 전제상 다시 보내지 않고 원래 실패를 `resultUnknown`으로 돌려준다.
-  - 조회의 401은 재발급 뒤 한 번만 다시 보낸다. 재전송 뒤에는 재발급하지 않는다.
-  - 세션 종료는 결과 코드 표의 세션 종료 행(HTTP 200 포함)으로만 판정하고, 그 요청은 화면에 `cancelled`로 끝난다.
-  - 쓰기의 401은 다시 보내지 않는다(E1 확인 전 전제). 재발급만 하고 원래 실패를 `resultUnknown`으로 돌려준다.
-  - `resultUnknown`은 http가 요청 경로로 판정한다. 쓰기 자체의 network·timeout, 그리고 쓰기의 401이 해당한다.
+  - `createHttp`의 필수 입력 `authRejectsBeforeExecution`은 서버의 401이 업무 실행 전(인증 필터)에서만 나는지(E1)를 프로젝트가 확인해 넘긴다. 확인하지 못했으면 `false`다.
+  - 인증 거절(401 또는 종료 행)이 왔는데 요청이 쓴 토큰이 그 사이 회전돼 있으면, 그것은 옛 토큰에 대한 응답이다. 재발급하지 않고 세션도 끝내지 않는다.
+    - 조회는 현재 토큰으로 다시 보내고, 토큰이 또 바뀌었을 때만 반복한다.
+    - 쓰기는 `authRejectsBeforeExecution: true`이고 HTTP 401일 때만 현재 토큰으로 한 번 다시 보낸다. 이미 한 번 다시 보낸 쓰기면 그 401을 그대로 돌려준다(반영 안 됨).
+    - 그 밖의 쓰기(`false`이거나, HTTP 200 봉투의 종료 행처럼 401이 아닌 거절)는 다시 보내지 않고 원래 실패를 `resultUnknown`으로 돌려준다. 세션은 유지된다.
+  - 토큰이 회전되지 않았으면:
+    - 종료 행은 세션을 끝내고, 그 요청은 화면에 `cancelled`로 끝난다. 세션 종료는 결과 코드 표의 세션 종료 행(HTTP 200 포함)으로만 판정한다.
+    - 첫 401은 재발급한다. 조회와 `authRejectsBeforeExecution: true`인 쓰기는 재발급 뒤 한 번 다시 보낸다. 재전송 뒤에는 재발급하지 않고, 재전송도 401이거나 재발급이 일시 실패하면 그 실패를 그대로 돌려준다(반영 안 됨, `resultUnknown` 아님).
+    - `false`인 쓰기는 재발급만 하고 다시 보내지 않으며 원래 실패를 `resultUnknown`으로 돌려준다.
+  - 쓰기의 추가 전송은 옛 토큰 재전송과 재발급 재전송을 합쳐 한 번뿐이다. 업무 실행 전 거절이라는 근거(E1)는 HTTP 401에만 있기 때문이다.
+  - 재전송 직전에 세대를 확인한다. 재발급을 기다리는 사이 로그아웃·계정 교체가 있었으면 보내지 않고 `cancelled`로 끝난다.
+  - `prepare`(운영 헤더)는 요청 하나에 한 번 부른다. 재전송은 첫 시도의 헤더를 그대로 쓰고 Authorization만 새 토큰으로 바꾼다.
+  - `resultUnknown`은 http가 요청 경로로 판정한다. 해당하는 것: 쓰기 자체의 network·timeout, `false`일 때 쓰기의 401, 토큰이 회전된 사이 다시 보내지 않은 쓰기의 인증 거절(위).
 - **유휴 마감(`/session/idle`):** `createIdleTimer`를 만들고 `start()`를 부른 앱에서만 동작한다. 타이머는 활동 연장 요청이나 임시 마감을 스스로 만들지 않는다.
   - `policy`는 `warningMs`와 필수 `pendingAtDeadline: 'wait' | 'expire'`, 선택 `extensionFallbackMs`다. 길이와 기본값은 프로젝트가 정한다. `extensionFallbackMs`는 양의 유한한 ms이며 생략하면 기한 없는 연장 응답으로 마감을 만들지 않는다.
   - 로그인·복원·다른 탭 계정 교체에서 이 세션의 마감이 없으면 마감 미정(`deadline: null`, `remaining(): null`, 경고 없음)이다. `start()` 때 저장 마감이 이미 지났으면 그 자리에서 `idle`로 끝낸다. `start()` 전 `pause()`는 그 판정을 재개 결과에 맡긴다.
@@ -63,7 +71,7 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
   - 앱 조립에서 `createLifetime({ session, queryClient, onFailure })`를 한 번 만들고 `<LifetimeProvider lifetime>`으로 감싼 뒤, router의 승인된 주소 변경 시작에 `lifetime.leave()`, 새 화면이 자리 잡았을 때 `lifetime.arrive()`를 부른다. 무엇이 새 방문인지(경로만인지 검색 조건까지인지)는 앱이 정한다. 거부된 이탈에는 부르지 않는다.
   - 그 아래의 `useSaveForm`·`useConfirmationState`·`useList`(조회·`selection.run`)·`useListDownload`·`useRecord`가 실행마다 시작한 방문·로그인을 기억한다. 업무 코드는 hook을 그대로 쓰고 방문을 직접 비교하지 않는다.
   - 방문이 바뀌면: 이전 방문의 진행 중·연결 대기 조회를 취소하고 오류 상태를 지운다(받아 둔 내용은 그대로 둔다. 내용이 있는 채 다시 받기만 실패한 조회도 내용은 남고 오류만 지워진다). 새 화면이 자리 잡으면 그 가운데 화면이 쓰는데 아무도 받고 있지 않은 것만 다시 받는다. 열려 있던 확인·거절·실패 안내는 닫힌다. 이미 보낸 쓰기·다운로드는 끝까지 가되 완료 처리와 그 자리의 실패 표시는 하지 않는다.
-  - `onFailure(failure, { place, here })`: `place`는 실패가 난 자리(`page` = `progress: 'page'`로 선언한 목록·단건 조회, `detail` = 그 밖의 조회, `action` = 저장·확인창 실행·일괄 작업, `download`), `here`는 그 화면이 아직 보이는가다. `'handled'`를 돌려주면 앱이 직접 알린 것이라 그 자리에 다시 그리지 않는다(확인창은 닫히고, 폼은 입력을 둔 채 실패 줄이 없고, 일괄 작업은 선택을 둔 채 끝나고, 다운로드는 실패 상태를 남기지 않는다). `'local'`이면 그 자리의 기본 표시다. `here`가 거짓인 호출은 떠난 뒤 끝난 쓰기·다운로드의 실패이고, 화면에는 자리가 없으므로 앱이 알릴지(토스트 등)만 정한다. 조회의 `here` 거짓 호출은 없다(취소된다).
+  - `onFailure(failure, { place, here })`: `place`는 실패가 난 자리(`page` = `progress: 'page'`로 선언한 목록·단건 조회, `detail` = 그 밖의 조회, `action` = 저장·확인창 실행·일괄 작업, `download`), `here`는 그 화면이 아직 보이는가다. `'handled'`를 돌려주면 앱이 직접 알린 것이라 그 자리에 다시 그리지 않는다(확인창은 닫히고, 폼은 입력을 둔 채 실패 줄이 없고, 일괄 작업은 선택을 둔 채 끝나고, 다운로드는 실패 상태를 남기지 않는다). `'local'`이면 그 자리의 기본 표시다. `here`가 거짓인 호출은 떠난 뒤 끝난 쓰기·다운로드의 실패이고, 화면에는 자리가 없으므로 앱이 알릴지(토스트 등)만 정한다. 이 호출의 `action`은 실행을 시작한 UI가 넘긴 작업 설명(`ActionDescription`: `label` 작업 이름, `describe(failure)` 그 작업 화면의 실패 문구)이다. 앱은 이것으로 "무슨 작업의 어떤 실패"인지 알린다. 확인창은 `confirm(action)`, 일괄 작업은 `confirm(action)`·`selection.run(work, action)`으로 넘기고, registry `ConfirmationDialog`·`BulkAction`·`BulkSelectAction`은 제목(문자열일 때)과 그 창의 실패 문구로 자동으로 넘긴다. 넘기지 않았으면 `action`은 없다. 조회의 `here` 거짓 호출은 없다(취소된다).
   - 조회 상태에 남은 실패를 문구로 바꾸는 자리(`ListDefaults`·`RecordViewDefaults`의 `renderFailure`)는 `lifetime.isHandled(failure)`가 참이면 `null`을 돌려 다시 쓰지 않는다.
   - 취소, 그리고 로그인한 상태에서 시작해 로그인이 끝나거나 바뀐 뒤 끝난 실행은 `onFailure`를 부르지 않는다. 로그인 없이 시작한 실행(로그인 요청)은 시작한 화면에 있는 동안 그 실행이 세션을 열어도 같은 실행이고, 화면을 떠난 뒤 열린 세션에는 결과를 넘기지 않는다. 연달아 이동해도 정리한 조회는 최종 도착 때 한 번에 다시 받고, 이동 중에 실패한 조회는 알리지 않고 도착한 화면이 쓰면 다시 받는다.
   - 쓰기 성공 뒤 갱신은 `/query`의 `refreshAfterWrite(queryClient, key)`를 요청 함수 안에서 성공 직후 부른다(진행 중 조회를 먼저 끊고 무효화한다). 그 함수는 화면을 떠나도 끝까지 실행되므로 지금 보는 화면의 데이터가 갱신된다.
@@ -105,7 +113,7 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
   - 보낸 Authorization 헤더와 운영 헤더
   - 401 → 재발급 1회 → 재전송 1회
   - 세션 종료 행 → 로그인 이동 1회
-  - 쓰기 401의 재전송 0회
+  - 쓰기 401의 재전송: `authRejectsBeforeExecution: true`면 1회, `false`면 0회
   - 로그아웃 뒤 이전 화면 데이터 미노출
 - mock 통과나 HTTP 200만으로 서버 계약을 확인했다고 하지 않는다.
 
@@ -113,7 +121,7 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 
 실제 조립 예: [apps/starter/src/features/auth/api/auth.ts](../../references/apps/starter/src/features/auth/api/auth.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-E1(401이 업무 실행 전인가), E2(일반·재발급 요청의 status·resultCode 의미), E3(동시 재발급, 이전 refresh 토큰 재사용, 늦은 응답의 쿠키 변경)는 설치된 web-kit 패키지의 [결정 기록 0003의 미확인 외부 계약](../../references/docs/decisions/0003-request-response-failure.md#미확인-외부-계약)이 기준이다. 확인되기 전까지 해당 부분은 보류한다.
+E1(401이 업무 실행 전인가), E2(일반·재발급 요청의 status·resultCode 의미), E3(동시 재발급, 이전 refresh 토큰 재사용, 늦은 응답의 쿠키 변경)는 설치된 web-kit 패키지의 [결정 기록 0003의 미확인 외부 계약](../../references/docs/decisions/0003-request-response-failure.md#미확인-외부-계약)이 기준이다. E1은 프로젝트가 확인해 `authRejectsBeforeExecution`으로 넘긴다. E2·E3은 확인되기 전까지 해당 부분을 보류한다.
 
 ## 프로젝트별 응답 계약
 

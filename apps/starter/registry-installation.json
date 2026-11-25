@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "version": "11.0.0-rc.1",
-  "sourceRef": "v11.0.0-rc.1",
-  "sourceCommit": "1c6b1b9e37c2d0aa775004ae015b42ce190650b4",
+  "version": "12.0.0-rc.1",
+  "sourceRef": "v12.0.0-rc.1",
+  "sourceCommit": "e23b312b36c77dc78e92c27815a58dbc66efffa3",
   "sourceWorkingTree": "clean",
   "shadcn": "4.19.1",
   "method": "shadcn@4.19.1 add; installation recorded after review",
@@ -55,14 +55,14 @@
     },
     {
       "name": "dialog",
-      "artifactHash": "fea3a89367c0e60cc64b242fa00354986adddab602eabf6de3182ee4228f811c",
+      "artifactHash": "21f8effdc05ec913f6a08738165dbf48137e5116edca4f23779c2c270ae409d6",
       "files": [
         {
           "source": "packages/ui-registry/src/dialog.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/dialog.tsx",
           "installed": "src/shared/ui/web-kit/dialog.tsx",
-          "sourceHash": "b177103efb0ea9c472adbeea6af95fbea64502f5b4334036d396f7da94ed8c7c",
-          "installedHash": "4d0e90bb748dd8ef6263b8a001013649a51c142ef379248e53654d664fade8df"
+          "sourceHash": "70b601f7436d79d9a97cc673a846b794b810bd3487dbd50b9faa07fbf01089ce",
+          "installedHash": "77a48da59d60b2dcd0f4d448b992d0c7baa3bdc568e85606f2c3621003395a5d"
         },
         {
           "source": "packages/ui-registry/checks/dialog.test.tsx",
@@ -294,7 +294,7 @@
     },
     {
       "name": "list",
-      "artifactHash": "c30a9e35173ba0ca98fdf89edb9edc4a6f8bcaa09b958627552f71eb1ef0883a",
+      "artifactHash": "4bd83febf1d3fbc4b28002410e92ade9d93d68a002cffe2937586584059d8dd5",
       "files": [
         {
           "source": "packages/ui-registry/src/list.tsx",
@@ -335,8 +335,8 @@
           "source": "packages/ui-registry/src/list/list-actions.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/list/list-actions.tsx",
           "installed": "src/shared/ui/web-kit/list/list-actions.tsx",
-          "sourceHash": "e38584461b95e02c914025bc387c4b12170b59df847668313150725bc4643c98",
-          "installedHash": "d620a154a7d60b65679dd7ed0d7dbb2fea2d9bf504ee93846078a0140d5ad869"
+          "sourceHash": "de1398cf8b1ff4dc52800cfc6c66220f53232bcff349e2ede197cff643fce3ee",
+          "installedHash": "5eac754a5d4820b05df447db4c8844f9ae2a6611ca6935684965f43924d4097e"
         }
       ]
     },
