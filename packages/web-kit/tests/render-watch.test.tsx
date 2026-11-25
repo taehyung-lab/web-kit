@@ -4,7 +4,7 @@
 import { watchRenders } from '../src/testing/render-watch';
 import { act, cleanup, render } from '@testing-library/react';
 import { memo, useState } from 'react';
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
 afterEach(cleanup);
 
@@ -95,4 +95,50 @@ it('stop 뒤에는 세지 않는다', () => {
   rows.stop();
   click(view, 'change');
   expect(rows.renders).toEqual([]);
+});
+
+it('React DOM이 아닌 렌더러의 커밋은 세지 않는다', () => {
+  const connection = (
+    globalThis as unknown as {
+      __REACT_DEVTOOLS_GLOBAL_HOOK__: {
+        inject(internals: object): number;
+        onCommitFiberRoot(id: number, root: object): void;
+      };
+    }
+  ).__REACT_DEVTOOLS_GLOBAL_HOOK__;
+  const other = connection.inject({ rendererPackageName: 'react-test-renderer' });
+  // React DOM 번호로 같은 커밋을 보냈다면 기록됐을 fiber다(새로 붙은 줄).
+  const rows = watchRenders('PlainRow');
+  const fiber = {
+    key: 'other',
+    type: PlainRow,
+    return: null,
+    flags: 1,
+    child: null,
+    sibling: null,
+    alternate: null,
+  };
+  connection.onCommitFiberRoot(other, {
+    current: {
+      key: null,
+      type: null,
+      return: null,
+      flags: 0,
+      child: fiber,
+      sibling: null,
+      alternate: null,
+    },
+  });
+  rows.stop();
+  expect(rows.renders).toEqual([]);
+});
+
+it('같은 전역에서 모듈이 다시 실행돼도 React DOM과 맺은 연결을 이어 쓴다', async () => {
+  vi.resetModules();
+  const again = await import('../src/testing/render-watch');
+  const view = render(<Rows kind="memo" />);
+  const rows = again.watchRenders('Row');
+  click(view, 'change');
+  rows.stop();
+  expect(rows.renders).toEqual(['row-1']);
 });
