@@ -54,6 +54,14 @@ function bulkFailureText(
   return custom === undefined ? copy.actionFailed : custom;
 }
 
+/** 화면을 떠난 뒤 실패하면 앱이 "무슨 작업의 어떤 실패"인지 알리도록 실행에 넘기는 작업 설명. 문구는 이 창과 같다. */
+function bulkDescription(title: string, context: Pick<Context, 'copy' | 'renderFailure'>) {
+  return {
+    label: title,
+    describe: (failure: unknown) => bulkFailureText(failure, context.copy, context.renderFailure),
+  };
+}
+
 /** 요청 없이 거절한 이유의 문구. 고른 행 없음은 messages.selectRows, 업무 거절은 refusalReason이 돌려준 사유다. */
 function bulkRefusalText(refusal: BulkRefusal | undefined, copy: Context['copy']) {
   if (refusal === undefined) return undefined;
@@ -258,7 +266,7 @@ function BulkAction<T>({
         running={model.selection.isRunning}
         confirmLabel={confirmLabel ?? copy.confirm}
         cancelLabel={cancelLabel ?? copy.cancel}
-        onConfirm={() => void confirm()}
+        onConfirm={() => void confirm(bulkDescription(title, context))}
         onCancel={cancel}
         body={
           pending === undefined
@@ -391,7 +399,7 @@ function BulkSelectAction<V extends string, T = unknown>({
         running={model.selection.isRunning}
         confirmLabel={confirmLabel ?? copy.confirm}
         cancelLabel={cancelLabel ?? copy.cancel}
-        onConfirm={() => void confirm()}
+        onConfirm={() => void confirm(bulkDescription(title, context))}
         onCancel={cancel}
         body={
           pending === undefined || fixed === undefined

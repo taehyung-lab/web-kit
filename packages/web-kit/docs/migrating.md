@@ -12,6 +12,8 @@
 - `prepare`는 전송 시도마다가 아니라 요청 하나에 한 번 불린다. 재전송은 첫 시도의 운영 헤더를 그대로 쓴다. `prepare` 안에서 Authorization을 읽던 코드는 더 이상 토큰을 볼 수 없다.
 - 재발급을 기다리는 사이 로그아웃·계정 교체가 있었으면 원 요청(조회 포함)을 다시 보내지 않고 `cancelled`로 끝낸다. 이전에는 새 로그인 토큰으로 한 번 보낸 뒤 응답을 버렸다.
 
+화면을 떠난 뒤 끝난 실패의 알림(`onFailure`의 두 번째 인자)에 선택 필드 `action`(`ActionDescription`: `label` 작업 이름, `describe(failure)` 그 창의 실패 문구)이 생겼다. 확인창·일괄 작업의 `confirm(action)`과 `selection.run(work, action)`이 넘기며, registry `ConfirmationDialog`·`BulkAction`·`BulkSelectAction`은 제목과 그 창의 실패 문구로 자동으로 넘긴다. 복사본을 쓰는 프로젝트는 새 원본과 비교해 `dialog.tsx`·`list/list-actions.tsx`의 `confirm(...)` 호출을 옮긴다. 넘기지 않으면 이전과 같다.
+
 보장은 [web-kit-http](../skills/web-kit-http/SKILL.md), 결정 이유는 [응답 결정](../references/docs/decisions/0003-request-response-failure.md)에 있다.
 
 ## 11.0.0-rc.1

@@ -1197,6 +1197,33 @@ it('실행 수명을 연결하지 않은 앱: 일괄 작업 중 부품이 내려
   await expect(running).rejects.toBe(failure);
 });
 
+it('선택 실행에 넘긴 작업 설명은 방문이 바뀐 뒤 끝난 실패의 알림에 실린다', async () => {
+  const reports: unknown[] = [];
+  const lifetime = createLifetime({ onFailure: (_failure, report) => { reports.push(report); return 'local'; } });
+  client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 60_000 } } });
+  render(
+    <QueryClientProvider client={client}>
+      <LifetimeProvider lifetime={lifetime}>
+        <Harness definition={makeDefinition()} initial={{}} fetchRows={async () => page('1', '2')} />
+      </LifetimeProvider>
+    </QueryClientProvider>,
+  );
+  await flush();
+  act(() => latest.selection.toggleRow('1', true));
+  const action = { label: '사용상태 변경' };
+  let reject!: (reason: unknown) => void;
+  let running!: Promise<unknown>;
+  act(() => {
+    running = latest.selection.run(() => new Promise<{ completedIds: string[] }>((_, fail) => { reject = fail; }), action);
+  });
+  act(() => lifetime.leave());
+  await act(async () => {
+    reject(new RequestFailure({ kind: 'server-error' }));
+    await running.catch(() => undefined);
+  });
+  expect(reports).toEqual([{ place: 'action', here: false, action }]);
+});
+
 it('결과 불명 뒤에는 그 뒤에 서버에서 받은 행만 고를 수 있다: 방문이 바뀌면 실패 안내는 지워지고, 스스로 다시 받아 답이 온 뒤에 풀린다', async () => {
   const lifetime = createLifetime();
   client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 60_000 } } });

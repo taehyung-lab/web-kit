@@ -289,6 +289,12 @@ export function ConfirmationDialog<T, F>({
   const completionMessage = screenCompletion ?? defaults.completionMessage;
   const retryLabel = screenRetry ?? defaults.retryLabel;
   const { state, covered, confirm, close } = confirmation;
+  // 화면을 떠난 뒤 실패하면 앱이 "무슨 작업의 어떤 실패"인지 알리도록, 제목과 이 창의 실패 문구를 실행에 넘긴다.
+  // 떠난 뒤의 실패는 onError를 거치지 않은 원래 실패라 이 창의 문구 함수에 그대로 넘긴다.
+  const action =
+    typeof props.title === 'string'
+      ? { label: props.title, describe: (failure: unknown) => renderFailure(failure as F) }
+      : undefined;
   return (
     <ConfirmDialog
       {...props}
@@ -299,7 +305,7 @@ export function ConfirmationDialog<T, F>({
       }
       open={state.kind === 'open' && !covered}
       pending={state.kind === 'open' && state.pending}
-      onConfirm={() => void confirm()}
+      onConfirm={() => void confirm(action)}
       onCancel={close}
     >
       {state.kind === 'open' && state.completed && completionMessage !== undefined
