@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "version": "11.0.0-rc.1",
-  "sourceRef": "v11.0.0-rc.1",
-  "sourceCommit": "1c6b1b9e37c2d0aa775004ae015b42ce190650b4",
+  "version": "12.0.0-rc.1",
+  "sourceRef": "v12.0.0-rc.1",
+  "sourceCommit": "876c3b166249b3ac2e5cd1bb74c6acb7115d5709",
   "sourceWorkingTree": "clean",
   "shadcn": "4.19.1",
   "method": "shadcn@4.19.1 add; installation recorded after review",
