@@ -31,6 +31,12 @@ const L = List.of<typeof declaration>();
 <L.FilterDetails names={['words', 'states', 'one', 'dates']}>Details</L.FilterDetails>;
 // @ts-expect-error 기간의 주소 키 from은 칸 이름이 아니다
 <L.FilterDetails names={['from']}>Details</L.FilterDetails>;
+// @ts-expect-error 페이지 주소 키는 필터 칸이 아니다
+<L.FilterDetails names={['page']}>Details</L.FilterDetails>;
+// @ts-expect-error 정렬 주소 키는 필터 칸이 아니다
+<L.FilterDetails names={['sort']}>Details</L.FilterDetails>;
+// @ts-expect-error 페이지 칸 이름(paging)도 필터 칸이 아니다
+<L.FilterDetails names={['paging']}>Details</L.FilterDetails>;
 // 직접 선언한 칸(종류 선언이 아닌 칸)은 이름이 곧 주소 키라 그 이름으로 쓴다.
 const custom = listSearch({
   policy: definePolicy({ keys: { page: 'page', pageSize: 'size', sort: 'sort', order: 'order' }, paging: { sizes: [20], defaultSize: 20 }, sortFirst: 'desc', keywords: { codec: arrayKeywordCodec, pending: 'include' }, choices: { format: 'array' }, dateRange: { entry: 'paired', keys: { type: 'type', from: 'from', to: 'to' } } }),
@@ -38,6 +44,8 @@ const custom = listSearch({
 });
 const C = List.of<typeof custom>();
 <C.FilterDetails names={['groupIds']}>Details</C.FilterDetails>;
+// @ts-expect-error 직접 선언한 목록에서도 보기 수 키는 필터 칸이 아니다
+<C.FilterDetails names={['size']}>Details</C.FilterDetails>;
 // 표 열의 sort는 선언한 정렬 값이다. 한 열이 두 값을 맡으면 둘 다 선언한 값이어야 한다.
 <L.Table columns={[{ key: 'n', header: 'N', cell: () => null, sort: 'name' }, { key: 'd', header: 'D', cell: () => null, sort: ['created', 'name'] }]} />;
 // @ts-expect-error 선언하지 않은 정렬 값

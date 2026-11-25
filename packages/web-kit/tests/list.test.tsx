@@ -1161,7 +1161,7 @@ it('bulk confirmation reports refusals as values: an empty selection is unavaila
   act(() => binding.open());
   expect(binding.pending?.ids).toEqual(['1']);
   await act(async () => { await binding.confirm(); });
-  expect(binding.refusal).toEqual({ reason: 'check', message: 'blocked by business' });
+  expect(binding.refusal).toEqual({ reason: 'refused', message: 'blocked by business' });
   expect(binding.failure).toBeUndefined();
   act(() => binding.dismiss());
   expect(binding.refusal).toBeUndefined();

@@ -163,8 +163,8 @@ export type SearchMetaEntry =
   | { readonly kind: 'keywords'; readonly maxTotal?: number; readonly targets: readonly string[]; readonly split?: string; readonly pending: 'include' | 'exclude' }
   | { readonly kind: 'choices'; readonly key: string; readonly values: readonly string[]; readonly multiple: boolean }
   | { readonly kind: 'dateRange'; readonly keys: DateKeys; readonly types: readonly string[] }
-  | { readonly kind: 'paging'; readonly sizes: readonly number[] }
-  | { readonly kind: 'sort'; readonly values: readonly string[] };
+  | { readonly kind: 'paging'; readonly keys: { readonly page: string; readonly size: string }; readonly sizes: readonly number[] }
+  | { readonly kind: 'sort'; readonly keys: { readonly sort: string; readonly order: string }; readonly values: readonly string[] };
 export type SearchMeta = Readonly<Record<string, SearchMetaEntry>>;
 
 /** 선언의 이름·종류·허용값을 UI 타입까지 보존한다. 실행 시 meta와 같은 모양이다. */
@@ -174,8 +174,8 @@ export type ListSearchMeta<F, P extends ListSearchPolicy> = {
     : F[N] extends ServerChoicesKind ? Extract<SearchMetaEntry, { kind: 'serverChoices' }>
     : F[N] extends ChoicesKind<infer T, infer M> ? { readonly kind: 'choices'; readonly key: N; readonly values: readonly T[]; readonly multiple: M }
     : F[N] extends DateRangeKind<infer T, infer K> ? { readonly kind: 'dateRange'; readonly keys: KeysOf<K, P>; readonly types: readonly T[] }
-    : F[N] extends PagingKind<infer S> ? { readonly kind: 'paging'; readonly sizes: readonly ([S] extends [never] ? P['paging']['sizes'][number] : S)[] }
-    : F[N] extends SortKind<infer S> ? { readonly kind: 'sort'; readonly values: readonly S[] }
+    : F[N] extends PagingKind<infer S> ? { readonly kind: 'paging'; readonly keys: { readonly page: P['keys']['page']; readonly size: P['keys']['pageSize'] }; readonly sizes: readonly ([S] extends [never] ? P['paging']['sizes'][number] : S)[] }
+    : F[N] extends SortKind<infer S> ? { readonly kind: 'sort'; readonly keys: { readonly sort: P['keys']['sort']; readonly order: P['keys']['order'] }; readonly values: readonly S[] }
     : never;
 };
 
@@ -343,7 +343,7 @@ export function listSearch<const P extends ListSearchPolicy, const F extends Rec
         });
         put(policy.keys.pageSize, { schema: schema((raw) => (typeof raw === 'number' && sizes.includes(raw) ? { value: raw } : FAIL)), default: defaultSize });
         view = { ...view, page: policy.keys.page, size: policy.keys.pageSize };
-        meta[name] = { kind: 'paging', sizes };
+        meta[name] = { kind: 'paging', keys: { page: policy.keys.page, size: policy.keys.pageSize }, sizes };
         break;
       }
       case 'sort': {
@@ -351,7 +351,7 @@ export function listSearch<const P extends ListSearchPolicy, const F extends Rec
         put(policy.keys.sort, { schema: schema((raw) => (typeof raw === 'string' && values.includes(raw) ? { value: raw } : FAIL)), default: entry.default });
         put(policy.keys.order, { schema: schema((raw) => (raw === 'asc' || raw === 'desc' ? { value: raw } : FAIL)), default: entry.order });
         view = { ...view, sort: policy.keys.sort, order: policy.keys.order };
-        meta[name] = { kind: 'sort', values };
+        meta[name] = { kind: 'sort', keys: { sort: policy.keys.sort, order: policy.keys.order }, values };
         break;
       }
     }

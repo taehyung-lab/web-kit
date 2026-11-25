@@ -78,7 +78,7 @@ declare function FilterActions({ model: explicitModel, className, children }: {
 } & {
     readonly model?: ListModel;
 }): import("react").JSX.Element;
-/** 접을 수 있는 상세 필터. 접어도 입력은 초안에 남는다. names(칸 이름) 중 확정 값이 있으면 펼친 채 시작한다. */
+/** 접을 수 있는 상세 필터. 접어도 입력은 초안에 남는다. names(칸 이름)에 걸러 내는 확정 조건이 있으면 펼친 채 시작한다. */
 declare function FilterDetails({ model: explicitModel, names, children }: {
     readonly names: readonly string[];
     readonly children: ReactNode;

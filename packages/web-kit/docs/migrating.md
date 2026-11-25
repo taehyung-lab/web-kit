@@ -9,12 +9,13 @@
 | `useList` 옵션 | `search`(주소 원본값) | `urlSearch` |
 | `useList` 옵션 | `selectable` | `isRowSelectable` |
 | `useList` 결과·`ListModel` | `search`(기본값을 채운 확정 조건) | `criteria` |
+| `useList` 결과·`ListModel` | `isSelectable` | `isRowSelectable` |
 | `useListDownload` 대상(`DownloadTarget`)·`DownloadSource` | `search` | `criteria` |
 | `ListStatus` | `{ kind: 'empty' }` | `{ kind: 'empty'; filtered: boolean }` |
 | `ListFilterLayout` 칸 | `label` | `title` |
 | `ListFilterLayout` 칸 | `labels` | `valueLabels` |
 | `listFilterLayout()` 결과 | `detailKeys` | 없음. 상세 칸의 `name`을 `FilterDetails names`에 넘긴다 |
-| `List.FilterDetails`·`useListDetailsBinding` | `keys`(주소 키 목록) | `names`(칸 이름 목록. 기간 칸은 `period` 같은 칸 이름 하나) |
+| `List.FilterDetails`·`useListDetailsBinding` | `keys`(주소 키 목록) | `names`(필터 칸 이름 목록. 기간 칸은 `period` 같은 칸 이름 하나. 선언에 없는 이름·페이지·정렬은 오류) |
 | `List.MultiSelect` | `optionLabels` | `valueLabels` |
 | `List.Period` | `typeLabels` | `valueLabels` |
 | `List.Keywords` | `choiceLabels` | `valueLabels` |
@@ -26,13 +27,15 @@
 | `BulkAction`·`BulkSelectAction` | `reportResult` | `resultDialog` |
 | `BulkAction`·`BulkSelectAction`·`useBulkConfirmation` | `check` | `refusalReason` |
 | `useBulkConfirmation` | 옵션 `value`(사용자가 고른 값)·반환 `pending.value` | 옵션 `choice`·반환 `pending.choice` |
+| `BulkRefusal`(일괄 작업 거절 사유) | `{ reason: 'check', message }` | `{ reason: 'refused', message }` |
 | 일괄 작업 `run`의 반환 | `{ completedIds, value? }` | `{ completedIds, details? }`(`BulkRunResult`) |
 | `onCompleted`·결과 창이 받는 값 | `{ completedIds, value? }` | `{ requestedIds, completedIds, details? }`(`BulkResult`) |
 | 목록 문구 | `empty` 하나 | `empty`(조건 없이 0건) + 새 `noMatches`(조건이 걸린 0건, 선택 키) |
 
 - `run`의 결과에 요청 건수를 따로 싣고 있었다면 지운다. 결과의 `requestedIds`는 확인창에 고정한 요청 행이다.
 - 0건 문구가 "조건에 맞는 결과가 없습니다"처럼 조건을 전제했다면 그 문구를 `noMatches`로 옮기고 `empty`에는 조건 없이 0건일 때의 문구를 준다. `filtered`의 판단 규칙은 web-kit-list 「조회 상태」가 정본이다.
-- 적합성 검사에 `list-empty-filtered`가 더해졌다. 새 후보의 검사 연결로 다시 실행한다.
+- 상세검색(`FilterDetails`)은 처음 닫히고, 접힌 칸에 걸러 내는 확정 조건이 있을 때만 펼친 채 시작한다(빈 결과의 `filtered`와 같은 칸 규칙). 이전에는 값이 하나라도 있으면 펼쳤으므로, 기간 기준(type)에 기본값이 있는 기간 칸이나 기본값만 든 칸은 이제 닫힌 채 시작한다.
+- 적합성 검사에 `list-empty-filtered`·`list-details-period`가 더해지고, `G100`은 기본값만 있는 상세 칸이 닫힌 채 시작하는지 확인한다. 새 후보의 검사 연결로 다시 실행한다.
 
 ## 10.0.0-rc.1
 

@@ -568,7 +568,7 @@ export function useList<
     /** 행 식별. 표가 같은 규칙을 다시 받지 않도록 낸다. */
     rowId: options.rowId,
     /** 업무상 선택할 수 있는 행인지(isRowSelectable을 선언했을 때만). 표의 선택 칸 표시가 이것을 읽는다. */
-    isSelectable: options.isRowSelectable,
+    isRowSelectable: options.isRowSelectable,
     checks: Object.fromEntries(Object.entries(definition.fields).map(([name, field]) => [name, field.check])),
     status,
     /** 보여 줄 행. isCurrent가 false면 이전 조건이거나 사용자 검색 응답 대기 중인 읽기용 결과다. */

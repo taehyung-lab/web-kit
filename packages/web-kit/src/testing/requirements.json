@@ -219,7 +219,8 @@
       "list-choice-status",
       "list-choice-search",
       "keyword-separators",
-      "list-empty-filtered"
+      "list-empty-filtered",
+      "list-details-period"
     ],
     "connections": [
       "list-ui.test.tsx"

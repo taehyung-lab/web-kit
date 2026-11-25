@@ -8,7 +8,8 @@ import { z } from 'zod';
 import { createLifetime, LifetimeProvider, type Lifetime } from '../../lifetime';
 import { useListDownload, type DownloadTarget } from '../../list/list-download';
 import type * as Contract0 from '../contracts/list-ui';
-import { defineSearch, type SearchDefinition } from '../../search/fields';
+import { connectSearch, defineSearch, type SearchDefinition } from '../../search/fields';
+import { arrayKeywordCodec, dateRange, definePolicy, listSearch, paging } from '../../search/list-search';
 import type * as Contract2 from '../contracts/ui';
 import { useList, type ListPage } from '../../list/use-list';
 import { conformanceTitle, type ConformanceTarget } from '../target.mjs';
@@ -473,7 +474,7 @@ it(title('G099', '키워드 대상이 늦게 도착해도 현재 선택지로 �
   await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ keywords: [{ field: 'name', value: 'hello' }] })));
 });
 
-it(title('G100', '상세 기본 조건은 초기화 뒤에도 보이고 접어도 미확정 입력은 보존한다'), () => {
+it(title('G100', '상세는 확정 조건이 없으면 닫힌 채 시작하고(초기화 뒤에도), 접어도 미확정 입력은 보존한다'), () => {
   const def = defineSearch({ fields: { q: { schema: z.string(), default: 'default' } } });
   function App() {
     const [url, setUrl] = useState(() => def.validateSearch({}));
@@ -503,14 +504,60 @@ it(title('G100', '상세 기본 조건은 초기화 뒤에도 보이고 접어�
     </QueryClientProvider>,
   );
   const toggle = screen.getByRole('button', { name: '상세 검색' });
-  expect(toggle.getAttribute('aria-expanded')).toBe('true');
+  // 기본값은 걸러 내는 확정 조건이 아니다(종류 정보가 없는 칸은 기본값과 다를 때 조건).
+  expect(toggle.getAttribute('aria-expanded')).toBe('false');
+  fireEvent.click(toggle);
   fireEvent.change(screen.getByRole('textbox', { name: '상세 조건' }), { target: { value: 'draft' } });
   fireEvent.click(toggle);
   fireEvent.click(toggle);
   expect((screen.getByRole('textbox', { name: '상세 조건' }) as HTMLInputElement).value).toBe('draft');
   fireEvent.click(screen.getByRole('button', { name: '초기화' }));
-  expect(toggle.getAttribute('aria-expanded')).toBe('true');
+  expect(toggle.getAttribute('aria-expanded')).toBe('false');
+  fireEvent.click(toggle);
   expect((screen.getByRole('textbox', { name: '상세 조건' }) as HTMLInputElement).value).toBe('default');
+});
+
+it.each([
+  [{}, 'false'],
+  [{ dateType: 'updated' }, 'false'],
+  [{ from: '2026-03-01', to: '2026-03-31' }, 'true'],
+])(title('list-details-period', '기간 칸이 상세에 있으면 날짜가 없을 때 닫히고(기간 기준만 있어도) 날짜가 있으면 펼친 채 시작한다 %j'), (initial, expanded) => {
+  const def = connectSearch(listSearch({
+    policy: definePolicy({
+      keys: { page: 'page', pageSize: 'size', sort: 'sort', order: 'order' }, paging: { sizes: [20], defaultSize: 20 }, sortFirst: 'desc',
+      keywords: { codec: arrayKeywordCodec, pending: 'exclude' }, choices: { format: 'array' },
+      dateRange: { entry: 'paired', keys: { type: 'dateType', from: 'from', to: 'to' } },
+    }),
+    fields: { period: dateRange({ types: ['created', 'updated'], defaultType: 'created' }), paging: paging() },
+  }));
+  function App() {
+    const [url, setUrl] = useState(() => def.validateSearch(initial));
+    const list = useList({
+      definition: def,
+      urlSearch: url,
+      navigate: (next) => setUrl(next),
+      query: (full) => ({ queryKey: ['detail-period', full], queryFn: async () => ({ rows: [] as Row[], total: 0 }) }),
+      rowId: (row) => row.id,
+    });
+    return (
+      <List model={list}>
+        <List.Filter>
+          <List.FilterDetails names={['period']}>
+            <List.Period from="from" to="to" label="기간" />
+          </List.FilterDetails>
+          <List.FilterActions />
+        </List.Filter>
+      </List>
+    );
+  }
+  const client = new QueryClient();
+  clients.push(client);
+  render(
+    <QueryClientProvider client={client}>
+      <App />
+    </QueryClientProvider>,
+  );
+  expect(screen.getByRole('button', { name: '상세 검색' }).getAttribute('aria-expanded')).toBe(expanded);
 });
 
 it(title('G101', '반례: 필터를 왼쪽으로 옮기는 배치만 바꿔도 조회·정렬·선택 연결 코드는 같다'), async () => {

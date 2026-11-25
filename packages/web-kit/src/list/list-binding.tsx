@@ -12,6 +12,7 @@ import type { FieldCheck, ViewKeys } from '../search/fields';
 import type { SearchMeta, SearchMetaEntry } from '../search/list-search';
 import type { DraftIssue, KeywordInput, ListStatus } from './use-list';
 import { useVisit } from '../lifetime';
+import { filterFieldKeys, isFieldFiltered } from './filtered';
 
 /** 기본 UI가 읽는 목록 상태(useList 결과와 같은 모양). */
 export interface ListModel<Row = any, D extends object = any> {
@@ -23,7 +24,7 @@ export interface ListModel<Row = any, D extends object = any> {
   readonly meta?: SearchMeta;
   /** useList의 rowId·isRowSelectable. 표가 행 규칙을 다시 받지 않도록 낸다. */
   readonly rowId?: (row: Row) => string;
-  readonly isSelectable?: (row: Row) => boolean;
+  readonly isRowSelectable?: (row: Row) => boolean;
   readonly draft: D;
   readonly draftSearch?: Readonly<Record<string, unknown>>;
   readonly issues: readonly DraftIssue[];
@@ -110,23 +111,15 @@ export function useListFilterBinding(model: ListModel) {
 }
 
 /**
- * 칸 이름 하나가 쓰는 주소 키. 기간 칸은 시작·끝(기간 기준이 있으면 기준까지) 키를 갖고,
- * 그 밖의 칸과 listSearch 없이 선언한 칸은 이름이 곧 주소 키다.
+ * 검색 확정·초기화·검증 사건에 맞춰 상세 필터를 펼친다. names는 접힌 칸의 이름(다른 부품의 name)이다.
+ * 처음에는 닫히고, 그 칸들의 확정 조건에 걸러 내는 값이 있으면(빈 결과의 filtered와 같은 칸 규칙, 기간 기준만 있으면 아님) 펼친 채 시작한다.
+ * 선언에 없는 이름·페이지·정렬·기간의 주소 키는 칸 이름이 아니라 오류다.
  */
-function searchKeysOf(model: ListModel, name: string): readonly string[] {
-  const entry = model.meta?.[name];
-  if (entry?.kind !== 'dateRange') return [name];
-  return entry.types.length > 0 ? [entry.keys.from, entry.keys.to, entry.keys.type] : [entry.keys.from, entry.keys.to];
-}
-
-/** 검색 확정·초기화·검증 사건에 맞춰 상세 필터를 펼친다. names는 접힌 칸의 이름이고 주소 키는 선언에서 푼다. */
 export function useListDetailsBinding(model: ListModel, names: readonly string[]) {
-  const keys = names.flatMap((name) => searchKeysOf(model, name));
-  const hasValue = (value: unknown) =>
-    value !== undefined && value !== null && value !== '' && value !== false && (!Array.isArray(value) || value.length > 0);
+  const keys = names.flatMap((name) => filterFieldKeys(model, name));
   const invalid = keys.some((key) => model.issues.some((issue) => issue.field === key));
   const signature = JSON.stringify([keys.map((key) => model.criteria[key]), model.resetVersion]);
-  const active = keys.some((key) => hasValue(model.criteria[key]));
+  const active = names.some((name) => isFieldFiltered(model, name, model.criteria));
   const [open, setOpen] = useState(active);
   const [seen, setSeen] = useState(signature);
   const id = useId();
@@ -143,8 +136,8 @@ export function useListDetailsBinding(model: ListModel, names: readonly string[]
   return { open, id, toggle: () => setOpen(!open) };
 }
 
-/** 일괄 작업을 요청 없이 거절한 이유. 고른 행이 없거나(no-selection) 업무 거절 사유(refusalReason)가 있다(check, message는 그 사유). */
-export type BulkRefusal = { readonly reason: 'no-selection' } | { readonly reason: 'check'; readonly message: string };
+/** 일괄 작업을 요청 없이 거절한 이유. 고른 행이 없거나(no-selection) 업무가 거절했다(refused, message는 refusalReason이 돌려준 사유). */
+export type BulkRefusal = { readonly reason: 'no-selection' } | { readonly reason: 'refused'; readonly message: string };
 
 /** 업무 실행(run)이 돌려주는 값. completedIds는 실제로 처리된 행, details는 화면에 보일 업무 결과(실패 사유 등)다. */
 export interface BulkRunResult<T = unknown> {
@@ -197,7 +190,7 @@ export function useBulkConfirmation<T, V = undefined>({ model, run, refusalReaso
   if (!running.current && model.selection.failure === undefined && pending !== undefined && stale(pending, model)) setPending(undefined);
   const checked = (ids: readonly string[], input: V | undefined): BulkRefusal | undefined => {
     const message = input === undefined ? refusalReason?.(ids) : refusalReason?.(ids, input);
-    return message ? { reason: 'check', message } : undefined;
+    return message ? { reason: 'refused', message } : undefined;
   };
 
   /** 마지막 순간에도 결과·선택 snapshot과 업무 조건을 다시 확인한다. */

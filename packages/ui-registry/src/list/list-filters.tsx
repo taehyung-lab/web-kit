@@ -74,7 +74,7 @@ function FilterActions({
 
 /**
  * 접을 수 있는 상세 필터. 접어도 입력은 초안에 남는다. names는 접힌 칸의 이름(다른 부품의 name과 같은 이름)이고,
- * 그 칸 중 확정 값이 있으면 펼친 채 시작한다. 기간 칸의 시작·끝·기준 주소 키는 선언에서 푼다.
+ * 처음에는 닫히고, 그 칸에 걸러 내는 확정 조건이 있으면(빈 결과의 filtered와 같은 칸 규칙) 펼친 채 시작한다. 기간 칸의 주소 키는 선언에서 푼다.
  */
 function FilterDetails({
   model: explicitModel,
