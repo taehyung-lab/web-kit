@@ -223,8 +223,9 @@ export function createHttp<C extends Credentials>({
       const now = session.current()?.credentials.accessToken;
       if (now !== undefined && now !== token) {
         // 조회는 토큰이 새로 바뀔 때마다 다시 보낸다. 쓰기는 이미 한 번 다시 보냈으면 멈춘다(반영 안 됨).
+        // 쓰기는 HTTP 401일 때만 다시 보낸다. 업무 실행 전 거절이라는 근거(E1)는 401에만 있고, 200 봉투의 종료 행은 업무 뒤일 수 있다.
         if (read) return send(config, generation, resent);
-        if (resendable) {
+        if (resendable && failure.status === 401) {
           if (resent) throw failure;
           return send(config, generation, true);
         }

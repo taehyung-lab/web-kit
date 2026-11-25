@@ -417,6 +417,22 @@ it('H19 재발급을 기다리는 사이 로그인이 바뀌면 원 요청을 �
   }
 });
 
+it('H21 켜져 있어도 HTTP 401이 아닌 인증 거절(200 봉투의 종료 행)에는 토큰이 회전돼 있어도 쓰기를 다시 보내지 않는다', async () => {
+  // 업무 실행 전 거절이라는 근거(E1)는 HTTP 401에만 있다. 200 봉투의 종료 코드는 업무 뒤에 나왔을 수 있다.
+  const write = rotatingSetup({ 0: 't-other' }, true);
+  replies = [ok(null, 4999), ok('must-not-send')];
+  await expect(write.http.requestData({ url: '/items', method: 'POST' })).rejects.toMatchObject({ kind: 'business', resultUnknown: true });
+  expect(sent.map((request) => request.authorization)).toEqual(['Bearer t1']);
+  expect(write.session.current()).not.toBeNull();
+
+  // 조회는 기존처럼 현재 토큰으로 다시 보낸다.
+  const read = rotatingSetup({ 0: 't-other' }, true);
+  replies = [ok(null, 4999), ok('done')];
+  sent = [];
+  await expect(read.http.requestData({ url: '/items' })).resolves.toBe('done');
+  expect(sent.map((request) => request.authorization)).toEqual(['Bearer t1', 'Bearer t-other']);
+});
+
 it('H20 재전송은 첫 시도의 운영 헤더를 그대로 쓴다(prepare는 요청 하나에 한 번)', async () => {
   reissue = vi.fn(async () => ({ accessToken: 't2' }));
   const session = createSession<Credentials>({ store: store(), reissue: (c) => reissue(c) });
