@@ -155,7 +155,7 @@ function BulkConfirm({
           body
         ) : null}
         {errorText !== null && (
-          <p role="alert" className="text-destructive text-sm">
+          <p role="alert" className="text-sm text-destructive">
             {errorText}
           </p>
         )}
@@ -170,7 +170,7 @@ function BulkConfirm({
         </div>
       )}
       {!open && errorText !== null && (
-        <p role="alert" className="text-destructive text-sm">
+        <p role="alert" className="text-sm text-destructive">
           {errorText}
         </p>
       )}
@@ -428,7 +428,7 @@ function Download({
       {/* 진행 중에는 종류·버튼을 잠그고 옆에 로딩 표시만 둔다. 문구는 화면 낭독기에만 읽힌다. */}
       {running && <Pending label={copy.downloading} />}
       {failure !== null && (
-        <span role="alert" className="text-destructive text-sm">
+        <span role="alert" className="text-sm text-destructive">
           {failure}
         </span>
       )}
