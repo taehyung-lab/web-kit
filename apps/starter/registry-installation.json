@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "version": "8.4.0-rc.4",
   "sourceRef": "v8.4.0-rc.4",
-  "sourceCommit": "e3f230c2a6c2c9bea33f4c0f27b75a067646e9c3",
+  "sourceCommit": "c33ff3be98e6ffabe0ae7cda35ddb7d0dfdcc195",
   "sourceWorkingTree": "clean",
   "shadcn": "4.19.1",
   "method": "shadcn@4.19.1 add; installation recorded after review",
