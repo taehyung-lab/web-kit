@@ -15,7 +15,8 @@ export default defineConfig({
     env: { VITE_API_BASE_URL: '', VITE_API_TIMEOUT_MS: '5000' },
     // Node 25+ 기본 Web Storage 전역이 jsdom localStorage를 가린다. Node 24(CI 기준)에서도 같은 조건으로 끈다.
     execArgv: ['--no-experimental-webstorage'],
-    setupFiles: ['./src/test/setup.ts'],
+    // render-watch(다시 그린 줄 세기)는 React DOM보다 먼저 실행돼야 해서 맨 앞에 둔다.
+    setupFiles: ['@boosterlab/web-kit/testing/render-watch', './src/test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
   },
 });
