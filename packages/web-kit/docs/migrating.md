@@ -1,5 +1,10 @@
 # 시험판에서 옮겨 오기
 
+## 9.0.0-rc.1
+
+- registry `record`의 조회 상태 루트 `<Detail>`을 `<RecordView>`로 옮긴다. 같은 파일에서 가져오며 함수형 자식과 상세용 `Detail.Fields`·`Detail.Field`·`Detail.History`는 계속 쓴다. 문구 설정은 `RecordViewDefaults`·`RecordViewMessages`·`RenderRecordViewFailure`·`RecordViewFailurePlace`로 바꾼다. 적합성 검사에는 `checkRecordUiConformance({ RecordView, Detail }, target)`을 넘긴다.
+- registry `list`의 `List.Detail`은 `List.FilterDetails`로 옮긴다. `List.of()`로 선언한 검색 키 검사를 계속 쓰며 독립 이름 `FilterDetails`도 같은 구현을 쓴다. 폼 없는 작업은 `ConfirmationDialog`에 `useConfirmationState` 결과를 연결한다.
+
 5.0.0 첫 정식 기준으로 옮길 때는 사용하던 시험판에 따라 다음 연결을 함께 이전한다. 현재 검사용 후보는 7.0.0-rc.1이다. 조건부 칸은 web-kit-form의 같은 조건 함수·schema·빈 값 선언을 함께 연결한다.
 
 - **목록 선택 칸의 전체 규칙·검색 그룹·선택 칸 정리(rc.6 → rc.7, 복사본 교정 필요: `list`·`choice`·`form`):** ① 다중이고 필수가 아니며 서버 검색이 아닌 `List.Choice`는 비면 전체가 체크로 보이고, 모든 선택지를 고르면 `[]`로 접힌다(이전에는 모두 고르면 모든 값이 배열로 남고 비면 아무것도 체크되지 않았다). 아무것도 체크되지 않은 상태는 없다: 마지막 하나를 해제하거나 전체를 지우는 변경은 무시한다. 평면 `MultiSelect`도 같다(이전에는 마지막 하나를 해제하면 전체가 체크됐다). 새 공개 이름 `commitFilterSelection`(`/search`)·`toggleWithin`(루트). 필수인 평면 `MultiSelect`는 이제 필수 `List.Choice`와 같다: 빈 값이 전체가 아니라 미선택으로 보이고 모두 고르면 값을 접지 않는다(이전에는 필수여도 빈 값이 전체로 보였다). `useListChoiceBinding`은 네 번째 인자(서버 검색 여부)와 반환 `ready`(값 정리를 해도 되는 선택지)를 더했고, `useChoiceBinding`은 `groupState`를 더했다. 프로젝트가 "모두 고름" 배열을 구별해 쓰고 있었다면 확인한다. 기존 필수 `List.Choice`와 단일 선택, 서버 검색은 이전과 같다. ② `Choice`의 `appearance="search"`가 가지가 있는 선택지를 그룹 제목과 그룹 체크로 보인다(가지 체크는 그 아래 중첩된 가지까지 모든 leaf를 켜고 끄며, 서버 검색이면 지금 결과의 leaf만 바꾸고 이미 고른 다른 값은 보존한다). ③ `Form.Choice`는 선택지 재시도에 성공하면 준비된 입력으로 포커스를 돌려준다(`Form.Select`와 같다). ④ `ChoiceProps`는 `/choice`의 `ChoiceBindingOptions`에 `appearance`만 더한 타입이다(구조는 같다). ⑤ `Choice`·`Select`의 선택지 지연·실패 자리는 같은 부품을 쓴다(모양은 같다). 새 공개 이름은 `listChoiceValue`(`/list`)와 `viewFilterSelection`(`/search`)이다. 복사본을 직접 고친 프로젝트는 이전/새 원본 차이를 비교해 교정한다.

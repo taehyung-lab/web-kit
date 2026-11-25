@@ -10,28 +10,28 @@ declare const defaultMessages: {
     empty: string;
     historyEmpty: string;
 };
-export type DetailMessages = typeof defaultMessages;
+export type RecordViewMessages = typeof defaultMessages;
 /** 실패가 보이는 자리. load는 내용 없는 실패, missing은 없음·이 조회의 거부, refresh는 내용을 보이는 중 재조회 실패다. */
-export type DetailFailurePlace = 'load' | 'missing' | 'refresh';
+export type RecordViewFailurePlace = 'load' | 'missing' | 'refresh';
 /** 실패 문구. undefined면 키트 기본 문구, null이면 그 자리에 아무것도 그리지 않는다(앱 경계가 이미 알린 401·403 등). */
-export type RenderDetailFailure = (failure: unknown, place: DetailFailurePlace) => ReactNode | null | undefined;
+export type RenderRecordViewFailure = (failure: unknown, place: RecordViewFailurePlace) => ReactNode | null | undefined;
 /**
  * 단건 하나의 상태를 그린다. 준비됨일 때만 children(data)을 그리고, 식별 전환·없음·실패는 useRecord 판정을 그대로 따른다.
  * missing은 없음 안내(무엇이 없는지와 돌아갈 길)다. 재조회 실패는 내용을 지우지 않고 위에 알린다.
  */
-declare function DetailRoot<T>({ state, children, missing, renderFailure, messages, }: {
+export declare function RecordView<T>({ state, children, missing, renderFailure, messages, }: {
     readonly state: RecordState<T>;
     readonly children: (data: T) => ReactNode;
     readonly missing?: ReactNode;
-    readonly renderFailure?: RenderDetailFailure;
-    readonly messages?: Partial<DetailMessages>;
+    readonly renderFailure?: RenderRecordViewFailure;
+    readonly messages?: Partial<RecordViewMessages>;
 }): import("react").JSX.Element;
 /** 라벨·값 항목들의 묶음(dl). */
 declare function Fields({ children, className }: {
     readonly children: ReactNode;
     readonly className?: string;
 }): import("react").JSX.Element;
-/** 라벨·값 한 칸. null·undefined·''만 빈 값 표시('-')이고 0은 그대로 보인다. 값의 의미·마스킹·포맷은 프로젝트가 정한다. */
+/** 라벨·값 한 칸. null·undefined·''·false만 빈 값 표시('-')이고 0은 그대로 보인다. 값의 의미·마스킹·포맷은 프로젝트가 정한다. */
 declare function Field({ label, children }: {
     readonly label: ReactNode;
     readonly children?: ReactNode;
@@ -54,8 +54,8 @@ declare function History({ entries, labels, empty, }: {
     };
     readonly empty?: ReactNode;
 }): import("react").JSX.Element;
-/** 상세 묶음 부품. `<Detail state={useRecord(...)}>{(data) => <Detail.Fields>…</Detail.Fields>}</Detail>` */
-export declare const Detail: typeof DetailRoot & {
+/** 상세 화면의 라벨·값·이력. RecordView 안팎에서 조합한다. */
+export declare const Detail: {
     Fields: typeof Fields;
     Field: typeof Field;
     History: typeof History;

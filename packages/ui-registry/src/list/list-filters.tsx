@@ -73,7 +73,7 @@ function FilterActions({
 }
 
 /** 접을 수 있는 상세 필터. 접어도 입력은 초안에 남는다. keys 중 확정 값이 있으면 펼친 채 시작한다. */
-function Detail({
+function FilterDetails({
   model: explicitModel,
   keys,
   children,
@@ -525,4 +525,14 @@ function FieldMessage({ id, children }: { readonly id: string; readonly children
   );
 }
 
-export { Filter, FilterActions, Detail, Choice, Text, Select, MultiSelect, Period, Keywords };
+export {
+  Filter,
+  FilterActions,
+  FilterDetails,
+  Choice,
+  Text,
+  Select,
+  MultiSelect,
+  Period,
+  Keywords,
+};

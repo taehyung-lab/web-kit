@@ -50,7 +50,7 @@ description: 등록·수정·대화창 폼의 저장·저장 뒤 추가 작업·
 - `DialogDefaults labels={{ close, confirm, cancel, pending }} confirmation?={{ renderFailure?, completionMessage?, retryLabel? }}`: 이 아래 `Dialog`·`ConfirmDialog`·`AlertDialog`(폼·목록 일괄 작업·이탈 확인이 그리는 창 포함)의 기본 버튼·진행 문구와 `ConfirmationDialog`의 실패·완료 문구. 창에 준 `closeLabel`·`confirmLabel`·`cancelLabel`·`pendingLabel`·`renderFailure`·`completionMessage`·`retryLabel`이 그 창에서만 앞선다. 폼 없이 대화창만 설치한 앱도 이것만 둔다.
 - `FormDefaults messages formatError? renderFailure?`: 이 아래 모든 `<Form>`의 문구(`FormMessages` 전체)·칸 오류 해소·실패 문구. `formatError`가 없으면 첫 문자열 오류, `renderFailure`가 없으면 키트 문구(`messages.saveFailed` 등)다. 폼의 확인창도 대화창 부품이므로 `DialogDefaults`도 함께 둔다.
 - `FormGuard messages`: 이탈 확인 문구 전체(`navigate`·`cancel`·`navigationFailed`).
-- 목록·상세의 앱 기본값은 registry `list`의 `ListDefaults`([web-kit-list](../web-kit-list/SKILL.md))·registry `record`의 `DetailDefaults`([web-kit-record](../web-kit-record/SKILL.md))로 같은 자리에 둔다. 이 둘은 일부 문구만 받아도 되며 빠진 키는 키트 기본(한국어) 문구다. 다른 언어 앱은 화면에 보이는 키를 모두 준다.
+- 목록·상세의 앱 기본값은 registry `list`의 `ListDefaults`([web-kit-list](../web-kit-list/SKILL.md))·registry `record`의 `RecordViewDefaults`([web-kit-record](../web-kit-record/SKILL.md))로 같은 자리에 둔다. 이 둘은 일부 문구만 받아도 되며 빠진 키는 키트 기본(한국어) 문구다. 다른 언어 앱은 화면에 보이는 키를 모두 준다.
 - 문구 집합은 모두 전체를 받는다(참조 정리 확인창 `referenceTitle(count)`·`referenceConfirm` 포함). 키트에 문구가 늘면 소비 앱 타입 검사가 실패하므로 빠진 문구가 조용히 다른 언어로 보이지 않는다. 한국어 앱은 복사본이 내보내는 `defaultFormMessages`·`defaultDialogLabels`·`defaultFormGuardMessages`를 그대로 넘긴다.
 - 공급이 없으면 `<Form>`·대화창이 렌더할 때 바로 오류가 난다(`requires <FormDefaults messages>`·`requires <DialogDefaults labels>`). 단위 시험에서 부품만 그릴 때도 같은 공급으로 감싼다.
 - 화면마다 문구·`formatError`·`renderFailure`를 넘기는 연결을 따로 만들지 않는다. 그 화면만 다른 값이 필요할 때만 그 `<Form>`에 준다.
@@ -161,9 +161,9 @@ headless는 화면 배치 없이 상태와 연결 함수만 쓰는 방식이다.
 
 ## 폼 없는 확인 실행
 
-실제 조립 예: [apps/starter/src/features/products/ui/detail/ProductDetailPage.tsx](../../references/apps/starter/src/features/products/ui/detail/ProductDetailPage.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
+실제 조립 예는 starter의 [확인창 복사본 검사](../../references/apps/starter/src/shared/ui/web-kit/checks/dialog.test.tsx.txt)에서 `useConfirmationState`와 `ConfirmationDialog`를 함께 쓰는 부분을 본다. 제목·문구·요청은 프로젝트가 정한다.
 
-삭제·상태 변경처럼 입력 없이 확인만 받는 작업은 `/dialog`의 `useConfirmationState`에 실행 함수와 실패 처리를 연결한다. `request`로 대상을 정하고 `confirm`으로 실행한다. 실행 중에는 재실행·닫기·대상 교체가 막힌다. 성공하면 닫힌다. 실패는 `onError`가 닫기 또는 보이기를 정한다. 표시는 registry `dialog`의 `ConfirmDialog`에 `state`를 연결한다. 삭제면 `progress: 'delete'`를 준다: 실행하는 동안 화면 전체 진행 덮개가 `messages.delete` 문구로 덮고 `covered`가 true이므로 확인창은 `open={state.kind === 'open' && !covered}`로 내린다(확인창 → 덮개 → 이동, 실패하면 덮개가 닫히고 확인창이 실패 문구와 함께 다시 열린다). 상태 변경 등 그 밖의 확인 실행은 선언하지 않는다(확인창 안 진행 표시).
+삭제·상태 변경처럼 입력 없이 확인만 받는 작업은 `/dialog`의 `useConfirmationState`에 실행 함수와 실패 처리를 연결하고, `request`로 대상을 정한다. registry `dialog`의 `<ConfirmationDialog confirmation={confirmation} title={…}>`에 그 결과를 넘기면 열기·닫기, 진행·실패 표시, 확인 버튼을 연결한다. 삭제면 `progress: 'delete'`를 선언한다. 실행 중 화면 전체 진행 덮개가 `messages.delete` 문구로 덮는 동안 확인창은 내려가고, 실패가 이 창에 남는 경우 덮개가 닫히면 확인창과 실패 문구가 다시 보인다. 그 밖의 확인 실행은 덮개를 선언하지 않으며 확인창 안에 진행을 표시한다.
 
 `run`에는 서버 요청을, 선택 `onSuccess`에는 요청 성공 뒤 무효화·알림·화면 이동을 둔다. 후속 처리가 실패하면 결과를 보관하므로 다음 확인은 `onSuccess`만 재실행한다. 이때 `state.completed`가 참이다. 후속 실패 창을 닫았다 다시 열어도 같은 `identity`와 같은 확인 값(`Object.is`, id 같은 안정적인 값 권장)이면 요청 결과를 유지한다. 후속 처리까지 성공하거나 대상이 바뀌면 기록을 버린다. 후속 처리만 재시도할 때는 삭제 덮개 대신 확인창 안 진행 표시를 쓴다. 후속 처리의 여러 단계 중 이미 끝난 알림 등은 소비자가 중복되지 않게 연결한다. `identity`에는 현재 상세 id처럼 대상을 구별하는 값을 준다. 값 변경과 unmount는 이전 확인의 늦은 완료를 무효화하지만 이미 전송한 서버 요청을 취소하지 않는다. `onSuccess`가 기다리는 작업 뒤에 화면 이동·알림을 실행한다면 전달된 `isCurrent()`를 먼저 확인한다. 함수 안에서 시작한 외부 부수효과를 키트가 되돌려 주지는 않는다.
 
