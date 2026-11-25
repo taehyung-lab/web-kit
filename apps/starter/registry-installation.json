@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "version": "8.4.0-rc.4",
-  "sourceRef": "v8.4.0-rc.4",
-  "sourceCommit": "c33ff3be98e6ffabe0ae7cda35ddb7d0dfdcc195",
+  "version": "8.5.0-rc.1",
+  "sourceRef": "v8.5.0-rc.1",
+  "sourceCommit": "bcacef4c16ef258ed0c70eaab7ecdb116b2c89f4",
   "sourceWorkingTree": "clean",
   "shadcn": "4.19.1",
   "method": "shadcn@4.19.1 add; installation recorded after review",
@@ -55,14 +55,14 @@
     },
     {
       "name": "dialog",
-      "artifactHash": "cab8a809a94da36bfd4af745159d876f86c7936e8f080d678790ea839858ec07",
+      "artifactHash": "fea3a89367c0e60cc64b242fa00354986adddab602eabf6de3182ee4228f811c",
       "files": [
         {
           "source": "packages/ui-registry/src/dialog.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/dialog.tsx",
           "installed": "src/shared/ui/web-kit/dialog.tsx",
-          "sourceHash": "fd26ddef1eccc2019ba155fad6f3c61df385ad327b0b7f1adbb1c3a300b5ab3b",
-          "installedHash": "cbd8f2648b9ea63e5c324a032f605c205930006e6ee631ea7b76a13e1eb20574"
+          "sourceHash": "b177103efb0ea9c472adbeea6af95fbea64502f5b4334036d396f7da94ed8c7c",
+          "installedHash": "4d0e90bb748dd8ef6263b8a001013649a51c142ef379248e53654d664fade8df"
         },
         {
           "source": "packages/ui-registry/checks/dialog.test.tsx",
@@ -75,15 +75,15 @@
           "source": "packages/ui-registry/checks/dialog.page.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/checks/dialog.page.tsx",
           "installed": "src/shared/ui/web-kit/checks/dialog.page.tsx",
-          "sourceHash": "03e1413de3545c370e33224000bd31dbf40eb41c6f9866881b556dd7abc0252d",
-          "installedHash": "03e1413de3545c370e33224000bd31dbf40eb41c6f9866881b556dd7abc0252d"
+          "sourceHash": "2ce421035a3437cc8d0f913b19752039559d2c77221d75463b9f4adcb8fa79d7",
+          "installedHash": "2ce421035a3437cc8d0f913b19752039559d2c77221d75463b9f4adcb8fa79d7"
         },
         {
           "source": "packages/ui-registry/checks/dialog.spec.ts",
           "registryTarget": "~/tests/e2e/web-kit/dialog.spec.ts",
           "installed": "tests/e2e/web-kit/dialog.spec.ts",
-          "sourceHash": "9282f61175a9e0b127bc963416475d0ca79dd3036676ab18600816699c3b02e2",
-          "installedHash": "c2f6564b598244cfcfba09d7f3bec0ce57bd0aa5d7a67df1e70ddcd98bccf883"
+          "sourceHash": "671a4b8b7b4bdd30263999a9144e6d5a2148490e0a60e5aaa28d0784179fd771",
+          "installedHash": "671a4b8b7b4bdd30263999a9144e6d5a2148490e0a60e5aaa28d0784179fd771"
         },
         {
           "source": "packages/ui-registry/checks/dialog.html",
@@ -294,7 +294,7 @@
     },
     {
       "name": "list",
-      "artifactHash": "24a01fbbf1b8c4ee965aa54d9b5b954021bc37f0775461feba262c290558154f",
+      "artifactHash": "7839bf91e27a6734f6bf5210720a7603ed21c613c0d4b5fc401d396f46551f1f",
       "files": [
         {
           "source": "packages/ui-registry/src/list.tsx",
@@ -335,8 +335,8 @@
           "source": "packages/ui-registry/src/list/list-actions.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/list/list-actions.tsx",
           "installed": "src/shared/ui/web-kit/list/list-actions.tsx",
-          "sourceHash": "508d4330eebbe8ea5a778c41718d94f570c5c6c4fa03ef9a3e759adfaafed189",
-          "installedHash": "a68025d3f90905ee6fdded86e7c6974adc180238c957ea1dea535e0c9d3074e5"
+          "sourceHash": "1af5762965ef3873b00e88e7c5b88a72e65d0a7febb79b94e9001545cf0a84c8",
+          "installedHash": "b13f6a139c220526fb65cae5aa25f8c268ee16c33cc3282aee37dd90ccc9bbfb"
         }
       ]
     },

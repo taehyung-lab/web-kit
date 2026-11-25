@@ -3,21 +3,21 @@
 // 창·버튼 모양은 프로젝트의 shadcn Dialog·Button이 정하고, 여기서는 열림·닫기 정책·포커스·잠금 연결만 맡는다.
 // 버튼 기본 문구(닫기·확인·취소·처리 중)와 확인 수명 창(ConfirmationDialog)의 실패·완료 문구는 앱 맨 위의 DialogDefaults 한 곳에서 받는다.
 // 화면이 준 문구는 그 창에서만 앞선다.
-import { createContext, useContext, type ReactNode, type RefObject } from 'react';
-import {
-  useDialogBinding,
-  useConfirmBinding,
-  useAcknowledgeBinding,
-} from '@boosterlab/web-kit/dialog';
 import { Button } from '@/shared/ui/button';
 import {
-  Dialog as DialogRoot,
   DialogClose,
   DialogContent,
   DialogFooter,
+  Dialog as DialogRoot,
   DialogTitle,
 } from '@/shared/ui/dialog';
 import type { useConfirmationState } from '@boosterlab/web-kit/dialog';
+import {
+  useAcknowledgeBinding,
+  useConfirmBinding,
+  useDialogBinding,
+} from '@boosterlab/web-kit/dialog';
+import { createContext, useContext, type ReactNode, type RefObject } from 'react';
 import { Pending } from './pending';
 
 /** 대화창 버튼의 앱 기본 문구. pending은 실행 중 진행 표시를 화면 낭독기가 읽는 문구다. */
@@ -148,6 +148,10 @@ export function Dialog({
   );
 }
 
+function focusAcknowledgement(button: HTMLButtonElement | null) {
+  button?.focus();
+}
+
 /** 실행 전 확인. 실행 중(pending)에는 닫기·재실행이 막히고 버튼 옆에 진행 표시가 선다. 승인·취소의 판정은 호출자가 한다. */
 export function ConfirmDialog({
   open,
@@ -160,6 +164,7 @@ export function ConfirmDialog({
   pending = false,
   pendingLabel,
   returnFocus,
+  acknowledge = false,
 }: {
   readonly open: boolean;
   readonly title: ReactNode;
@@ -172,6 +177,8 @@ export function ConfirmDialog({
   /** 실행 중 표시의 화면 낭독기 문구. */
   readonly pendingLabel?: string;
   readonly returnFocus?: RefObject<HTMLElement | null>;
+  /** 같은 창에서 실행 결과를 확인한다. [확인]만 남고 닫기 요청은 막는다. */
+  readonly acknowledge?: boolean;
 }) {
   const labels = useDialogLabels('ConfirmDialog');
   const binding = useConfirmBinding({ pending, onConfirm, onCancel });
@@ -180,21 +187,28 @@ export function ConfirmDialog({
       open={open}
       title={title}
       role="alertdialog"
-      closable={binding.closable}
+      closable={!acknowledge && binding.closable}
       onClose={binding.cancel}
       returnFocus={returnFocus}
       footer={
         <>
+          {!acknowledge && (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={binding.locked}
+              onClick={binding.cancel}
+            >
+              {cancelLabel ?? labels.cancel}
+            </Button>
+          )}
           <Button
+            ref={acknowledge ? focusAcknowledgement : undefined}
             type="button"
-            variant="outline"
             disabled={binding.locked}
-            onClick={binding.cancel}
+            onClick={binding.confirm}
           >
-            {cancelLabel ?? labels.cancel}
-          </Button>
-          <Button type="button" disabled={binding.locked} onClick={binding.confirm}>
-            {confirmLabel ?? labels.confirm}
+            {acknowledge ? labels.confirm : (confirmLabel ?? labels.confirm)}
           </Button>
           {pending ? <Pending label={pendingLabel ?? labels.pending} /> : null}
         </>
