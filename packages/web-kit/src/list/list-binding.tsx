@@ -131,16 +131,22 @@ export function useListDetailsBinding(model: ListModel, keys: readonly string[])
   return { open, id, toggle: () => setOpen(!open) };
 }
 
-/** 확인 당시 결과·선택을 고정하고 실행 직전 검증과 단일 실행을 보장한다. */
+/** 일괄 작업을 요청 없이 거절한 이유. 고른 행이 없거나(no-selection) 업무 check가 거절했다(check, message는 check가 돌려준 사유). */
+export type BulkRefusal = { readonly reason: 'no-selection' } | { readonly reason: 'check'; readonly message: string };
+
 /**
- * emptyRefusal을 주면 선택한 행이 없어도 실행 버튼을 잠그지 않고, 눌렀을 때 요청 없이 그 사유로 거절한다(업무 check의 거절과 같은 자리 error에 문자열로 남는다).
- * 주지 않으면 선택한 행이 없는 동안 locked다. 거절을 확인한 뒤에는 dismiss로 거절과 열려 있던 확인을 함께 닫는다.
+ * 확인 당시 결과·선택을 고정하고 실행 직전 검증과 단일 실행을 보장한다.
+ * 상태만 값으로 돌려주고 보이는 방식(버튼 잠금·알림 창·문구)은 복사형 UI가 정한다.
+ * - locked: 지금은 어떤 경우에도 실행할 수 없다(이전 결과 표시 중·실행 중·반영 여부 확인 필요).
+ * - unavailable: 눌러도 요청 없이 거절될 이유(고른 행 없음). 잠글지, 눌렀을 때 refusal로 알릴지는 UI가 고른다.
+ * - refusal: open·confirm이 요청 없이 거절한 이유(업무 check 포함). failure: 실행 뒤 실패.
  * 열린 확인·거절·실패 안내는 그 방문의 것이다. 방문이 바뀌면(lifetime.ts) 닫는다.
  * onCompleted는 실행 결과가 이 화면에 전달될 때만 부른다(부분 결과 안내 등). 실행 중 방문이 바뀌었으면 부르지 않는다.
  */
-export function useBulkConfirmation<T, V = undefined>({ model, run, check, value, emptyRefusal, onCompleted }: { model: ListModel; run: (ids: readonly string[], value?: V) => Promise<{ completedIds: readonly string[]; value?: T }>; check?: (ids: readonly string[], value?: V) => string | undefined; value?: V; emptyRefusal?: string; onCompleted?: (result: { completedIds: readonly string[]; value?: T }) => void }) {
+export function useBulkConfirmation<T, V = undefined>({ model, run, check, value, onCompleted }: { model: ListModel; run: (ids: readonly string[], value?: V) => Promise<{ completedIds: readonly string[]; value?: T }>; check?: (ids: readonly string[], value?: V) => string | undefined; value?: V; onCompleted?: (result: { completedIds: readonly string[]; value?: T }) => void }) {
   const [pending, setPending] = useState<{ ids: readonly string[]; page: unknown; value?: V }>();
-  const [error, setError] = useState<unknown>();
+  const [failure, setFailure] = useState<unknown>();
+  const [refusal, setRefusal] = useState<BulkRefusal>();
   const running = useRef(false);
   const current = useRef(model);
   current.current = model;
@@ -149,7 +155,8 @@ export function useBulkConfirmation<T, V = undefined>({ model, run, check, value
   if (seenVisit !== visit) {
     setSeenVisit(visit);
     setPending(undefined);
-    setError(undefined);
+    setFailure(undefined);
+    setRefusal(undefined);
   }
   const stale = (snapshot: { ids: readonly string[]; page: unknown }, now: ListModel) =>
     snapshot.page !== now.page ||
@@ -157,6 +164,10 @@ export function useBulkConfirmation<T, V = undefined>({ model, run, check, value
     !now.isCurrent ||
     snapshot.ids.some((id) => !now.selection.canSelect(id));
   if (!running.current && model.selection.failure === undefined && pending !== undefined && stale(pending, model)) setPending(undefined);
+  const checked = (ids: readonly string[], input: V | undefined): BulkRefusal | undefined => {
+    const message = input === undefined ? check?.(ids) : check?.(ids, input);
+    return message ? { reason: 'check', message } : undefined;
+  };
 
   /** 마지막 순간에도 결과·선택 snapshot과 업무 조건을 다시 확인한다. */
   async function confirm() {
@@ -166,47 +177,50 @@ export function useBulkConfirmation<T, V = undefined>({ model, run, check, value
       setPending(undefined);
       return;
     }
-    const refusal = pending.value === undefined ? check?.(pending.ids) : check?.(pending.ids, pending.value);
-    if (refusal) {
-      setError(refusal);
+    const refused = checked(pending.ids, pending.value);
+    if (refused) {
+      setRefusal(refused);
       return;
     }
     running.current = true;
-    setError(undefined);
+    setFailure(undefined);
     try {
       const result = await now.selection.run((ids) => pending.value === undefined ? run(ids) : run(ids, pending.value));
       if (result !== undefined) onCompleted?.(result);
       setPending(undefined);
-    } catch (failure) {
-      setError(failure);
+    } catch (caught) {
+      setFailure(caught);
     } finally {
       running.current = false;
     }
   }
-  return { pending, error: model.selection.failure ?? error, confirm,
+  const locked = !model.isCurrent || model.selection.failure !== undefined || model.selection.isRunning;
+  return { pending, failure: model.selection.failure ?? failure, refusal, confirm,
     recovery: model.selection.failure === undefined ? undefined : {
       pending: model.selection.isRecovering === true,
       run: async () => {
         const recovered = await current.current.selection.recover?.();
-        if (recovered) { setPending(undefined); setError(undefined); }
+        if (recovered) { setPending(undefined); setFailure(undefined); }
       },
     },
-    locked: !model.isCurrent || model.selection.failure !== undefined || (emptyRefusal === undefined && model.selection.selectedIds.length === 0) || model.selection.isRunning,
+    locked,
+    unavailable: model.selection.selectedIds.length === 0 ? ('no-selection' as const) : undefined,
     open: () => {
-      if (running.current || model.selection.isRunning || model.selection.failure !== undefined) return;
+      if (running.current || locked) return;
       if (model.selection.selectedIds.length === 0) {
-        // 잠그지 않은 경우(emptyRefusal)에만 여기로 온다. 요청·확인창 없이 거절한다.
-        setError(emptyRefusal);
+        setRefusal({ reason: 'no-selection' });
         return;
       }
-      const refusal = value === undefined ? check?.(model.selection.selectedIds) : check?.(model.selection.selectedIds, value);
-      setError(refusal);
-      if (!refusal) setPending({ ids: [...model.selection.selectedIds], page: model.page, value });
+      const refused = checked(model.selection.selectedIds, value);
+      setRefusal(refused);
+      setFailure(undefined);
+      if (!refused) setPending({ ids: [...model.selection.selectedIds], page: model.page, value });
     },
     cancel: () => { if (!running.current && !current.current.selection.isRecovering) setPending(undefined); },
     /** 거절·실패 안내를 확인했다. 안내를 지우고, 실행 중이 아니면 열려 있던 확인도 닫는다. */
     dismiss: () => {
-      setError(undefined);
+      setRefusal(undefined);
+      setFailure(undefined);
       if (!running.current && !current.current.selection.isRecovering) setPending(undefined);
     },
   };
@@ -299,16 +313,16 @@ export interface DownloadControl {
 }
 
 
-/** 다운로드 종류 변경은 이전 실패를 지운 뒤 다음 선택을 반영한다. */
 /** 다운로드를 시작하지 않고 거절한 이유. 종류를 고르지 않았거나(no-kind) 선택 다운로드인데 고른 행이 없다(no-selection). */
 export type DownloadRefusal = 'no-kind' | 'no-selection';
 
 /**
- * 다운로드 종류 선택과 실행 버튼의 연결. 기본은 종류를 고르지 않았거나 시작할 수 없으면 버튼을 잠근다(blocked).
- * refuse를 켜면 진행 중·이전 결과 표시 중에만 잠그고, 종류 없음·선택 행 없음은 눌렀을 때 요청 없이 refusal로 알린다(dismiss로 지운다).
- * 거절 안내는 그 방문의 것이라 방문이 바뀌면(lifetime.ts) 지운다.
+ * 다운로드 종류 선택과 실행 버튼의 연결. 상태만 값으로 돌려주고 보이는 방식은 복사형 UI가 정한다.
+ * - locked: 진행 중·이전 결과 표시 중이라 지금은 시작할 수 없다.
+ * - unavailable: 눌러도 요청 없이 거절될 이유(종류 없음·선택 행 없음). 잠글지, 눌렀을 때 refusal로 알릴지는 UI가 고른다.
+ * - refusal: start가 요청 없이 거절한 이유(dismiss로 지운다). 거절 안내는 그 방문의 것이라 방문이 바뀌면(lifetime.ts) 지운다.
  */
-export function useListDownloadBinding(control: DownloadControl, kinds: readonly DownloadKind[], options: { readonly refuse?: boolean } = {}) {
+export function useListDownloadBinding(control: DownloadControl, kinds: readonly DownloadKind[]) {
   const [kind, setKind] = useState<DownloadKind | ''>('');
   const [refusal, setRefusal] = useState<DownloadRefusal>();
   const visit = useVisit();
@@ -319,18 +333,18 @@ export function useListDownloadBinding(control: DownloadControl, kinds: readonly
   }
   // 종류를 고르기 전에도 진행 중·이전 결과 표시 중인지는 알아야 해서 '전체' 기준으로 묻는다.
   const block = control.blockOf(kind === '' ? 'all' : kind);
-  const refuse = options.refuse === true;
-  return { kind, refusal,
-    blocked: refuse ? block === 'running' || block === 'stale' : kind === '' || block !== undefined,
+  const locked = block === 'running' || block === 'stale';
+  const unavailable: DownloadRefusal | undefined = kind === '' ? 'no-kind' : block === 'no-selection' ? 'no-selection' : undefined;
+  return { kind, refusal, locked, unavailable,
     change: (value: string) => {
       control.clear();
       setRefusal(undefined);
       setKind(kinds.find((kind) => kind === value) ?? '');
     },
     start: () => {
-      if (refuse && kind === '') setRefusal('no-kind');
-      else if (refuse && block === 'no-selection') setRefusal('no-selection');
-      else if (kind !== '') void control.start(kind);
+      if (locked) return;
+      if (unavailable !== undefined) setRefusal(unavailable);
+      else if (kind !== '' && block === undefined) void control.start(kind);
     },
     dismiss: () => setRefusal(undefined),
   };

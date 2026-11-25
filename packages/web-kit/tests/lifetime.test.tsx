@@ -306,13 +306,13 @@ function model(run: ListModel['selection']['run']): ListModel {
 it('일괄 작업: 열어 둔 거절 안내는 방문이 바뀌면 닫힌다', () => {
   const lifetime = app();
   const hook = renderHook(
-    () => useBulkConfirmation({ model: model(vi.fn()), run: vi.fn(), emptyRefusal: 'select rows first' }),
+    () => useBulkConfirmation({ model: model(vi.fn()), run: vi.fn() }),
     { wrapper: lifetime.wrapper },
   );
   act(() => hook.result.current.open());
-  expect(hook.result.current.error).toBe('select rows first');
+  expect(hook.result.current.refusal).toEqual({ reason: 'no-selection' });
   act(() => lifetime.lifetime.leave());
-  expect(hook.result.current.error).toBeUndefined();
+  expect(hook.result.current.refusal).toBeUndefined();
 });
 
 it('일괄 작업: onCompleted는 결과가 이 화면에 전달될 때만 부른다', async () => {

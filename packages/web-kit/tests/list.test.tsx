@@ -1116,49 +1116,56 @@ it.each([
   queryClient.clear();
 });
 
-it('bulk confirmation with emptyRefusal refuses an empty selection on open without locking, and dismiss clears the refusal and an open confirmation', async () => {
+it('bulk confirmation reports refusals as values: an empty selection is unavailable (not locked) and refused on open; dismiss clears the refusal and an open confirmation', async () => {
   let binding!: ReturnType<typeof useBulkConfirmation<unknown, string>>;
   const run = vi.fn(async (ids: readonly string[]) => ({ completedIds: ids }));
   const check = vi.fn<(ids: readonly string[]) => string | undefined>(() => 'blocked by business');
   function Bulk({ model }: { model: typeof latest }) {
-    binding = useBulkConfirmation({ model, run, check, emptyRefusal: 'select rows first' });
+    binding = useBulkConfirmation({ model, run, check });
     return null;
   }
   mount({ definition: makeDefinition(), initial: {}, fetchRows: async () => page('1', '2'), renderResult: model => <Bulk model={model} /> });
   await flush();
-  // 고른 행이 없어도 잠그지 않는다. 누르면 업무 check·확인창·요청 없이 거절한다.
+  // 고른 행이 없는 것은 잠금이 아니라 거절될 이유다. 잠글지 알릴지는 UI가 고른다.
   expect(binding.locked).toBe(false);
+  expect(binding.unavailable).toBe('no-selection');
   act(() => binding.open());
-  expect(binding.error).toBe('select rows first');
+  expect(binding.refusal).toEqual({ reason: 'no-selection' });
+  expect(binding.failure).toBeUndefined();
   expect(binding.pending).toBeUndefined();
   expect(check).not.toHaveBeenCalled();
   act(() => binding.dismiss());
-  expect(binding.error).toBeUndefined();
+  expect(binding.refusal).toBeUndefined();
 
   // 실행 직전의 업무 거절을 확인(dismiss)하면 열려 있던 확인도 닫힌다.
   check.mockReturnValueOnce(undefined);
   act(() => latest.selection.toggleRow('1', true));
+  expect(binding.unavailable).toBeUndefined();
   act(() => binding.open());
   expect(binding.pending?.ids).toEqual(['1']);
   await act(async () => { await binding.confirm(); });
-  expect(binding.error).toBe('blocked by business');
+  expect(binding.refusal).toEqual({ reason: 'check', message: 'blocked by business' });
+  expect(binding.failure).toBeUndefined();
   act(() => binding.dismiss());
-  expect(binding.error).toBeUndefined();
+  expect(binding.refusal).toBeUndefined();
   expect(binding.pending).toBeUndefined();
   expect(run).not.toHaveBeenCalled();
 });
 
-it('bulk confirmation without emptyRefusal stays locked while nothing is selected', async () => {
+it('bulk confirmation keeps an execution failure apart from refusals', async () => {
   let binding!: ReturnType<typeof useBulkConfirmation<unknown, string>>;
+  const failure = new Error('server down');
   function Bulk({ model }: { model: typeof latest }) {
-    binding = useBulkConfirmation({ model, run: async (ids) => ({ completedIds: ids }) });
+    binding = useBulkConfirmation({ model, run: async () => { throw failure; } });
     return null;
   }
   mount({ definition: makeDefinition(), initial: {}, fetchRows: async () => page('1'), renderResult: model => <Bulk model={model} /> });
   await flush();
-  expect(binding.locked).toBe(true);
   act(() => latest.selection.toggleRow('1', true));
-  expect(binding.locked).toBe(false);
+  act(() => binding.open());
+  await act(async () => { await binding.confirm(); });
+  expect(binding.failure).toBe(failure);
+  expect(binding.refusal).toBeUndefined();
 });
 
 it('실행 수명을 연결하지 않은 앱: 일괄 작업 중 부품이 내려가도 실패는 호출자에게 그대로 던져진다', async () => {

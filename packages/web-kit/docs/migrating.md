@@ -1,5 +1,11 @@
 # 시험판에서 옮겨 오기
 
+## 10.0.0-rc.1
+
+- `useBulkConfirmation`은 `emptyRefusal`을 받지 않고, `error` 대신 `refusal`(`{ reason: 'no-selection' }`·`{ reason: 'check', message }`)과 `failure`(요청이 나간 뒤 실패)를 나눠 돌려준다. `locked`는 고른 행 수와 무관하고, 고른 행이 없으면 `unavailable: 'no-selection'`이다. 고른 행이 없을 때 버튼을 잠그려면 `locked || unavailable !== undefined`로 잠근다.
+- `useListDownloadBinding`은 세 번째 인자 `{ refuse }`와 반환 `blocked`를 없앴다. `locked`(진행 중·이전 결과 표시 중)와 `unavailable`(`'no-kind'`·`'no-selection'`)을 보고 복사본이 잠글지 알릴지 고른다.
+- registry `list`의 `list/list-actions.tsx` **복사본 교정 필요.** 보이는 방식(`ListDefaults refusal`)은 그대로다.
+
 ## 9.0.0-rc.2
 
 - registry `record`의 조회 상태 루트 `<Detail>`을 `<RecordView>`로 옮긴다. 같은 파일에서 가져오며 함수형 자식과 상세용 `Detail.Fields`·`Detail.Field`·`Detail.History`는 계속 쓴다. 문구 설정은 `RecordViewDefaults`·`RecordViewMessages`·`RenderRecordViewFailure`·`RecordViewFailurePlace`로 바꾼다. 적합성 검사에는 `checkRecordUiConformance({ RecordView, Detail }, target)`을 넘긴다.
@@ -13,15 +19,16 @@
 - **스킬 이름 정정과 작은 정리(rc.5 → rc.6, 복사본 교정 필요: `CheckboxTree` 한 파일):** `web-kit-record` 스킬이 안내하던 `Record`·`RecordDefaults`를 실제 공개 이름 `Detail`·`DetailDefaults`로 바로잡았다(코드는 rc.5에서 이미 바뀌었다). `checkboxTreeSelection(...).checked`의 쓰이지 않던 둘째 인자(`requireAll`)를 없앴으므로 직접 호출하며 둘째 인자를 넘기던 코드는 인자를 지운다. `CheckboxTree` 복사본도 같은 인자를 넘기지 않게 바꿨다(동작은 같다). `RequestFailure.rejectsAuthentication`이 더해졌다(401이거나 결과 코드 표가 세션 종료를 정한 실패). 키트 안의 세 곳이 따로 쓰던 같은 식을 이 한 곳으로 모았고 동작은 같다.
 - **복사본 이름 정리(rc.4 → rc.5, 복사본 교정 필요, 기존 사용 깨짐):** 이름이 역할을 말하도록 registry 복사본의 파일과 내보내기를 바꿨다. TypeScript 기본 타입 `Record<K, V>`와 같던 `Record`는 `Detail`이 됐다. 복사본을 새 후보로 다시 설치한 뒤 프로젝트의 import를 아래 표대로 바꾸고 lint·타입·적합성 검사를 실행한다. 복사본을 직접 고친 프로젝트는 이전/새 원본 차이를 비교해 필요한 교정만 옮긴다(`--overwrite`를 기본 갱신법으로 쓰지 않는다). 동작은 바뀌지 않는다.
 
-  | 이전 | 새 이름 |
-  |---|---|
-  | `@/shared/ui/web-kit/list-ui` | `@/shared/ui/web-kit/list` |
-  | `@/shared/ui/web-kit/detail-ui` | `@/shared/ui/web-kit/detail` |
-  | `@/shared/ui/web-kit/form/ui` | `@/shared/ui/web-kit/form/form` |
-  | `Record`·`Record.Fields`·`Record.Field`·`Record.History` | `Detail`·`Detail.Fields`·`Detail.Field`·`Detail.History` |
+  | 이전                                                                         | 새 이름                                                                      |
+  | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+  | `@/shared/ui/web-kit/list-ui`                                                | `@/shared/ui/web-kit/list`                                                   |
+  | `@/shared/ui/web-kit/detail-ui`                                              | `@/shared/ui/web-kit/detail`                                                 |
+  | `@/shared/ui/web-kit/form/ui`                                                | `@/shared/ui/web-kit/form/form`                                              |
+  | `Record`·`Record.Fields`·`Record.Field`·`Record.History`                     | `Detail`·`Detail.Fields`·`Detail.Field`·`Detail.History`                     |
   | `RecordDefaults`·`RecordMessages`·`RenderRecordFailure`·`RecordFailurePlace` | `DetailDefaults`·`DetailMessages`·`RenderDetailFailure`·`DetailFailurePlace` |
 
   `checkRecordUiConformance`의 첫 인자는 `{ Record }`에서 `{ Detail }`로 바뀐다. 단건 상태 hook `useRecord`·`/record` 모듈 이름은 그대로다.
+
 - **성공한 무마감 연장의 기본 길이(선택 연결):** 소비자가 `policy.extensionFallbackMs`에 기본 길이를 주고 성공 응답을 `ServerTimeSample`로 반환하면, 유효한 서버 마감이 없을 때만 로컬 기본 시한을 적용한다. `null`·실패에는 적용하지 않으며 실제 서버 마감 재수신이 로컬 기본 시한보다 우선한다. 기본 길이는 패키지가 정하지 않는다.
 - **인증 완료 재시도의 입력 검사(복사본 교정 필요):** registry `auth`의 `auth.tsx`와 검사 입력 `checks/auth-six.tsx`는 `model.awaitingCompletion`일 때 코드 형식 검증을 건너뛴다. 이미 확인한 코드를 편집하거나 기한이 지나도 완료만 다시 시도할 수 있다. 이때 코드 만료 안내는 숨기며 전체 인증 기한의 만료 안내는 유지한다. 패키지만 올리면 기존 복사본은 바뀌지 않으므로 두 파일의 제출 조건을 함께 갱신하고 단위·브라우저 인증 검사를 실행한다.
 - **인증 확인 뒤 완료만 다시 시도(rc.13 → rc.14, 패키지만 올리면 반영):** `useAuthChallenge`의 `onVerified`가 실패하면 확인 성공 결과를 보관하고, 같은 scope의 다음 제출은 코드를 다시 보내지 않고 `onVerified`만 다시 실행한다. 이 동안 `model.awaitingCompletion`이 true이고, 코드 기한이 지나도 전체 기한 안이면 제출할 수 있다. 무효화·scope 교체·unmount는 보관한 결과를 버린다. 다시 시도할 수 없는 결과(예: 프로젝트가 세션을 끝낸 취소)는 `onVerified`가 정리·이동을 마치고 정상 반환한다. registry 원본·복사본 변경은 없다.
@@ -50,13 +57,13 @@
 
 ### UI 입구 이전 표
 
-| 이전 시험판 import | 현재 위치(기본 설치 target 기준) |
-|---|---|
-| `@boosterlab/web-kit/ui` | registry `ui`: `@/shared/ui/web-kit` |
-| `@boosterlab/web-kit/list/ui` | registry `list`: `@/shared/ui/web-kit/list` |
-| `@boosterlab/web-kit/form/ui` | registry `form`: `@/shared/ui/web-kit/form/form` |
-| `@boosterlab/web-kit/detail/ui` | registry `record`: `@/shared/ui/web-kit/detail` |
-| `@boosterlab/web-kit/filter` | registry `checkbox-tree`·`filter-error`: `@/shared/ui/web-kit/CheckboxTree`·`@/shared/ui/web-kit/search/filter-error`; 순수 계산은 패키지 루트 |
+| 이전 시험판 import               | 현재 위치(기본 설치 target 기준)                                                                                                                     |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@boosterlab/web-kit/ui`         | registry `ui`: `@/shared/ui/web-kit`                                                                                                                 |
+| `@boosterlab/web-kit/list/ui`    | registry `list`: `@/shared/ui/web-kit/list`                                                                                                          |
+| `@boosterlab/web-kit/form/ui`    | registry `form`: `@/shared/ui/web-kit/form/form`                                                                                                     |
+| `@boosterlab/web-kit/detail/ui`  | registry `record`: `@/shared/ui/web-kit/detail`                                                                                                      |
+| `@boosterlab/web-kit/filter`     | registry `checkbox-tree`·`filter-error`: `@/shared/ui/web-kit/CheckboxTree`·`@/shared/ui/web-kit/search/filter-error`; 순수 계산은 패키지 루트       |
 | `@boosterlab/web-kit/styles.css` | 없음: 키트 스타일시트를 없앴다. 프로젝트 shadcn 테마 CSS가 모양을 정한다([설치 안내](installing.md#키트-스타일시트에서-shadcn-기본-부품으로-옮기기)) |
 
 위 6개 패키지 입구는 제거됐다. `/choice`는 공유 선택/검색의 `useChoiceBinding`을 공개하는 새 입구다. `/dialog`는 대화창 연결을, `/progress`는 진행 등록 연결을, `/form`·`/list`·`/record`는 각각의 상태·연결 hook을 제공한다.
@@ -75,14 +82,14 @@
 
 구조 계약을 채택한 소비 앱은 파일·import·검사기를 함께 옮긴다. 런타임 API와 registry UI는 그대로이며 패키지만 교체하면 이전 구조가 검사에 실패한다.
 
-| 이전 자리 | 새 자리 |
-|---|---|
-| `pages/` | `ui/<화면>/`, 여러 화면의 배치는 `ui/` |
+| 이전 자리                                           | 새 자리                                                  |
+| --------------------------------------------------- | -------------------------------------------------------- |
+| `pages/`                                            | `ui/<화면>/`, 여러 화면의 배치는 `ui/`                   |
 | `hooks/`, `forms/`, `rules/`, `storage/`, `search/` | `model/<함께 바꾸는 동작>/`, 공용 데이터·정책은 `model/` |
-| 업무 루트의 타입·계산 파일 | `model/` |
-| `messages.ts` | `ui/messages.ts` |
-| `permissions.ts` | `model/<업무>-permissions.ts` |
-| `public.ts` | `index.ts`, 외부 import는 업무 폴더 경로 |
+| 업무 루트의 타입·계산 파일                          | `model/`                                                 |
+| `messages.ts`                                       | `ui/messages.ts`                                         |
+| `permissions.ts`                                    | `model/<업무>-permissions.ts`                            |
+| `public.ts`                                         | `index.ts`, 외부 import는 업무 폴더 경로                 |
 
 상태 연결은 `*-store`, `*-state`, `*-session`, `*-permissions`, URL 선언은 `*-search`, 업무 hook은 `use-*` 이름으로 실행 역할을 드러낸다. 나머지 model 파일은 순수 코드로 검사한다. 기존 폴더를 통째로 model에 넣지 않는다. [구조 계약](../skills/web-kit-structure/SKILL.md)의 의존 방향·순수성·JSX 경계를 그대로 검증한다. 구조 검사와 생성기, 앱 등록·라우트·문구 소비·검사 import를 함께 옮긴다. 제품 URL·요청·권한·저장·세션 동작은 보존한다.
 

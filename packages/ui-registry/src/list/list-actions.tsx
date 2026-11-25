@@ -4,6 +4,7 @@ import { useVisit } from '@boosterlab/web-kit/lifetime';
 import {
   useBulkConfirmation,
   useListDownloadBinding,
+  type BulkRefusal,
   type DownloadControl,
   type DownloadKind,
   type ListModel,
@@ -40,24 +41,45 @@ function Actions({
   );
 }
 
-/** 일괄 작업 실패 문구. 업무 거절(string)은 그대로, 그 밖의 실패는 renderFailure → 기본 문구 순이다. null이면 그리지 않는다. */
-function bulkErrorText(
-  error: unknown,
+/** 일괄 작업 실행 실패 문구. renderFailure → 기본 문구 순이다. null이면 그리지 않는다. */
+function bulkFailureText(
+  failure: unknown,
   copy: Context['copy'],
   renderFailure: RenderFailure
 ): ReactNode | null {
-  if (error === undefined) return null;
-  if (typeof error === 'string') return error;
-  const custom = renderFailure(error, 'action');
+  if (failure === undefined) return null;
+  const custom = renderFailure(failure, 'action');
   return custom === undefined ? copy.actionFailed : custom;
 }
 
+/** 요청 없이 거절한 이유의 문구. 고른 행 없음은 messages.selectRows, 업무 check는 check가 돌려준 사유다. */
+function bulkRefusalText(refusal: BulkRefusal | undefined, copy: Context['copy']) {
+  if (refusal === undefined) return undefined;
+  return refusal.reason === 'no-selection' ? copy.selectRows : refusal.message;
+}
+
 /**
- * 요청 전 거절을 알림 창으로 보이는 방식(refusal="alert")에서, 문자열 거절(고른 행 없음·바꿀 값 없음·업무 check)을 꺼낸다.
- * 그 밖의 실패(요청이 나간 뒤의 실패)와 inline 방식은 undefined라 기존 자리(확인창·버튼 옆)에 그대로 보인다.
+ * 일괄 작업 버튼·거절·실패의 표시. 요청 전 거절을 알림 창으로 보이는 방식(refusal="alert")은 고른 행이 없어도 버튼을 잠그지 않고
+ * 거절을 알림 창에 보인다. inline 방식은 고른 행이 없으면 버튼을 잠그고, 업무 거절은 실행 실패와 같은 자리(확인창·버튼 옆)에 보인다.
  */
-function alertRefusal(error: unknown, refusal: Context['refusal']): string | undefined {
-  return refusal === 'alert' && typeof error === 'string' ? error : undefined;
+function useBulkPresentation(
+  binding: Pick<
+    ReturnType<typeof useBulkConfirmation>,
+    'failure' | 'refusal' | 'locked' | 'unavailable'
+  >,
+  context: Pick<Context, 'copy' | 'renderFailure' | 'refusal'>
+) {
+  const alertMode = context.refusal === 'alert';
+  const refusalText = bulkRefusalText(binding.refusal, context.copy);
+  const alerted = alertMode ? refusalText : undefined;
+  return {
+    disabled: binding.locked || (!alertMode && binding.unavailable !== undefined),
+    alerted,
+    errorText:
+      alerted !== undefined
+        ? null
+        : (refusalText ?? bulkFailureText(binding.failure, context.copy, context.renderFailure)),
+  };
 }
 
 /** 요청 전 거절 알림 창. 사유 한 줄과 [확인]뿐이고, 확인하면 창만 닫는다. */
@@ -207,25 +229,27 @@ function BulkAction<T>({
   readonly cancelLabel?: string;
   readonly describe?: (ids: readonly string[]) => ReactNode;
 } & { readonly model?: ListModel }) {
-  const { model, copy, renderFailure, refusal } = useListContext(explicitModel);
+  const context = useListContext(explicitModel);
+  const { model, copy } = context;
   const trigger = useRef<HTMLButtonElement>(null);
   const result = useBulkResultAlert(onCompleted, reportResult);
-  const { pending, error, confirm, locked, open, cancel, dismiss, recovery } = useBulkConfirmation({
-    model,
-    run,
-    onCompleted: result.complete,
-    check,
-    emptyRefusal: refusal === 'alert' ? copy.selectRows : undefined,
-  });
-  const refused = alertRefusal(error, refusal);
+  const binding = useBulkConfirmation({ model, run, onCompleted: result.complete, check });
+  const { pending, confirm, open, cancel, dismiss, recovery } = binding;
+  const shown = useBulkPresentation(binding, context);
   return (
     <>
-      <Button ref={trigger} type="button" variant="outline" disabled={locked} onClick={open}>
+      <Button
+        ref={trigger}
+        type="button"
+        variant="outline"
+        disabled={shown.disabled}
+        onClick={open}
+      >
         {label}
       </Button>
-      <RefusalAlert message={refused} title={copy.refusalTitle} onConfirm={dismiss} />
+      <RefusalAlert message={shown.alerted} title={copy.refusalTitle} onConfirm={dismiss} />
       <BulkConfirm
-        open={pending !== undefined && refused === undefined}
+        open={pending !== undefined && shown.alerted === undefined}
         title={title}
         running={model.selection.isRunning}
         confirmLabel={confirmLabel ?? copy.confirm}
@@ -237,7 +261,7 @@ function BulkAction<T>({
             ? null
             : (describe?.(pending.ids) ?? `${pending.ids.length}${copy.items}`)
         }
-        errorText={refused === undefined ? bulkErrorText(error, copy, renderFailure) : null}
+        errorText={shown.errorText}
         recovery={recovery}
         reloadLabel={copy.reload ?? defaultMessages.reload}
         unknownMessage={copy.resultUnknown ?? defaultMessages.resultUnknown}
@@ -307,7 +331,8 @@ function BulkSelectAction<V extends string, T = unknown>({
   /** 묶음(fieldset)의 배치. */
   readonly className?: string;
 } & { readonly model?: ListModel }) {
-  const { model, copy, renderFailure, refusal } = useListContext(explicitModel);
+  const context = useListContext(explicitModel);
+  const { model, copy } = context;
   const [chosen, setChosen] = useState<V | null>(defaultValue ?? null);
   // 선택지가 바뀌어 고른 값이 사라졌거나 막혔으면 고르지 않은 것으로 본다.
   const value =
@@ -316,23 +341,20 @@ function BulkSelectAction<V extends string, T = unknown>({
       : null;
   const trigger = useRef<HTMLButtonElement>(null);
   const result = useBulkResultAlert(onCompleted, reportResult);
-  const { pending, error, confirm, locked, open, cancel, dismiss, recovery } = useBulkConfirmation<
-    T,
-    V
-  >({
+  const binding = useBulkConfirmation<T, V>({
     model,
     value: value ?? undefined,
     onCompleted: result.complete,
-    emptyRefusal: refusal === 'alert' ? copy.selectRows : undefined,
-    run: (ids, target) =>
-      target === undefined ? Promise.reject(requiredMessage ?? copy.chooseValue) : run(ids, target),
+    // 값이 없으면 아래 check가 먼저 거절하므로 실행에는 늘 고른 값이 온다.
+    run: (ids, target) => run(ids, target as V),
     check: (ids, target) =>
       target === undefined ||
       !options.some((option) => option.value === target && option.disabled !== true)
         ? requiredMessage || copy.chooseValue || defaultMessages.chooseValue
         : check?.(ids, target),
   });
-  const refused = alertRefusal(error, refusal);
+  const { pending, confirm, open, cancel, dismiss, recovery } = binding;
+  const shown = useBulkPresentation(binding, context);
   const fixed = pending?.value;
   const optionLabel = options.find((option) => option.value === fixed)?.label ?? fixed;
   return (
@@ -349,12 +371,18 @@ function BulkSelectAction<V extends string, T = unknown>({
         disabled={!model.isCurrent || model.selection.isRunning}
         onValueChange={(next) => setChosen(next as V | null)}
       />
-      <Button ref={trigger} type="button" variant="outline" disabled={locked} onClick={open}>
+      <Button
+        ref={trigger}
+        type="button"
+        variant="outline"
+        disabled={shown.disabled}
+        onClick={open}
+      >
         {label}
       </Button>
-      <RefusalAlert message={refused} title={copy.refusalTitle} onConfirm={dismiss} />
+      <RefusalAlert message={shown.alerted} title={copy.refusalTitle} onConfirm={dismiss} />
       <BulkConfirm
-        open={pending !== undefined && refused === undefined}
+        open={pending !== undefined && shown.alerted === undefined}
         title={title}
         running={model.selection.isRunning}
         confirmLabel={confirmLabel ?? copy.confirm}
@@ -367,7 +395,7 @@ function BulkSelectAction<V extends string, T = unknown>({
             : (describe?.(pending.ids, fixed) ??
               `${optionLabel}: ${pending.ids.length}${copy.items}`)
         }
-        errorText={refused === undefined ? bulkErrorText(error, copy, renderFailure) : null}
+        errorText={shown.errorText}
         recovery={recovery}
         reloadLabel={copy.reload ?? defaultMessages.reload}
         unknownMessage={copy.resultUnknown ?? defaultMessages.resultUnknown}
@@ -393,12 +421,15 @@ function Download({
   const { copy, renderFailure, refusal } = useListContext(explicitModel);
   const {
     kind,
-    blocked,
+    locked,
+    unavailable,
     change,
     start,
     refusal: refused,
     dismiss,
-  } = useListDownloadBinding(control, kinds, { refuse: refusal === 'alert' });
+  } = useListDownloadBinding(control, kinds);
+  // 요청 전 거절을 알림 창으로 보이는 방식은 종류 없음·선택 행 없음에도 잠그지 않고 눌렀을 때 알린다. inline 방식은 잠근다.
+  const blocked = locked || (refusal !== 'alert' && unavailable !== undefined);
   const kindLabel = (value: DownloadKind) =>
     value === 'all' ? copy.downloadAll : copy.downloadSelected;
   const custom =
