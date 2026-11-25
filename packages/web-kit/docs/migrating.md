@@ -25,7 +25,7 @@
 | `BulkSelectAction` | `defaultValue` | `defaultChoice` |
 | `BulkAction`·`BulkSelectAction` | `reportResult` | `resultDialog` |
 | `BulkAction`·`BulkSelectAction`·`useBulkConfirmation` | `check` | `refusalReason` |
-| `useBulkConfirmation` | `value`(사용자가 고른 값) | `choice` |
+| `useBulkConfirmation` | 옵션 `value`(사용자가 고른 값)·반환 `pending.value` | 옵션 `choice`·반환 `pending.choice` |
 | 일괄 작업 `run`의 반환 | `{ completedIds, value? }` | `{ completedIds, details? }`(`BulkRunResult`) |
 | `onCompleted`·결과 창이 받는 값 | `{ completedIds, value? }` | `{ requestedIds, completedIds, details? }`(`BulkResult`) |
 | 목록 문구 | `empty` 하나 | `empty`(조건 없이 0건) + 새 `noMatches`(조건이 걸린 0건, 선택 키) |
