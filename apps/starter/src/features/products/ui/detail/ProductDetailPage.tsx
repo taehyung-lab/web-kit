@@ -1,6 +1,6 @@
 // 파일 책임: 상품 상세 화면. 단건 상태 판정은 상세 flow(useRecord) 한 곳이 하고, 여기서는 상태별 표현과 dt/dd 목록을 그린다.
 import { failureCopyKey } from '@/shared/lib/failure-copy';
-import { Detail } from '@/shared/ui/web-kit/detail';
+import { Detail, RecordView } from '@/shared/ui/web-kit/detail';
 import { Button } from '@/shared/ui/button';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -27,7 +27,7 @@ export function ProductDetailPage({
       <Button variant="ghost" className="self-start" onClick={onBack}>
         ‹ {t('products.backToList')}
       </Button>
-      <Detail
+      <RecordView
         state={state}
         missing={
           <>
@@ -39,7 +39,7 @@ export function ProductDetailPage({
         }
       >
         {(product) => <ProductDetail product={product} onEdit={onEdit} />}
-      </Detail>
+      </RecordView>
     </div>
   );
 }
