@@ -1,6 +1,6 @@
 # 시험판에서 옮겨 오기
 
-## 9.0.0-rc.1
+## 9.0.0-rc.2
 
 - registry `record`의 조회 상태 루트 `<Detail>`을 `<RecordView>`로 옮긴다. 같은 파일에서 가져오며 함수형 자식과 상세용 `Detail.Fields`·`Detail.Field`·`Detail.History`는 계속 쓴다. 문구 설정은 `RecordViewDefaults`·`RecordViewMessages`·`RenderRecordViewFailure`·`RecordViewFailurePlace`로 바꾼다. 적합성 검사에는 `checkRecordUiConformance({ RecordView, Detail }, target)`을 넘긴다.
 - registry `list`의 `List.Detail`은 `List.FilterDetails`로 옮긴다. `List.of()`로 선언한 검색 키 검사를 계속 쓰며 독립 이름 `FilterDetails`도 같은 구현을 쓴다. 폼 없는 작업은 `ConfirmationDialog`에 `useConfirmationState` 결과를 연결한다.
