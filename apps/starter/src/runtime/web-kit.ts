@@ -60,6 +60,9 @@ export const http: Http = createHttp({
   session,
   response: springEnvelope(resultCodes),
   isPublic: (config) => PUBLIC_PATHS.some((path) => config.url === path),
+  // 서버의 401이 업무 실행 전 거절인가. mock은 보호 경로마다 토큰부터 확인하므로 true다.
+  // 실제 서버로 바꾸면 그 서버에서 확인해 정한다(docs/server.md). true면 쓰기도 401 뒤 재발급하고 한 번 다시 보낸다.
+  authRejectsBeforeExecution: true,
   // 운영 헤더: 화면 언어.
   prepare: (headers) => {
     headers.set('Accept-Language', i18n.language);

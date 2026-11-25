@@ -36,11 +36,16 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
   - 원 요청 없이도(SSE 등) 재발급할 수 있다.
   - 기다리던 요청 하나가 취소되면 그 요청만 끝나고 재발급은 계속된다.
 - **요청 처리:**
-  - 인증 거절(401 또는 종료 행)이 왔는데 요청이 쓴 토큰이 그 사이 회전돼 있으면, 그것은 옛 토큰에 대한 응답이다. 재발급·종료 없이 현재 토큰으로 다시 보내고, 토큰이 또 바뀌었을 때만 반복한다. 쓰기는 E1 전제상 다시 보내지 않고 원래 실패를 `resultUnknown`으로 돌려준다.
-  - 조회의 401은 재발급 뒤 한 번만 다시 보낸다. 재전송 뒤에는 재발급하지 않는다.
+  - `createHttp`의 필수 입력 `authRejectsBeforeExecution`은 서버의 401이 업무 실행 전(인증 필터)에서만 나는지(E1)를 프로젝트가 확인해 넘긴다. 확인하지 못했으면 `false`다.
+  - 인증 거절(401 또는 종료 행)이 왔는데 요청이 쓴 토큰이 그 사이 회전돼 있으면, 그것은 옛 토큰에 대한 응답이다. 재발급·종료 없이 현재 토큰으로 다시 보낸다. 조회는 토큰이 또 바뀌었을 때만 반복한다.
+  - 그 밖의 첫 401은 재발급 뒤 한 번만 다시 보낸다. 재전송 뒤에는 재발급하지 않는다.
+  - 쓰기(GET·HEAD·OPTIONS 밖의 메소드):
+    - `authRejectsBeforeExecution: true`면 조회와 같이 재발급 뒤 다시 보낸다. 옛 토큰 재전송과 재발급 재전송을 합쳐 추가 전송은 한 번뿐이다. 재전송도 401이거나 재발급이 일시 실패하면 그 실패를 그대로 돌려준다(반영 안 됨, `resultUnknown` 아님).
+    - `false`면 다시 보내지 않는다. 재발급만 하고 원래 실패를 `resultUnknown`으로 돌려준다.
+  - 재전송 직전에 세대를 확인한다. 재발급을 기다리는 사이 로그아웃·계정 교체가 있었으면 보내지 않고 `cancelled`로 끝난다.
+  - `prepare`(운영 헤더)는 요청 하나에 한 번 부른다. 재전송은 첫 시도의 헤더를 그대로 쓰고 Authorization만 새 토큰으로 바꾼다.
   - 세션 종료는 결과 코드 표의 세션 종료 행(HTTP 200 포함)으로만 판정하고, 그 요청은 화면에 `cancelled`로 끝난다.
-  - 쓰기의 401은 다시 보내지 않는다(E1 확인 전 전제). 재발급만 하고 원래 실패를 `resultUnknown`으로 돌려준다.
-  - `resultUnknown`은 http가 요청 경로로 판정한다. 쓰기 자체의 network·timeout, 그리고 쓰기의 401이 해당한다.
+  - `resultUnknown`은 http가 요청 경로로 판정한다. 쓰기 자체의 network·timeout, 그리고 `authRejectsBeforeExecution: false`일 때 쓰기의 401이 해당한다.
 - **유휴 마감(`/session/idle`):** `createIdleTimer`를 만들고 `start()`를 부른 앱에서만 동작한다. 타이머는 활동 연장 요청이나 임시 마감을 스스로 만들지 않는다.
   - `policy`는 `warningMs`와 필수 `pendingAtDeadline: 'wait' | 'expire'`, 선택 `extensionFallbackMs`다. 길이와 기본값은 프로젝트가 정한다. `extensionFallbackMs`는 양의 유한한 ms이며 생략하면 기한 없는 연장 응답으로 마감을 만들지 않는다.
   - 로그인·복원·다른 탭 계정 교체에서 이 세션의 마감이 없으면 마감 미정(`deadline: null`, `remaining(): null`, 경고 없음)이다. `start()` 때 저장 마감이 이미 지났으면 그 자리에서 `idle`로 끝낸다. `start()` 전 `pause()`는 그 판정을 재개 결과에 맡긴다.
@@ -105,7 +110,7 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
   - 보낸 Authorization 헤더와 운영 헤더
   - 401 → 재발급 1회 → 재전송 1회
   - 세션 종료 행 → 로그인 이동 1회
-  - 쓰기 401의 재전송 0회
+  - 쓰기 401의 재전송: `authRejectsBeforeExecution: true`면 1회, `false`면 0회
   - 로그아웃 뒤 이전 화면 데이터 미노출
 - mock 통과나 HTTP 200만으로 서버 계약을 확인했다고 하지 않는다.
 
@@ -113,7 +118,7 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 
 실제 조립 예: [apps/starter/src/features/auth/api/auth.ts](../../references/apps/starter/src/features/auth/api/auth.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
-E1(401이 업무 실행 전인가), E2(일반·재발급 요청의 status·resultCode 의미), E3(동시 재발급, 이전 refresh 토큰 재사용, 늦은 응답의 쿠키 변경)는 설치된 web-kit 패키지의 [결정 기록 0003의 미확인 외부 계약](../../references/docs/decisions/0003-request-response-failure.md#미확인-외부-계약)이 기준이다. 확인되기 전까지 해당 부분은 보류한다.
+E1(401이 업무 실행 전인가), E2(일반·재발급 요청의 status·resultCode 의미), E3(동시 재발급, 이전 refresh 토큰 재사용, 늦은 응답의 쿠키 변경)는 설치된 web-kit 패키지의 [결정 기록 0003의 미확인 외부 계약](../../references/docs/decisions/0003-request-response-failure.md#미확인-외부-계약)이 기준이다. E1은 프로젝트가 확인해 `authRejectsBeforeExecution`으로 넘긴다. E2·E3은 확인되기 전까지 해당 부분을 보류한다.
 
 ## 프로젝트별 응답 계약
 

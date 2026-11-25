@@ -1,5 +1,19 @@
 # 시험판에서 옮겨 오기
 
+## 12.0.0-rc.1
+
+`createHttp`에 필수 입력 `authRejectsBeforeExecution: boolean`이 생겼다. 서버의 401이 업무 실행 전(인증 필터)에서만 나는지 확인해 넘긴다.
+
+- `true`: 쓰기(POST·PUT·PATCH·DELETE)도 401 뒤 재발급하고 원 요청을 한 번 다시 보낸다. 토큰 만료 직후의 저장이 "반영 여부 미확정" 없이 성공한다.
+- `false`: 이전과 같다. 쓰기는 재발급만 하고 원 실패를 `resultUnknown`으로 돌려준다. 확인하지 못한 서버는 이 값을 넘긴다.
+
+함께 바뀐 동작(입력과 관계없음):
+
+- `prepare`는 전송 시도마다가 아니라 요청 하나에 한 번 불린다. 재전송은 첫 시도의 운영 헤더를 그대로 쓴다. `prepare` 안에서 Authorization을 읽던 코드는 더 이상 토큰을 볼 수 없다.
+- 재발급을 기다리는 사이 로그아웃·계정 교체가 있었으면 원 요청(조회 포함)을 다시 보내지 않고 `cancelled`로 끝낸다. 이전에는 새 로그인 토큰으로 한 번 보낸 뒤 응답을 버렸다.
+
+보장은 [web-kit-http](../skills/web-kit-http/SKILL.md), 결정 이유는 [응답 결정](../references/docs/decisions/0003-request-response-failure.md)에 있다.
+
 ## 11.0.0-rc.1
 
 목록 검색·빈 결과·일괄 작업의 이름을 하나의 말로 맞췄다. 옛 이름 별칭은 없으므로 아래 표대로 바꾸고 타입·lint·적합성 검사를 다시 실행한다. 주소 키(URL)와 "칸 이름 = 주소 키" 구조는 그대로다. registry `list`의 `list.tsx`·`list/list-filters.tsx`·`list/list-results.tsx`·`list/list-actions.tsx`·`list/list-context.tsx` **복사본 교정 필요**(새 후보 원본과 이전 원본을 같은 CLI로 설치해 비교한 뒤 프로젝트 수정과 함께 옮긴다).

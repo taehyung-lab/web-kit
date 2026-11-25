@@ -18,7 +18,7 @@ const table = createResultCodeTable([
 ]);
 
 let replies: Reply[];
-let sent: { url?: string; method?: string; authorization?: string; locale?: string }[];
+let sent: { url?: string; method?: string; authorization?: string; locale?: string; path?: string }[];
 
 /** 순서대로 준비한 응답을 돌려주는 가짜 전송. 보낸 헤더를 기록한다. */
 const adapter: AxiosAdapter = async (config: InternalAxiosRequestConfig) => {
@@ -28,6 +28,7 @@ const adapter: AxiosAdapter = async (config: InternalAxiosRequestConfig) => {
     method: config.method,
     authorization: headers.get('Authorization') as string | undefined,
     locale: headers.get('Accept-Language') as string | undefined,
+    path: headers.get('X-Client-Path') as string | undefined,
   });
   if (config.signal?.aborted) throw new AxiosError('canceled', AxiosError.ERR_CANCELED, config);
   const reply = replies.shift() ?? { status: 200, data: { header: { resultCode: 200 }, data: null } };
@@ -63,7 +64,7 @@ function fail(status: number, resultCode?: number) {
 }
 
 let reissue: ReturnType<typeof vi.fn<(credentials: Credentials) => Promise<Credentials>>>;
-function setup(response: ResponseContract = springEnvelope(table)) {
+function setup(response: ResponseContract = springEnvelope(table), { authRejectsBeforeExecution = false } = {}) {
   reissue = vi.fn(async (_credentials: Credentials) => ({ accessToken: 't2' }));
   const session = createSession<Credentials>({ store: store(), reissue: (c) => reissue(c) });
   session.start({ accessToken: 't1' });
@@ -71,6 +72,7 @@ function setup(response: ResponseContract = springEnvelope(table)) {
     session,
     response,
     isPublic: (config) => config.url?.startsWith('/auth/') === true,
+    authRejectsBeforeExecution,
     prepare: (headers) => headers.set('Accept-Language', 'ko'),
     defaults: { adapter },
   });
@@ -150,7 +152,7 @@ it('H5 세션 종료 행의 첫 401은 재발급 없이 세션을 끝내고 취�
   expect(session.current()).toBeNull();
 });
 
-it('H6 쓰기의 401은 재전송하지 않고(E1 확인 전) 원 실패를 반영 여부 미확정으로 돌려준다', async () => {
+it('H6 authRejectsBeforeExecution이 꺼져 있으면 쓰기의 401은 재전송하지 않고 원 실패를 반영 여부 미확정으로 돌려준다', async () => {
   const { http } = setup();
   replies = [fail(401, 4002)];
   const error = await http.requestData({ url: '/items', method: 'POST' }).catch((reason: unknown) => reason);
@@ -159,7 +161,7 @@ it('H6 쓰기의 401은 재전송하지 않고(E1 확인 전) 원 실패를 반�
   expect(sent).toHaveLength(1);
 });
 
-it('H7 쓰기 401 뒤 재발급이 timeout이어도 실패 종류로 반영 여부를 바꾸지 않는다', async () => {
+it('H7 꺼져 있을 때 쓰기 401 뒤 재발급이 timeout이어도 실패 종류로 반영 여부를 바꾸지 않는다', async () => {
   const { http, session } = setup();
   reissue.mockRejectedValueOnce(new RequestFailure({ kind: 'timeout' }));
   replies = [fail(401, 4002)];
@@ -188,6 +190,7 @@ it('H9 요청 중 세션이 바뀌면 성공 응답도 취소로 끝난다', asy
     session,
     response: springEnvelope(table),
     isPublic: () => false,
+    authRejectsBeforeExecution: false,
     defaults: {
       adapter: async (config) => {
         await gate;
@@ -233,7 +236,7 @@ it('H11 호출자가 취소하면 cancelled다. 재발급을 기다리던 요청
 });
 
 /** 다른 탭의 회전을 흉내 낼 수 있는 세션과 http. rotateAt[i]번째 전송 직후 저장 토큰을 바꾼다. */
-function rotatingSetup(rotateAt: Record<number, string>) {
+function rotatingSetup(rotateAt: Record<number, string>, authRejectsBeforeExecution = false) {
   let value: StoredSession<Credentials> | null = null;
   const listeners = new Set<(next: StoredSession<Credentials> | null) => void>();
   const rotating: SessionStore<Credentials> = {
@@ -253,6 +256,7 @@ function rotatingSetup(rotateAt: Record<number, string>) {
     session,
     response: springEnvelope(table),
     isPublic: () => false,
+    authRejectsBeforeExecution,
     defaults: {
       adapter: async (config) => {
         const index = sent.length;
@@ -303,6 +307,7 @@ it('H13 모든 전송 시도(재전송 포함)를 응답 헤더·status·보낸 
     session,
     response: springEnvelope(table),
     isPublic: () => false,
+    authRejectsBeforeExecution: false,
     observe: (event) =>
       events.push({
         url: event.url,
@@ -332,7 +337,7 @@ it('H14 결과 코드 표의 종료 행으로 끝난 세션은 서버가 끝낸 
   expect(changes).toMatchObject([{ kind: 'ended', by: 'server' }]);
 });
 
-it('H15 쓰기의 인증 거절은 토큰이 회전돼 있어도 다시 보내지 않고 반영 여부 미확정으로 돌려준다(E1 전제)', async () => {
+it('H15 꺼져 있으면 쓰기의 인증 거절은 토큰이 회전돼 있어도 다시 보내지 않고 반영 여부 미확정으로 돌려준다', async () => {
   const { http, session } = rotatingSetup({ 0: 't-other' });
   replies = [fail(401, 4002), ok('must-not-send')];
   const error = await http.requestData({ url: '/items', method: 'POST' }).catch((reason: unknown) => reason);
@@ -340,6 +345,105 @@ it('H15 쓰기의 인증 거절은 토큰이 회전돼 있어도 다시 보내�
   expect(sent).toHaveLength(1);
   expect(reissue).not.toHaveBeenCalled();
   expect(session.current()).not.toBeNull();
+});
+
+it('H16 authRejectsBeforeExecution이 켜져 있으면 쓰기의 401도 재발급 뒤 한 번 재전송한다', async () => {
+  for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
+    const { http } = setup(undefined, { authRejectsBeforeExecution: true });
+    replies = [fail(401, 4002), ok(`done-${method}`)];
+    sent = [];
+    await expect(http.requestData({ url: '/items', method })).resolves.toBe(`done-${method}`);
+    expect(reissue).toHaveBeenCalledTimes(1);
+    expect(sent.map((request) => request.authorization)).toEqual(['Bearer t1', 'Bearer t2']);
+  }
+});
+
+it('H17 켜져 있을 때 재전송도 401이거나 재발급이 실패하면 반영 안 됨으로 끝난다(미확정 아님)', async () => {
+  const first = setup(undefined, { authRejectsBeforeExecution: true });
+  replies = [fail(401, 4002), fail(401, 4002)];
+  await expect(first.http.requestData({ url: '/items', method: 'POST' })).rejects.toMatchObject({
+    kind: 'unauthorized', status: 401, resultUnknown: false,
+  });
+  expect(reissue).toHaveBeenCalledTimes(1);
+  expect(sent).toHaveLength(2);
+
+  const second = setup(undefined, { authRejectsBeforeExecution: true });
+  reissue.mockRejectedValueOnce(new RequestFailure({ kind: 'timeout' }));
+  replies = [fail(401, 4002)];
+  sent = [];
+  await expect(second.http.requestData({ url: '/items', method: 'POST' })).rejects.toMatchObject({ kind: 'timeout', resultUnknown: false });
+  expect(sent).toHaveLength(1);
+  expect(second.session.current()).not.toBeNull();
+});
+
+it('H18 켜져 있어도 쓰기는 토큰이 거듭 회전돼도 추가 전송이 한 번뿐이다. 조회는 회전마다 다시 보낸다', async () => {
+  const write = rotatingSetup({ 0: 't-other', 1: 't3' }, true);
+  replies = [fail(401, 4002), fail(401, 4002), ok('must-not-send')];
+  await expect(write.http.requestData({ url: '/items', method: 'POST' })).rejects.toMatchObject({ kind: 'unauthorized', resultUnknown: false });
+  expect(sent.map((request) => request.authorization)).toEqual(['Bearer t1', 'Bearer t-other']);
+  expect(reissue).not.toHaveBeenCalled();
+
+  const read = rotatingSetup({ 0: 't-other', 1: 't3' }, true);
+  replies = [fail(401, 4002), fail(401, 4002), ok('done')];
+  sent = [];
+  await expect(read.http.requestData({ url: '/items' })).resolves.toBe('done');
+  expect(sent.map((request) => request.authorization)).toEqual(['Bearer t1', 'Bearer t-other', 'Bearer t3']);
+});
+
+it('H19 재발급을 기다리는 사이 로그인이 바뀌면 원 요청을 새 로그인의 토큰으로 보내지 않는다', async () => {
+  const { session } = setup(undefined, { authRejectsBeforeExecution: true });
+  // 재발급이 끝난 바로 뒤(재전송 전)에 다른 계정으로 로그인한 상황.
+  const switching = {
+    ...session,
+    refresh: async (...args: Parameters<typeof session.refresh>) => {
+      const token = await session.refresh(...args);
+      session.start({ accessToken: 'other-account' });
+      return token;
+    },
+  };
+  const http = createHttp({
+    session: switching,
+    response: springEnvelope(table),
+    isPublic: () => false,
+    authRejectsBeforeExecution: true,
+    defaults: { adapter },
+  });
+  for (const method of ['GET', 'POST']) {
+    session.start({ accessToken: 't1' });
+    replies = [fail(401, 4002), ok('must-not-send')];
+    sent = [];
+    await expect(http.requestData({ url: '/items', method })).rejects.toMatchObject({ kind: 'cancelled' });
+    expect(sent.map((request) => request.authorization)).toEqual(['Bearer t1']);
+  }
+});
+
+it('H20 재전송은 첫 시도의 운영 헤더를 그대로 쓴다(prepare는 요청 하나에 한 번)', async () => {
+  reissue = vi.fn(async () => ({ accessToken: 't2' }));
+  const session = createSession<Credentials>({ store: store(), reissue: (c) => reissue(c) });
+  session.start({ accessToken: 't1' });
+  let screen = '/organizations/new';
+  const prepare = vi.fn((headers: AxiosHeaders) => {
+    if (!headers.has('X-Client-Path')) headers.set('X-Client-Path', screen);
+  });
+  const http = createHttp({
+    session,
+    response: springEnvelope(table),
+    isPublic: () => false,
+    authRejectsBeforeExecution: true,
+    prepare,
+    defaults: {
+      adapter: async (config) => {
+        // 첫 응답을 기다리는 동안 사용자가 다른 화면으로 이동했다.
+        screen = '/organizations';
+        return adapter(config);
+      },
+    },
+  });
+  replies = [fail(401, 4002), ok('done')];
+  await expect(http.requestData({ url: '/items', method: 'POST', headers: { 'Content-Type': 'application/json' } })).resolves.toBe('done');
+  expect(sent.map((request) => request.path)).toEqual(['/organizations/new', '/organizations/new']);
+  expect(sent.map((request) => request.authorization)).toEqual(['Bearer t1', 'Bearer t2']);
+  expect(prepare).toHaveBeenCalledTimes(1);
 });
 
 /** 다른 서버 규약도 공통 실패·전송 수명을 사용한다. */
@@ -428,7 +532,7 @@ it('요청별 메타는 동시 응답이 역순으로 와도 자기 데이터·�
   const session = createSession({ store: store(), reissue: vi.fn() });
   let release!: () => void;
   const firstReady = new Promise<void>((resolve) => { release = resolve; });
-  const http = createHttp({ session, response: springEnvelope(table), isPublic: () => true, defaults: { adapter: async (config) => {
+  const http = createHttp({ session, response: springEnvelope(table), isPublic: () => true, authRejectsBeforeExecution: false, defaults: { adapter: async (config) => {
     if (config.url === '/first') await firstReady;
     return { config, status: 200, statusText: '', data: config.url, headers: { 'content-type': 'text/plain', 'x-deadline': config.url === '/first' ? '140' : '120' } };
   } } });
@@ -445,7 +549,7 @@ it('재전송된 요청의 메타는 401 응답 대신 최종 성공 응답을 �
   const session = createSession({ store: store(), reissue: async () => ({ accessToken: 'rotated-synthetic' }) });
   session.start({ accessToken: 'synthetic' });
   let calls = 0;
-  const http = createHttp({ session, response: springEnvelope(table), isPublic: () => false, defaults: { adapter: async (config) => {
+  const http = createHttp({ session, response: springEnvelope(table), isPublic: () => false, authRejectsBeforeExecution: false, defaults: { adapter: async (config) => {
     const attempt = ++calls;
     const response = { config, status: attempt === 1 ? 401 : 200, statusText: '', data: attempt === 1 ? {} : 'accepted',
       headers: { 'content-type': 'text/plain', 'x-deadline': attempt === 1 ? 'old' : 'new' } };
@@ -462,10 +566,13 @@ it('재전송된 요청의 메타는 401 응답 대신 최종 성공 응답을 �
 it('R1·R3 응답 계약은 필수이고 공통 요청 타입은 서버 봉투를 전제하지 않는다', () => {
   type Input = Parameters<typeof createHttp>[0];
   // @ts-expect-error 서버 응답 계약을 생략할 수 없다.
-  const missing: Input = { session: setup().session, isPublic: () => false };
+  const missing: Input = { session: setup().session, isPublic: () => false, authRejectsBeforeExecution: false };
   void missing;
+  // @ts-expect-error 401이 업무 실행 전 거절인지(쓰기 재전송 여부)는 프로젝트가 반드시 정한다.
+  const undecided: Input = { session: setup().session, isPublic: () => false, response: springEnvelope(table) };
+  void undecided;
   const input: Input = {
-    session: setup().session, isPublic: () => false, response: springEnvelope(table),
+    session: setup().session, isPublic: () => false, response: springEnvelope(table), authRejectsBeforeExecution: false,
     // @ts-expect-error 코드 표는 선택한 해석 부품의 입력이다.
     results: table,
   };
