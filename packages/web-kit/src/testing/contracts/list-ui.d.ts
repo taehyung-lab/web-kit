@@ -79,7 +79,7 @@ declare function FilterActions({ model: explicitModel, className, children }: {
     readonly model?: ListModel;
 }): import("react").JSX.Element;
 /** 접을 수 있는 상세 필터. 접어도 입력은 초안에 남는다. keys 중 확정 값이 있으면 펼친 채 시작한다. */
-declare function Detail({ model: explicitModel, keys, children }: {
+declare function FilterDetails({ model: explicitModel, keys, children }: {
     readonly keys: readonly string[];
     readonly children: ReactNode;
 } & {
@@ -281,7 +281,7 @@ export declare const List: typeof ListRoot & {
     Filter: typeof Filter;
     Choice: typeof Choice;
     FilterActions: typeof FilterActions;
-    Detail: typeof Detail;
+    FilterDetails: typeof FilterDetails;
     Text: typeof Text;
     Select: typeof Select;
     MultiSelect: typeof MultiSelect;
@@ -300,4 +300,4 @@ export declare const List: typeof ListRoot & {
     Check: typeof Check;
 };
 /** 같은 목록 상태를 일반 JSX 이름으로 조립하는 입구. 기존 List.*와 구현·수명이 같다. */
-export { ListRoot as ListProvider, Filter as FilterPanel, FilterActions, Detail as FilterDetails, Text as TextFilter, Choice as ChoiceFilter, Select as SelectFilter, MultiSelect as MultiChoiceFilter, Period as PeriodFilter, Keywords as KeywordFilter, Result as ListResult, Table as ResultTable, Total as ResultTotal, PageSize, SortSelect, Pagination, Actions as ListActions, BulkAction, Download as ListDownload, Check as ListCheck, };
+export { ListRoot as ListProvider, Filter as FilterPanel, FilterActions, FilterDetails, Text as TextFilter, Choice as ChoiceFilter, Select as SelectFilter, MultiSelect as MultiChoiceFilter, Period as PeriodFilter, Keywords as KeywordFilter, Result as ListResult, Table as ResultTable, Total as ResultTotal, PageSize, SortSelect, Pagination, Actions as ListActions, BulkAction, Download as ListDownload, Check as ListCheck, };

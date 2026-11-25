@@ -208,12 +208,12 @@ describe('List.Table headerClassName', () => {
   });
 });
 
-it('List.Detail triggerClassName styles only the toggle button and keeps its aria wiring', async () => {
+it('List.FilterDetails triggerClassName styles only the toggle button and keeps its aria wiring', async () => {
   mountList(
     <List.Filter>
-      <List.Detail keys={[]} triggerClassName="h-7 text-xs">
+      <List.FilterDetails keys={[]} triggerClassName="h-7 text-xs">
         <span>more</span>
-      </List.Detail>
+      </List.FilterDetails>
     </List.Filter>
   );
   const toggle = await screen.findByRole('button', { name: '상세 검색' });

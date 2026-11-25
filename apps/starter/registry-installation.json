@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "version": "8.5.0-rc.1",
-  "sourceRef": "v8.5.0-rc.1",
-  "sourceCommit": "bcacef4c16ef258ed0c70eaab7ecdb116b2c89f4",
+  "version": "9.0.0-rc.2",
+  "sourceRef": "v9.0.0-rc.2",
+  "sourceCommit": "3c0c51c39076b28752bdada8a0559ac56631944f",
   "sourceWorkingTree": "clean",
   "shadcn": "4.19.1",
   "method": "shadcn@4.19.1 add; installation recorded after review",
@@ -294,21 +294,21 @@
     },
     {
       "name": "list",
-      "artifactHash": "7839bf91e27a6734f6bf5210720a7603ed21c613c0d4b5fc401d396f46551f1f",
+      "artifactHash": "4e4e8e839f0816230f7f1d985cff685cd7db2101ab302c729bb1a50e3e4a3ad9",
       "files": [
         {
           "source": "packages/ui-registry/src/list.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/list.tsx",
           "installed": "src/shared/ui/web-kit/list.tsx",
-          "sourceHash": "42424281c091052a41738b1d6d25317d24180ffa1bcc70919b3688908cbd57f9",
-          "installedHash": "42424281c091052a41738b1d6d25317d24180ffa1bcc70919b3688908cbd57f9"
+          "sourceHash": "d56e25fcdcef62e3a4f8e4ffa0280c38e20f2b41b01d680ed364f75172408feb",
+          "installedHash": "d56e25fcdcef62e3a4f8e4ffa0280c38e20f2b41b01d680ed364f75172408feb"
         },
         {
           "source": "packages/ui-registry/checks/list-ui.test.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/checks/list-ui.test.tsx",
           "installed": "src/shared/ui/web-kit/checks/list-ui.test.tsx",
-          "sourceHash": "e7b01e207aa928f31fa74a7f5af75522fb87a4057a0738c856285e2ff56e4725",
-          "installedHash": "e7b01e207aa928f31fa74a7f5af75522fb87a4057a0738c856285e2ff56e4725"
+          "sourceHash": "d6dd6d758dbd51fb10bc9792d2a5cf5518e63f8dcb5dd23ff89da691fe14a5eb",
+          "installedHash": "d6dd6d758dbd51fb10bc9792d2a5cf5518e63f8dcb5dd23ff89da691fe14a5eb"
         },
         {
           "source": "packages/ui-registry/src/list/list-context.tsx",
@@ -321,8 +321,8 @@
           "source": "packages/ui-registry/src/list/list-filters.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/list/list-filters.tsx",
           "installed": "src/shared/ui/web-kit/list/list-filters.tsx",
-          "sourceHash": "dfe3b43133bb49e52c40ecdf7ea884b16a1dcbd850e71f58f868aa82c0f81c34",
-          "installedHash": "cd918f899473163d0a707205056df8cad5fb29e409bf471bf24a48b0dd3f17f8"
+          "sourceHash": "4840628d578e29fb95988e58b2ed257240c828f2b881f1b3adc27bed64bc9c08",
+          "installedHash": "4b5f9a6e3cf8f8e79fd16cd7ee71e88d3cf346472fc0eb01b3f5cdeaa2965ddc"
         },
         {
           "source": "packages/ui-registry/src/list/list-results.tsx",
@@ -342,21 +342,21 @@
     },
     {
       "name": "record",
-      "artifactHash": "525a0eb84750d2fc738aad0c24fdb61c244878e803b6f3cf01ff821abb71b5b3",
+      "artifactHash": "66c9ab7e4ad83535743f9eb2993c6427378ac89ffdb2fcca861450994fe26302",
       "files": [
         {
           "source": "packages/ui-registry/src/detail.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/detail.tsx",
           "installed": "src/shared/ui/web-kit/detail.tsx",
-          "sourceHash": "37cc306b87a684e0fce7bf9e56e5ad8c43eee8cab5c891134b9e607cb6e715d9",
-          "installedHash": "4a079ab8ae8bbed2ae361ef8142a878a63ee3871209a3750fb8779bc3331331f"
+          "sourceHash": "2f4f6d9a1c77961d0116ff9496e08ca3b019d03ab7218957b532faf1097b5f9f",
+          "installedHash": "804a0a407ef1653882a50334732ed17d90989d1dacad82b6b04c46b782aa8192"
         },
         {
           "source": "packages/ui-registry/checks/record-ui.test.tsx",
           "registryTarget": "~/src/shared/ui/web-kit/checks/record-ui.test.tsx",
           "installed": "src/shared/ui/web-kit/checks/record-ui.test.tsx",
-          "sourceHash": "b5d48e67a651e1a876f85d86a2fa674b73d3c41a4ff0f50aa22f87654b38ed1c",
-          "installedHash": "b5d48e67a651e1a876f85d86a2fa674b73d3c41a4ff0f50aa22f87654b38ed1c"
+          "sourceHash": "0e61e90bbf3daa9fab987baef23f700f05c16f7d1cf64aef86bed387f04ab833",
+          "installedHash": "0e61e90bbf3daa9fab987baef23f700f05c16f7d1cf64aef86bed387f04ab833"
         }
       ]
     },

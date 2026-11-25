@@ -9,11 +9,13 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 /** 바뀐 이름과 새 이름. 5.1.0-rc.5에서 상세 부품 이름과 복사본 파일 이름을 정리했다. */
 const RETIRED = [
-  [/\bRecordDefaults\b/, 'DetailDefaults'],
-  [/\bRecordMessages\b/, 'DetailMessages'],
-  [/\bRenderRecordFailure\b/, 'RenderDetailFailure'],
-  [/\bRecordFailurePlace\b/, 'DetailFailurePlace'],
-  [/<Record[\s>]|<\/Record>|\bRecord\.(Fields|Field|History)\b/, 'Detail'],
+  [/\b(?:RecordDefaults|DetailDefaults)\b/, 'RecordViewDefaults'],
+  [/\b(?:RecordMessages|DetailMessages)\b/, 'RecordViewMessages'],
+  [/\b(?:RenderRecordFailure|RenderDetailFailure)\b/, 'RenderRecordViewFailure'],
+  [/\b(?:RecordFailurePlace|DetailFailurePlace)\b/, 'RecordViewFailurePlace'],
+  [/<(?:Record|Detail)[\s>]|<\/(?:Record|Detail)>/, 'RecordView'],
+  [/\bRecord\.(Fields|Field|History)\b/, 'Detail'],
+  [/\bList\.Detail\b|`Detail (?:keys|triggerClassName)\b/, 'List.FilterDetails'],
   [/\b(?:list-ui|detail-ui)\.tsx\b|web-kit\/(?:list-ui|detail-ui|form\/ui)\b|\bform\/ui\.tsx\b/, 'list·detail·form/form 파일 이름'],
 ];
 const GUIDE_ROOTS = ['packages/web-kit/skills', 'packages/web-kit/docs', 'packages/web-kit/README.md', 'README.md', 'apps/starter/docs'];

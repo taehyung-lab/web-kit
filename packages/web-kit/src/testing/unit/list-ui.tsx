@@ -475,9 +475,9 @@ it(title('G100', '상세 기본 조건은 초기화 뒤에도 보이고 접어�
     return (
       <List model={list}>
         <List.Filter>
-          <List.Detail keys={['q']}>
+          <List.FilterDetails keys={['q']}>
             <List.Text name="q" label="상세 조건" />
-          </List.Detail>
+          </List.FilterDetails>
           <List.FilterActions />
         </List.Filter>
       </List>
@@ -642,9 +642,9 @@ it(title('G105', '필수 필터는 별표·aria와 안내를 연결하며 검색
     () => (
       <List.Filter>
         <List.Text name="to" label="다른 조건" />
-        <List.Detail keys={['from']}>
+        <List.FilterDetails keys={['from']}>
           <List.Text name="from" label="시작" />
-        </List.Detail>
+        </List.FilterDetails>
         <List.FilterActions />
       </List.Filter>
     ),

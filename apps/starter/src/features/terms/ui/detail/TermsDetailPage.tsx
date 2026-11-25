@@ -1,5 +1,5 @@
 // 파일 책임: 약관 상세. 단건 상태 판정은 상세 flow(useRecord)가 하고, 여기서는 항목 배치만 정한다.
-import { Detail } from '@/shared/ui/web-kit/detail';
+import { Detail, RecordView } from '@/shared/ui/web-kit/detail';
 import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useTermsDetail } from '../../model/detail/use-terms-detail';
@@ -11,7 +11,7 @@ export function TermsDetailPage({ termsId }: { readonly termsId: string }) {
   return (
     <div className="flex flex-col gap-5">
       <h1>{t('terms.detailTitle')}</h1>
-      <Detail
+      <RecordView
         state={state}
         missing={
           <>
@@ -29,7 +29,7 @@ export function TermsDetailPage({ termsId }: { readonly termsId: string }) {
             <Detail.Field label={t('terms.fields.body')}>{terms.body}</Detail.Field>
           </Detail.Fields>
         )}
-      </Detail>
+      </RecordView>
     </div>
   );
 }

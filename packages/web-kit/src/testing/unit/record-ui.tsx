@@ -7,7 +7,7 @@ import type { RecordState } from '../../record';
 import { conformanceTitle, type ConformanceTarget } from '../target.mjs';
 
 /** 소비처가 넘긴 실제 복사본으로 record-ui 보장 전체를 등록한다. */
-export function checkRecordUiConformance({ Detail }: { Detail: typeof Contract0.Detail }, target: ConformanceTarget) {
+export function checkRecordUiConformance({ RecordView, Detail }: { RecordView: typeof Contract0.RecordView; Detail: typeof Contract0.Detail }, target: ConformanceTarget) {
   const it = baseIt;
   const title = (id: string, label: string) => conformanceTitle(id, target, label);
 // @vitest-environment jsdom
@@ -22,7 +22,7 @@ const renderFailure = (failure: unknown) => (failure instanceof RequestFailure &
 
 function view(state: RecordState<{ name: string; phone?: string; count: number }>) {
   return render(
-    <Detail state={state} renderFailure={renderFailure} missing={<a href="/list">목록으로</a>}>
+    <RecordView state={state} renderFailure={renderFailure} missing={<a href="/list">목록으로</a>}>
       {(data) => (
         <Detail.Fields>
           <Detail.Field label="이름">{data.name}</Detail.Field>
@@ -30,7 +30,7 @@ function view(state: RecordState<{ name: string; phone?: string; count: number }
           <Detail.Field label="수">{data.count}</Detail.Field>
         </Detail.Fields>
       )}
-    </Detail>,
+    </RecordView>,
   );
 }
 

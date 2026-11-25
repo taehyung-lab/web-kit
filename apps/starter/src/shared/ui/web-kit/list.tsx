@@ -5,7 +5,7 @@ import { ListRoot, Check } from './list/list-context';
 import {
   Filter,
   FilterActions,
-  Detail,
+  FilterDetails,
   Choice,
   Text,
   Select,
@@ -69,7 +69,7 @@ type SortValues<M extends SearchMeta> = M[Names<M, 'sort'>] extends {
 export type TypedList<M extends SearchMeta, K extends string = string> = typeof ListRoot &
   Omit<
     typeof List,
-    'of' | 'Keywords' | 'MultiSelect' | 'Period' | 'SortSelect' | 'Detail' | 'Table'
+    'of' | 'Keywords' | 'MultiSelect' | 'Period' | 'SortSelect' | 'FilterDetails' | 'Table'
   > & {
     readonly Keywords: (
       props: NamedLabels<M, 'keywords', Props<typeof Keywords>, 'choiceLabels', 'targets'>
@@ -92,8 +92,8 @@ export type TypedList<M extends SearchMeta, K extends string = string> = typeof 
       }
     ) => ReactNode;
     /** keys는 접힌 칸의 확정 검색값 이름이다(그중 하나라도 값이 있으면 처음부터 펼친다). */
-    readonly Detail: (
-      props: Omit<Props<typeof Detail>, 'keys'> & { readonly keys: readonly K[] }
+    readonly FilterDetails: (
+      props: Omit<Props<typeof FilterDetails>, 'keys'> & { readonly keys: readonly K[] }
     ) => ReactNode;
     /** 열의 sort에는 선언한 정렬 값만 쓸 수 있다. */
     readonly Table: <Row>(
@@ -113,7 +113,7 @@ export const List = Object.assign(ListRoot, {
   Filter,
   Choice,
   FilterActions,
-  Detail,
+  FilterDetails,
   Text,
   Select,
   MultiSelect,
@@ -137,7 +137,7 @@ export {
   ListRoot as ListProvider,
   Filter as FilterPanel,
   FilterActions,
-  Detail as FilterDetails,
+  FilterDetails,
   Text as TextFilter,
   Choice as ChoiceFilter,
   Select as SelectFilter,

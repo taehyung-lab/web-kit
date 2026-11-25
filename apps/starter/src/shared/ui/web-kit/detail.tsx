@@ -1,4 +1,4 @@
-// 파일 책임: 상세 기본 UI의 묶음 부품(Detail.*). useRecord가 판정한 네 상태(대기·없음·실패·준비됨)와 갱신 실패를 그리고,
+// 파일 책임: 조회 상태 표시(RecordView)와 상세 항목·이력(Detail.*). useRecord가 판정한 네 상태(대기·없음·실패·준비됨)와 갱신 실패를 그리고,
 // 준비된 내용은 Detail.Fields·Field·History로 배치한다. 문구·앱 경계 무표시는 프로젝트가 renderFailure·missing 값으로 정한다.
 import { createContext, useContext, useId, type ReactNode } from 'react';
 import type { RecordState } from '@boosterlab/web-kit/record';
@@ -16,24 +16,24 @@ const defaultMessages = {
   empty: '-',
   historyEmpty: '변경 이력이 없습니다.',
 };
-export type DetailMessages = typeof defaultMessages;
+export type RecordViewMessages = typeof defaultMessages;
 
 /** 실패가 보이는 자리. load는 내용 없는 실패, missing은 없음·이 조회의 거부, refresh는 내용을 보이는 중 재조회 실패다. */
-export type DetailFailurePlace = 'load' | 'missing' | 'refresh';
+export type RecordViewFailurePlace = 'load' | 'missing' | 'refresh';
 /** 실패 문구. undefined면 키트 기본 문구, null이면 그 자리에 아무것도 그리지 않는다(앱 경계가 이미 알린 401·403 등). */
-export type RenderDetailFailure = (
+export type RenderRecordViewFailure = (
   failure: unknown,
-  place: DetailFailurePlace
+  place: RecordViewFailurePlace
 ) => ReactNode | null | undefined;
 
-/** 앱이 DetailDefaults로 준 기본값. 없으면 키트 기본 문구만 쓴다. */
+/** 앱이 RecordViewDefaults로 준 기본값. 없으면 키트 기본 문구만 쓴다. */
 type Defaults = {
-  readonly messages: Partial<DetailMessages>;
-  readonly renderFailure?: RenderDetailFailure;
+  readonly messages: Partial<RecordViewMessages>;
+  readonly renderFailure?: RenderRecordViewFailure;
 };
 const DefaultsContext = createContext<Defaults>({ messages: {} });
-/** Detail 안의 문구. Detail 밖에 둔 Field·History는 null을 보고 앱 기본값을 직접 읽는다. */
-const MessagesContext = createContext<DetailMessages | null>(null);
+/** RecordView 안의 문구. RecordView 밖에 둔 Field·History는 null을 보고 앱 기본값을 직접 읽는다. */
+const MessagesContext = createContext<RecordViewMessages | null>(null);
 
 /** 값이 undefined인 키를 버린다. 「이 문구는 따로 정하지 않음」이 아래 단계의 문구를 지우지 않게 한다. */
 function definedOnly<T extends object>(value: T | undefined): Partial<T> {
@@ -45,9 +45,9 @@ function definedOnly<T extends object>(value: T | undefined): Partial<T> {
 
 /** 가까운 쪽 실패 문구를 먼저 묻고, undefined(정하지 않음)일 때만 다음 단계에 묻는다. null·''은 그 단계의 답으로 그대로 쓴다. */
 function chainFailure(
-  first: RenderDetailFailure | undefined,
-  next: RenderDetailFailure | undefined
-): RenderDetailFailure | undefined {
+  first: RenderRecordViewFailure | undefined,
+  next: RenderRecordViewFailure | undefined
+): RenderRecordViewFailure | undefined {
   if (first === undefined) return next;
   if (next === undefined) return first;
   return (failure, place) => {
@@ -56,31 +56,31 @@ function chainFailure(
   };
 }
 
-/** 키트 기본 → 앱 기본(DetailDefaults) → 이 Detail의 messages 순으로 덮어쓴 문구. */
-function useDetailCopy(messages?: Partial<DetailMessages>): DetailMessages {
+/** 키트 기본 → 앱 기본(RecordViewDefaults) → 이 RecordView의 messages 순으로 덮어쓴 문구. */
+function useRecordViewCopy(messages?: Partial<RecordViewMessages>): RecordViewMessages {
   const defaults = useContext(DefaultsContext);
   return { ...defaultMessages, ...defaults.messages, ...definedOnly(messages) };
 }
 
-/** Field·History가 읽는 문구. Detail 안이면 그 Detail의 문구, 밖이면 앱 기본값이다. */
-function useFieldCopy(): DetailMessages {
+/** Field·History가 읽는 문구. RecordView 안이면 그 RecordView의 문구, 밖이면 앱 기본값이다. */
+function useFieldCopy(): RecordViewMessages {
   const local = useContext(MessagesContext);
-  const fallback = useDetailCopy();
+  const fallback = useRecordViewCopy();
   return local ?? fallback;
 }
 
 /**
  * 앱 전체의 상세 기본 문구와 실패 문구. 앱 골격에 한 번 두고 언어가 바뀌면 새 messages로 다시 그린다.
- * 각 <Detail messages renderFailure>는 이 값 위에 덮어쓴다. 안쪽 DetailDefaults는 바깥 값 위에 덮어쓴다.
+ * 각 <RecordView messages renderFailure>는 이 값 위에 덮어쓴다. 안쪽 RecordViewDefaults는 바깥 값 위에 덮어쓴다.
  * renderFailure는 가까운 쪽부터 묻고 undefined면 다음 단계(바깥 → 키트 기본 문구)로 넘긴다. null이면 그리지 않는다.
  */
-export function DetailDefaults({
+export function RecordViewDefaults({
   messages,
   renderFailure,
   children,
 }: {
-  readonly messages?: Partial<DetailMessages>;
-  readonly renderFailure?: RenderDetailFailure;
+  readonly messages?: Partial<RecordViewMessages>;
+  readonly renderFailure?: RenderRecordViewFailure;
   readonly children: ReactNode;
 }) {
   const outer = useContext(DefaultsContext);
@@ -95,7 +95,7 @@ export function DetailDefaults({
  * 단건 하나의 상태를 그린다. 준비됨일 때만 children(data)을 그리고, 식별 전환·없음·실패는 useRecord 판정을 그대로 따른다.
  * missing은 없음 안내(무엇이 없는지와 돌아갈 길)다. 재조회 실패는 내용을 지우지 않고 위에 알린다.
  */
-function DetailRoot<T>({
+export function RecordView<T>({
   state,
   children,
   missing,
@@ -105,13 +105,13 @@ function DetailRoot<T>({
   readonly state: RecordState<T>;
   readonly children: (data: T) => ReactNode;
   readonly missing?: ReactNode;
-  readonly renderFailure?: RenderDetailFailure;
-  readonly messages?: Partial<DetailMessages>;
+  readonly renderFailure?: RenderRecordViewFailure;
+  readonly messages?: Partial<RecordViewMessages>;
 }) {
   const id = useId();
-  const copy = useDetailCopy(messages);
+  const copy = useRecordViewCopy(messages);
   const defaults = useContext(DefaultsContext);
-  const renderFailure: RenderDetailFailure =
+  const renderFailure: RenderRecordViewFailure =
     chainFailure(localFailure, defaults.renderFailure) ?? (() => undefined);
   let body: ReactNode;
   if (state.kind === 'missing') {
@@ -191,7 +191,7 @@ function Fields({
   );
 }
 
-/** 라벨·값 한 칸. null·undefined·''만 빈 값 표시('-')이고 0은 그대로 보인다. 값의 의미·마스킹·포맷은 프로젝트가 정한다. */
+/** 라벨·값 한 칸. null·undefined·''·false만 빈 값 표시('-')이고 0은 그대로 보인다. 값의 의미·마스킹·포맷은 프로젝트가 정한다. */
 function Field({ label, children }: { readonly label: ReactNode; readonly children?: ReactNode }) {
   const copy = useFieldCopy();
   const empty =
@@ -261,6 +261,6 @@ function History({
   );
 }
 
-/** 상세 묶음 부품. `<Detail state={useRecord(...)}>{(data) => <Detail.Fields>…</Detail.Fields>}</Detail>` */
-export const Detail = Object.assign(DetailRoot, { Fields, Field, History });
+/** 상세 화면의 라벨·값·이력. RecordView 안팎에서 조합한다. */
+export const Detail = { Fields, Field, History };
 export { RetryRegion } from './retry';
