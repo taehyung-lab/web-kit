@@ -161,7 +161,7 @@ headless는 화면 배치 없이 상태와 연결 함수만 쓰는 방식이다.
 
 ## 폼 없는 확인 실행
 
-실제 조립 예는 starter의 [확인창 복사본 검사](../../references/apps/starter/src/shared/ui/web-kit/checks/dialog.test.tsx.txt)에서 `useConfirmationState`와 `ConfirmationDialog`를 함께 쓰는 부분을 본다. 제목·문구·요청은 프로젝트가 정한다.
+실제 조립 예: [starter의 확인창 복사본 검사](../../references/apps/starter/src/shared/ui/web-kit/checks/dialog.test.tsx.txt)에서 `useConfirmationState`와 `ConfirmationDialog`를 함께 쓰는 부분. 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 삭제·상태 변경처럼 입력 없이 확인만 받는 작업은 `/dialog`의 `useConfirmationState`에 실행 함수와 실패 처리를 연결하고, `request`로 대상을 정한다. registry `dialog`의 `<ConfirmationDialog confirmation={confirmation} title={…}>`에 그 결과를 넘기면 열기·닫기, 진행·실패 표시, 확인 버튼을 연결한다. 삭제면 `progress: 'delete'`를 선언한다. 실행 중 화면 전체 진행 덮개가 `messages.delete` 문구로 덮는 동안 확인창은 내려가고, 실패가 이 창에 남는 경우 덮개가 닫히면 확인창과 실패 문구가 다시 보인다. 그 밖의 확인 실행은 덮개를 선언하지 않으며 확인창 안에 진행을 표시한다.
 
