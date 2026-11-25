@@ -87,7 +87,7 @@ it('상세검색 펼침은 칸 이름을 받고, 그 칸에 걸러 내는 확정
   expect(open(model({}), ['period'])).toBe(false);
   expect(open(model({ dateType: 'updated' }), ['period'])).toBe(false);
   expect(open(model({ endDate: '2026-01-31' }), ['period'])).toBe(true);
-  // 종류 정보가 없는 칸은 기본값과 다를 때 조건이다.
+  // 종류 정보가 없는 칸은 값이 있으면 조건이다(빈 문자열은 아님).
   expect(open(model({}), ['memo'])).toBe(false);
   expect(open(model({ memo: 'x' }), ['memo'])).toBe(true);
   // 기간 칸의 검증 오류(시작 키에 붙는다)도 칸 이름으로 펼친다.

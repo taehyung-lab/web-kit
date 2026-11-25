@@ -1,7 +1,7 @@
 // 파일 책임: 확정 조건에 실제로 결과를 거르는 값이 있는지 칸 단위로 판단한다.
 // 빈 결과(empty)의 filtered와 상세검색 펼침의 시작 상태가 같은 규칙을 쓴다.
-// "기본값과 다른가"가 아니다: 기본 기간이 걸린 목록도 기간으로 거르므로 조건이 있다.
-import { sameSearchValue, type ViewKeys } from '../search/fields';
+// "기본값과 다른가"가 아니다: 기본값으로 걸린 값(기본 기간 등)도 결과를 거르므로 조건이다.
+import type { ViewKeys } from '../search/fields';
 import type { SearchMeta, SearchMetaEntry } from '../search/list-search';
 
 /** 판단에 필요한 목록 선언(검색 정의와 목록 모델이 같은 모양으로 갖는다). */
@@ -45,9 +45,9 @@ function entryFiltered(name: string, entry: SearchMetaEntry, criteria: Readonly<
   }
 }
 
-/** 종류 정보가 없는 필드(defineSearch, listSearch에 직접 넣은 필드)는 기본값과 다를 때 조건이 걸린 것이다. */
-function plainFieldFiltered(source: FilterSource, key: string, criteria: Readonly<Record<string, unknown>>): boolean {
-  return !sameSearchValue(criteria[key], source.defaults[key]);
+/** 종류 정보가 없는 필드(defineSearch, listSearch에 직접 넣은 필드)는 값이 있으면(빈 문자열·빈 배열·null·undefined가 아니면) 조건이다. */
+function plainFieldFiltered(key: string, criteria: Readonly<Record<string, unknown>>): boolean {
+  return hasValue(criteria[key]);
 }
 
 /** 판단에서 빼는 키(보기 키·조회 표시)와 종류로 선언한 칸이 차지한 주소 키. */
@@ -72,14 +72,14 @@ export function filterFieldKeys(source: FilterSource, name: string): readonly st
 export function isFieldFiltered(source: FilterSource, name: string, criteria: Readonly<Record<string, unknown>>): boolean {
   filterFieldKeys(source, name);
   const entry = source.meta?.[name];
-  return entry === undefined ? plainFieldFiltered(source, name, criteria) : entryFiltered(name, entry, criteria);
+  return entry === undefined ? plainFieldFiltered(name, criteria) : entryFiltered(name, entry, criteria);
 }
 
-/** 확정 조건 전체에 조건이 걸렸는가. 종류로 선언한 칸은 종류로, 나머지 필드는 기본값과 비교한다. */
+/** 확정 조건 전체에 조건이 걸렸는가. 종류로 선언한 칸은 종류로, 나머지 필드는 값이 있는지로 판단한다. */
 export function isFiltered(source: FilterSource, criteria: Readonly<Record<string, unknown>>): boolean {
   const claimed = claimedKeys(source);
   return (
     Object.entries(source.meta ?? {}).some(([name, entry]) => entryFiltered(name, entry, criteria)) ||
-    Object.keys(source.defaults).some((key) => !claimed.has(key) && plainFieldFiltered(source, key, criteria))
+    Object.keys(source.defaults).some((key) => !claimed.has(key) && plainFieldFiltered(key, criteria))
   );
 }

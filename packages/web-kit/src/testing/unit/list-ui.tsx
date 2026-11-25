@@ -474,7 +474,7 @@ it(title('G099', '키워드 대상이 늦게 도착해도 현재 선택지로 �
   await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ keywords: [{ field: 'name', value: 'hello' }] })));
 });
 
-it(title('G100', '상세는 확정 조건이 없으면 닫힌 채 시작하고(초기화 뒤에도), 접어도 미확정 입력은 보존한다'), () => {
+it(title('G100', '상세 기본 조건은 초기화 뒤에도 보이고 접어도 미확정 입력은 보존한다'), () => {
   const def = defineSearch({ fields: { q: { schema: z.string(), default: 'default' } } });
   function App() {
     const [url, setUrl] = useState(() => def.validateSearch({}));
@@ -504,16 +504,14 @@ it(title('G100', '상세는 확정 조건이 없으면 닫힌 채 시작하고(�
     </QueryClientProvider>,
   );
   const toggle = screen.getByRole('button', { name: '상세 검색' });
-  // 기본값은 걸러 내는 확정 조건이 아니다(종류 정보가 없는 칸은 기본값과 다를 때 조건).
-  expect(toggle.getAttribute('aria-expanded')).toBe('false');
-  fireEvent.click(toggle);
+  // 기본값으로 걸린 값도 결과를 거르는 확정 조건이라 펼친 채 시작한다.
+  expect(toggle.getAttribute('aria-expanded')).toBe('true');
   fireEvent.change(screen.getByRole('textbox', { name: '상세 조건' }), { target: { value: 'draft' } });
   fireEvent.click(toggle);
   fireEvent.click(toggle);
   expect((screen.getByRole('textbox', { name: '상세 조건' }) as HTMLInputElement).value).toBe('draft');
   fireEvent.click(screen.getByRole('button', { name: '초기화' }));
-  expect(toggle.getAttribute('aria-expanded')).toBe('false');
-  fireEvent.click(toggle);
+  expect(toggle.getAttribute('aria-expanded')).toBe('true');
   expect((screen.getByRole('textbox', { name: '상세 조건' }) as HTMLInputElement).value).toBe('default');
 });
 

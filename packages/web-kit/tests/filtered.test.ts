@@ -65,12 +65,13 @@ describe('listSearch 칸 종류로 판단한다', () => {
     const defaults = { ...withDefaultPeriod.defaults, from: '2026-01-01', to: '2026-01-31' };
     expect(isFiltered({ ...withDefaultPeriod, defaults }, defaults)).toBe(true);
   });
-  it('listSearch에 직접 넣은 칸은 기본값과 다를 때 건다', () => {
+  it('listSearch에 직접 넣은 칸은 값이 있으면 건다(빈 문자열은 조건 없음)', () => {
+    expect(filtered({ memo: '' })).toBe(false);
     expect(filtered({ memo: 'x' })).toBe(true);
   });
 });
 
-describe('종류 정보가 없는 defineSearch는 보기 값을 뺀 필터 부분이 기본값과 다른지로 판단한다', () => {
+describe('종류 정보가 없는 defineSearch는 보기 값을 뺀 필드에 값이 있는지로 판단한다(기본값으로 걸린 값도 조건)', () => {
   const plain = defineSearch({
     fields: {
       page: { schema: z.number(), default: 1 },
@@ -81,12 +82,12 @@ describe('종류 정보가 없는 defineSearch는 보기 값을 뺀 필터 부�
     view: { page: 'page', size: 'size' },
   });
   const values = plain.defaults as Record<string, unknown>;
-  it('기본값 그대로면 조건 없음, 페이지를 바꿔도 조건 없음', () => {
-    expect(isFiltered(plain, values)).toBe(false);
-    expect(isFiltered(plain, { ...values, page: 2 })).toBe(false);
+  it('기본값으로 걸린 값(status: open)도 조건이다', () => {
+    expect(isFiltered(plain, values)).toBe(true);
   });
-  it('필터 칸이 기본값과 다르면 건다', () => {
-    expect(isFiltered(plain, { ...values, q: 'x' })).toBe(true);
-    expect(isFiltered(plain, { ...values, status: 'closed' })).toBe(true);
+  it('필드가 모두 비었으면 조건 없음, 페이지·보기 수는 판단하지 않는다', () => {
+    expect(isFiltered(plain, { ...values, status: undefined })).toBe(false);
+    expect(isFiltered(plain, { ...values, status: undefined, page: 2, size: 50 })).toBe(false);
+    expect(isFiltered(plain, { ...values, status: undefined, q: 'x' })).toBe(true);
   });
 });
