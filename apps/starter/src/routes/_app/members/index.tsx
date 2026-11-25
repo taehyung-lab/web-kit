@@ -11,5 +11,5 @@ export const Route = createFileRoute('/_app/members/')({
 
 function MemberListRoute() {
   const navigate = Route.useNavigate();
-  return <MemberListPage search={Route.useSearch()} navigate={(next, { replace }) => void navigate({ search: next, replace })} />;
+  return <MemberListPage urlSearch={Route.useSearch()} navigate={(next, { replace }) => void navigate({ search: next, replace })} />;
 }

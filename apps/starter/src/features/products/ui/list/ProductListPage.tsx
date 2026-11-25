@@ -9,18 +9,18 @@ import { ProductActions } from '../ProductActions';
 import { useProductColumns } from './product-columns';
 /** 같은 목록 상태를 필터·표·페이지·확인 작업에 전달한다. */
 export function ProductListPage({
-  search,
+  urlSearch,
   navigate,
   onOpen,
   onCreate,
 }: {
-  readonly search: UrlSearch;
+  readonly urlSearch: UrlSearch;
   readonly navigate: (next: UrlSearch, options: { readonly replace: boolean }) => void;
   readonly onOpen: (id: string) => void;
   readonly onCreate: () => void;
 }) {
   const { t } = useTranslation();
-  const { list, categoryName, deactivateSelected, deactivated } = useProductList({ search, navigate });
+  const { list, categoryName, deactivateSelected, deactivated } = useProductList({ urlSearch, navigate });
   const columns = useProductColumns(categoryName);
   return (
     <div className="flex flex-col gap-5">
@@ -38,13 +38,14 @@ export function ProductListPage({
           reset: t('products.filter.reset'),
           optionsFailed: t('products.list.optionsFailed'),
           empty: t('products.list.empty'),
+          noMatches: t('products.list.noMatches'),
           size: t('products.list.pageSize'),
         }}
       >
         <ProductFilters />
         <ProductActions total={list.total} selectedCount={list.selection.selectedIds.length} deactivateSelected={deactivateSelected} done={deactivated} />
         <ListResult>
-          <ResultTable columns={columns} rowId={(row) => row.id} selectable onOpen={(row) => onOpen(row.id)} />
+          <ResultTable columns={columns} rowId={(row) => row.id} selectionColumn onOpen={(row) => onOpen(row.id)} />
         </ListResult>
         <Pagination />
       </ListProvider>

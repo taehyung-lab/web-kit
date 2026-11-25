@@ -156,17 +156,17 @@ import type { UrlSearch } from '@boosterlab/web-kit/search';
 import { ${e}ListQuery } from '${A}features/${feature}/api/${entity}-list-query';
 import { ${e}ListSearch, to${E}ListParams } from '${A}features/${feature}/model/list/${entity}-list-search';
 
-/** search·navigate는 route가 URL에서 읽어 넘긴다. */
+/** urlSearch(주소 검색값)·navigate는 route가 URL에서 읽어 넘긴다. */
 export function use${E}List({
-  search,
+  urlSearch,
   navigate,
 }: {
-  readonly search: UrlSearch;
+  readonly urlSearch: UrlSearch;
   readonly navigate: (next: UrlSearch, options: { readonly replace: boolean }) => void;
 }) {
   const list = useList({
     definition: ${e}ListSearch,
-    search,
+    urlSearch,
     navigate,
     progress: 'page',
     query: (full) => ${e}ListQuery(to${E}ListParams(full)),
@@ -179,13 +179,13 @@ export function use${E}List({
 import { use${E}List } from '${A}features/${feature}/model/${work}/use-${entity}-list';
 
 export function ${E}ListPage({
-  search,
+  urlSearch,
   navigate,
 }: {
-  readonly search: UrlSearch;
+  readonly urlSearch: UrlSearch;
   readonly navigate: (next: UrlSearch, options: { readonly replace: boolean }) => void;
 }) {
-  const { list } = use${E}List({ search, navigate });
+  const { list } = use${E}List({ urlSearch, navigate });
   // TODO(web-kit-new): 제목·필터·결과 표·페이지 이동을 registry list로 배치한다(web-kit-list 「registry 표시」). 채우기 전에는 typecheck가 실패한다.
   return <${TODO_MARKER}list_layout list={list} />;
 }
@@ -201,7 +201,7 @@ export const Route = createFileRoute('${route.id}')({
 
 function ${E}ListRoute() {
   const navigate = Route.useNavigate();
-  return <${E}ListPage search={Route.useSearch()} navigate={(next, { replace }) => void navigate({ search: next, replace })} />;
+  return <${E}ListPage urlSearch={Route.useSearch()} navigate={(next, { replace }) => void navigate({ search: next, replace })} />;
 }
 ` });
   } else if (route.mode === 'detail') {

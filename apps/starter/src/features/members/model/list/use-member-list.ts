@@ -5,27 +5,27 @@ import { memberListQuery, useChangeMemberStatus } from '../../api/members';
 import type { MemberAccountStatus } from '../member';
 import { memberListSearch, toMemberListParams } from './member-list-search';
 
-/** search·navigate는 route가 URL에서 읽어 넘긴다. 진입만으로는 조회하지 않고 검색을 눌러야 조회한다. */
+/** urlSearch(주소 검색값)·navigate는 route가 URL에서 읽어 넘긴다. 진입만으로는 조회하지 않고 검색을 눌러야 조회한다. */
 export function useMemberList({
-  search,
+  urlSearch,
   navigate,
 }: {
-  readonly search: UrlSearch;
+  readonly urlSearch: UrlSearch;
   readonly navigate: (next: UrlSearch, options: { readonly replace: boolean }) => void;
 }) {
   const list = useList({
     definition: memberListSearch,
-    search,
+    urlSearch,
     navigate,
     progress: 'page',
     query: (full) => memberListQuery(toMemberListParams(full)),
     rowId: (row) => row.id,
   });
   const change = useChangeMemberStatus();
-  /** 확인한 선택을 확인한 상태로 바꾼다. 서버가 모두 바꿨을 때만 키트의 선택에서 뺀다(일부만 되면 다시 볼 수 있게 남긴다). */
+  /** 확인한 선택을 확인한 상태로 바꾼다. 서버가 모두 바꿨을 때만 키트의 선택에서 뺀다(일부만 되면 다시 볼 수 있게 남긴다). details는 서버가 바꾼 건수다. */
   async function changeStatus(ids: readonly string[], status: MemberAccountStatus) {
     const count = await change.mutateAsync({ ids, status });
-    return { completedIds: count === ids.length ? ids : [], value: count };
+    return { completedIds: count === ids.length ? ids : [], details: count };
   }
   return { list, changeStatus };
 }

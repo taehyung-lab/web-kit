@@ -11,6 +11,7 @@ import { validateDateRange } from '../date-range';
 import { sameSearchValue, type FullSearch, type SearchDefinition, type SearchField, type UrlSearch } from '../search/fields';
 import { keywordLimitIssues } from '../search/filter-layout';
 import { addKeyword, nextSort, type Keyword } from '../search/interactions';
+import { isFiltered } from './filtered';
 
 type AnyFields = Record<string, SearchField<any>>;
 
@@ -42,7 +43,8 @@ export type ListStatus =
   | { readonly kind: 'idle'; readonly reason: 'check-stuck'; readonly fields: readonly string[]; readonly resume: () => void }
   | { readonly kind: 'pending' }
   | { readonly kind: 'failed'; readonly failure: unknown; readonly retry: () => void }
-  | { readonly kind: 'empty' }
+  /** 결과 0건. filtered는 확정 조건에 실제로 거르는 값이 있는지다(조건 없이 0건과 조건에 맞는 것이 없는 0건을 가른다). */
+  | { readonly kind: 'empty'; readonly filtered: boolean }
   | { readonly kind: 'rows' };
 
 /** URL과 모양이 다른 입력 초안(기간 preset 등)의 변환. from은 확정 검색 → 초안, to는 초안 → 확정할 필터 값. */
@@ -65,8 +67,8 @@ export interface ListOptions<
    * 검색·페이지 이동은 이전 결과를 보인 채 다시 조회하므로 덮지 않는다.
    */
   readonly progress?: 'page';
-  /** route가 검증한 현재 URL 값(Route.useSearch(), 정규 URL 표현). 값으로 읽는 일은 목록이 한다. */
-  readonly search: UrlSearch;
+  /** 주소 검색값: route가 검증한 현재 URL 값(Route.useSearch(), 정규 URL 표현). 기본값을 채워 확정 조건(criteria)으로 읽는 일은 목록이 한다. */
+  readonly urlSearch: UrlSearch;
   /** URL 이동. 값은 정규 URL(encode 적용 뒤)이다. 확정은 push, 복구는 replace로 부른다. */
   readonly navigate: (next: UrlSearch, options: { readonly replace: boolean }) => void;
   /**
@@ -75,8 +77,8 @@ export interface ListOptions<
    */
   readonly query: (search: FullSearch<F>) => UseQueryOptions<TPage & ListPage<TRow>, TError, TPage & ListPage<TRow>, TKey>;
   readonly rowId: (row: TRow) => string;
-  /** 업무상 선택할 수 없는 행을 거른다. 없으면 모두 선택 가능. */
-  readonly selectable?: (row: TRow) => boolean;
+  /** 행마다 업무상 고를 수 있는지. 없으면 모두 고를 수 있다. */
+  readonly isRowSelectable?: (row: TRow) => boolean;
   /** 초안 모양이 URL 값과 다를 때만 선언한다. 없으면 초안은 검색 값 그대로다. */
   readonly draft?: DraftCodec<F, D>;
   /** 검색 확정 직전의 직접 입력 검증(제품의 기간 한도 등). 초안 모양을 받는다. */
@@ -148,7 +150,7 @@ export function useList<
   const { definition } = options;
   const latest = useRef(options);
   latest.current = options;
-  const full = definition.resolve(definition.read(options.search));
+  const full = definition.resolve(definition.read(options.urlSearch));
   const current = definition.canonical(full);
   const urlKey = JSON.stringify(current);
   const values = full as Record<string, unknown>;
@@ -411,8 +413,8 @@ export function useList<
   }
 
   // ── 선택 ──
-  const selectable = options.selectable ?? (() => true);
-  const allowed = isCurrent ? rows.filter(selectable).map(options.rowId) : [];
+  const isRowSelectable = options.isRowSelectable ?? (() => true);
+  const allowed = isCurrent ? rows.filter(isRowSelectable).map(options.rowId) : [];
   const sourceKey = JSON.stringify(allowed);
   const [selection, setSelection] = useState(() => ({ lifetime: selectionLifetime, sourceKey, selected: new Set<string>() }));
   let selectionCurrent = selection;
@@ -549,7 +551,7 @@ export function useList<
     };
   else if (!allValid) status = { kind: 'pending' };
   else if (!ready && query.data === undefined) status = { kind: 'idle', reason: 'not-ready' };
-  else if (query.data !== undefined) status = query.data.rows.length === 0 ? { kind: 'empty' } : { kind: 'rows' };
+  else if (query.data !== undefined) status = query.data.rows.length === 0 ? { kind: 'empty', filtered: isFiltered(definition, full) } : { kind: 'rows' };
   else if (query.isError)
     status = cancelled ? { kind: 'idle', reason: 'cancelled', resume: refetch } : { kind: 'failed', failure: query.error, retry: refetch };
   else status = { kind: 'pending' };
@@ -557,16 +559,16 @@ export function useList<
   useFullPageProgress('loading', options.progress === 'page' && page === undefined && status.kind === 'pending' && (running || query.isFetching));
 
   return {
-    /** 현재 URL을 기본값으로 채운 확정 검색. */
-    search: full,
+    /** 확정 조건: 현재 주소 검색값(urlSearch)을 기본값으로 채운 값. 조회·다운로드가 쓴다. */
+    criteria: full,
     defaults: definition.defaults,
     view: definition.view,
     /** listSearch로 선언한 칸 종류 정보. 화면 부품이 name으로 주소 키·선택지를 읽는다. */
     meta: definition.meta,
     /** 행 식별. 표가 같은 규칙을 다시 받지 않도록 낸다. */
     rowId: options.rowId,
-    /** 업무상 선택할 수 있는 행인지(선언했을 때만). 표의 선택 칸 표시가 이것을 읽는다. */
-    isSelectable: options.selectable,
+    /** 업무상 선택할 수 있는 행인지(isRowSelectable을 선언했을 때만). 표의 선택 칸 표시가 이것을 읽는다. */
+    isRowSelectable: options.isRowSelectable,
     checks: Object.fromEntries(Object.entries(definition.fields).map(([name, field]) => [name, field.check])),
     status,
     /** 보여 줄 행. isCurrent가 false면 이전 조건이거나 사용자 검색 응답 대기 중인 읽기용 결과다. */

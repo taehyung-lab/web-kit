@@ -12,7 +12,7 @@ export function ProductActions({
 }: {
   readonly total: number;
   readonly selectedCount: number;
-  readonly deactivateSelected: (ids: readonly string[]) => Promise<{ readonly completedIds: readonly string[]; readonly value: number }>;
+  readonly deactivateSelected: (ids: readonly string[]) => Promise<{ readonly completedIds: readonly string[]; readonly details: number }>;
   readonly done: number | undefined;
 }) {
   const { t } = useTranslation();
@@ -26,7 +26,7 @@ export function ProductActions({
             label={t('products.bulk.deactivate', { count: selectedCount })}
             title={t('products.bulk.title')}
             confirmLabel={t('products.bulk.confirm')}
-            describe={(ids) => t('products.bulk.body', { count: ids.length })}
+            confirmMessage={(ids) => t('products.bulk.body', { count: ids.length })}
             run={deactivateSelected}
           />
         </ListActions>

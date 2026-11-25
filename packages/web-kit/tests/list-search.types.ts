@@ -64,14 +64,14 @@ const filterSearch = listSearch({
 });
 type Layout = ListFilterLayout<typeof filterSearch.meta>;
 const layout: Layout = {
-  term: { section: 'basic', labels: { name: 'Name' } },
-  group: { section: 'detail', label: 'Group' },
+  term: { section: 'basic', valueLabels: { name: 'Name' } },
+  group: { section: 'detail', title: 'Group' },
 };
 void layout;
 // @ts-expect-error 서버 선택지 칸의 배치 누락
 const missingFilter: Layout = { term: layout.term };
 // @ts-expect-error 검색 대상 이름 오타
-const wrongLabel: Layout = { ...layout, term: { section: 'basic', labels: { neme: 'Name' } } };
+const wrongLabel: Layout = { ...layout, term: { section: 'basic', valueLabels: { neme: 'Name' } } };
 // @ts-expect-error 서버 선택지 조회 연결 누락
 connectSearch(filterSearch);
 void [missingFilter, wrongLabel];

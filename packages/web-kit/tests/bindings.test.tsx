@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 // 파일 책임: 공개 연결 hook을 실제 요소와 연결해 포커스·잠금·요청·목록 동등성을 검사한다.
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { ListProvider, useListModel, useList, type ListModel } from '../src/list/index';
+import { ListProvider, useListModel, useList, useListDetailsBinding, type ListModel } from '../src/list/index';
 import { List, type ListColumn } from '../../ui-registry/src/list';
 import { defineSearch } from '../src/search';
 import { useDialogBinding, useConfirmBinding, useAcknowledgeBinding } from '../src/confirmation';
@@ -24,7 +24,7 @@ function ListScreen({ mode, children }: { mode: 'context' | 'props'; children?: 
     from: { schema: z.string(), default: undefined }, to: { schema: z.string(), default: undefined },
   } });
   const [url, navigate] = useState(() => definition.validateSearch({}));
-  const list = useList({ definition, search: url, navigate: (next) => {
+  const list = useList({ definition, urlSearch: url, navigate: (next) => {
       navigate(next);
       window.history.replaceState(null, '', '?' + new URLSearchParams(Object.entries(next).map(([key, value]) => [key, String(value)])));
     }, rowId: (row: { id: string }) => row.id,
@@ -34,7 +34,7 @@ function ListScreen({ mode, children }: { mode: 'context' | 'props'; children?: 
   const columns: readonly ListColumn<{ id: string }>[] = [{ key: 'id', header: '번호', cell: (row) => row.id }];
   const body = <>
     <List.Filter {...props}><List.Text {...props} name="q" label="검색어" /><List.FilterActions {...props} /></List.Filter>
-    <List.Table {...props} columns={columns} rowId={(row) => row.id} selectable />
+    <List.Table {...props} columns={columns} rowId={(row) => row.id} selectionColumn />
     <List.Pagination {...props} />
     <output data-testid="url">{JSON.stringify(url)}</output><output data-testid="selection">{list.selection.selectedIds.join(',')}</output>
     {children}
@@ -73,6 +73,33 @@ function PeriodScreen({ fixed = false }: { fixed?: boolean }) {
   return <List.Period model={model} from="from" to="to" label="기간"
     {...(fixed ? { timeZone: 'America/Los_Angeles', now: () => new Date('2026-01-01T01:00:00Z'), presets: [{ label: '오늘', value: { unit: 'day' as const, amount: 0 } }] } : {})} />;
 }
+it('상세검색 펼침은 칸 이름을 받고, 그 칸에 걸러 내는 확정 조건이 있을 때만 펼친 채 시작한다', () => {
+  const meta = {
+    period: { kind: 'dateRange', keys: { type: 'dateType', from: 'startDate', to: 'endDate' }, types: ['created', 'updated'] },
+    paging: { kind: 'paging', keys: { page: 'page', size: 'size' }, sizes: [20] },
+  } as const;
+  const defaults = { dateType: 'created', startDate: undefined, endDate: undefined, memo: '', page: 1, size: 20, searched: true };
+  const view = { page: 'page', size: 'size', sort: 'sort', order: 'order' };
+  const model = (criteria: Record<string, unknown>, issues: ListModel['issues'] = [], submitVersion = 0) =>
+    ({ meta, defaults, view, criteria: { ...defaults, ...criteria }, issues, resetVersion: 0, submitVersion }) as unknown as ListModel;
+  const open = (current: ListModel, names: readonly string[]) => renderHook(() => useListDetailsBinding(current, names)).result.current.open;
+  // 기간 기준(type)만 있으면 조건이 아니라 닫힌 채 시작한다. 날짜가 하나라도 있으면 펼친다.
+  expect(open(model({}), ['period'])).toBe(false);
+  expect(open(model({ dateType: 'updated' }), ['period'])).toBe(false);
+  expect(open(model({ endDate: '2026-01-31' }), ['period'])).toBe(true);
+  // 종류 정보가 없는 칸은 값이 있으면 조건이다(빈 문자열은 아님).
+  expect(open(model({}), ['memo'])).toBe(false);
+  expect(open(model({ memo: 'x' }), ['memo'])).toBe(true);
+  // 기간 칸의 검증 오류(시작 키에 붙는다)도 칸 이름으로 펼친다.
+  const hook = renderHook(({ current }) => useListDetailsBinding(current, ['period']), { initialProps: { current: model({}) } });
+  hook.rerender({ current: model({}, [{ field: 'startDate', code: 'range' }], 1) });
+  expect(hook.result.current.open).toBe(true);
+  // 선언에 없는 이름·기간의 주소 키·페이지 칸과 그 주소 키는 칸 이름이 아니다.
+  vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  for (const name of ['missing', 'startDate', 'dateType', 'paging', 'page', 'size'])
+    expect(() => open(model({}), [name]), name).toThrow(/not a filter field|paging\/sort field/);
+});
+
 it('기간은 단축·시간대·시계를 생략해도 직접 입력한다', () => {
   render(<PeriodScreen />);
   fireEvent.change(screen.getByLabelText('기간 시작'), { target: { value: '2026-05-02' } });

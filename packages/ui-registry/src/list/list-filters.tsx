@@ -72,20 +72,23 @@ function FilterActions({
   );
 }
 
-/** 접을 수 있는 상세 필터. 접어도 입력은 초안에 남는다. keys 중 확정 값이 있으면 펼친 채 시작한다. */
+/**
+ * 접을 수 있는 상세 필터. 접어도 입력은 초안에 남는다. names는 접힌 칸의 이름(다른 부품의 name과 같은 이름)이고,
+ * 처음에는 닫히고, 그 칸에 걸러 내는 확정 조건이 있으면(빈 결과의 filtered와 같은 칸 규칙) 펼친 채 시작한다. 기간 칸의 주소 키는 선언에서 푼다.
+ */
 function FilterDetails({
   model: explicitModel,
-  keys,
+  names,
   children,
   triggerClassName,
 }: {
-  readonly keys: readonly string[];
+  readonly names: readonly string[];
   readonly children: ReactNode;
   /** 펼침 버튼의 모양·자리(기본 클래스 뒤에 합친다). 동작·접근성 연결은 바꾸지 않는다. */
   readonly triggerClassName?: string;
 } & { readonly model?: ListModel }) {
   const { model, copy } = useListContext(explicitModel);
-  const { open, id, toggle } = useListDetailsBinding(model, keys);
+  const { open, id, toggle } = useListDetailsBinding(model, names);
   return (
     <>
       <Button
@@ -241,26 +244,26 @@ function Select({
 
 /**
  * 다중 선택. 빈 배열은 제한 없음(전부 체크 표시)이고 전부 고르면 빈 배열로 돌린다. "전체"는 allLabel이 있을 때만 둔다.
- * listSearch의 choices 칸이면 선택지 값은 선언에서 읽고 optionLabel로 문구만 준다. options는 defineSearch 화면용이다.
+ * listSearch의 choices 칸이면 선택지 값은 선언에서 읽고 valueLabels로 문구만 준다. options는 defineSearch 화면용이다.
  */
 function MultiSelect({
   model: explicitModel,
   name,
   label,
   options: given,
-  optionLabels,
+  valueLabels,
   allLabel,
 }: {
   readonly name: string;
   readonly label: string;
   readonly options?: readonly { readonly value: string; readonly label: string }[];
   /** listSearch 칸의 값별 문구. 선언한 값마다 있어야 한다. */
-  readonly optionLabels?: Readonly<Record<string, string>>;
+  readonly valueLabels?: Readonly<Record<string, string>>;
   readonly allLabel?: string;
 } & { readonly model?: ListModel }) {
   const { model } = useListContext(explicitModel);
   const options =
-    given ?? labelled(listFieldMeta(model, 'choices', name).values, optionLabels, name);
+    given ?? labelled(listFieldMeta(model, 'choices', name).values, valueLabels, name);
   const values = options.map((option) => option.value);
   const { effective, set, toggle } = useListMultiChoiceBinding(name, values, explicitModel);
   return (
@@ -292,14 +295,14 @@ function MultiSelect({
 
 /**
  * 기간: 기준 선택(선택)·단축·직접 입력. 맞지 않는 기간은 검색할 때 상태가 기본값으로 돌린다.
- * listSearch의 dateRange 칸이면 name만 주고 주소 키·기간 기준 값은 선언에서 읽는다(typeLabel은 문구). from·to·type은 defineSearch 화면용이다.
+ * listSearch의 dateRange 칸이면 name만 주고 주소 키·기간 기준 값은 선언에서 읽는다(valueLabels는 기간 기준 값별 문구). from·to·type은 defineSearch 화면용이다.
  */
 function Period({
   model: explicitModel,
   name,
   from: givenFrom,
   to: givenTo,
-  typeLabels,
+  valueLabels,
   label,
   timeZone,
   now,
@@ -312,7 +315,7 @@ function Period({
   readonly from?: string;
   readonly to?: string;
   /** listSearch 기간 기준 값별 문구. 선언한 값마다 있어야 한다. */
-  readonly typeLabels?: Readonly<Record<string, string>>;
+  readonly valueLabels?: Readonly<Record<string, string>>;
   readonly label: string;
   /** 단축이 오늘을 읽는 시간대. 생략하면 브라우저 시간대를 쓴다. */
   readonly timeZone?: string;
@@ -337,7 +340,7 @@ function Period({
     meta === undefined
       ? givenType
       : meta.types.length > 0
-        ? { name: meta.keys.type, options: labelled(meta.types, typeLabels, name!) }
+        ? { name: meta.keys.type, options: labelled(meta.types, valueLabels, name!) }
         : undefined;
   const draft = model.draft as Record<string, unknown>;
   const issue = model.issues.find((item) => item.field === from);
@@ -402,14 +405,14 @@ function Period({
 
 /**
  * 키워드: 대상 선택·입력·추가·칩. Enter는 추가 후 검색하고 버튼은 각각 추가·검색만 한다.
- * listSearch의 keywords 칸이면 검색 대상과 구분자는 선언에서 읽고 choiceLabel로 대상 문구만 준다. choices는 defineSearch 화면용이다.
+ * listSearch의 keywords 칸이면 검색 대상과 구분자는 선언에서 읽고 valueLabels로 대상 문구만 준다. choices는 defineSearch 화면용이다.
  */
 function Keywords({
   model: explicitModel,
   name,
   label,
   choices: givenChoices,
-  choiceLabels,
+  valueLabels,
   targetLabel,
   inputLabel,
   removeLabel,
@@ -418,7 +421,7 @@ function Keywords({
   readonly label: string;
   readonly choices?: readonly { readonly value: string; readonly label: string }[];
   /** listSearch 검색 대상별 문구. 선언한 대상마다 있어야 한다. */
-  readonly choiceLabels?: Readonly<Record<string, string>>;
+  readonly valueLabels?: Readonly<Record<string, string>>;
   /** 대상 선택·입력 칸·칩 제거 버튼 이름. 생략하면 label과 messages로 만든다. */
   readonly targetLabel?: string;
   readonly inputLabel?: string;
@@ -427,7 +430,7 @@ function Keywords({
   const { model, copy, keywordEnterSearch } = useListContext(explicitModel);
   const hintId = useId();
   const meta = givenChoices === undefined ? listFieldMeta(model, 'keywords', name) : undefined;
-  const choices = givenChoices ?? labelled(meta!.targets, choiceLabels, name);
+  const choices = givenChoices ?? labelled(meta!.targets, valueLabels, name);
   const { input, items, submit, remove } = useListKeywordBinding(
     model,
     name,

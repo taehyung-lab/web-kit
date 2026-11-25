@@ -5,6 +5,8 @@ import {
   useBulkConfirmation,
   useListDownloadBinding,
   type BulkRefusal,
+  type BulkResult,
+  type BulkRunResult,
   type DownloadControl,
   type DownloadKind,
   type ListModel,
@@ -52,7 +54,7 @@ function bulkFailureText(
   return custom === undefined ? copy.actionFailed : custom;
 }
 
-/** 요청 없이 거절한 이유의 문구. 고른 행 없음은 messages.selectRows, 업무 check는 check가 돌려준 사유다. */
+/** 요청 없이 거절한 이유의 문구. 고른 행 없음은 messages.selectRows, 업무 거절은 refusalReason이 돌려준 사유다. */
 function bulkRefusalText(refusal: BulkRefusal | undefined, copy: Context['copy']) {
   if (refusal === undefined) return undefined;
   return refusal.reason === 'no-selection' ? copy.selectRows : refusal.message;
@@ -99,25 +101,25 @@ function RefusalAlert({
   );
 }
 
-type BulkResult<T> = { completedIds: readonly string[]; value?: T };
-type BulkResultAlert = { readonly title: string; readonly body: ReactNode };
+/** 결과 창의 제목과 본문. */
+type BulkResultDialog = { readonly title: string; readonly body: ReactNode };
 
-function useBulkResultAlert<T>(
+function useBulkResultDialog<T>(
   onCompleted: ((result: BulkResult<T>) => void) | undefined,
-  reportResult: ((result: BulkResult<T>) => BulkResultAlert | undefined) | undefined
+  resultDialog: ((result: BulkResult<T>) => BulkResultDialog | undefined) | undefined
 ) {
   const visit = useVisit();
-  const [notice, setNotice] = useState<{ visit: number; alert: BulkResultAlert }>();
+  const [notice, setNotice] = useState<{ visit: number; dialog: BulkResultDialog }>();
   if (notice !== undefined && notice.visit !== visit) setNotice(undefined);
 
   function complete(result: BulkResult<T>) {
     onCompleted?.(result);
-    const alert = reportResult?.(result);
-    if (alert !== undefined) setNotice({ visit, alert });
+    const dialog = resultDialog?.(result);
+    if (dialog !== undefined) setNotice({ visit, dialog });
   }
 
   return {
-    alert: notice?.visit === visit ? notice.alert : undefined,
+    dialog: notice?.visit === visit ? notice.dialog : undefined,
     complete,
     acknowledge: () => setNotice(undefined),
   };
@@ -153,7 +155,7 @@ function BulkConfirm({
   readonly recovery?: { readonly pending: boolean; readonly run: () => Promise<void> };
   readonly reloadLabel: string;
   readonly unknownMessage: string;
-  readonly result?: BulkResultAlert;
+  readonly result?: BulkResultDialog;
   readonly onAcknowledge: () => void;
   readonly returnFocus: RefObject<HTMLButtonElement | null>;
 }) {
@@ -209,31 +211,33 @@ function BulkAction<T>({
   label,
   run,
   onCompleted,
-  reportResult,
-  check,
+  resultDialog,
+  refusalReason,
   title = label,
   confirmLabel,
   cancelLabel,
-  describe,
+  confirmMessage,
 }: {
   readonly label: string;
-  readonly run: (ids: readonly string[]) => Promise<{ completedIds: readonly string[]; value?: T }>;
+  /** 업무 실행. completedIds는 실제로 처리된 행, details는 결과 창에 보일 업무 결과다. */
+  readonly run: (ids: readonly string[]) => Promise<BulkRunResult<T>>;
   /** 실행 결과가 이 화면에 전달될 때 한 번(완료·부분 결과 안내). 실행 중 화면을 떠났으면 부르지 않는다. */
   readonly onCompleted?: (result: BulkResult<T>) => void;
-  /** 같은 방문에서 결과를 받으면 호출한다. 반환한 내용으로 확인창을 결과 알림 창으로 바꾼다. */
-  readonly reportResult?: (result: BulkResult<T>) => BulkResultAlert | undefined;
+  /** 같은 방문에서 결과를 받으면 호출한다. 반환한 제목·본문으로 확인창을 결과 창으로 바꾼다. */
+  readonly resultDialog?: (result: BulkResult<T>) => BulkResultDialog | undefined;
   /** 업무상 거절 사유. 있으면 실행하지 않고 보인다. */
-  readonly check?: (ids: readonly string[]) => string | undefined;
+  readonly refusalReason?: (ids: readonly string[]) => string | undefined;
   readonly title?: string;
   readonly confirmLabel?: string;
   readonly cancelLabel?: string;
-  readonly describe?: (ids: readonly string[]) => ReactNode;
+  /** 확인창 본문. 생략하면 "{건수}{messages.items}". */
+  readonly confirmMessage?: (ids: readonly string[]) => ReactNode;
 } & { readonly model?: ListModel }) {
   const context = useListContext(explicitModel);
   const { model, copy } = context;
   const trigger = useRef<HTMLButtonElement>(null);
-  const result = useBulkResultAlert(onCompleted, reportResult);
-  const binding = useBulkConfirmation({ model, run, onCompleted: result.complete, check });
+  const result = useBulkResultDialog(onCompleted, resultDialog);
+  const binding = useBulkConfirmation({ model, run, onCompleted: result.complete, refusalReason });
   const { pending, confirm, open, cancel, dismiss, recovery } = binding;
   const shown = useBulkPresentation(binding, context);
   return (
@@ -259,13 +263,13 @@ function BulkAction<T>({
         body={
           pending === undefined
             ? null
-            : (describe?.(pending.ids) ?? `${pending.ids.length}${copy.items}`)
+            : (confirmMessage?.(pending.ids) ?? `${pending.ids.length}${copy.items}`)
         }
         errorText={shown.errorText}
         recovery={recovery}
         reloadLabel={copy.reload ?? defaultMessages.reload}
         unknownMessage={copy.resultUnknown ?? defaultMessages.resultUnknown}
-        result={result.alert}
+        result={result.dialog}
         onAcknowledge={result.acknowledge}
         returnFocus={trigger}
       />
@@ -276,7 +280,7 @@ function BulkAction<T>({
 /**
  * 고른 값 하나로 선택 행을 바꾸는 일괄 작업(상태 변경 등). 선택 칸 + 실행 버튼 + 확인창을 한 묶음(fieldset)으로 그린다.
  * 확인창을 여는 순간의 행 id와 값을 함께 고정해 업무 확인·실행·문구에 쓴다(열린 뒤 선택 칸이 바뀌어도 확인한 값으로 실행한다).
- * 값을 고르지 않고 누르면 실행하지 않고 requiredMessage(없으면 messages.chooseValue)를 보인다. 성공 뒤에도 고른 값은 그대로 둔다.
+ * 값을 고르지 않고 누르면 실행하지 않고 noChoiceMessage(없으면 messages.chooseValue)를 보인다. 성공 뒤에도 고른 값은 그대로 둔다.
  * 이전 조건 결과를 보이는 동안 묶음 전체가 잠긴다. 확인 당시 결과·선택이 바뀌면 실행하지 않는 것, 실패 선택 유지, 중복 실행 방지는 BulkAction과 같다.
  */
 function BulkSelectAction<V extends string, T = unknown>({
@@ -286,16 +290,16 @@ function BulkSelectAction<V extends string, T = unknown>({
   placeholder,
   selectLabel,
   selectClassName,
-  requiredMessage,
-  defaultValue,
+  noChoiceMessage,
+  defaultChoice,
   run,
   onCompleted,
-  reportResult,
-  check,
+  resultDialog,
+  refusalReason,
   title = label,
   confirmLabel,
   cancelLabel,
-  describe,
+  confirmMessage,
   className,
 }: {
   /** 실행 버튼 문구. */
@@ -312,50 +316,50 @@ function BulkSelectAction<V extends string, T = unknown>({
   /** 선택 칸의 크기·모양(기본 min-w-32 뒤에 합친다). */
   readonly selectClassName?: string;
   /** 값을 고르지 않고 눌렀을 때의 안내. 생략하면 messages.chooseValue. */
-  readonly requiredMessage?: string;
-  readonly defaultValue?: V;
-  readonly run: (
-    ids: readonly string[],
-    value: V
-  ) => Promise<{ completedIds: readonly string[]; value?: T }>;
+  readonly noChoiceMessage?: string;
+  /** 처음 골라 둘 값. */
+  readonly defaultChoice?: V;
+  /** 업무 실행. choice는 확인창을 열 때 고정한 값이다. */
+  readonly run: (ids: readonly string[], choice: V) => Promise<BulkRunResult<T>>;
   /** 실행 결과가 이 화면에 전달될 때 한 번(완료·부분 결과 안내). 실행 중 화면을 떠났으면 부르지 않는다. */
   readonly onCompleted?: (result: BulkResult<T>) => void;
-  /** 같은 방문에서 결과를 받으면 호출한다. 반환한 내용으로 확인창을 결과 알림 창으로 바꾼다. */
-  readonly reportResult?: (result: BulkResult<T>) => BulkResultAlert | undefined;
+  /** 같은 방문에서 결과를 받으면 호출한다. 반환한 제목·본문으로 확인창을 결과 창으로 바꾼다. */
+  readonly resultDialog?: (result: BulkResult<T>) => BulkResultDialog | undefined;
   /** 업무상 거절 사유. 있으면 실행하지 않고 보인다. 여는 순간은 지금 고른 값, 실행 직전은 확인창에 고정한 값으로 묻는다. */
-  readonly check?: (ids: readonly string[], value: V) => string | undefined;
+  readonly refusalReason?: (ids: readonly string[], choice: V) => string | undefined;
   readonly title?: string;
   readonly confirmLabel?: string;
   readonly cancelLabel?: string;
-  readonly describe?: (ids: readonly string[], value: V) => ReactNode;
+  /** 확인창 본문. 생략하면 "{고른 값 문구}: {건수}{messages.items}". */
+  readonly confirmMessage?: (ids: readonly string[], choice: V) => ReactNode;
   /** 묶음(fieldset)의 배치. */
   readonly className?: string;
 } & { readonly model?: ListModel }) {
   const context = useListContext(explicitModel);
   const { model, copy } = context;
-  const [chosen, setChosen] = useState<V | null>(defaultValue ?? null);
+  const [chosen, setChosen] = useState<V | null>(defaultChoice ?? null);
   // 선택지가 바뀌어 고른 값이 사라졌거나 막혔으면 고르지 않은 것으로 본다.
-  const value =
+  const choice =
     chosen !== null && options.some((option) => option.value === chosen && option.disabled !== true)
       ? chosen
       : null;
   const trigger = useRef<HTMLButtonElement>(null);
-  const result = useBulkResultAlert(onCompleted, reportResult);
+  const result = useBulkResultDialog(onCompleted, resultDialog);
   const binding = useBulkConfirmation<T, V>({
     model,
-    value: value ?? undefined,
+    choice: choice ?? undefined,
     onCompleted: result.complete,
-    // 값이 없으면 아래 check가 먼저 거절하므로 실행에는 늘 고른 값이 온다.
+    // 값이 없으면 아래 refusalReason이 먼저 거절하므로 실행에는 늘 고른 값이 온다.
     run: (ids, target) => run(ids, target as V),
-    check: (ids, target) =>
+    refusalReason: (ids, target) =>
       target === undefined ||
       !options.some((option) => option.value === target && option.disabled !== true)
-        ? requiredMessage || copy.chooseValue || defaultMessages.chooseValue
-        : check?.(ids, target),
+        ? noChoiceMessage || copy.chooseValue || defaultMessages.chooseValue
+        : refusalReason?.(ids, target),
   });
   const { pending, confirm, open, cancel, dismiss, recovery } = binding;
   const shown = useBulkPresentation(binding, context);
-  const fixed = pending?.value;
+  const fixed = pending?.choice;
   const optionLabel = options.find((option) => option.value === fixed)?.label ?? fixed;
   return (
     <fieldset
@@ -367,7 +371,7 @@ function BulkSelectAction<V extends string, T = unknown>({
         className={cn('min-w-32', selectClassName)}
         options={options}
         placeholder={placeholder}
-        value={value}
+        value={choice}
         disabled={!model.isCurrent || model.selection.isRunning}
         onValueChange={(next) => setChosen(next as V | null)}
       />
@@ -392,14 +396,14 @@ function BulkSelectAction<V extends string, T = unknown>({
         body={
           pending === undefined || fixed === undefined
             ? null
-            : (describe?.(pending.ids, fixed) ??
+            : (confirmMessage?.(pending.ids, fixed) ??
               `${optionLabel}: ${pending.ids.length}${copy.items}`)
         }
         errorText={shown.errorText}
         recovery={recovery}
         reloadLabel={copy.reload ?? defaultMessages.reload}
         unknownMessage={copy.resultUnknown ?? defaultMessages.resultUnknown}
-        result={result.alert}
+        result={result.dialog}
         onAcknowledge={result.acknowledge}
         returnFocus={trigger}
       />

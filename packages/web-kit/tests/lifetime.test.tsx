@@ -148,7 +148,7 @@ it('로그인이 바뀐 뒤 끝난 실패와 취소는 앱에 알리지 않는�
 });
 
 function download(lifetime: ReturnType<typeof app>, run: () => Promise<void>) {
-  const list = { search: {}, isCurrent: true, selection: { selectedIds: [] } };
+  const list = { criteria: {}, isCurrent: true, selection: { selectedIds: [] } };
   return renderHook(() => useListDownload(list, { run }), { wrapper: lifetime.wrapper });
 }
 
@@ -330,7 +330,7 @@ it('일괄 작업: onCompleted는 결과가 이 화면에 전달될 때만 부�
     hook.unmount();
   }
   expect(onCompleted).toHaveBeenCalledTimes(1);
-  expect(onCompleted).toHaveBeenCalledWith({ completedIds: ['1'] });
+  expect(onCompleted).toHaveBeenCalledWith({ requestedIds: ['1'], completedIds: ['1'] });
 });
 
 it('확인창: 완료 처리가 화면을 옮기지 못하고 실패하면(방문은 그대로) 요청을 다시 보내지 않고 완료만 다시 시도한다', async () => {
@@ -445,7 +445,7 @@ it('다운로드: 로그인이 바뀌면 실행 함수의 신호가 끊기고, �
   const lifetime = app(() => 'local', { session });
   const pending = deferred<void>();
   let signal: AbortSignal | undefined;
-  const list = { search: {}, isCurrent: true, selection: { selectedIds: [] } };
+  const list = { criteria: {}, isCurrent: true, selection: { selectedIds: [] } };
   const hook = renderHook(
     () =>
       useListDownload(list, {

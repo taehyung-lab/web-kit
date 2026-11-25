@@ -13,7 +13,7 @@ function ProductListRoute() {
   const navigate = Route.useNavigate();
   return (
     <ProductListPage
-      search={Route.useSearch()}
+      urlSearch={Route.useSearch()}
       navigate={(next, { replace }) => void navigate({ search: next, replace })}
       onOpen={(productId) => void navigate({ to: '/products/$productId', params: { productId } })}
       onCreate={() => void navigate({ to: '/products/new' })}
