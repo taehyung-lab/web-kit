@@ -59,14 +59,14 @@ type NamedLabels<
     >;
   };
 }[Names<M, K>];
-/** 기간 칸이 차지하는 주소 키(시작·끝·기준). 이 키들은 칸 이름이 아니다. */
-type DateKeysOf<M extends SearchMeta> = {
-  [N in keyof M]: M[N] extends { kind: 'dateRange'; keys: infer DK } ? DK[keyof DK] : never;
+/** 종류로 선언한 칸이 차지하는 주소 키(기간의 시작·끝·기준, 페이지·보기 수, 정렬·방향). 이 키들은 칸 이름이 아니다. */
+type ClaimedKeysOf<M extends SearchMeta> = {
+  [N in keyof M]: M[N] extends { keys: infer DK } ? DK[keyof DK] : never;
 }[keyof M];
-/** 상세검색 펼침이 받는 칸 이름: 종류로 선언한 검색 칸과 직접 선언한 칸. */
+/** 상세검색 펼침이 받는 필터 칸 이름: 종류로 선언한 검색 칸과 직접 선언한 칸(페이지·정렬 제외). */
 type FilterNames<M extends SearchMeta, K extends string> =
   | Names<M, 'keywords' | 'choices' | 'serverChoices' | 'dateRange'>
-  | Exclude<K, keyof M | DateKeysOf<M>>;
+  | Exclude<K, keyof M | ClaimedKeysOf<M> | 'searched'>;
 type MultiMeta<M extends SearchMeta> = {
   [N in keyof M as M[N] extends { multiple: true } ? N : never]: M[N];
 };
@@ -105,7 +105,7 @@ export type TypedList<M extends SearchMeta, K extends string = string> = typeof 
         readonly valueLabels: Readonly<Record<SortValues<M>, string>>;
       }
     ) => ReactNode;
-    /** names는 접힌 칸의 이름이다(다른 부품의 name과 같은 이름). 그중 하나라도 확정 값이 있으면 처음부터 펼친다. */
+    /** names는 접힌 필터 칸의 이름이다(다른 부품의 name과 같은 이름, 페이지·정렬 제외). 그 칸에 걸러 내는 확정 조건이 있으면 처음부터 펼친다. */
     readonly FilterDetails: (
       props: Omit<Props<typeof FilterDetails>, 'names'> & {
         readonly names: readonly FilterNames<M, K>[];

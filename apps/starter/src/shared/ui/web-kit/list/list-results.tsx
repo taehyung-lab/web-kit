@@ -159,9 +159,9 @@ function Table<Row>({
   const rows = model.rows as readonly Row[];
   const rowId = givenRowId ?? (model.rowId as ((row: Row) => string) | undefined);
   if (rowId === undefined) throw new Error('List.Table: give rowId or declare it in useList');
-  const isSelectable = model.isSelectable as ((row: Row) => boolean) | undefined;
+  const isRowSelectable = model.isRowSelectable as ((row: Row) => boolean) | undefined;
   const selectionColumn =
-    givenSelectionColumn ?? (isSelectable !== undefined && rows.some(isSelectable));
+    givenSelectionColumn ?? (isRowSelectable !== undefined && rows.some(isRowSelectable));
   const viewport = useRef<HTMLDivElement>(null);
   const virtualize = rows.length >= virtualizeFrom;
   const { sortKey, order, locked } = listViewBinding(model);
