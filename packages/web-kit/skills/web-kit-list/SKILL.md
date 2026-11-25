@@ -90,7 +90,7 @@ description: 목록 필터·기간 프리셋·날짜 검색의 시간대/UTC 경
 - `BulkSelectAction`은 값 하나를 골라 선택 행에 적용하는 일괄 작업(상태 변경 등)이다. `options`(선택지)·`placeholder`·`selectLabel`·`run(ids, value)`·`check?(ids, value)`·`describe?(ids, value)`를 받고 선택 칸·실행 버튼·확인창을 한 묶음으로 그리며, 이전 조건 결과를 보이는 동안 묶음 전체가 잠긴다. 확인창을 여는 순간의 행 id와 값을 함께 고정해 업무 확인·실행·문구에 쓰고(`useBulkConfirmation`의 `value`), 값 없이 누르면 실행하지 않고 `requiredMessage`(없으면 `messages.chooseValue`)를 보인다. 성공 뒤에도 고른 값은 남는다. 확인 당시 결과·선택 변경 무효화·실패 선택 유지·중복 실행 방지는 `BulkAction`과 같다. 권한·서버 호출·부분 성공 의미는 소비자가 `run`의 반환으로 정한다. 조립 예: [apps/starter/src/features/members/ui/list/MemberListPage.tsx](../../references/apps/starter/src/features/members/ui/list/MemberListPage.tsx.txt).
 - 같은 방문에서 서버가 확정한 일괄 작업 결과는 `reportResult(result)`에서 안내할 수 있다. `{ title, body }`를 돌려주면 실행 확인창이 같은 창에서 결과 알림으로 바뀌고, [확인]으로 닫으면 초점을 받을 수 있는 실행 버튼으로 포커스를 돌려준다. 반환값이 없으면 창을 닫는다. 언제 창을 보일지와 문구·토스트는 앱이 정한다. 이때 업무가 해석한 결과를 쓰고, 갱신으로 사라질 수 있는 선택 행에서 사유를 다시 계산하지 않는다. 방문이 바뀌면 열린 결과 창은 지우고 늦은 결과는 표시하지 않는다.
 - `Download`는 `useListDownload` 결과를 받아 종류 선택·버튼·진행·실패 문구를 그린다.
-- 요청을 보내기 전에 막은 일(고른 행 없음·바꿀 값 없음·`check`의 거절·다운로드 종류 없음)을 알리는 방식은 앱 맨 위 `ListDefaults refusal`로 한 번 정한다. 기본 `inline`은 고른 행이 없으면 일괄 작업 버튼을 잠그고 그 밖의 거절은 버튼 옆 글로 보인다. `alert`는 버튼을 잠그지 않고 누르면 요청 없이 알림 창(registry `dialog`의 `AlertDialog`) 하나로 사유를 보이며, [확인]은 창과 열려 있던 확인창을 닫고 선택·고른 값은 그대로 둔다. 문구는 `messages.selectRows`·`chooseValue`(또는 `requiredMessage`)·`chooseDownloadKind`·`refusalTitle`이다. 요청이 나간 뒤의 실패는 어느 방식이든 기존 자리(확인창·버튼 옆)에 남는다. 화면마다 버튼 잠금을 풀거나 알림 창을 따로 띄우지 않는다. 연결 hook을 직접 쓰면 `useBulkConfirmation({ emptyRefusal })`·`dismiss`, `useListDownloadBinding(control, kinds, { refuse })`·`refusal`·`dismiss`가 같은 일을 한다.
+- 요청을 보내기 전에 막은 일(고른 행 없음·바꿀 값 없음·`check`의 거절·다운로드 종류 없음)을 알리는 방식은 앱 맨 위 `ListDefaults refusal`로 한 번 정한다. 기본 `inline`은 고른 행이 없으면 일괄 작업 버튼을 잠그고 그 밖의 거절은 버튼 옆 글로 보인다. `alert`는 버튼을 잠그지 않고 누르면 요청 없이 알림 창(registry `dialog`의 `AlertDialog`) 하나로 사유를 보이며, [확인]은 창과 열려 있던 확인창을 닫고 선택·고른 값은 그대로 둔다. 문구는 `messages.selectRows`·`chooseValue`(또는 `requiredMessage`)·`chooseDownloadKind`·`refusalTitle`이다. 요청이 나간 뒤의 실패는 어느 방식이든 기존 자리(확인창·버튼 옆)에 남는다. 화면마다 버튼 잠금을 풀거나 알림 창을 따로 띄우지 않는다. 연결 hook(`useBulkConfirmation`·`useListDownloadBinding`)은 보이는 방식을 받지 않고 값만 돌려준다: `locked`(지금은 실행할 수 없음: 이전 결과 표시 중·실행 중·반영 여부 확인 필요), `unavailable`(눌러도 요청 없이 거절될 이유: 고른 행 없음·다운로드 종류 없음), `refusal`(요청 없이 거절한 이유, 일괄 작업은 `{ reason: 'no-selection' }` 또는 `{ reason: 'check', message }`), 일괄 작업의 `failure`(요청이 나간 뒤 실패), `dismiss`. 잠글지(`unavailable`이면 잠금) 눌렀을 때 알릴지는 복사본이 `ListDefaults refusal`을 보고 고른다.
 - `List.of<typeof 선언>()`의 `FilterDetails keys`는 접힌 칸의 **확정 검색값 이름**이다(기간 칸이면 시작일·종료일·기준의 주소 키, 직접 선언한 칸이면 그 이름). 화면 칸 이름(예: `period`)이 아니다. `Table`의 열 `sort`는 선언한 정렬 값만 받는다. 자기 배치 부품으로 감쌀 때는 `ListColumn<Row, 정렬 값>`으로 같은 검사를 잇는다.
 - 문구는 `ListDefaults`·`messages`, 모양은 프로젝트 shadcn 테마 변수·`className`·좁은 표시 입구(`Table headerClassName`, `FilterDetails triggerClassName`, `BulkSelectAction selectClassName`)·복사본의 Tailwind 클래스로 바꾼다. 표시 입구는 모양만 바꾸고 동작·접근성 연결은 그대로다. 선택 칸(`Select`·기간 기준·검색어 대상·정렬·페이지 크기·다운로드 종류)은 shadcn Select, 체크는 shadcn Checkbox다.
 - `captureListReturn`/`resolveListReturn`은 목록 주소의 검색·hash를 보존하고 같은 목록 경로에서만 복귀한다. 앱 안 경로 판정은 루트 `safeAppPath`와 같다([web-kit-http](../web-kit-http/SKILL.md)). 조회 결과 출처(`isCurrent`)와는 다른 책임이다.
@@ -131,11 +131,11 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 
 ### 고정 선택지와 서버 선택지 고르기
 
-| 선택지의 출처·표현 | 사용할 칸 | 선언 자리 |
-|---|---|---|
-| 준비된 평면 목록의 단일·다중 선택 | `List.Select`·`List.MultiSelect` | 화면은 `options`, 검색 필드는 허용값 schema. 이 칸들은 `check`를 구독하지 않는다. |
-| 준비된 트리·그룹 또는 표시 모양을 고르는 선택 | `List.Choice`(`ChoiceFilter`) | 화면은 `nodes`, 검색 필드는 허용값 schema |
-| 서버 응답으로 표시와 URL 허용값을 함께 확인 | `List.Choice`(`ChoiceFilter`) | 검색 필드의 `check`; 화면은 필드 이름과 문구·표시 설정 |
+| 선택지의 출처·표현                            | 사용할 칸                        | 선언 자리                                                                         |
+| --------------------------------------------- | -------------------------------- | --------------------------------------------------------------------------------- |
+| 준비된 평면 목록의 단일·다중 선택             | `List.Select`·`List.MultiSelect` | 화면은 `options`, 검색 필드는 허용값 schema. 이 칸들은 `check`를 구독하지 않는다. |
+| 준비된 트리·그룹 또는 표시 모양을 고르는 선택 | `List.Choice`(`ChoiceFilter`)    | 화면은 `nodes`, 검색 필드는 허용값 schema                                         |
+| 서버 응답으로 표시와 URL 허용값을 함께 확인   | `List.Choice`(`ChoiceFilter`)    | 검색 필드의 `check`; 화면은 필드 이름과 문구·표시 설정                            |
 
 서버 선택지는 다음 세 자리에 연결한다. 실제 예: [분류 요청](../../references/apps/starter/src/features/products/api/categories.ts.txt) → [상품 검색 선언](../../references/apps/starter/src/features/products/model/list/product-list-search.ts.txt) → 위 `ProductFilters`의 `categoryId` 칸.
 
