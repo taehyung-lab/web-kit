@@ -28,7 +28,13 @@ export { VIRTUALIZE_FROM_ROWS } from './list/list-results';
 export type { ListColumn } from './list/list-results';
 import type { ListColumn } from './list/list-results';
 export { useListModel, useListField } from '@boosterlab/web-kit/list';
-export type { ListModel, PeriodShortcut, DownloadControl } from '@boosterlab/web-kit/list';
+export type {
+  ListModel,
+  PeriodShortcut,
+  DownloadControl,
+  BulkResult,
+  BulkRunResult,
+} from '@boosterlab/web-kit/list';
 
 /** 선언의 칸 종류와 문구를 검사하는 타입 입구. 실행 구현은 List와 같다. */
 type Props<C> = C extends (props: infer P) => unknown ? P : never;
@@ -53,6 +59,14 @@ type NamedLabels<
     >;
   };
 }[Names<M, K>];
+/** 기간 칸이 차지하는 주소 키(시작·끝·기준). 이 키들은 칸 이름이 아니다. */
+type DateKeysOf<M extends SearchMeta> = {
+  [N in keyof M]: M[N] extends { kind: 'dateRange'; keys: infer DK } ? DK[keyof DK] : never;
+}[keyof M];
+/** 상세검색 펼침이 받는 칸 이름: 종류로 선언한 검색 칸과 직접 선언한 칸. */
+type FilterNames<M extends SearchMeta, K extends string> =
+  | Names<M, 'keywords' | 'choices' | 'serverChoices' | 'dateRange'>
+  | Exclude<K, keyof M | DateKeysOf<M>>;
 type MultiMeta<M extends SearchMeta> = {
   [N in keyof M as M[N] extends { multiple: true } ? N : never]: M[N];
 };
@@ -63,7 +77,7 @@ type SortValues<M extends SearchMeta> = M[Names<M, 'sort'>] extends {
   ? V
   : never;
 /**
- * M은 화면 칸 이름과 종류(선언의 meta), K는 확정 검색값의 이름(선언의 fields)이다. 둘은 다르다:
+ * M은 화면 칸 이름과 종류(선언의 meta), K는 확정 조건의 주소 키(선언의 fields)다. 둘은 다르다:
  * 기간 칸 `period`는 M에만 있고 그 값은 K의 시작일·종료일·기준으로 나뉘며, 직접 선언한 칸은 K에만 있다.
  */
 export type TypedList<M extends SearchMeta, K extends string = string> = typeof ListRoot &
@@ -72,28 +86,30 @@ export type TypedList<M extends SearchMeta, K extends string = string> = typeof 
     'of' | 'Keywords' | 'MultiSelect' | 'Period' | 'SortSelect' | 'FilterDetails' | 'Table'
   > & {
     readonly Keywords: (
-      props: NamedLabels<M, 'keywords', Props<typeof Keywords>, 'choiceLabels', 'targets'>
+      props: NamedLabels<M, 'keywords', Props<typeof Keywords>, 'valueLabels', 'targets'>
     ) => ReactNode;
     readonly MultiSelect: (
       props: NamedLabels<
         MultiMeta<M>,
         'choices',
         Props<typeof MultiSelect>,
-        'optionLabels',
+        'valueLabels',
         'values'
       >
     ) => ReactNode;
     readonly Period: (
-      props: NamedLabels<M, 'dateRange', Props<typeof Period>, 'typeLabels', 'types'>
+      props: NamedLabels<M, 'dateRange', Props<typeof Period>, 'valueLabels', 'types'>
     ) => ReactNode;
     readonly SortSelect: (
-      props: Omit<Props<typeof SortSelect>, 'options' | 'optionLabels'> & {
-        readonly optionLabels: Readonly<Record<SortValues<M>, string>>;
+      props: Omit<Props<typeof SortSelect>, 'options' | 'valueLabels'> & {
+        readonly valueLabels: Readonly<Record<SortValues<M>, string>>;
       }
     ) => ReactNode;
-    /** keys는 접힌 칸의 확정 검색값 이름이다(그중 하나라도 값이 있으면 처음부터 펼친다). */
+    /** names는 접힌 칸의 이름이다(다른 부품의 name과 같은 이름). 그중 하나라도 확정 값이 있으면 처음부터 펼친다. */
     readonly FilterDetails: (
-      props: Omit<Props<typeof FilterDetails>, 'keys'> & { readonly keys: readonly K[] }
+      props: Omit<Props<typeof FilterDetails>, 'names'> & {
+        readonly names: readonly FilterNames<M, K>[];
+      }
     ) => ReactNode;
     /** 열의 sort에는 선언한 정렬 값만 쓸 수 있다. */
     readonly Table: <Row>(
