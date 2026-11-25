@@ -1081,6 +1081,8 @@ it('L 결과 불확실 쓰기는 직접 재실행·선택 변경을 막고 재�
   await act(async () => { expect(await latest.selection.recover()).toBe(true); });
   expect(latest.selection.failure).toBeUndefined();
   expect(latest.selection.selectedIds).toEqual([]);
+  // 다시 받은 행이 화면에 반영된 뒤 고른다(사용자는 갱신된 화면을 보고 누른다).
+  await waitFor(() => expect(latest.selection.canSelect('2')).toBe(true));
   act(() => latest.selection.toggleRow('2', true));
   const next = vi.fn(async (ids: readonly string[]) => ({ completedIds: ids }));
   await act(async () => { await latest.selection.run(next); });
