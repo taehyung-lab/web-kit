@@ -1,4 +1,6 @@
 // 파일 책임: 선택 기반 작업·일괄 확인·값 선택 일괄 작업·다운로드를 연결한다.
+import { Button } from '@/components/ui/button';
+import { useVisit } from '@boosterlab/web-kit/lifetime';
 import {
   useBulkConfirmation,
   useListDownloadBinding,
@@ -6,16 +8,15 @@ import {
   type DownloadKind,
   type ListModel,
 } from '@boosterlab/web-kit/list';
-import { useState, type ReactNode } from 'react';
 import { cn } from 'cn';
-import { Button } from '@/components/ui/button';
-import { SelectBox } from '../select-box';
+import { useState, type ReactNode } from 'react';
 import { AlertDialog, ConfirmDialog } from '../dialog';
 import { Pending } from '../pending';
+import { SelectBox } from '../select-box';
 import {
-  useListContext,
   defaultMessages,
   OptionSelect,
+  useListContext,
   type Context,
   type RenderFailure,
 } from './list-context';
@@ -76,6 +77,30 @@ function RefusalAlert({
   );
 }
 
+type BulkResult<T> = { completedIds: readonly string[]; value?: T };
+type BulkResultAlert = { readonly title: string; readonly body: ReactNode };
+
+function useBulkResultAlert<T>(
+  onCompleted: ((result: BulkResult<T>) => void) | undefined,
+  reportResult: ((result: BulkResult<T>) => BulkResultAlert | undefined) | undefined
+) {
+  const visit = useVisit();
+  const [notice, setNotice] = useState<{ visit: number; alert: BulkResultAlert }>();
+  if (notice !== undefined && notice.visit !== visit) setNotice(undefined);
+
+  function complete(result: BulkResult<T>) {
+    onCompleted?.(result);
+    const alert = reportResult?.(result);
+    if (alert !== undefined) setNotice({ visit, alert });
+  }
+
+  return {
+    alert: notice?.visit === visit ? notice.alert : undefined,
+    complete,
+    acknowledge: () => setNotice(undefined),
+  };
+}
+
 /** 일괄 작업 확인창과 확인창 밖 실패 줄. BulkAction·BulkSelectAction이 같은 모양을 쓴다. */
 function BulkConfirm({
   open,
@@ -90,6 +115,8 @@ function BulkConfirm({
   recovery,
   reloadLabel,
   unknownMessage,
+  result,
+  onAcknowledge,
 }: {
   readonly open: boolean;
   readonly title: string;
@@ -103,21 +130,32 @@ function BulkConfirm({
   readonly recovery?: { readonly pending: boolean; readonly run: () => Promise<void> };
   readonly reloadLabel: string;
   readonly unknownMessage: string;
+  readonly result?: BulkResultAlert;
+  readonly onAcknowledge: () => void;
 }) {
   return (
     <>
       <ConfirmDialog
-        open={open}
-        title={title}
-        pending={running || recovery?.pending}
+        open={open || result !== undefined}
+        title={result?.title ?? title}
+        pending={result === undefined && (running || recovery?.pending)}
+        acknowledge={result !== undefined}
         confirmLabel={recovery ? reloadLabel : confirmLabel}
         cancelLabel={cancelLabel}
-        onConfirm={recovery ? () => void recovery.run() : onConfirm}
+        onConfirm={
+          result !== undefined ? onAcknowledge : recovery ? () => void recovery.run() : onConfirm
+        }
         onCancel={onCancel}
       >
-        {recovery ? <p>{unknownMessage}</p> : open ? body : null}
+        {result !== undefined ? (
+          <div className="max-h-[50dvh] overflow-y-auto break-words">{result.body}</div>
+        ) : recovery ? (
+          <p>{unknownMessage}</p>
+        ) : open ? (
+          body
+        ) : null}
         {errorText !== null && (
-          <p role="alert" className="text-sm text-destructive">
+          <p role="alert" className="text-destructive text-sm">
             {errorText}
           </p>
         )}
@@ -132,7 +170,7 @@ function BulkConfirm({
         </div>
       )}
       {!open && errorText !== null && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-destructive text-sm">
           {errorText}
         </p>
       )}
@@ -146,6 +184,7 @@ function BulkAction<T>({
   label,
   run,
   onCompleted,
+  reportResult,
   check,
   title = label,
   confirmLabel,
@@ -155,7 +194,9 @@ function BulkAction<T>({
   readonly label: string;
   readonly run: (ids: readonly string[]) => Promise<{ completedIds: readonly string[]; value?: T }>;
   /** 실행 결과가 이 화면에 전달될 때 한 번(완료·부분 결과 안내). 실행 중 화면을 떠났으면 부르지 않는다. */
-  readonly onCompleted?: (result: { completedIds: readonly string[]; value?: T }) => void;
+  readonly onCompleted?: (result: BulkResult<T>) => void;
+  /** 같은 방문에서 결과를 받으면 호출한다. 반환한 내용으로 확인창을 결과 알림 창으로 바꾼다. */
+  readonly reportResult?: (result: BulkResult<T>) => BulkResultAlert | undefined;
   /** 업무상 거절 사유. 있으면 실행하지 않고 보인다. */
   readonly check?: (ids: readonly string[]) => string | undefined;
   readonly title?: string;
@@ -164,10 +205,11 @@ function BulkAction<T>({
   readonly describe?: (ids: readonly string[]) => ReactNode;
 } & { readonly model?: ListModel }) {
   const { model, copy, renderFailure, refusal } = useListContext(explicitModel);
+  const result = useBulkResultAlert(onCompleted, reportResult);
   const { pending, error, confirm, locked, open, cancel, dismiss, recovery } = useBulkConfirmation({
     model,
     run,
-    onCompleted,
+    onCompleted: result.complete,
     check,
     emptyRefusal: refusal === 'alert' ? copy.selectRows : undefined,
   });
@@ -195,6 +237,8 @@ function BulkAction<T>({
         recovery={recovery}
         reloadLabel={copy.reload ?? defaultMessages.reload}
         unknownMessage={copy.resultUnknown ?? defaultMessages.resultUnknown}
+        result={result.alert}
+        onAcknowledge={result.acknowledge}
       />
     </>
   );
@@ -217,6 +261,7 @@ function BulkSelectAction<V extends string, T = unknown>({
   defaultValue,
   run,
   onCompleted,
+  reportResult,
   check,
   title = label,
   confirmLabel,
@@ -245,7 +290,9 @@ function BulkSelectAction<V extends string, T = unknown>({
     value: V
   ) => Promise<{ completedIds: readonly string[]; value?: T }>;
   /** 실행 결과가 이 화면에 전달될 때 한 번(완료·부분 결과 안내). 실행 중 화면을 떠났으면 부르지 않는다. */
-  readonly onCompleted?: (result: { completedIds: readonly string[]; value?: T }) => void;
+  readonly onCompleted?: (result: BulkResult<T>) => void;
+  /** 같은 방문에서 결과를 받으면 호출한다. 반환한 내용으로 확인창을 결과 알림 창으로 바꾼다. */
+  readonly reportResult?: (result: BulkResult<T>) => BulkResultAlert | undefined;
   /** 업무상 거절 사유. 있으면 실행하지 않고 보인다. 여는 순간은 지금 고른 값, 실행 직전은 확인창에 고정한 값으로 묻는다. */
   readonly check?: (ids: readonly string[], value: V) => string | undefined;
   readonly title?: string;
@@ -262,13 +309,14 @@ function BulkSelectAction<V extends string, T = unknown>({
     chosen !== null && options.some((option) => option.value === chosen && option.disabled !== true)
       ? chosen
       : null;
+  const result = useBulkResultAlert(onCompleted, reportResult);
   const { pending, error, confirm, locked, open, cancel, dismiss, recovery } = useBulkConfirmation<
     T,
     V
   >({
     model,
     value: value ?? undefined,
-    onCompleted,
+    onCompleted: result.complete,
     emptyRefusal: refusal === 'alert' ? copy.selectRows : undefined,
     run: (ids, target) =>
       target === undefined ? Promise.reject(requiredMessage ?? copy.chooseValue) : run(ids, target),
@@ -317,6 +365,8 @@ function BulkSelectAction<V extends string, T = unknown>({
         recovery={recovery}
         reloadLabel={copy.reload ?? defaultMessages.reload}
         unknownMessage={copy.resultUnknown ?? defaultMessages.resultUnknown}
+        result={result.alert}
+        onAcknowledge={result.acknowledge}
       />
     </fieldset>
   );
@@ -378,7 +428,7 @@ function Download({
       {/* 진행 중에는 종류·버튼을 잠그고 옆에 로딩 표시만 둔다. 문구는 화면 낭독기에만 읽힌다. */}
       {running && <Pending label={copy.downloading} />}
       {failure !== null && (
-        <span role="alert" className="text-sm text-destructive">
+        <span role="alert" className="text-destructive text-sm">
           {failure}
         </span>
       )}

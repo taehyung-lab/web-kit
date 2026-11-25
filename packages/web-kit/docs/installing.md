@@ -87,6 +87,10 @@ pnpm exec web-kit-registry record --source /path/to/same-version-web-kit --items
 
 `ui/`의 dialog·pending·choice·retry·index도 `web-kit/` 바로 아래로 옮긴다. 이전 복사본의 프로젝트 디자인을 보존하며 아래 세 방향 비교를 하고, import·검사 연결·설치 기록을 함께 갱신한다. 이 변경은 이름과 위치만 바꾸며 본문 잠금·초점 복원·진행 우선순위·대화창 순서는 유지한다.
 
+### 일괄 작업 결과 알림
+
+**복사본 교정 필요.** `list`의 `list/list-actions.tsx`와 `dialog`의 `dialog.tsx`를 함께 갱신한다. 결과를 안내할 작업만 `reportResult`를 추가하고, 현재 방문에 도착한 결과에서 알림 내용을 반환하면 실행 확인창이 결과 알림으로 바뀐다. 다른 완료 콜백은 기존 `onCompleted`를 쓴다. [목록 사용 계약](../skills/web-kit-list/SKILL.md)을 따른다.
+
 ### 복사본 갱신
 
 이전 원본 **A**, 받을 새 원본 **B**, 프로젝트가 고친 현재 복사본 **C**를 비교한다. 설치 기록으로 A의 tag/commit과 파일을 찾고 A와 B를 같은 CLI·설정으로 별도 작업 폴더에 설치한다. A→B는 키트 교정, A→C는 프로젝트 수정이다. 두 차이를 비교해 C의 디자인·업무 연결을 보존하며 필요한 교정을 적용한다. 충돌은 파일을 보존해 검토한다. `shadcn add --diff`는 C와 B의 차이만 보여 주므로 세 방향 비교를 대신하지 않는다.

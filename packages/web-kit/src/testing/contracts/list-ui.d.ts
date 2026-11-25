@@ -238,20 +238,33 @@ declare function Actions({ model: explicitModel, children, className }: {
 } & {
     readonly model?: ListModel;
 }): import("react").JSX.Element;
-/** 확인창을 거치는 일괄 작업. 확인 당시 결과와 선택이 바뀌면 실행하지 않고, 실패는 확인창에 남기며 선택은 유지한다. */
-declare function BulkAction<T>({ model: explicitModel, label, run, check, title, confirmLabel, cancelLabel, describe, }: {
+type BulkResult<T> = {
+    readonly completedIds: readonly string[];
+    readonly value?: T;
+};
+type BulkResultAlert = {
+    readonly title: string;
+    readonly body: ReactNode;
+};
+declare function BulkAction<T>(props: {
     readonly label: string;
-    readonly run: (ids: readonly string[]) => Promise<{
-        completedIds: readonly string[];
-        value?: T;
-    }>;
-    /** 업무상 거절 사유. 있으면 실행하지 않고 보인다. */
+    readonly run: (ids: readonly string[]) => Promise<BulkResult<T>>;
+    readonly onCompleted?: (result: BulkResult<T>) => void;
+    readonly reportResult?: (result: BulkResult<T>) => BulkResultAlert | undefined;
     readonly check?: (ids: readonly string[]) => string | undefined;
     readonly title?: string;
     readonly confirmLabel?: string;
     readonly cancelLabel?: string;
     readonly describe?: (ids: readonly string[]) => ReactNode;
-} & {
+    readonly model?: ListModel;
+}): import("react").JSX.Element;
+declare function BulkSelectAction<V extends string, T = unknown>(props: {
+    readonly label: string;
+    readonly options: readonly { readonly value: V; readonly label: string }[];
+    readonly defaultValue?: V;
+    readonly run: (ids: readonly string[], value: V) => Promise<BulkResult<T>>;
+    readonly onCompleted?: (result: BulkResult<T>) => void;
+    readonly reportResult?: (result: BulkResult<T>) => BulkResultAlert | undefined;
     readonly model?: ListModel;
 }): import("react").JSX.Element;
 export type { DownloadControl } from '@boosterlab/web-kit/list';
@@ -282,6 +295,7 @@ export declare const List: typeof ListRoot & {
     Pagination: typeof Pagination;
     Actions: typeof Actions;
     BulkAction: typeof BulkAction;
+    BulkSelectAction: typeof BulkSelectAction;
     Download: typeof Download;
     Check: typeof Check;
 };

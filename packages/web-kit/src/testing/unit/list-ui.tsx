@@ -5,6 +5,7 @@ import { useState, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, expect, it as baseIt, vi } from 'vitest';
 import { z } from 'zod';
+import { createLifetime, LifetimeProvider, type Lifetime } from '../../lifetime';
 import { useListDownload, type DownloadTarget } from '../../list/list-download';
 import type * as Contract0 from '../contracts/list-ui';
 import { defineSearch, type SearchDefinition } from '../../search/fields';
@@ -72,6 +73,7 @@ function mount(
     fetch?: (search: unknown) => Promise<ListPage<Row>>;
     def?: SearchDefinition<Fields>;
     initial?: Record<string, unknown>;
+    lifetime?: Lifetime;
   } = {},
 ) {
   const fetch = vi.fn(options.fetch ?? (async () => ({ rows: [{ id: 'a' }, { id: 'b' }], total: 2 })));
@@ -96,7 +98,11 @@ function mount(
   clients.push(client);
   render(
     <QueryClientProvider client={client}>
-      <App />
+      {options.lifetime ? (
+        <LifetimeProvider lifetime={options.lifetime}>
+          <App />
+        </LifetimeProvider>
+      ) : <App />}
     </QueryClientProvider>,
   );
   return { fetch, navigations };
@@ -292,6 +298,85 @@ it(title('G096', '일괄 요청 실패는 확인창과 선택을 보존하고 �
   await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
   expect(screen.getAllByRole('checkbox', { name: '행 선택' }).map(checked)).toEqual([false, true]);
 });
+
+it.each(['button', 'select'] as const)(
+  title('bulk-result-notice', '같은 창에서 결과를 확인하고 방문을 벗어나면 안내를 닫는다 (%s)'),
+  async (kind) => {
+    const lifetime = createLifetime();
+    const partial = { completedIds: ['a'], value: 'b를 처리하지 못했습니다.' };
+    let deliverLate!: (result: typeof partial) => void;
+    const late = new Promise<typeof partial>((resolve) => { deliverLate = resolve; });
+    const run = vi.fn<() => Promise<{ completedIds: string[]; value?: string }>>()
+      .mockResolvedValueOnce(partial)
+      .mockResolvedValueOnce(partial)
+      .mockResolvedValueOnce({ completedIds: ['a', 'b'] })
+      .mockReturnValueOnce(late);
+    const onCompleted = vi.fn();
+    const reportResult = vi.fn(({ value }: { value?: string }) =>
+      value === undefined ? undefined : { title: '일괄 결과', body: <p>{value}</p> }
+    );
+    const action = { label: '일괄 적용', run, onCompleted, reportResult };
+    mount(() => (
+      <List.Result>
+        {kind === 'button' ? (
+          <List.BulkAction {...action} />
+        ) : (
+          <List.BulkSelectAction {...action} options={[{ value: 'off', label: '사용안함' }]} defaultValue="off" />
+        )}
+        <List.Table columns={columns} rowId={(row) => row.id} selectable />
+      </List.Result>
+    ), { lifetime });
+    await screen.findByText('a');
+    const start = screen.getByRole('button', { name: '일괄 적용' });
+    async function submit() {
+      const selectAll = screen.getByRole('checkbox', { name: '이 페이지 전체 선택' });
+      if (!checked(selectAll)) fireEvent.click(selectAll);
+      start.focus();
+      fireEvent.click(start);
+      const confirm = await screen.findByRole('alertdialog', { name: '일괄 적용' });
+      await act(async () => {
+        fireEvent.click(within(confirm).getByRole('button', { name: '확인' }));
+      });
+      return confirm;
+    }
+
+    const confirm = await submit();
+    const result = await screen.findByRole('alertdialog', { name: '일괄 결과' });
+    expect(screen.getAllByRole('alertdialog')).toEqual([confirm]);
+    expect(result).toBe(confirm);
+    expect(within(result).getByText(partial.value)).toBeTruthy();
+    expect(onCompleted).toHaveBeenCalledWith(partial);
+    expect(reportResult).toHaveBeenCalledWith(partial);
+    expect(run).toHaveBeenCalledWith(...(kind === 'button' ? [['a', 'b']] : [['a', 'b'], 'off']));
+    const acknowledge = within(result).getByRole('button', { name: '확인' });
+    expect(document.activeElement).toBe(acknowledge);
+    expect(within(result).getAllByRole('button')).toEqual([acknowledge]);
+    fireEvent.keyDown(acknowledge, { key: 'Escape' });
+    expect(screen.getByRole('alertdialog')).toBe(result);
+    fireEvent.click(acknowledge);
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(start));
+    expect(screen.getAllByRole('checkbox', { name: '행 선택' }).map(checked)).toEqual([false, true]);
+
+    await submit();
+    await screen.findByRole('alertdialog', { name: '일괄 결과' });
+    act(() => { lifetime.leave(); lifetime.arrive(); });
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+
+    await submit();
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(reportResult).toHaveBeenCalledTimes(3);
+    expect(onCompleted).toHaveBeenCalledTimes(3);
+
+    await submit();
+    expect(screen.getByRole('alertdialog', { name: '일괄 적용' })).toBeTruthy();
+    act(() => { lifetime.leave(); lifetime.arrive(); });
+    await act(async () => { deliverLate(partial); });
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(reportResult).toHaveBeenCalledTimes(3);
+    expect(onCompleted).toHaveBeenCalledTimes(3);
+  }
+);
 
 it(title('G097', '이전 조건 결과를 보이는 동안 총건수는 …, 선택·액션은 잠기고, 새 결과가 오면 풀린다'), async () => {
   let release!: () => void;
