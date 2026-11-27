@@ -310,7 +310,7 @@ test('목록 묶음 진입 판정(route.tsx)은 다른 업무 것을 쓰지 않�
   // 다른 화면이 이미 있는 상위 주소(/manage)에 새 업무의 진입 판정을 걸면 그 화면들도 새 권한을 거치게 된다.
   const parent = cli('--feature', 'probes', '--entity', 'probe', '--kind', 'form', '--url', '/manage/new');
   assert.equal(parent.status, 1);
-  assert.match(parent.stderr, /이미 다른 화면\(venue\)이 있는 주소/);
+  assert.match(parent.stderr, /이미 다른 화면\([^)]*venue\/route\.tsx[^)]*\)이 있는 주소/);
   assert.deepEqual(files(dir), before);
   // 같은 업무가 만든 진입 판정은 다음 화면이 그대로 쓴다.
   assert.equal(cli('--feature', 'probes', '--entity', 'probe', '--kind', 'list', '--url', '/probes').status, 0);
@@ -423,4 +423,41 @@ test('키트 기본 골격은 골격 이름과 같아질 수 있는 업무 이�
     const found = [...program.getSyntacticDiagnostics(file), ...program.getSemanticDiagnostics(file).filter((item) => [2300, 2451, 2393, 2440].includes(item.code))];
     assert.deepEqual(found.map((item) => ts.flattenDiagnosticMessageText(item.messageText, '\n')), [], path);
   }
+}));
+
+test('다른 업무 화면과 같은 주소를 쓰거나 그 화면에 새 진입 판정이 걸리는 골격은 쓰지 않는다', () => project(({ dir, cli }) => {
+  const screen = (mode) => ({ files: [
+    { path: '{{featureDir}}/model/{{entity}}-' + mode + '.ts', template: 'value.ts.tpl' },
+    { path: '{{routesDir}}{{collectionUrl}}/route.tsx', template: 'group.tsx.tpl', shared: true },
+    { path: '{{routesDir}}/{{routeFile}}', template: 'route.tsx.tpl' },
+  ] });
+  useProjectTemplates(dir, { list: screen('list'), detail: screen('detail'), edit: screen('edit') }, {
+    'value.ts.tpl': 'export const value = {{TODO}}x;\n',
+    'group.tsx.tpl': "import { permission } from '{{alias}}features/{{feature}}';\nexport const Route = createFileRoute('/{{group}}{{collectionUrl}}')({ permission });\n",
+    'route.tsx.tpl': "export const Route = createFileRoute('{{routeId}}')({});\n",
+  });
+  // 다른 업무의 상세가 같은 $id 폴더에 있고 묶음 route.tsx는 없다: 수정 화면과 함께 묶음 진입 판정을 새로 걸면 그 상세에도 걸린다.
+  mkdirSync(join(dir, 'src/routes/_app/venues/$id'), { recursive: true });
+  writeFileSync(join(dir, 'src/routes/_app/venues/$id/index.tsx'), 'export const Route = 1;\n');
+  const before = files(dir);
+  const edit = cli('--feature', 'probes', '--entity', 'probe', '--kind', 'form', '--url', '/venues/$id/edit');
+  assert.equal(edit.status, 1);
+  assert.match(edit.stderr, /이미 다른 화면\(\$id\/index\.tsx\)이 있는 주소/);
+  // 같은 주소를 다른 파일 모양으로 이미 쓰는 route: venues/new.tsx가 있으면 venues/new 목록(new/index.tsx·new/route.tsx)은 같은 주소다.
+  writeFileSync(join(dir, 'src/routes/_app/venues/new.tsx'), 'export const Route = 1;\n');
+  const twin = cli('--feature', 'probes', '--entity', 'probe', '--kind', 'list', '--url', '/venues/new');
+  assert.equal(twin.status, 1);
+  assert.match(twin.stderr, /같은 주소의 route src\/routes\/_app\/venues\/new\.tsx가 이미 있다/);
+  rmSync(join(dir, 'src/routes/_app/venues/new.tsx'));
+  assert.deepEqual(files(dir), before);
+  // 업무 소유는 import 문으로 판정한다: 따옴표 모양이 달라도 같은 업무, 주석·문자열에만 있으면 다른 업무.
+  mkdirSync(join(dir, 'src/routes/_app/tickets'), { recursive: true });
+  writeFileSync(join(dir, 'src/routes/_app/tickets/route.tsx'), 'import { permission } from "@/features/tickets";\n');
+  const owned = cli('--feature', 'tickets', '--entity', 'ticket', '--kind', 'list', '--url', '/tickets');
+  assert.equal(owned.status, 0, owned.stdout + owned.stderr);
+  mkdirSync(join(dir, 'src/routes/_app/bills'), { recursive: true });
+  writeFileSync(join(dir, 'src/routes/_app/bills/route.tsx'), "// import { permission } from '@/features/bills';\nimport { permission } from '@/features/venues';\n");
+  const comment = cli('--feature', 'bills', '--entity', 'bill', '--kind', 'list', '--url', '/bills');
+  assert.equal(comment.status, 1);
+  assert.match(comment.stderr, /다른 업무의 진입 판정/);
 }));

@@ -2,7 +2,7 @@
 // 완료처럼 보이는 것을 만들지 않는다: 서버 endpoint·필드·화면 배치·저장 뒤 목적지는 선언되지 않은 TODO_web_kit_new_* 이름으로 남겨
 // 채우기 전에는 typecheck가 실패한다. 성공을 지어낸 API, 건너뛴 검사, 통과용 검사 파일은 만들지 않는다.
 import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { loadStructureConfig, VAGUE_NAMES } from './config.mjs';
@@ -106,6 +106,21 @@ function loadTemplates(config) {
 
 /** 같은 범위에서 이름이 겹친다는 TypeScript 진단: 중복 식별자·재선언·중복 함수 구현·import와 지역 선언 충돌. */
 const DUPLICATE_NAME_CODES = new Set([2300, 2451, 2393, 2440]);
+
+/** route 파일이 실제 import 문으로 그 업무 입구를 가져오는지(따옴표·주석·문자열과 구별해 TypeScript로 읽는다). */
+function importsFeature(text, specifier) {
+  const ts = require('typescript');
+  const source = ts.createSourceFile('route.tsx', text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  return source.statements.some((statement) => ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier) && statement.moduleSpecifier.text === specifier);
+}
+
+/** 같은 주소를 뜻하는 다른 route 파일 모양. `x/index.tsx`·`x/route.tsx` ↔ `x.tsx`, `x.tsx` ↔ `x/index.tsx`·`x/route.tsx`. */
+function sameAddressRoutes(path) {
+  const folder = path.match(/^(.*)\/(?:index|route)\.tsx$/)?.[1];
+  if (folder !== undefined) return [`${folder}.tsx`];
+  const flat = path.match(/^(.*)\.tsx$/)?.[1];
+  return flat === undefined ? [] : [`${flat}/index.tsx`, `${flat}/route.tsx`];
+}
 
 /** 파일 맨 위에서 같은 공간(값·타입)에 두 번 선언된 이름. import 이름도 센다. */
 function duplicateTopLevelNames(ts, file) {
@@ -279,14 +294,26 @@ export function scaffoldScreen({ root, configFile, feature, kind, url, entity, g
     if (shared !== null) { result.conflicts.push({ ...file, reason: shared }); continue; }
     // 목록 묶음의 진입 판정(route.tsx)은 그 주소 아래 모든 화면에 걸린다. 다른 업무의 것을 재사용하거나, 이미 다른 화면이 있는 주소에 새로 걸지 않는다.
     if (file.path === collectionRoute) {
-      const owner = (text) => text.includes(`${config.alias}features/${feature}'`);
-      if (existsSync(full) && !owner(readFileSync(full, 'utf8'))) { result.conflicts.push({ ...file, reason: '다른 업무의 진입 판정이라 이 업무 화면의 묶음으로 쓰지 않는다' }); continue; }
+      if (existsSync(full) && !importsFeature(readFileSync(full, 'utf8'), `${config.alias}features/${feature}`)) {
+        result.conflicts.push({ ...file, reason: '다른 업무의 진입 판정이라 이 업무 화면의 묶음으로 쓰지 않는다' });
+        continue;
+      }
       const dir = dirname(full);
       if (!existsSync(full) && existsSync(dir)) {
+        // 폴더 아래 이미 있는 route 파일(하위 폴더 포함) 가운데 이번에 만들 파일이 아닌 것이 하나라도 있으면, 새 진입 판정이 그 화면에도 걸린다.
         const planned = new Set(files.map((item) => join(config.root, item.path)));
-        const others = readdirSync(dir).filter((name) => !planned.has(join(dir, name)) && !(lstatSync(join(dir, name)).isDirectory() && [...planned].some((path) => path.startsWith(join(dir, name) + '/'))));
+        const others = readdirSync(dir, { recursive: true, withFileTypes: true })
+          .filter((entry) => !entry.isDirectory())
+          .map((entry) => join(entry.parentPath, entry.name))
+          .filter((path) => !planned.has(path))
+          .map((path) => relative(dir, path));
         if (others.length > 0) { result.conflicts.push({ ...file, reason: `이미 다른 화면(${others.join('·')})이 있는 주소에 새 진입 판정을 걸지 않는다` }); continue; }
       }
+    }
+    // 같은 주소를 다른 파일 모양으로 이미 쓰는 route(예: a/new.tsx ↔ a/new/index.tsx·a/new/route.tsx)가 있으면 같은 주소에 화면·진입 판정이 둘이 된다.
+    if (file.path === collectionRoute || file.path.startsWith(`${config.routes}/`)) {
+      const twin = sameAddressRoutes(file.path).find((path) => existsSync(join(config.root, path)));
+      if (twin !== undefined) { result.conflicts.push({ ...file, reason: `같은 주소의 route ${twin}가 이미 있다` }); continue; }
     }
     if (file.exports) {
       const existing = existsSync(full) ? readFileSync(full, 'utf8') : '';
