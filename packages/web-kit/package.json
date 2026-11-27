@@ -1,13 +1,15 @@
 {
   "name": "@boosterlab/web-kit",
-  "version": "12.0.0-rc.1",
+  "version": "12.0.0-rc.3",
   "private": true,
   "type": "module",
   "sideEffects": [
-    "./src/testing/render-watch.ts"
+    "./src/testing/render-watch.ts",
+    "./src/action-cursor.css"
   ],
   "exports": {
     ".": "./src/index.ts",
+    "./action-cursor.css": "./src/action-cursor.css",
     "./failure": "./src/failure.ts",
     "./session": "./src/session/session.ts",
     "./http": "./src/http.ts",

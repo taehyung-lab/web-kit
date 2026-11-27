@@ -1,0 +1,12 @@
+/* 활성 조작의 기본 커서. 드래그 등 개별 utility가 우선한다. */
+@layer base {
+  :where(
+    button, a[href], summary, select,
+    input:is([type="button"], [type="submit"], [type="reset"], [type="checkbox"], [type="radio"]),
+    [role="button"], [role="link"], [role="checkbox"], [role="radio"], [role="switch"], [role="tab"],
+    [role="option"], [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"],
+    [role="combobox"]:not(input, textarea, [contenteditable="true"])
+  ):not(:disabled, [aria-disabled="true"], [data-disabled], [aria-readonly="true"]) {
+    cursor: pointer;
+  }
+}
