@@ -88,7 +88,7 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
 - `isPublic`: 로그인 전·재발급·로그아웃 경로. 공개 요청에는 토큰이 실리지 않고, 세션도 건드리지 않는다.
 - `prepare`: 언어·메뉴 같은 운영 헤더.
 - 서버 로그아웃은 `createSession({ signOut })`에 넘긴다. 받은 자격증명의 토큰을 헤더에 직접 실어 공개 요청으로 보낸다. 로그아웃 버튼은 `session.end()`만 부른다. 그 뒤 로그인 이동은 앱 안 이동(router navigate)으로 한다. `window.location`으로 문서를 다시 읽으면 브라우저가 진행 중인 `signOut` 요청을 끊어 서버 세션이 남는다.
-- 로그인 요청 응답으로 세션을 여는 일(`session.start`)은 로그인 flow의 완료 단계(`onSaved`)에서 한다([로그인 flow](../../references/apps/starter/src/features/auth/model/login/use-login-flow.ts.txt)). 로그인 요청 함수는 응답만 돌려준다.
+- 로그인 요청 응답으로 세션을 여는 일(`session.start`)은 로그인 flow의 완료 단계(`onSaved`)에서 한다. 로그인 요청 함수는 응답만 돌려준다.
 - `session.subscribe`의 `ended`에서 로그인 이동·안내를 한다. 구독은 앱 조립(`app/`)에 둔다([세션 이동](../../references/apps/starter/src/app/session/SessionNavigation.tsx.txt)). `by`로 이 탭의 로그아웃(local), 다른 탭(other-tab), 서버 인증 계약(server)을 구별한다. 토큰 저장 위치는 프로젝트 정책이다.
 - 로그인 뒤 돌아갈 곳처럼 URL·state로 받은 이동 주소는 루트 `.`의 `safeAppPath(value, { exclude? })`로 거른 값만 쓴다. 같은 앱 경로(`/`로 시작)면 원문을, 아니면 undefined를 돌려준다. 절대 주소·`//host`·역슬래시(`/\host`)·제어 문자(`/\t/host`처럼 브라우저가 지워 `//`가 되는 것)·원문 공백·잘못된 퍼센트 인코딩을 거절하고, 인코딩을 한 번 푼 값에도 `//` 시작·역슬래시·제어 문자 규칙을 적용한다(`%5C`·`%2F%2F` 거절, `%20` 허용). `exclude`의 경로와 같거나 그 아래(`/login`, `/login/otp`)는 거절하고 이름만 이어진 경로(`/login-help`)는 통과한다. 로그인 경로 같은 제외 대상과 기본 목적지는 프로젝트가 정한다. 목록 복귀(`captureListReturn`)도 같은 판정을 쓴다.
 - 유휴 마감은 프로젝트의 세션 시작과 명시 마감 전달을 같은 연결에서 조립한다. 어떤 응답의 마감을 받을지·임시 마감 계기·경고 길이·0초 선택·재개 유예 길이·활동 부품 부착과 화면 닫음 상태는 프로젝트가 정한다. 서버 형식은 `ServerTimeSample`로 해석해 넘긴다. HTTP `Date` 응답 헤더의 시계 차이는 `/session/idle`의 `clockOffsetFromDate(date, receivedAt)`로 잰다. `Date`가 초 단위라 받은 시각을 초로 내려 비교하며, 헤더가 없거나 읽을 수 없으면 undefined이므로 `clockOffsetMs`를 생략한다(0으로 채우지 않는다). 마감 헤더의 이름·형식은 프로젝트 서버 계약이다.
@@ -112,8 +112,6 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 - mock 통과나 HTTP 200만으로 서버 계약을 확인했다고 하지 않는다.
 
 ## 미확인 외부 계약
-
-실제 조립 예: [apps/starter/src/features/auth/api/auth.ts](../../references/apps/starter/src/features/auth/api/auth.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 E1(401이 업무 실행 전인가), E2(일반·재발급 요청의 status·resultCode 의미), E3(동시 재발급, 이전 refresh 토큰 재사용, 늦은 응답의 쿠키 변경)는 설치된 web-kit 패키지의 [결정 기록 0003의 미확인 외부 계약](../../references/docs/decisions/0003-request-response-failure.md#미확인-외부-계약)이 기준이다. E1은 프로젝트가 확인해 `authRejectsBeforeExecution`으로 넘긴다. E2·E3은 확인되기 전까지 해당 부분을 보류한다.
 

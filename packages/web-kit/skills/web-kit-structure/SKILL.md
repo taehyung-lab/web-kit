@@ -66,8 +66,6 @@ runtime을 app에서 나누는 이유: feature가 http·세션을 쓰려고 app�
 
 ## 의존 방향
 
-실제 조립 예: [apps/starter/src/features/auth/index.ts](../../references/apps/starter/src/features/auth/index.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
-
 - app은 features·runtime·shared를 조립한다. routes는 URL·진입 판정·문맥을 넘긴다. feature는 app·routes를 import하지 않는다.
 - app·routes·다른 feature는 대상 업무의 `index.ts`를 통해서만 쓴다. `@/features/<업무>`처럼 폴더 경로를 쓴다. 공개한 이름도 실제 출처를 추적하므로 ui가 index를 거쳐 api를 실행할 수 없다.
 - ui는 model의 업무 hook·순수 코드·shared를 사용한다. api·생성 코드·runtime·상태 연결·검색 선언의 값은 직접 가져오지 않는다.

@@ -5,7 +5,8 @@
 // 2. 예시 업무가 없다: features는 auth뿐이고 예시 업무 경로가 없다.
 // 3. 설치 → 생성 코드(api:generate)·route 트리가 남은 명세·route와 같다 → pnpm check(format·typecheck·lint·build·적합성 unit/browser).
 // 4. web-kit-new로 첫 업무 네 화면을 만든다. 채우기 전 typecheck는 미완성 표시로 실패해야 한다.
-// 5. 미완성 표시만 검사용 값으로 채우면 typecheck·lint(구조 포함)가 통과하고, 로그인 뒤 네 주소가 각 화면을 그린다.
+// 5. 미완성 표시만 검사용 값으로 채우고 첫 화면을 app/screens.ts에 등록하면 typecheck·lint(구조 포함)가 통과하고,
+//    로그인 뒤 그 첫 화면으로 가며 메뉴에 보이고, 네 주소가 각 화면을 그린다.
 // 검사용 채움 값의 응답은 이 검사 안에서만 쓰는 고정 값이다(실제 서버 계약이 아니다).
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -61,11 +62,23 @@ const ADD = {
 };
 const SCREEN_TEST = `import { renderApp } from '@/test/app';
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { expect, it } from 'vitest';
 
 it.each(${JSON.stringify(SCREENS.map(([, url, text]) => [url.replace('$orderId', '1'), text]))})('로그인 뒤 %s 주소가 그 화면을 그린다', async (url, text) => {
   renderApp(url);
   expect(await screen.findByText(text)).toBeTruthy();
+});
+
+it('app/screens.ts에 등록한 첫 화면: 로그인하면 그 화면으로 가고 머리글 메뉴에 보인다', async () => {
+  const user = userEvent.setup();
+  const { router } = renderApp('/login', { signedIn: false });
+  await user.type(await screen.findByLabelText(/아이디/), 'admin');
+  await user.type(screen.getByLabelText(/비밀번호/), 'password');
+  await user.click(screen.getByRole('button', { name: '로그인' }));
+  expect(await screen.findByText('list screen')).toBeTruthy();
+  expect(router.state.location.pathname).toBe('/orders');
+  expect(screen.getByRole('link', { name: 'Orders' }).getAttribute('href')).toBe('/orders');
 });
 
 it('로그인하지 않았으면 첫 업무 화면도 로그인으로 보낸다', async () => {
@@ -137,6 +150,16 @@ try {
     });
     writeFileSync(path, text);
   }
+  // 생성기가 안내한 직접 연결: 메뉴와 첫 화면을 app/screens.ts에 등록한다(문구 키는 검사용 하나).
+  const screens = join(project, 'src/app/screens.ts');
+  writeFileSync(
+    screens,
+    readFileSync(screens, 'utf8')
+      .replace('{ ko: {}, en: {} }', "{ ko: { orders: { menu: 'Orders' } }, en: { orders: { menu: 'Orders' } } }")
+      .replace('readonly labelKey: string }[] = [];', "readonly labelKey: string }[] = [{ to: '/orders', labelKey: 'orders.menu' }];")
+      .replace('firstScreen: ScreenPath | null = null;', "firstScreen: ScreenPath | null = '/orders';")
+  );
+  if (!/to: '\/orders'/.test(readFileSync(screens, 'utf8')) || !/= '\/orders';/.test(readFileSync(screens, 'utf8'))) throw new Error('app/screens.ts에 첫 화면을 등록하지 못했다(파일 모양이 안내와 다르다)');
   writeFileSync(join(featureDir, 'ui/Orders.test.tsx'), SCREEN_TEST);
   expectPass('route 트리 재생성(build)', project, 'pnpm', ['build']);
   expectPass('typecheck', project, 'pnpm', ['typecheck']);

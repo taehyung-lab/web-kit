@@ -102,6 +102,8 @@ export const exampleDb = {
     return { ...state };
   },
   restore(snapshot: ExampleSnapshot) {
-    Object.assign(state, snapshot);
+    // 저장 모양에 다른 값(나누기 전 인증 값 등)이 섞여 있어도 예시 업무 값만 가져온다.
+    const { products, members, terms, workflows } = snapshot;
+    Object.assign(state, { products, members, terms, workflows });
   },
 };

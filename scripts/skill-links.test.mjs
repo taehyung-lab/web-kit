@@ -8,21 +8,25 @@ import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { checkMarkdownLinks } from './document-links.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
-/** 새 프로젝트에서 빠지는 starter 예시 업무 경로(scripts/starter/examples.json). 단어가 아니라 링크 대상 경로로 판정한다. */
-const exampleLayer = JSON.parse(readFileSync(resolve(root, 'scripts/starter/examples.json'), 'utf8')).remove;
-/** 문서 링크 중 starter 예시 업무 층을 가리키는 것. */
+/**
+ * 본보기로 가리키면 안 되는 starter 경로: 모든 업무 폴더(src/features/, 인증 포함)와 새 프로젝트에서 빠지는 예시 업무 층
+ * (scripts/starter/examples.json). 보장은 계약 문장으로 설명하고, 링크는 앱 조립·실행 기반·설정·적합성 검사에만 둔다.
+ * 단어가 아니라 링크 대상 경로로 판정한다.
+ */
+const exampleLayer = ['src/features', ...JSON.parse(readFileSync(resolve(root, 'scripts/starter/examples.json'), 'utf8')).remove];
+/** 문서 링크 중 starter의 업무 폴더·예시 업무 층을 가리키는 것. */
 function exampleLinks(text) {
   return [...text.matchAll(/\]\(([^)]+)\)/g)]
     .map(([, target]) => target.split('#')[0].match(/(?:^|\/)apps\/starter\/(.+?)(?:\.txt)?$/)?.[1])
     .filter((path) => path !== undefined && exampleLayer.some((example) => path === example || path.startsWith(example + '/')));
 }
 for (const document of ['README.md', ...readdirSync(resolve(root, 'packages/web-kit/docs')).filter((file) => file.endsWith('.md')).map((file) => 'docs/' + file)]) {
-  test(`packages/web-kit/${document}: 예시 업무 파일을 본보기로 링크하지 않는다`, () => {
+  test(`packages/web-kit/${document}: 업무 폴더·예시 업무 파일을 본보기로 링크하지 않는다`, () => {
     assert.deepEqual(exampleLinks(readFileSync(resolve(root, 'packages/web-kit', document), 'utf8')), []);
   });
 }
-test('예시 업무 링크 판정은 경로로 하고 앱 조립·인증 파일 링크는 허용한다', () => {
-  assert.deepEqual(exampleLinks('[a](../../references/apps/starter/src/features/products/api/products.ts.txt) [b](../../references/apps/starter/src/runtime/web-kit.ts.txt) [c](../../references/apps/starter/src/features/auth/index.ts.txt)'), ['src/features/products/api/products.ts']);
+test('업무 폴더 링크 판정은 경로로 하고 앱 조립·실행 기반·적합성 검사 링크는 허용한다', () => {
+  assert.deepEqual(exampleLinks('[a](../../references/apps/starter/src/features/products/api/products.ts.txt) [b](../../references/apps/starter/src/runtime/web-kit.ts.txt) [c](../../references/apps/starter/src/features/auth/index.ts.txt) [d](../../references/apps/starter/src/shared/ui/web-kit/checks/form-ui.test.tsx.txt) [e](../../references/apps/starter/src/routes/_app/products/index.tsx.txt)'), ['src/features/products/api/products.ts', 'src/features/auth/index.ts', 'src/routes/_app/products/index.tsx']);
   assert.deepEqual(exampleLinks('상품 목록과 products 단어만 있는 문장'), []);
 });
 const skills =readdirSync(resolve(root, 'packages/web-kit/skills')).filter((name) => name.startsWith('web-kit-'));
@@ -37,7 +41,7 @@ for (const name of skills) {
     }
   });
   // 보장은 계약으로 설명한다. 새 프로젝트에 없는 예시 업무(scripts/starter/examples.json)의 파일을 본보기로 가리키지 않는다.
-  test(name + ': 예시 업무 파일을 본보기로 링크하지 않는다', () => {
+  test(name + ': 업무 폴더·예시 업무 파일을 본보기로 링크하지 않는다', () => {
     assert.deepEqual(exampleLinks(text), [], name);
   });
   // 제거된 패키지 입구를 다시 권하지 않도록 막는다.

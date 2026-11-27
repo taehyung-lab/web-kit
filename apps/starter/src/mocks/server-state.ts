@@ -15,6 +15,9 @@ export interface MockServerSnapshot {
   readonly features: unknown[];
 }
 
+/** 인증과 업무 상태를 나누기 전에 저장한 모양(인증 값과 업무 값이 한 객체에 있다). */
+type LegacySnapshot = MockAuthSnapshot & { readonly auth?: undefined };
+
 export const mockServerState = {
   reset() {
     mockDb.reset();
@@ -23,7 +26,13 @@ export const mockServerState = {
   snapshot(): MockServerSnapshot {
     return { auth: mockDb.snapshot(), features: featureMockStates.map((state) => state.snapshot()) };
   },
-  restore(snapshot: MockServerSnapshot) {
+  restore(snapshot: MockServerSnapshot | LegacySnapshot) {
+    // 나누기 전 모양(인증·업무 값이 한 객체)으로 저장된 상태도 그대로 읽는다: 인증은 그 값에서, 업무 상태는 각자 자기 값만 고른다.
+    if (snapshot.auth === undefined) {
+      mockDb.restore({ tokens: snapshot.tokens, refreshValid: snapshot.refreshValid, issued: snapshot.issued });
+      for (const state of featureMockStates) state.restore(snapshot as never);
+      return;
+    }
     // 저장한 뒤 업무 목록이 바뀌었으면(모양이 다르면) 처음 상태로 둔다.
     if (snapshot.features?.length !== featureMockStates.length) throw new Error('mock 상태 모양이 바뀌었습니다');
     mockDb.restore(snapshot.auth);

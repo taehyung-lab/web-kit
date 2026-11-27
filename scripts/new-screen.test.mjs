@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -277,4 +277,37 @@ test('골격 자리값: 업무·이름 표기(featureCamel·ENTITY)를 바꾸고
   assert.equal(cli('--feature', 'sales-orders', '--entity', 'sales-order', '--kind', 'list', '--url', '/sales-orders').status, 0);
   assert.equal(readFileSync(join(dir, 'src/features/sales-orders/ui/list/SalesOrderListPage.tsx'), 'utf8'),
     "export const names = ['salesOrders', 'SALES_ORDER'];\nexport const view = <List messages={{ empty: t('salesOrders.empty') }} value={TODO_web_kit_new_value} />;\n");
+}));
+
+test('화면 자신의 route를 shared로 두는 골격은 거절한다(같은 주소의 기존 화면은 재사용이 아니라 충돌이다)', () => project(({ dir, cli }) => {
+  const manifest = structuredClone(projectList);
+  manifest.list.files[1].shared = true;
+  useProjectTemplates(dir, manifest, projectListTemplates);
+  const before = files(dir);
+  const result = cli('--feature', 'invoices', '--kind', 'list', '--url', '/invoices');
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /shared로 둘 수 없습니다/);
+  assert.deepEqual(files(dir), before);
+}));
+
+test('쓰는 파일이나 상위 폴더가 심볼릭 링크면 다른 곳을 고치지 않고 아무 파일도 쓰지 않는다', () => project(({ dir, cli }) => {
+  // 업무 입구가 다른 업무의 route를 가리키는 링크인 경우
+  mkdirSync(join(dir, 'src/routes/_app/orders'), { recursive: true });
+  const other = join(dir, 'src/routes/_app/orders/index.tsx');
+  writeFileSync(other, 'export const keep = 1;\n');
+  mkdirSync(join(dir, 'src/features/invoices'), { recursive: true });
+  symlinkSync(other, join(dir, 'src/features/invoices/index.ts'));
+  const linked = cli('--feature', 'invoices', '--kind', 'list', '--url', '/invoices');
+  assert.equal(linked.status, 1);
+  assert.match(linked.stderr, /src\/features\/invoices\/index\.ts가 심볼릭 링크/);
+  assert.equal(readFileSync(other, 'utf8'), 'export const keep = 1;\n');
+  assert.equal(existsSync(join(dir, 'src/routes/_app/invoices/index.tsx')), false);
+  // 업무 폴더 자체가 다른 폴더를 가리키는 링크인 경우
+  rmSync(join(dir, 'src/features/invoices'), { recursive: true });
+  mkdirSync(join(dir, 'elsewhere'));
+  symlinkSync(join(dir, 'elsewhere'), join(dir, 'src/features/invoices'));
+  const folder = cli('--feature', 'invoices', '--kind', 'list', '--url', '/invoices');
+  assert.equal(folder.status, 1);
+  assert.match(folder.stderr, /src\/features\/invoices가 심볼릭 링크/);
+  assert.deepEqual(readdirSync(join(dir, 'elsewhere')), []);
 }));

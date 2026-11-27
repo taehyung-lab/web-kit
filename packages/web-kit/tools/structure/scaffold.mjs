@@ -1,7 +1,7 @@
 // 파일 책임: 새 화면의 구조 골격(ui·model·api·index·route)을 web-kit-structure 자리에 만든다.
 // 완료처럼 보이는 것을 만들지 않는다: 서버 endpoint·필드·화면 배치·저장 뒤 목적지는 선언되지 않은 TODO_web_kit_new_* 이름으로 남겨
 // 채우기 전에는 typecheck가 실패한다. 성공을 지어낸 API, 건너뛴 검사, 통과용 검사 파일은 만들지 않는다.
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
@@ -131,6 +131,8 @@ function plan({ config, feature, entity, kind, url, group }) {
       throw new Error(`${at}: ${path}는 상대 조각(.·..) 없이 프로젝트 안 경로여야 합니다`);
     // 골격은 요청한 업무 폴더와 요청한 URL의 route 파일에만 쓴다. 다른 업무·다른 주소의 route는 건드리지 않는다.
     // 목록 묶음 route.tsx는 같은 목록의 여러 화면이 함께 쓰므로 shared(이미 있으면 그대로 둔다)로만 받는다.
+    // 이 화면의 route는 shared일 수 없다: 이미 다른 화면이 그 주소를 쓰면 재사용이 아니라 충돌이다.
+    if (path === routePath && entry.shared === true) throw new Error(`${at}: 이 화면의 route 파일(${routePath})은 shared로 둘 수 없습니다(같은 주소의 다른 화면은 충돌이다)`);
     const allowedRoute = path === routePath || (path === collectionRoute && entry.shared === true);
     if (!allowedRoute && !path.startsWith(featureDir + '/'))
       throw new Error(`${at}: ${path}는 ${featureDir}/ 안이거나 ${routePath}${collectionRoute ? `·${collectionRoute}(shared)` : ''}여야 합니다`);
@@ -149,6 +151,19 @@ function plan({ config, feature, entity, kind, url, group }) {
   const exports = (screen.exports ?? []).map((line) => render(line, values, `${where}/screens.json ${route.mode}.exports`));
   files.push({ path: `${featureDir}/index.ts`, exports });
   return { files, next: (screen.next ?? []).map((line) => render(line, values, `${where}/screens.json ${route.mode}.next`)) };
+}
+
+/** 프로젝트 안 경로 조각 중 이미 있는 심볼릭 링크(파일이나 상위 폴더)의 상대 경로. 없으면 null. */
+function linkedSegment(root, path) {
+  let current = root;
+  const parts = path.split('/');
+  for (const [index, part] of parts.entries()) {
+    current = join(current, part);
+    let stat;
+    try { stat = lstatSync(current); } catch { return null; }
+    if (stat.isSymbolicLink()) return parts.slice(0, index + 1).join('/');
+  }
+  return null;
 }
 
 /**
@@ -173,6 +188,9 @@ export function scaffoldScreen({ root, configFile, feature, kind, url, entity, g
   const result = { created: [], updated: [], reused: [], unchanged: [], conflicts: [], markers: 0, dryRun, next };
   for (const file of files) {
     const full = join(config.root, file.path);
+    // 쓰는 곳은 적힌 경로 그대로여야 한다. 그 파일이나 상위 폴더가 심볼릭 링크면 다른 업무·route를 고칠 수 있으므로 충돌로 둔다.
+    const link = linkedSegment(config.root, file.path);
+    if (link !== null) { result.conflicts.push({ ...file, reason: `${link}가 심볼릭 링크라 실제 쓰는 위치가 다르다` }); continue; }
     if (file.exports) {
       const existing = existsSync(full) ? readFileSync(full, 'utf8') : '';
       file.content = extendPublicEntry(existing, file.exports);
@@ -200,7 +218,7 @@ export function formatScaffold(result, { feature, kind, url }) {
   for (const file of result.updated) lines.push(`  ${result.dryRun ? '공개 연결 추가 예정' : '공개 연결 추가'} ${file.path}`);
   for (const file of result.reused) lines.push(`  기존 파일 사용 ${file.path} (같은 feature의 공유 파일이라 덮어쓰지 않음)`);
   for (const file of result.unchanged) lines.push(`  변경 없음 ${file.path}`);
-  for (const file of result.conflicts) lines.push(`  충돌 ${file.path}: 내용이 다른 파일이 이미 있어 아무 파일도 쓰지 않았다`);
+  for (const file of result.conflicts) lines.push(`  충돌 ${file.path}: ${file.reason ?? '내용이 다른 파일이 이미 있어'} 아무 파일도 쓰지 않았다`);
   if (result.conflicts.length > 0) return lines.join('\n');
   lines.push(`이 화면 골격에 남은 미완성 표시 ${result.markers}곳(${TODO_MARKER}…, 공유 파일 중 이미 고친 것은 세지 않음): 선언되지 않은 이름이라 채우기 전에는 typecheck가 실패한다.`);
   lines.push('생성한 파일 수는 완료한 화면 수가 아니다. 검사 파일은 만들지 않았다: 화면 행동·서버 요청을 확인하는 제품 검사를 직접 작성하고 따로 집계한다.');

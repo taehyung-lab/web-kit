@@ -95,11 +95,9 @@ headless는 화면 배치 없이 상태와 연결 함수만 쓰는 방식이다.
 - 입력 control의 id는 `fieldId(name)`을 쓰고, 같은 id를 `FieldFrame`에 넘긴다. 체크 트리(`CheckboxTree`)는 그 id를 `id`로 받으며, 검증 오류의 focus가 그 그룹으로 온다.
 - 줄을 추가·삭제하는 입력은 아래 「줄 추가·삭제 입력」을 따른다.
 
-## 선택과 추가 행동의 예제
+## 선택과 추가 행동
 
-조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
-
-보호 제외는 [로그인 화면](../../references/apps/starter/src/features/auth/ui/login/LoginPage.tsx.txt), 저장(요청·응답 반환)과 완료(세션 시작·이동) 분리는 [로그인 flow](../../references/apps/starter/src/features/auth/model/login/use-login-flow.ts.txt)를 참고한다. 저장 후 추가 조회는 `onSaved`가 하고, 그 조회가 실패하면 키트가 완료 단계만 다시 시도한다(저장 요청은 다시 보내지 않는다). 완료 확인(`acknowledge`)을 켜면 확인 창을 닫은 뒤 `onSaved`의 이동이 실행된다. 저장 뒤 효과(세션 시작·이동·후속 조회)는 `save`에 넣지 않고 `onSaved`에 둔다. schema·서버 요청·후속 업무는 프로젝트가 정하고 저장 상태 기계를 새로 만들지 않는다. primary와 secondary의 완료 선언은 각 동작에 따로 준다.
+보호 제외는 입력이 남아도 떠날 때 묻지 않는 화면(로그인 등)에 `<Form protect={false}>`로 선언한다. 저장(요청·응답 반환)과 완료(세션 시작·이동)는 `save`가 응답만 돌려주고 `onSaved`가 세션 시작·이동을 하는 것으로 나눈다. 저장 후 추가 조회는 `onSaved`가 하고, 그 조회가 실패하면 키트가 완료 단계만 다시 시도한다(저장 요청은 다시 보내지 않는다). 완료 확인(`acknowledge`)을 켜면 확인 창을 닫은 뒤 `onSaved`의 이동이 실행된다. 저장 뒤 효과(세션 시작·이동·후속 조회)는 `save`에 넣지 않고 `onSaved`에 둔다. schema·서버 요청·후속 업무는 프로젝트가 정하고 저장 상태 기계를 새로 만들지 않는다. primary와 secondary의 완료 선언은 각 동작에 따로 준다.
 
 폼과 `blocking-progress` 또는 `checkbox-tree`를 함께 설치하면 registry 검사 연결이 `/testing/unit/combinations`로 자기 UI 복사본의 조합 검사도 등록한다. 둘 중 하나만 설치한 프로젝트에는 그 조합을 요구하지 않는다. 덮개와 폼의 서버 오류 초점 브라우저 화면은 `/testing/fixtures/combinations`를 쓴다.
 
