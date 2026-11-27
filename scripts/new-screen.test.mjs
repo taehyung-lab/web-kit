@@ -261,3 +261,18 @@ test('골격 자리값: 목록 주소·상세 주소·주소 변수는 화면 �
   assert.equal(values('edit'), '/sales/order-items/$itemId/edit|/sales/order-items|/sales/order-items/$itemId|itemId|_app');
   assert.equal(readFileSync(join(dir, 'src/routes/_app/sales/order-items/route.tsx'), 'utf8'), "export const Route = createFileRoute('/_app/sales/order-items')({});\n");
 }));
+
+test('골격 자리값: 업무·이름 표기(featureCamel·ENTITY)를 바꾸고 JSX 객체 값 {{ a: 1 }}은 그대로 둔다', () => project(({ dir, cli }) => {
+  useProjectTemplates(dir, {
+    list: { files: [
+      { path: '{{featureDir}}/ui/list/{{Entity}}ListPage.tsx', template: 'page.tsx.tpl' },
+      { path: '{{routesDir}}/{{routeFile}}', template: 'route.tsx.tpl' },
+    ] },
+  }, {
+    'page.tsx.tpl': "export const names = ['{{featureCamel}}', '{{ENTITY}}'];\nexport const view = <List messages={{ empty: t('{{featureCamel}}.empty') }} value={{{TODO}}value} />;\n",
+    'route.tsx.tpl': "export const Route = createFileRoute('{{routeId}}')({});\n",
+  });
+  assert.equal(cli('--feature', 'sales-orders', '--entity', 'sales-order', '--kind', 'list', '--url', '/sales-orders').status, 0);
+  assert.equal(readFileSync(join(dir, 'src/features/sales-orders/ui/list/SalesOrderListPage.tsx'), 'utf8'),
+    "export const names = ['salesOrders', 'SALES_ORDER'];\nexport const view = <List messages={{ empty: t('salesOrders.empty') }} value={TODO_web_kit_new_value} />;\n");
+}));
