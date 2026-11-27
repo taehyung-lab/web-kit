@@ -6,18 +6,18 @@
 
 전체 페이지를 공용으로 고정하지 않는다. 필요한 기능의 입구와 UI만 선택한다. 한 패키지에 기능이 함께 배포되는 것과 모든 기능을 사용하는 것은 다르다. 스킬이 연결돼 있어도 해당 기능을 제품에 추가하라는 뜻은 아니다.
 
-| 프로젝트의 차이 | 어디에서 표현하나 | 실제 조립 예 |
+| 프로젝트의 차이 | 어디에서 표현하나 | 계약 |
 |---|---|---|
-| 같은 목록인데 검색 시작 시점이 다름 | 같은 `/list`에 조회 조건을 전달 | [즉시 조회](../references/apps/starter/src/features/products/model/list/product-list-search.ts.txt), [검색 후 조회](../references/apps/starter/src/features/members/model/list/member-list-search.ts.txt) |
-| 같은 저장 폼인데 일부만 첨부·배열이 필요 | `/form` 상태를 유지하며 필요한 UI를 조합 | [복잡한 폼](../references/apps/starter/src/features/shows/ui/form/ShowCreatePage.tsx.txt) |
+| 같은 목록인데 검색 시작 시점이 다름 | 같은 `/list`에 조회 조건을 전달 | 검색 선언의 `gated`(검색 후 조회)와 기본값(즉시 조회) — [web-kit-list](../skills/web-kit-list/SKILL.md) |
+| 같은 저장 폼인데 일부만 첨부·배열이 필요 | `/form` 상태를 유지하며 필요한 UI를 조합 | `Form.Array`·`Form.File`·`Form.Dialog` — [web-kit-form](../skills/web-kit-form/SKILL.md) |
 | 같은 인증 처리인데 입력 모양이 다름 | `/auth` 진행은 공유하고 프로젝트 UI를 바꿈 | [한 칸·여섯 칸 검사](../references/apps/starter/src/shared/ui/web-kit/checks/auth.page.tsx.txt) |
-| 저장 후 승인 등 업무의 성공 정의가 다름 | 프로젝트 요청 함수·완료 동작에서 연결 | [저장 후 추가 조회](../references/apps/starter/src/features/form-workflows/ui/FormWorkflowPage.tsx.txt) |
+| 저장 후 승인 등 업무의 성공 정의가 다름 | 프로젝트 요청 함수·완료 동작에서 연결 | `save`는 요청만, 후속 조회·이동은 `onSaved` — [web-kit-form](../skills/web-kit-form/SKILL.md) |
 
 예를 들어 A·B가 목록과 폼을 같이 쓰고, C는 즉시 조회와 첨부를 더하며, D는 목록 없이 폼을 승인 과정에 연결할 수 있다. web-kit에 A/B/C/D 분기를 만들지 않는다. 두 프로젝트만 같은 기능을 써도 공용화할 수 있지만, 특정 업무를 공유한다면 별도의 업무 책임인지 먼저 판단한다.
 
 UI가 필요하면 registry의 해당 항목을 선택한다. `form`·`list`·`record`·`auth`를 각각 설치할 수 있으며 필요한 내부 의존과 검사 연결이 따라온다. 사용하지 않는 항목의 검사는 요구하지 않고, 채택한 항목과 그 의존의 필수 검사는 모두 실행한다. `all`은 전체 예제용이며 필수 선택이 아니다. 직접 UI를 만들 때도 채택한 공용 상태·오류·이벤트 순서와 실제 연결 검사를 유지한다.
 
-내부 starter를 복사하면 실행 가능한 예제 앱 전체로 시작한다. 빈 최소 앱이나 기능 선택 생성기는 아니다. 예제를 제거할 때는 사용 코드·route·검사 연결·설치 항목과 의존을 함께 확인한다. 사용하는 UI를 남겨 둔 채 설치 기록만 줄이지 않는다.
+`pnpm starter:create`로 만든 새 프로젝트는 예시 업무 없이 앱 조립·인증·실행 기반·적합성 검사만 갖고 시작한다(키트 예시 업무는 키트 저장소의 검사 앱에만 있다). 첫 업무 화면은 다른 업무를 복사하지 않고 `web-kit-new`의 골격과 각 스킬의 계약으로 만든다. 프로젝트가 자기 입구(요청·목록·단건 연결)를 정했으면 그 입구를 쓰는 골격 폴더를 `web-kit.structure.json`의 `screenTemplates`로 넘긴다([web-kit-structure](../skills/web-kit-structure/SKILL.md) 「새 화면 골격」). 쓰지 않는 registry 항목을 정리할 때는 사용 코드·검사 연결·설치 항목과 의존을 함께 확인한다. 사용하는 UI를 남겨 둔 채 설치 기록만 줄이지 않는다.
 
 ## 새 프로젝트
 

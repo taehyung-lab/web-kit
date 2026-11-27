@@ -78,12 +78,15 @@ function routeOf(kind, url, group) {
 }
 
 const SCREENS = ['list', 'detail', 'create', 'edit'];
-const TOKENS = ['feature', 'entity', 'Entity', 'entityCamel', 'id', 'alias', 'featureDir', 'group', 'routesDir', 'routeFile', 'routeId', 'url', 'collectionUrl', 'recordUrl', 'TODO'];
+const TOKENS = ['feature', 'featureCamel', 'entity', 'Entity', 'entityCamel', 'ENTITY', 'id', 'alias', 'featureDir', 'group', 'routesDir', 'routeFile', 'routeId', 'url', 'collectionUrl', 'recordUrl', 'TODO'];
 const DEFAULT_TEMPLATES = fileURLToPath(new URL('./screen-templates/', import.meta.url));
 
-/** {{이름}} 자리를 값으로 바꾼다. 모르는 이름은 골격 오류다(빈 값으로 넘기지 않는다). */
+/**
+ * {{이름}} 자리를 값으로 바꾼다. 모르는 이름은 골격 오류다(빈 값으로 넘기지 않는다).
+ * 이름은 영문자로 시작하는 한 단어라서 JSX의 객체 값 `{{ a: 1 }}`은 자리로 읽지 않는다.
+ */
 function render(text, values, where) {
-  return text.replace(/\{\{([^{}]*)\}\}/g, (_, name) => {
+  return text.replace(/\{\{([A-Za-z][A-Za-z0-9]*)\}\}/g, (_, name) => {
     if (!Object.hasOwn(values, name)) throw new Error(`${where}: 알 수 없는 골격 자리 {{${name}}} (쓸 수 있는 것: ${TOKENS.join('·')})`);
     return values[name];
   });
@@ -112,7 +115,7 @@ function plan({ config, feature, entity, kind, url, group }) {
   // 주소 변수 이름: 상세·수정은 주소의 마지막 $변수, 목록·등록은 상세로 이동할 때 쓸 <entity>Id다.
   const id = route.mode === 'detail' || route.mode === 'edit' ? route.param : `${camel(entity)}Id`;
   const values = {
-    feature, entity, Entity: pascal(entity), entityCamel: camel(entity), id, alias: config.alias,
+    feature, featureCamel: camel(feature), entity, Entity: pascal(entity), entityCamel: camel(entity), ENTITY: entity.toUpperCase().replaceAll('-', '_'), id, alias: config.alias,
     featureDir, group, routesDir, routeFile: route.file, routeId: route.id, url,
     collectionUrl: route.collectionUrl ?? '', recordUrl: `${route.collectionUrl ?? ''}/$${id}`, TODO: TODO_MARKER,
   };
@@ -137,7 +140,8 @@ function plan({ config, feature, entity, kind, url, group }) {
     return { path, content, ...(entry.shared === true ? { shared: true } : {}) };
   });
   if (!files.some((file) => file.path === routePath)) throw new Error(`${where}/screens.json ${route.mode}: route 파일({{routesDir}}/{{routeFile}})이 없습니다`);
-  if (!files.some((file) => !file.shared && file.content.includes(TODO_MARKER)))
+  // 골격 자체에 채울 자리가 있어야 한다. 화면 전용 파일이 공유 파일(폼 schema 등)만 채우면 되는 화면도 있어 공유 파일까지 본다.
+  if (!files.some((file) => file.content.includes(TODO_MARKER)))
     throw new Error(`${where}/screens.json ${route.mode}: 채울 자리({{TODO}}…)가 없는 골격은 완료처럼 보이므로 만들지 않습니다`);
   const exports = (screen.exports ?? []).map((line) => render(line, values, `${where}/screens.json ${route.mode}.exports`));
   files.push({ path: `${featureDir}/index.ts`, exports });

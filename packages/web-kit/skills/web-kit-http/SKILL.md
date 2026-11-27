@@ -11,8 +11,6 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
 
 ## 화면 선언
 
-실제 조립 예: [apps/starter/src/features/products/api/products.ts](../../references/apps/starter/src/features/products/api/products.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
-
 - 화면은 생성 endpoint 함수나 queryOptions를 쓰고, 전송 예외를 직접 해석하지 않는다. 받는 실패는 `RequestFailure`(12종 `kind`)다.
 - 쓰기 뒤 다시 읽을 조회는 mutation `meta: { invalidates: [key, …] }`로 선언한다. 성공했을 때와 `resultUnknown`일 때 실행된다.
 - 비밀번호처럼 보관하면 안 되는 입력값이 든 쓰기는 `meta: { sensitive: true }`로 선언한다. 성공이든 실패든 끝나면 요청 보관소의 기록이 지워진다(화면이 쓰기를 지켜보는 중이어도). 오류 전달과 다시 시도는 그대로다.
@@ -20,8 +18,6 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
 - 같은 결과 코드 안에서 이유를 나누는 서버 값은 `detailCode`(프로젝트 세부 코드)로 받는다. 키트는 그 값을 운반만 하고 뜻·문구·종류를 정하지 않는다. 같은 값이라도 프로젝트마다 뜻이 다를 수 있고, 프로젝트가 선언하지 않은 값일 수도 있다. 실패가 무엇인지는 `code`(결과 코드)와 `detailCode`로 묻고, 화면 문구 키(`messageKey`)를 비교해 실패를 알아보지 않는다. 세부 코드의 뜻과 화면 처리는 그 코드를 쓰는 업무가 선언하고, 선언하지 않은 값은 결과 코드의 기본 처리를 따른다.
 
 ## 키트 보장
-
-실제 조립 예: [apps/starter/src/app/session.test.tsx](../../references/apps/starter/src/app/session.test.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 - **실패:** 필수 `ResponseContract`가 서버 응답의 성공 데이터·실패 종류·문구 키·세션 종료를 정한다. 파일로 받는 요청(`responseType: 'blob'`)도 응답이 JSON이면 본문을 JSON으로 읽어 계약에 넘긴다. 취소는 `cancelled`이고 화면 상태·알림에 들어가지 않는다.
 - **세션 수명** 한 곳이 세대를 판정한다.
@@ -103,8 +99,6 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
 - `notify`에서 어떤 실패를 어디에 보일지 출처로 고른다(예: 활성 조회의 forbidden만 모달). 화면이 이미 보이는 쓰기 실패와 겹치지 않게 한다.
 
 ## 확인 방법
-
-실제 조립 예: [apps/starter/src/app/session.test.tsx](../../references/apps/starter/src/app/session.test.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 단위·브라우저 CI에서 실행하고 `web-kit-check`를 필수 단계로 둔다. starter 통과로 대신하지 않는다. 실제 사용 UI와 검사 대상의 일치는 별도 검토로 판정한다. 설치·결과 파일 연결은 [소비 안내](../../docs/checking.md)를 따른다.
 
