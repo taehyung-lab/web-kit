@@ -252,7 +252,7 @@ test('골격 자리값: 목록 주소·상세 주소·주소 변수는 화면 �
   });
   useProjectTemplates(dir, { list: screen('list'), detail: screen('detail'), create: screen('create'), edit: screen('edit') }, {
     'values.ts.tpl': "export const values = '{{url}}|{{collectionUrl}}|{{recordUrl}}|{{id}}|{{group}}' as {{TODO}}x;\n",
-    'group.tsx.tpl': "export const Route = createFileRoute('/{{group}}{{collectionUrl}}')({});\n",
+    'group.tsx.tpl': "import { permission } from '{{alias}}features/{{feature}}';\nexport const Route = createFileRoute('/{{group}}{{collectionUrl}}')({ permission });\n",
     'route.tsx.tpl': "export const Route = createFileRoute('{{routeId}}')({});\n",
   });
   for (const [kind, url] of [['list', '/sales/order-items'], ['detail', '/sales/order-items/$orderItemId'], ['form', '/sales/order-items/new'], ['form', '/sales/order-items/$orderItemId/edit']])
@@ -263,13 +263,60 @@ test('골격 자리값: 목록 주소·상세 주소·주소 변수는 화면 �
   assert.equal(values('detail'), '/sales/order-items/$orderItemId|/sales/order-items|/sales/order-items/$orderItemId|orderItemId|_app');
   assert.equal(values('create'), '/sales/order-items/new|/sales/order-items|/sales/order-items/$orderItemId|orderItemId|_app');
   assert.equal(values('edit'), '/sales/order-items/$orderItemId/edit|/sales/order-items|/sales/order-items/$orderItemId|orderItemId|_app');
-  // 상세·수정 주소가 다른 변수 이름을 쓰면 목록·등록이 가리키는 상세와 어긋나므로 만들지 않는다.
+  // 이미 있는 상세와 다른 변수로 상세를 또 만들면 같은 주소에 상세가 둘이 되므로 만들지 않는다.
   const before = files(dir);
   const other = cli('--feature', 'order-items', '--kind', 'detail', '--url', '/sales/order-items/$itemId');
   assert.equal(other.status, 1);
-  assert.match(other.stderr, /주소 변수는 \$orderItemId여야 합니다/);
+  assert.match(other.stderr, /상세 주소는 이미 \$orderItemId입니다/);
   assert.deepEqual(files(dir), before);
-  assert.equal(readFileSync(join(dir, 'src/routes/_app/sales/order-items/route.tsx'), 'utf8'), "export const Route = createFileRoute('/_app/sales/order-items')({});\n");
+  assert.equal(readFileSync(join(dir, 'src/routes/_app/sales/order-items/route.tsx'), 'utf8'), "import { permission } from '@/features/order-items';\nexport const Route = createFileRoute('/_app/sales/order-items')({ permission });\n");
+}));
+
+test('상세 주소 변수는 프로젝트가 정하고, 네 화면이 같은 변수를 쓴다(먼저 만든 상세·목록이 정한 이름을 따른다)', () => project(({ dir, cli }) => {
+  assert.equal(cli('--feature', 'invoices', '--kind', 'detail', '--url', '/invoices/$id').status, 0);
+  assert.equal(cli('--feature', 'invoices', '--kind', 'form', '--url', '/invoices/$id/edit').status, 0);
+  // 목록이 나중에 만들어져도 이미 있는 상세($id)를 가리킨다.
+  const list = cli('--feature', 'invoices', '--kind', 'list', '--url', '/invoices');
+  assert.equal(list.status, 0, list.stderr);
+  assert.ok(existsSync(join(dir, 'src/routes/_app/invoices/$id/index.tsx')));
+  const mismatch = cli('--feature', 'invoices', '--kind', 'form', '--url', '/invoices/$invoiceId/edit');
+  assert.equal(mismatch.status, 1);
+  assert.match(mismatch.stderr, /상세 주소는 이미 \$id입니다/);
+}));
+
+test('목록 묶음 진입 판정(route.tsx)은 다른 업무 것을 쓰지 않고, 이미 다른 화면이 있는 주소에 새로 걸지 않는다', () => project(({ dir, cli }) => {
+  const screen = (mode) => ({ files: [
+    { path: '{{featureDir}}/model/{{entity}}-' + mode + '.ts', template: 'value.ts.tpl' },
+    { path: '{{routesDir}}{{collectionUrl}}/route.tsx', template: 'group.tsx.tpl', shared: true },
+    { path: '{{routesDir}}/{{routeFile}}', template: 'route.tsx.tpl' },
+  ] });
+  useProjectTemplates(dir, { list: screen('list'), detail: screen('detail'), create: screen('create') }, {
+    'value.ts.tpl': 'export const value = {{TODO}}x;\n',
+    'group.tsx.tpl': "import { permission } from '{{alias}}features/{{feature}}';\nexport const Route = createFileRoute('/{{group}}{{collectionUrl}}')({ permission });\n",
+    'route.tsx.tpl': "export const Route = createFileRoute('{{routeId}}')({});\n",
+  });
+  // 다른 업무가 쓰는 목록 주소: 그 업무의 진입 판정과 상세가 이미 있다.
+  mkdirSync(join(dir, 'src/routes/_app/manage/venue/$venueId'), { recursive: true });
+  writeFileSync(join(dir, 'src/routes/_app/manage/venue/route.tsx'), "import { permission } from '@/features/venues';\n");
+  writeFileSync(join(dir, 'src/routes/_app/manage/venue/$venueId/index.tsx'), 'export const Route = 1;\n');
+  writeFileSync(join(dir, 'src/routes/_app/manage/venue/index.tsx'), 'export const Route = 1;\n');
+  const before = files(dir);
+  const sameDetail = cli('--feature', 'probes', '--entity', 'probe', '--kind', 'detail', '--url', '/manage/venue/$probeId');
+  assert.equal(sameDetail.status, 1);
+  assert.match(sameDetail.stderr, /상세 주소는 이미 \$venueId입니다/);
+  const otherGroup = cli('--feature', 'probes', '--entity', 'probe', '--kind', 'form', '--url', '/manage/venue/new');
+  assert.equal(otherGroup.status, 1);
+  assert.match(otherGroup.stderr, /다른 업무의 진입 판정/);
+  // 다른 화면이 이미 있는 상위 주소(/manage)에 새 업무의 진입 판정을 걸면 그 화면들도 새 권한을 거치게 된다.
+  const parent = cli('--feature', 'probes', '--entity', 'probe', '--kind', 'form', '--url', '/manage/new');
+  assert.equal(parent.status, 1);
+  assert.match(parent.stderr, /이미 다른 화면\(venue\)이 있는 주소/);
+  assert.deepEqual(files(dir), before);
+  // 같은 업무가 만든 진입 판정은 다음 화면이 그대로 쓴다.
+  assert.equal(cli('--feature', 'probes', '--entity', 'probe', '--kind', 'list', '--url', '/probes').status, 0);
+  const next = cli('--feature', 'probes', '--entity', 'probe', '--kind', 'form', '--url', '/probes/new');
+  assert.equal(next.status, 0, next.stderr);
+  assert.match(next.stdout, /변경 없음 src\/routes\/_app\/probes\/route\.tsx/);
 }));
 
 test('골격 자리값: 업무·이름 표기(featureCamel·ENTITY)를 바꾸고 JSX 객체 값 {{ a: 1 }}은 그대로 둔다', () => project(({ dir, cli }) => {
@@ -333,7 +380,24 @@ test('공개 입구가 다른 업무 route와 하드 링크로 묶여 있으면 
   assert.equal(existsSync(join(dir, 'src/routes/_app/invoices/index.tsx')), false);
 }));
 
-test('어떤 업무 이름이든 이름이 겹치는 골격은 쓰지 않는다: 만들면 겹침 없이 읽히고, 겹치면 아무것도 쓰지 않고 이름을 바꾸라고 한다', () => project(({ dir, cli }) => {
+test('골격 이름이 겹치는 프로젝트 골격은 쓰기 전에 거절한다(import와 지역 선언 충돌 포함)', () => project(({ dir, cli }) => {
+  useProjectTemplates(dir, {
+    list: { files: [
+      { path: '{{featureDir}}/model/list/use-{{entity}}-list.ts', template: 'clash.ts.tpl' },
+      { path: '{{routesDir}}/{{routeFile}}', template: 'route.tsx.tpl' },
+    ] },
+  }, {
+    'clash.ts.tpl': "import { use{{Entity}}List } from './elsewhere';\nexport function use{{Entity}}List() {\n  return {{TODO}}x;\n}\n",
+    'route.tsx.tpl': "export const Route = createFileRoute('{{routeId}}')({});\n",
+  });
+  const before = files(dir);
+  const result = cli('--feature', 'invoices', '--kind', 'list', '--url', '/invoices');
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /이름이 겹치거나 문법 오류[\s\S]*useInvoiceList이\(가\) 맨 위에서 두 번 선언된다/);
+  assert.deepEqual(files(dir), before);
+}));
+
+test('키트 기본 골격은 골격 이름과 같아질 수 있는 업무 이름으로도 겹침 없이 만든다', () => project(({ dir, cli }) => {
   const ts = createRequire(join(root, 'packages/web-kit/package.json'))('typescript');
   // 골격이 쓰는 지역·함수 이름과 같아질 수 있는 업무 이름들(예: create → useCreate + Create = useCreateCreate).
   const names = ['state', 'record', 'editor', 'navigate', 'create', 'update', 'list', 'detail', 'edit', 'form', 'route', 'query'];
@@ -348,7 +412,8 @@ test('어떤 업무 이름이든 이름이 겹치는 골격은 쓰지 않는다:
       refused.push(`${name} ${url}`);
     }
   }
-  assert.ok(refused.includes('create /x-create/new'), '알려진 겹침(useCreateCreate)을 거절해야 한다: ' + refused.join(', '));
+  // 키트 기본 골격은 이 이름들 모두로 만들 수 있어야 한다(요청 hook 별칭 등으로 겹치지 않게 썼다).
+  assert.deepEqual(refused, [], '키트 기본 골격이 거절한 업무 이름');
   // 만든 파일은 문법 오류와 같은 범위 중복 선언이 없다(TODO 이름 없음은 의도한 실패라 보지 않는다).
   const generated = [...files(join(dir, 'src/features')).map((path) => join(dir, 'src/features', path)), ...files(join(dir, 'src/routes')).map((path) => join(dir, 'src/routes', path))]
     .filter((path) => /\.tsx?$/.test(path));

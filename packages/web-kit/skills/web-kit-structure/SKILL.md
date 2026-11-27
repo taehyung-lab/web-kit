@@ -129,7 +129,8 @@ runtime을 app에서 나누는 이유: feature가 http·세션을 쓰려고 app�
 ## 새 화면 골격
 
 - `pnpm exec web-kit-new --feature <도메인> --kind list|form|detail --url <URL> [--entity <단수 이름>] [--group <_묶음>] [--dry-run]`을 프로젝트 루트에서 실행한다. `--group`이 없으면 `web-kit.structure.json`의 `screenGroup` 묶음에 만들고, 둘 다 없거나 그 묶음에 `route.tsx`가 없으면 아무것도 쓰지 않고 실패한다(진입 판정 없는 화면을 만들지 않는다). form은 URL이 `/new`면 등록, `/$<id>/edit`면 수정 골격이다.
-- 상세·수정 주소의 변수는 `$<entity>Id`(예: entity `order` → `/orders/$orderId`)다. 목록·등록이 같은 이름으로 상세에 이동하므로 다른 이름은 거절한다. 주소에 보이는 값은 이름과 관계없다.
+- 상세 주소 변수 이름은 프로젝트가 상세·수정 URL로 정한다. 한 목록의 네 화면은 같은 이름을 쓴다: 목록 주소 폴더에 이미 `$<변수>`(상세 route)가 있으면 그 이름, 없으면 상세·수정 URL의 변수, 목록·등록을 먼저 만들면 `<entity>Id`다. 이미 있는 상세나 먼저 만든 목록·등록이 가리키는 이름과 다르면(같은 주소에 상세가 둘이 되거나 이동이 어긋남) 아무 파일도 쓰지 않고 실패한다.
+- 목록 묶음 진입 판정(`route.tsx`)은 그 주소 아래 모든 화면에 걸린다. 그 업무 입구(`<alias>features/<업무>`)를 import한 같은 업무의 것만 다음 화면이 다시 쓰고, 다른 업무의 것이거나 이미 다른 화면이 있는 상위 주소에 새로 걸어야 하면 실패한다.
 - 쓰기 전에 만든 .ts·.tsx를 TypeScript로 읽어, 업무 이름과 골격의 이름이 겹치거나(예: entity `create` → `useCreateCreate` 두 번) 문법 오류가 있으면 아무 파일도 쓰지 않고 이름을 바꾸라고 알린다. 채울 자리(TODO)의 이름 없음은 의도한 실패라 보지 않는다.
 - 같은 feature의 공유 파일(앱 모델·단건 query·폼 schema)은 이미 있으면 그대로 쓰고, 화면 파일이 다른 내용으로 이미 있으면 아무 파일도 쓰지 않고 실패한다. 같은 입력으로 다시 실행하면 바뀌는 것이 없다.
 - 생성기는 완료를 만들지 않는다. 서버 endpoint·필드·화면 배치·저장 뒤 목적지는 `TODO_web_kit_new_*`라는 선언되지 않은 이름으로 남아 채우기 전에는 typecheck가 실패한다. 성공 응답을 지어내지 않고 검사 파일(건너뛴 검사 포함)을 만들지 않는다. 문구 등록·메뉴·route 트리 재생성은 직접 한다(골격이 적은 「직접 연결할 것」을 출력한다).
@@ -140,7 +141,7 @@ runtime을 app에서 나누는 이유: feature가 http·세션을 쓰려고 app�
 키트 기본 골격은 키트 입구(`useList`·`useRecord`·`useSaveForm`, query·mutation 직접 선언)를 쓴다. 프로젝트가 요청·목록·단건을 자기 입구로 감쌌다면(예: 열람 기록을 붙이는 목록 입구) 기본 골격은 그 프로젝트 규칙을 어기므로, 프로젝트가 자기 입구를 쓰는 골격 폴더를 소유하고 `web-kit.structure.json`의 `"screenTemplates": "<폴더>"`로 넘긴다. 넘기면 키트 기본 골격은 쓰지 않는다.
 
 - 폴더에는 `screens.json`과 템플릿 파일을 둔다. `screens.json`: `{ "list"|"detail"|"create"|"edit": { "files": [{ "path", "template", "shared"? }], "exports"?: [줄], "next"?: [줄] } }`. 없는 화면 종류를 요청하면 기본 골격으로 대신 만들지 않고 실패한다.
-- 자리 이름(`{{이름}}`): `feature`·`featureCamel`·`entity`·`Entity`·`entityCamel`·`ENTITY`, `id`(네 화면 모두 `<entityCamel>Id`. 골격 안에서는 지역 이름이 아니라 `params.{{id}}`처럼 속성 이름으로만 쓴다), `alias`, `featureDir`, `group`·`routesDir`·`routeFile`·`routeId`, `url`·`collectionUrl`(목록 주소)·`recordUrl`(`<목록 주소>/$<id>`), `TODO`(미완성 표시 접두어). 모르는 이름은 실패한다. JSX 객체 값 `{{ a: 1 }}`은 자리로 읽지 않는다.
+- 자리 이름(`{{이름}}`): `feature`·`featureCamel`·`entity`·`Entity`·`entityCamel`·`ENTITY`, `id`(그 목록의 상세 주소 변수 이름, 위 규칙. 골격 안에서는 지역 이름이 아니라 `params.{{id}}`처럼 속성 이름으로만 쓴다), `alias`, `featureDir`, `group`·`routesDir`·`routeFile`·`routeId`, `url`·`collectionUrl`(목록 주소)·`recordUrl`(`<목록 주소>/$<id>`), `TODO`(미완성 표시 접두어). 모르는 이름은 실패한다. JSX 객체 값 `{{ a: 1 }}`은 자리로 읽지 않는다.
 - 쓰는 자리는 요청한 업무 폴더(`{{featureDir}}/…`)와 요청한 URL의 route 파일 둘뿐이다: 이 화면의 route(`{{routesDir}}/{{routeFile}}`, route id 포함 필수)와 목록 묶음의 `{{routesDir}}{{collectionUrl}}/route.tsx`(shared로만, route id `'/{{group}}{{collectionUrl}}'` 포함). 공개 입구 `index.ts`는 `exports` 줄(한 줄에 이름 하나)로만 더한다. 검사 파일과 채울 자리가 없는 골격은 거절한다.
 - 프로젝트는 골격으로 만든 네 화면을 채웠을 때 typecheck·lint(구조·프로젝트 규칙)·화면 검사가 통과하는지 확인하는 수용 검사를 함께 둔다. 키트는 기본 골격을 같은 방식으로 새 프로젝트에서 검사한다(저장소 `scripts/check-new-project.mjs`).
 - 생성한 파일 수·화면 수는 완료 수가 아니다. 화면은 제품 근거(원문·결정·시나리오)로 채우고 그 행동을 확인하는 검사를 직접 작성한 뒤에 완료로 센다.

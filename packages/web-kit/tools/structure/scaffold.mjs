@@ -1,7 +1,7 @@
 // 파일 책임: 새 화면의 구조 골격(ui·model·api·index·route)을 web-kit-structure 자리에 만든다.
 // 완료처럼 보이는 것을 만들지 않는다: 서버 endpoint·필드·화면 배치·저장 뒤 목적지는 선언되지 않은 TODO_web_kit_new_* 이름으로 남겨
 // 채우기 전에는 typecheck가 실패한다. 성공을 지어낸 API, 건너뛴 검사, 통과용 검사 파일은 만들지 않는다.
-import { existsSync, lstatSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
@@ -161,6 +161,31 @@ function checkRenderedSources(files, where) {
     throw new Error(`${where}: 이 이름 조합으로 만든 골격은 채워도 읽히지 않습니다(이름이 겹치거나 문법 오류). --entity·--feature 이름을 바꾸세요.\n  ${problems.join('\n  ')}`);
 }
 
+/**
+ * 이 목록의 상세 주소 변수 이름. 네 화면이 같은 이름으로 같은 상세 주소를 가리켜야 한다.
+ * 목록 주소 폴더에 이미 `$<변수>` 폴더(상세 route)가 있으면 그 이름, 없으면 상세·수정은 요청 URL의 변수, 목록·등록은 `<entity>Id`다.
+ * 상세·수정이 이미 있는 다른 상세(다른 업무일 수 있다)와 다른 변수를 쓰거나, 이미 만든 목록·등록이 다른 상세 주소를 가리키면 충돌이다.
+ */
+function recordParam({ config, routesDir, route, feature, entity }) {
+  const fallback = `${camel(entity)}Id`;
+  if (route.collectionUrl === null) return route.param ?? fallback;
+  const collectionDir = join(config.root, routesDir + route.collectionUrl);
+  const existing = existsSync(collectionDir) ? readdirSync(collectionDir).filter((name) => name.startsWith('$') && name !== '$.tsx').map((name) => name.slice(1)) : [];
+  if (existing.length > 1) throw new Error(`${routesDir}${route.collectionUrl}에 상세 주소 폴더가 여럿 있습니다(${existing.map((name) => '$' + name).join('·')}). 한 목록의 상세는 하나다`);
+  const wanted = route.mode === 'detail' || route.mode === 'edit' ? route.param : existing[0] ?? fallback;
+  if (existing.length === 1 && existing[0] !== wanted)
+    throw new Error(`${routesDir}${route.collectionUrl}의 상세 주소는 이미 $${existing[0]}입니다(요청 $${wanted}). 같은 주소에 다른 상세를 두지 않는다`);
+  // 같은 목록의 목록·등록 route가 이미 다른 상세 주소를 가리키면, 상세를 그 이름으로 만들어야 이동이 맞는다.
+  for (const file of ['index.tsx', 'new.tsx']) {
+    const path = join(collectionDir, file);
+    if (!existsSync(path)) continue;
+    const pointed = readFileSync(path, 'utf8').match(new RegExp(`'${route.collectionUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/\\$([A-Za-z][A-Za-z0-9]*)'`))?.[1];
+    if (pointed !== undefined && pointed !== wanted)
+      throw new Error(`${routesDir}${route.collectionUrl}/${file}이 상세 주소 $${pointed}를 가리킵니다(요청 $${wanted}). 상세·수정 주소를 $${pointed}로 맞추세요`);
+  }
+  return wanted;
+}
+
 /** 화면 종류별 파일 목록을 골격 폴더에서 만든다. shared는 같은 feature의 다른 화면과 함께 쓰는 파일이라 이미 있으면 그대로 둔다. */
 function plan({ config, feature, entity, kind, url, group }) {
   const route = routeOf(kind, url, group);
@@ -169,11 +194,7 @@ function plan({ config, feature, entity, kind, url, group }) {
   if (screen === undefined) throw new Error(`${where}/screens.json에 ${route.mode} 화면 골격이 없습니다`);
   const featureDir = `${config.src}/features/${feature}`;
   const routesDir = `${config.routes}/${group}`;
-  // 대상 주소 변수는 네 화면이 같이 쓰는 이름 하나(<entity>Id)다. 목록·등록은 상세로 이동할 때, 상세·수정은 주소에서 읽을 때 쓴다.
-  // 화면마다 따로 정하면 목록·등록이 가리키는 상세 주소와 실제 상세 route가 어긋나므로 다른 이름은 받지 않는다(주소에 보이는 값은 같다).
-  const id = `${camel(entity)}Id`;
-  if ((route.mode === 'detail' || route.mode === 'edit') && route.param !== id)
-    throw new Error(`${route.mode} 화면의 주소 변수는 $${id}여야 합니다(받은 값 $${route.param}). 목록·등록·상세·수정이 같은 이름으로 같은 상세 주소를 가리킨다`);
+  const id = recordParam({ config, routesDir, route, feature, entity });
   const values = {
     feature, featureCamel: camel(feature), entity, Entity: pascal(entity), entityCamel: camel(entity), ENTITY: entity.toUpperCase().replaceAll('-', '_'), id, alias: config.alias,
     featureDir, group, routesDir, routeFile: route.file, routeId: route.id, url,
@@ -211,7 +232,7 @@ function plan({ config, feature, entity, kind, url, group }) {
   checkRenderedSources(files, `${where} ${route.mode}`);
   const exports = (screen.exports ?? []).map((line) => render(line, values, `${where}/screens.json ${route.mode}.exports`));
   files.push({ path: `${featureDir}/index.ts`, exports });
-  return { files, next: (screen.next ?? []).map((line) => render(line, values, `${where}/screens.json ${route.mode}.next`)) };
+  return { files, collectionRoute, next: (screen.next ?? []).map((line) => render(line, values, `${where}/screens.json ${route.mode}.next`)) };
 }
 
 /**
@@ -249,13 +270,24 @@ export function scaffoldScreen({ root, configFile, feature, kind, url, entity, g
   // 묶음의 진입 판정·골격은 그 묶음의 route.tsx에 있다. 없는 묶음에 화면을 만들면 진입 판정 없는 화면이 생기므로 거절한다.
   if (!existsSync(join(config.root, config.routes, group, 'route.tsx')))
     throw new Error(`route 묶음 ${group}이 없습니다: 진입 판정·골격을 둔 ${config.routes}/${group}/route.tsx가 있는 묶음에만 화면을 만듭니다`);
-  const { files, next } = plan({ config, feature, entity: name, kind, url, group });
+  const { files, next, collectionRoute } = plan({ config, feature, entity: name, kind, url, group });
   const result = { created: [], updated: [], reused: [], unchanged: [], conflicts: [], markers: 0, dryRun, next };
   for (const file of files) {
     const full = join(config.root, file.path);
     // 쓰는 곳은 적힌 경로 그대로여야 한다. 그 파일이나 상위 폴더가 링크(심볼릭·하드)면 다른 업무·route를 고칠 수 있으므로 충돌로 둔다.
     const shared = sharedTarget(config.root, file.path);
     if (shared !== null) { result.conflicts.push({ ...file, reason: shared }); continue; }
+    // 목록 묶음의 진입 판정(route.tsx)은 그 주소 아래 모든 화면에 걸린다. 다른 업무의 것을 재사용하거나, 이미 다른 화면이 있는 주소에 새로 걸지 않는다.
+    if (file.path === collectionRoute) {
+      const owner = (text) => text.includes(`${config.alias}features/${feature}'`);
+      if (existsSync(full) && !owner(readFileSync(full, 'utf8'))) { result.conflicts.push({ ...file, reason: '다른 업무의 진입 판정이라 이 업무 화면의 묶음으로 쓰지 않는다' }); continue; }
+      const dir = dirname(full);
+      if (!existsSync(full) && existsSync(dir)) {
+        const planned = new Set(files.map((item) => join(config.root, item.path)));
+        const others = readdirSync(dir).filter((name) => !planned.has(join(dir, name)) && !(lstatSync(join(dir, name)).isDirectory() && [...planned].some((path) => path.startsWith(join(dir, name) + '/'))));
+        if (others.length > 0) { result.conflicts.push({ ...file, reason: `이미 다른 화면(${others.join('·')})이 있는 주소에 새 진입 판정을 걸지 않는다` }); continue; }
+      }
+    }
     if (file.exports) {
       const existing = existsSync(full) ? readFileSync(full, 'utf8') : '';
       file.content = extendPublicEntry(existing, file.exports);
