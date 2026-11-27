@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "version": "12.0.0-rc.5",
   "sourceRef": "v12.0.0-rc.5",
-  "sourceCommit": "4e59ebbdbc5eb64f7e8b9b948a75900bc71d9e79",
+  "sourceCommit": "b0466768592b3dbe61994afda8ec2fe3bb027a27",
   "sourceWorkingTree": "clean",
   "shadcn": "4.19.1",
   "method": "shadcn@4.19.1 add; installation recorded after review",
