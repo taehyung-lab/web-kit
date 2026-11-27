@@ -13,6 +13,7 @@
     "src/routes/_app/form-workflows",
     "src/mocks/examples",
     "src/app/session.test.tsx",
+    "src/mocks/server-state.test.ts",
     "src/api/generated/products",
     "src/api/generated/categories",
     "src/api/generated/models/category.ts",
