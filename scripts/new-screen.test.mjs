@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, linkSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -310,4 +310,17 @@ test('쓰는 파일이나 상위 폴더가 심볼릭 링크면 다른 곳을 고
   assert.equal(folder.status, 1);
   assert.match(folder.stderr, /src\/features\/invoices가 심볼릭 링크/);
   assert.deepEqual(readdirSync(join(dir, 'elsewhere')), []);
+}));
+
+test('공개 입구가 다른 업무 route와 하드 링크로 묶여 있으면 아무 파일도 쓰지 않는다', () => project(({ dir, cli }) => {
+  mkdirSync(join(dir, 'src/routes/_app/orders'), { recursive: true });
+  const other = join(dir, 'src/routes/_app/orders/index.tsx');
+  writeFileSync(other, 'export const keep = 1;\n');
+  mkdirSync(join(dir, 'src/features/invoices'), { recursive: true });
+  linkSync(other, join(dir, 'src/features/invoices/index.ts'));
+  const result = cli('--feature', 'invoices', '--kind', 'list', '--url', '/invoices');
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /하드 링크/);
+  assert.equal(readFileSync(other, 'utf8'), 'export const keep = 1;\n');
+  assert.equal(existsSync(join(dir, 'src/routes/_app/invoices/index.tsx')), false);
 }));

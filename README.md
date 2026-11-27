@@ -33,7 +33,7 @@ Node 24.19, pnpm 10.33.
 
 ## 새 프로젝트 시작
 
-실행 가능한 예시 앱 전체로 시작한다. 고정 AWK checkout과 생성·검사 순서는 [새 프로젝트 시작](docs/starting.md)을 따른다. 필요한 기능만 기존 앱에 넣으려면 [선택 사용](packages/web-kit/docs/consuming.md#기능을-골라-쓰기)과 [설치 안내](packages/web-kit/docs/installing.md)로 간다.
+앱 조립·인증·실행 기반·키트 UI 복사본과 적합성 검사만 갖고 업무 화면 없이 시작한다(키트 예시 업무는 이 저장소의 `apps/starter`에만 있다). 첫 업무는 `web-kit-new` 골격으로 만든다. 고정 AWK checkout과 생성·검사 순서는 [새 프로젝트 시작](docs/starting.md)을 따른다. 필요한 기능만 기존 앱에 넣으려면 [선택 사용](packages/web-kit/docs/consuming.md#기능을-골라-쓰기)과 [설치 안내](packages/web-kit/docs/installing.md)로 간다.
 
 ## 문서 찾기
 

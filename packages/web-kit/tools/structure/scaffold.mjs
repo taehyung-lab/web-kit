@@ -153,15 +153,19 @@ function plan({ config, feature, entity, kind, url, group }) {
   return { files, next: (screen.next ?? []).map((line) => render(line, values, `${where}/screens.json ${route.mode}.next`)) };
 }
 
-/** 프로젝트 안 경로 조각 중 이미 있는 심볼릭 링크(파일이나 상위 폴더)의 상대 경로. 없으면 null. */
-function linkedSegment(root, path) {
+/**
+ * 적힌 경로에 쓰면 다른 파일까지 바뀌는 이유. 없으면 null.
+ * 경로 조각(파일이나 상위 폴더)이 심볼릭 링크이거나, 이미 있는 파일이 다른 이름과 내용을 나누는 하드 링크(링크 수 2 이상)면 쓰지 않는다.
+ */
+function sharedTarget(root, path) {
   let current = root;
   const parts = path.split('/');
   for (const [index, part] of parts.entries()) {
     current = join(current, part);
     let stat;
     try { stat = lstatSync(current); } catch { return null; }
-    if (stat.isSymbolicLink()) return parts.slice(0, index + 1).join('/');
+    if (stat.isSymbolicLink()) return `${parts.slice(0, index + 1).join('/')}가 심볼릭 링크라 실제 쓰는 위치가 다르다`;
+    if (index === parts.length - 1 && stat.isFile() && stat.nlink > 1) return `${path}가 다른 파일과 내용을 나누는 하드 링크라 그 파일도 바뀐다`;
   }
   return null;
 }
@@ -188,9 +192,9 @@ export function scaffoldScreen({ root, configFile, feature, kind, url, entity, g
   const result = { created: [], updated: [], reused: [], unchanged: [], conflicts: [], markers: 0, dryRun, next };
   for (const file of files) {
     const full = join(config.root, file.path);
-    // 쓰는 곳은 적힌 경로 그대로여야 한다. 그 파일이나 상위 폴더가 심볼릭 링크면 다른 업무·route를 고칠 수 있으므로 충돌로 둔다.
-    const link = linkedSegment(config.root, file.path);
-    if (link !== null) { result.conflicts.push({ ...file, reason: `${link}가 심볼릭 링크라 실제 쓰는 위치가 다르다` }); continue; }
+    // 쓰는 곳은 적힌 경로 그대로여야 한다. 그 파일이나 상위 폴더가 링크(심볼릭·하드)면 다른 업무·route를 고칠 수 있으므로 충돌로 둔다.
+    const shared = sharedTarget(config.root, file.path);
+    if (shared !== null) { result.conflicts.push({ ...file, reason: shared }); continue; }
     if (file.exports) {
       const existing = existsSync(full) ? readFileSync(full, 'utf8') : '';
       file.content = extendPublicEntry(existing, file.exports);

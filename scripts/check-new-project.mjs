@@ -118,6 +118,8 @@ try {
   if (JSON.stringify(features) !== JSON.stringify(['auth'])) throw new Error(`새 프로젝트 features가 auth뿐이 아니다: ${features.join(', ')}`);
   for (const path of examples.remove) if (existsSync(join(project, path))) throw new Error(`예시 업무가 남았다: ${path}`);
   if (!existsSync(join(root, 'apps/starter/src/features/products'))) throw new Error('검사 앱의 예시 업무가 사라졌다');
+  // 업무 없이도 지켜야 하는 앱 골격 검사(로그인·세션)는 남는다. pnpm check가 실제로 실행한다.
+  for (const path of ['src/app/sign-in.test.tsx', 'src/app/session/session-idle.test.tsx', 'tests/e2e/app.spec.ts']) if (!existsSync(join(project, path))) throw new Error(`앱 골격 검사가 빠졌다: ${path}`);
   console.log('  통과 예시 업무 없음(features: auth), 검사 앱 예시 보존');
 
   // 3. 설치와 기반 검사. 생성 코드·route 트리는 남은 명세·route에서 다시 만들어도 같아야 한다.
