@@ -105,10 +105,11 @@ it.each(['core', 'form', 'list', 'dialog', 'choice', 'auth', 'search', 'progress
 });
 
 /** 공개 입구에서 시각 UI 경로가 다시 늘어나지 않게 고정한다. */
-it('패키지 subpath는 승인된 39개 입구만 공개한다', () => {
+it('패키지 subpath는 승인된 40개 입구만 공개한다', () => {
   const manifest = Object.values((import.meta as unknown as { glob: (pattern: string, options: object) => Record<string, string> }).glob('../package.json', { query: '?raw', import: 'default', eager: true }))[0]!;
   expect(Object.keys(JSON.parse(manifest).exports).sort()).toEqual([
   ".",
+  "./action-cursor.css",
   "./api",
   "./auth",
   "./choice",
