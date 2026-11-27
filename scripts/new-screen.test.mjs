@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, linkSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runStructureCheck } from '../packages/web-kit/tools/structure/check.mjs';
@@ -323,4 +324,23 @@ test('공개 입구가 다른 업무 route와 하드 링크로 묶여 있으면 
   assert.match(result.stderr, /하드 링크/);
   assert.equal(readFileSync(other, 'utf8'), 'export const keep = 1;\n');
   assert.equal(existsSync(join(dir, 'src/routes/_app/invoices/index.tsx')), false);
+}));
+
+test('주소 변수 이름이 골격의 지역 이름(state·record·editor·navigate)과 같아도 같은 이름을 두 번 선언하지 않는다', () => project(({ dir, cli }) => {
+  const ts = createRequire(join(root, 'packages/web-kit/package.json'))('typescript');
+  for (const name of ['state', 'record', 'editor', 'navigate']) {
+    for (const [kind, url] of [['detail', `/orders-${name}/$${name}`], ['form', `/orders-${name}/$${name}/edit`]]) {
+      const result = cli('--feature', `orders-${name}`, '--entity', 'order', '--kind', kind, '--url', url);
+      assert.equal(result.status, 0, result.stderr);
+    }
+  }
+  const generated = [...files(join(dir, 'src/features')).map((path) => join(dir, 'src/features', path)), ...files(join(dir, 'src/routes')).map((path) => join(dir, 'src/routes', path))]
+    .filter((path) => /\.tsx?$/.test(path));
+  const program = ts.createProgram(generated, { noEmit: true, jsx: ts.JsxEmit.Preserve, noResolve: true, types: [] });
+  for (const path of generated) {
+    const file = program.getSourceFile(path);
+    // 문법 오류와 "같은 블록에서 이미 선언한 이름"(TS2451·TS2300)만 본다. 미완성 표시(TODO) 때문의 이름 없음은 의도한 실패다.
+    const found = [...program.getSyntacticDiagnostics(file), ...program.getSemanticDiagnostics(file).filter((item) => item.code === 2451 || item.code === 2300)];
+    assert.deepEqual(found.map((item) => ts.flattenDiagnosticMessageText(item.messageText, '\n')), [], path);
+  }
 }));

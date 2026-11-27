@@ -7,6 +7,7 @@ export const Route = createFileRoute('{{routeId}}')({
 });
 
 function {{Entity}}EditRoute() {
-  const { {{id}} } = Route.useParams();
-  return <{{Entity}}EditPage {{id}}={{{id}}} />;
+  // 주소 변수 이름(프로젝트가 정한다)은 속성 이름으로만 쓴다. 화면에는 id로 넘긴다.
+  const params = Route.useParams();
+  return <{{Entity}}EditPage id={params.{{id}}} />;
 }

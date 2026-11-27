@@ -120,7 +120,17 @@ try {
   if (!existsSync(join(root, 'apps/starter/src/features/products'))) throw new Error('검사 앱의 예시 업무가 사라졌다');
   // 업무 없이도 지켜야 하는 앱 골격 검사(로그인·세션)는 남는다. pnpm check가 실제로 실행한다.
   for (const path of ['src/app/sign-in.test.tsx', 'src/app/session/session-idle.test.tsx', 'tests/e2e/app.spec.ts']) if (!existsSync(join(project, path))) throw new Error(`앱 골격 검사가 빠졌다: ${path}`);
-  console.log('  통과 예시 업무 없음(features: auth), 검사 앱 예시 보존');
+  // 남은 파일(코드·문서·설정)이 빠진 예시 업무 경로를 가리키지 않는다. 판정은 경로 문자열이다(업무 이름 단어가 아니다).
+  const removedFolders = examples.remove.filter((path) => !/\.[a-z]+$/.test(path));
+  const stale = readdirSync(project, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile() && /\.(?:md|ts|tsx|json|mjs|js)$/.test(entry.name) && !/(^|\/)(node_modules|vendor)(\/|$)/.test(relative(project, entry.parentPath)) && entry.name !== 'pnpm-lock.yaml')
+    .flatMap((entry) => {
+      const path = join(entry.parentPath, entry.name);
+      const text = readFileSync(path, 'utf8');
+      return removedFolders.filter((folder) => text.includes(folder)).map((folder) => `${relative(project, path)} → ${folder}`);
+    });
+  if (stale.length > 0) throw new Error(`새 프로젝트 파일이 빠진 예시 업무 경로를 가리킨다:\n${stale.join('\n')}`);
+  console.log('  통과 예시 업무 없음(features: auth), 남은 파일이 빠진 예시 경로를 가리키지 않음, 검사 앱 예시 보존');
 
   // 3. 설치와 기반 검사. 생성 코드·route 트리는 남은 명세·route에서 다시 만들어도 같아야 한다.
   expectPass('pnpm install --frozen-lockfile', project, 'pnpm', ['install', '--frozen-lockfile']);

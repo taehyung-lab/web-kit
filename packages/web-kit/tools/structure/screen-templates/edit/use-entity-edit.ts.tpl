@@ -7,8 +7,8 @@ import { {{entityCamel}}FormSchema, type {{Entity}}FormOutput } from '{{alias}}f
 import type { {{Entity}} } from '{{alias}}features/{{feature}}/model/{{entity}}';
 
 /** 수정 원본의 단건 상태. */
-export function use{{Entity}}EditSource({{id}}: string) {
-  return useRecord({{entityCamel}}DetailQuery({{id}}), {{id}}, { progress: 'page' });
+export function use{{Entity}}EditSource(id: string) {
+  return useRecord({{entityCamel}}DetailQuery(id), id, { progress: 'page' });
 }
 
 /** 준비된 원본의 수정 폼. */

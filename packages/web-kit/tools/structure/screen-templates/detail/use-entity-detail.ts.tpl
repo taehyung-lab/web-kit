@@ -2,6 +2,6 @@
 import { useRecord } from '@boosterlab/web-kit/record';
 import { {{entityCamel}}DetailQuery } from '{{alias}}features/{{feature}}/api/{{entity}}-detail-query';
 
-export function use{{Entity}}Detail({{id}}: string) {
-  return useRecord({{entityCamel}}DetailQuery({{id}}), {{id}}, { progress: 'page' });
+export function use{{Entity}}Detail(id: string) {
+  return useRecord({{entityCamel}}DetailQuery(id), id, { progress: 'page' });
 }
