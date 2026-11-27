@@ -104,6 +104,63 @@ function loadTemplates(config) {
   return { dir, where, manifest };
 }
 
+/** 같은 범위에서 이름이 겹친다는 TypeScript 진단: 중복 식별자·재선언·중복 함수 구현·import와 지역 선언 충돌. */
+const DUPLICATE_NAME_CODES = new Set([2300, 2451, 2393, 2440]);
+
+/** 파일 맨 위에서 같은 공간(값·타입)에 두 번 선언된 이름. import 이름도 센다. */
+function duplicateTopLevelNames(ts, file) {
+  const seen = { value: new Set(), type: new Set() };
+  const duplicates = [];
+  const add = (space, identifier) => {
+    if (!identifier || !ts.isIdentifier(identifier)) return;
+    if (seen[space].has(identifier.text)) duplicates.push(identifier.text);
+    seen[space].add(identifier.text);
+  };
+  for (const statement of file.statements) {
+    if (ts.isImportDeclaration(statement) && statement.importClause) {
+      const clause = statement.importClause;
+      const spaces = clause.isTypeOnly ? ['type'] : ['value', 'type'];
+      if (clause.name) for (const space of spaces) add(space, clause.name);
+      const bindings = clause.namedBindings;
+      if (bindings && ts.isNamespaceImport(bindings)) for (const space of spaces) add(space, bindings.name);
+      if (bindings && ts.isNamedImports(bindings))
+        for (const element of bindings.elements) for (const space of element.isTypeOnly ? ['type'] : spaces) add(space, element.name);
+    } else if (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement) || ts.isEnumDeclaration(statement)) add('value', statement.name);
+    else if (ts.isVariableStatement(statement)) for (const declaration of statement.declarationList.declarations) add('value', declaration.name);
+    else if (ts.isInterfaceDeclaration(statement) || ts.isTypeAliasDeclaration(statement)) add('type', statement.name);
+  }
+  return duplicates;
+}
+
+/**
+ * 채울 자리(TODO) 말고는 그대로 읽히는 골격인지, 쓰기 전에 렌더한 모든 .ts·.tsx를 TypeScript로 읽어 확인한다.
+ * 업무·이름·주소 변수 조합에 따라 골격의 이름끼리 겹치면(예: 업무 이름이 골격의 함수 이름과 같아짐) 문법 오류나 중복 선언이 생긴다.
+ * 그런 조합은 채워도 빌드되지 않으므로 아무것도 쓰지 않고 이름을 바꾸라고 알린다. import 대상은 읽지 않는다(TODO 이름 없음은 의도한 실패다).
+ */
+function checkRenderedSources(files, where) {
+  const ts = require('typescript');
+  const sources = new Map(files.filter((file) => /\.tsx?$/.test(file.path)).map((file) => ['/' + file.path, file.content]));
+  if (sources.size === 0) return;
+  const options = { noEmit: true, noResolve: true, noLib: true, types: [], jsx: ts.JsxEmit.Preserve, target: ts.ScriptTarget.Latest, allowJs: false };
+  const host = ts.createCompilerHost(options);
+  host.getSourceFile = (name, version) => sources.has(name)
+    ? ts.createSourceFile(name, sources.get(name), version, true, name.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS)
+    : undefined;
+  host.fileExists = (name) => sources.has(name);
+  host.readFile = (name) => sources.get(name);
+  const program = ts.createProgram([...sources.keys()], options, host);
+  const problems = [];
+  for (const name of sources.keys()) {
+    const file = program.getSourceFile(name);
+    const found = [...program.getSyntacticDiagnostics(file), ...program.getSemanticDiagnostics(file).filter((item) => DUPLICATE_NAME_CODES.has(item.code))];
+    for (const item of found) problems.push(`${name.slice(1)}: ${ts.flattenDiagnosticMessageText(item.messageText, ' ')}`);
+    // import 대상을 읽지 않으면 TypeScript는 "import와 지역 선언 충돌"을 알리지 않는다. 맨 위 이름은 직접 센다(값 이름·타입 이름 따로).
+    for (const duplicate of duplicateTopLevelNames(ts, file)) problems.push(`${name.slice(1)}: ${duplicate}이(가) 맨 위에서 두 번 선언된다`);
+  }
+  if (problems.length > 0)
+    throw new Error(`${where}: 이 이름 조합으로 만든 골격은 채워도 읽히지 않습니다(이름이 겹치거나 문법 오류). --entity·--feature 이름을 바꾸세요.\n  ${problems.join('\n  ')}`);
+}
+
 /** 화면 종류별 파일 목록을 골격 폴더에서 만든다. shared는 같은 feature의 다른 화면과 함께 쓰는 파일이라 이미 있으면 그대로 둔다. */
 function plan({ config, feature, entity, kind, url, group }) {
   const route = routeOf(kind, url, group);
@@ -112,8 +169,11 @@ function plan({ config, feature, entity, kind, url, group }) {
   if (screen === undefined) throw new Error(`${where}/screens.json에 ${route.mode} 화면 골격이 없습니다`);
   const featureDir = `${config.src}/features/${feature}`;
   const routesDir = `${config.routes}/${group}`;
-  // 주소 변수 이름: 상세·수정은 주소의 마지막 $변수, 목록·등록은 상세로 이동할 때 쓸 <entity>Id다.
-  const id = route.mode === 'detail' || route.mode === 'edit' ? route.param : `${camel(entity)}Id`;
+  // 대상 주소 변수는 네 화면이 같이 쓰는 이름 하나(<entity>Id)다. 목록·등록은 상세로 이동할 때, 상세·수정은 주소에서 읽을 때 쓴다.
+  // 화면마다 따로 정하면 목록·등록이 가리키는 상세 주소와 실제 상세 route가 어긋나므로 다른 이름은 받지 않는다(주소에 보이는 값은 같다).
+  const id = `${camel(entity)}Id`;
+  if ((route.mode === 'detail' || route.mode === 'edit') && route.param !== id)
+    throw new Error(`${route.mode} 화면의 주소 변수는 $${id}여야 합니다(받은 값 $${route.param}). 목록·등록·상세·수정이 같은 이름으로 같은 상세 주소를 가리킨다`);
   const values = {
     feature, featureCamel: camel(feature), entity, Entity: pascal(entity), entityCamel: camel(entity), ENTITY: entity.toUpperCase().replaceAll('-', '_'), id, alias: config.alias,
     featureDir, group, routesDir, routeFile: route.file, routeId: route.id, url,
@@ -148,6 +208,7 @@ function plan({ config, feature, entity, kind, url, group }) {
   // 골격 자체에 채울 자리가 있어야 한다. 화면 전용 파일이 공유 파일(폼 schema 등)만 채우면 되는 화면도 있어 공유 파일까지 본다.
   if (!files.some((file) => file.content.includes(TODO_MARKER)))
     throw new Error(`${where}/screens.json ${route.mode}: 채울 자리({{TODO}}…)가 없는 골격은 완료처럼 보이므로 만들지 않습니다`);
+  checkRenderedSources(files, `${where} ${route.mode}`);
   const exports = (screen.exports ?? []).map((line) => render(line, values, `${where}/screens.json ${route.mode}.exports`));
   files.push({ path: `${featureDir}/index.ts`, exports });
   return { files, next: (screen.next ?? []).map((line) => render(line, values, `${where}/screens.json ${route.mode}.next`)) };

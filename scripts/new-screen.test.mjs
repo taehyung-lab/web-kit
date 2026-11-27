@@ -255,13 +255,20 @@ test('골격 자리값: 목록 주소·상세 주소·주소 변수는 화면 �
     'group.tsx.tpl': "export const Route = createFileRoute('/{{group}}{{collectionUrl}}')({});\n",
     'route.tsx.tpl': "export const Route = createFileRoute('{{routeId}}')({});\n",
   });
-  for (const [kind, url] of [['list', '/sales/order-items'], ['detail', '/sales/order-items/$itemId'], ['form', '/sales/order-items/new'], ['form', '/sales/order-items/$itemId/edit']])
+  for (const [kind, url] of [['list', '/sales/order-items'], ['detail', '/sales/order-items/$orderItemId'], ['form', '/sales/order-items/new'], ['form', '/sales/order-items/$orderItemId/edit']])
     assert.equal(cli('--feature', 'order-items', '--kind', kind, '--url', url).status, 0);
   const values = (mode) => readFileSync(join(dir, `src/features/order-items/model/${mode}-values.ts`), 'utf8').match(/'(.*)'/)[1];
+  // 네 화면이 같은 상세 주소(recordUrl)와 같은 주소 변수(id)를 가리킨다.
   assert.equal(values('list'), '/sales/order-items|/sales/order-items|/sales/order-items/$orderItemId|orderItemId|_app');
-  assert.equal(values('detail'), '/sales/order-items/$itemId|/sales/order-items|/sales/order-items/$itemId|itemId|_app');
+  assert.equal(values('detail'), '/sales/order-items/$orderItemId|/sales/order-items|/sales/order-items/$orderItemId|orderItemId|_app');
   assert.equal(values('create'), '/sales/order-items/new|/sales/order-items|/sales/order-items/$orderItemId|orderItemId|_app');
-  assert.equal(values('edit'), '/sales/order-items/$itemId/edit|/sales/order-items|/sales/order-items/$itemId|itemId|_app');
+  assert.equal(values('edit'), '/sales/order-items/$orderItemId/edit|/sales/order-items|/sales/order-items/$orderItemId|orderItemId|_app');
+  // 상세·수정 주소가 다른 변수 이름을 쓰면 목록·등록이 가리키는 상세와 어긋나므로 만들지 않는다.
+  const before = files(dir);
+  const other = cli('--feature', 'order-items', '--kind', 'detail', '--url', '/sales/order-items/$itemId');
+  assert.equal(other.status, 1);
+  assert.match(other.stderr, /주소 변수는 \$orderItemId여야 합니다/);
+  assert.deepEqual(files(dir), before);
   assert.equal(readFileSync(join(dir, 'src/routes/_app/sales/order-items/route.tsx'), 'utf8'), "export const Route = createFileRoute('/_app/sales/order-items')({});\n");
 }));
 
@@ -326,21 +333,29 @@ test('공개 입구가 다른 업무 route와 하드 링크로 묶여 있으면 
   assert.equal(existsSync(join(dir, 'src/routes/_app/invoices/index.tsx')), false);
 }));
 
-test('주소 변수 이름이 골격의 지역 이름(state·record·editor·navigate)과 같아도 같은 이름을 두 번 선언하지 않는다', () => project(({ dir, cli }) => {
+test('어떤 업무 이름이든 이름이 겹치는 골격은 쓰지 않는다: 만들면 겹침 없이 읽히고, 겹치면 아무것도 쓰지 않고 이름을 바꾸라고 한다', () => project(({ dir, cli }) => {
   const ts = createRequire(join(root, 'packages/web-kit/package.json'))('typescript');
-  for (const name of ['state', 'record', 'editor', 'navigate']) {
-    for (const [kind, url] of [['detail', `/orders-${name}/$${name}`], ['form', `/orders-${name}/$${name}/edit`]]) {
-      const result = cli('--feature', `orders-${name}`, '--entity', 'order', '--kind', kind, '--url', url);
-      assert.equal(result.status, 0, result.stderr);
+  // 골격이 쓰는 지역·함수 이름과 같아질 수 있는 업무 이름들(예: create → useCreate + Create = useCreateCreate).
+  const names = ['state', 'record', 'editor', 'navigate', 'create', 'update', 'list', 'detail', 'edit', 'form', 'route', 'query'];
+  const refused = [];
+  for (const name of names) {
+    for (const [kind, url] of [['list', `/x-${name}`], ['detail', `/x-${name}/$${name}Id`], ['form', `/x-${name}/new`], ['form', `/x-${name}/$${name}Id/edit`]]) {
+      const before = files(dir);
+      const result = cli('--feature', `x-${name}`, '--entity', name, '--kind', kind, '--url', url);
+      if (result.status === 0) continue;
+      assert.match(result.stderr, /이름이 겹치거나 문법 오류/, `${name} ${kind} ${url}: ${result.stderr}`);
+      assert.deepEqual(files(dir), before, '거절하면 아무 파일도 쓰지 않는다');
+      refused.push(`${name} ${url}`);
     }
   }
+  assert.ok(refused.includes('create /x-create/new'), '알려진 겹침(useCreateCreate)을 거절해야 한다: ' + refused.join(', '));
+  // 만든 파일은 문법 오류와 같은 범위 중복 선언이 없다(TODO 이름 없음은 의도한 실패라 보지 않는다).
   const generated = [...files(join(dir, 'src/features')).map((path) => join(dir, 'src/features', path)), ...files(join(dir, 'src/routes')).map((path) => join(dir, 'src/routes', path))]
     .filter((path) => /\.tsx?$/.test(path));
   const program = ts.createProgram(generated, { noEmit: true, jsx: ts.JsxEmit.Preserve, noResolve: true, types: [] });
   for (const path of generated) {
     const file = program.getSourceFile(path);
-    // 문법 오류와 "같은 블록에서 이미 선언한 이름"(TS2451·TS2300)만 본다. 미완성 표시(TODO) 때문의 이름 없음은 의도한 실패다.
-    const found = [...program.getSyntacticDiagnostics(file), ...program.getSemanticDiagnostics(file).filter((item) => item.code === 2451 || item.code === 2300)];
+    const found = [...program.getSyntacticDiagnostics(file), ...program.getSemanticDiagnostics(file).filter((item) => [2300, 2451, 2393, 2440].includes(item.code))];
     assert.deepEqual(found.map((item) => ts.flattenDiagnosticMessageText(item.messageText, '\n')), [], path);
   }
 }));
