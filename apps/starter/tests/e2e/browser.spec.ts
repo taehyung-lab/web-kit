@@ -32,6 +32,18 @@ function recordApi(page: Page) {
   return events;
 }
 
+test('활성 버튼·체크박스·선택 항목에는 손 모양 커서가 보인다', async ({ page }) => {
+  await signIn(page);
+  await expect(page.getByRole('button', { name: '로그아웃' })).toHaveCSS('cursor', 'pointer');
+  await expect(page.getByRole('checkbox', { name: '이 페이지 전체 선택' })).toHaveCSS('cursor', 'pointer');
+  const select = page.locator('[data-slot="select-trigger"]').first();
+  await expect(select).toHaveCSS('cursor', 'pointer');
+  await select.click();
+  await expect(page.getByRole('option').first()).toHaveCSS('cursor', 'pointer');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('textbox').first()).not.toHaveCSS('cursor', 'pointer');
+});
+
 test('signing out in one tab ends the session in the other tab', async ({ context }) => {
   const first = await context.newPage();
   await signIn(first);

@@ -36,7 +36,7 @@ pnpm dlx shadcn@4.19.1 add @web-kit/form --dry-run
 pnpm dlx shadcn@4.19.1 add @web-kit/form
 ```
 
-항목의 npm·registry 의존과 단위/브라우저 검사 연결 파일도 함께 설치한다. 항목이 쓰는 shadcn 기본 부품은 shadcn 공식 registry에서 받아 오므로 네트워크가 필요하고, 이미 있는 기본 부품 파일은 덮어쓰기 여부를 묻는다(프로젝트가 고친 부품은 덮어쓰지 않는다). 키트 UI는 `src/shared/ui/web-kit`에 생긴다. 별도 스타일시트는 없으며 앱의 테마 CSS 하나가 모양을 정한다. 예: `@/shared/ui/web-kit/form/form`의 Form, `@boosterlab/web-kit/form`의 useSaveForm, 화면의 버튼은 `@/shared/ui/button`의 Button.
+항목의 npm·registry 의존과 단위/브라우저 검사 연결 파일도 함께 설치한다. 항목이 쓰는 shadcn 기본 부품은 shadcn 공식 registry에서 받아 오므로 네트워크가 필요하고, 이미 있는 기본 부품 파일은 덮어쓰기 여부를 묻는다(프로젝트가 고친 부품은 덮어쓰지 않는다). 키트 UI는 `src/shared/ui/web-kit`에 생긴다. 앱의 테마 CSS가 모양을 정한다. 활성 조작에 손 모양 커서를 표시하려면 Tailwind import 아래에 `@import '@boosterlab/web-kit/action-cursor.css';`를 둔다. 기존 shadcn 선택 항목과 메뉴 항목의 `cursor-default`는 제거한다. 드래그 손잡이의 전용 커서는 그대로 쓴다. 예: `@/shared/ui/web-kit/form/form`의 Form, `@boosterlab/web-kit/form`의 useSaveForm, 화면의 버튼은 `@/shared/ui/button`의 Button.
 
 5. 설치한 버전과 같은 키트 checkout을 지정해 공통 도구로 설치 직후 기록을 만든다. 선택 항목의 내부 의존은 자동으로 포함한다. 원본 정의·빌드 JSON·설치 파일이 맞지 않으면 기록하지 않는다.
 

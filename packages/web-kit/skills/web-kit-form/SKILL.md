@@ -5,6 +5,8 @@ description: 등록·수정·대화창 폼의 저장·저장 뒤 추가 작업·
 
 # web-kit form
 
+등록·수정의 입력이나 첫 표시를 바꿀 때는 [화면 조작 설계](../web-kit-structure/SKILL.md#화면-조작-설계)에서 시작 상태와 조작별 기대 범위를 먼저 정한다.
+
 `/form`의 `useSaveForm`(저장 수명)·연결 hook·Provider와 registry `form`의 `Form`·`FormGuard` 복사본을 쓰는 기준이다. registry는 프로젝트에 설치해 소유하는 UI 원본 묶음이다. 버튼·입력·선택·체크박스 같은 기본 부품은 프로젝트의 shadcn(base-nova) 부품(`@/shared/ui/<부품>`)이고 키트 항목의 `registryDependencies`로 함께 설치된다. 대화창·진행 표시는 registry `dialog`·`pending`·`blocking-progress`로 설치한다. 인자와 타입은 설치된 소스를 따른다.
 
 이 책임만 골라 사용할 수 있다. 선택한 한 책임 안에서는 키트 수명 처리와 자체 구현을 섞지 않는다. 선택 설치 peer(해당 기능을 쓸 때만 설치하는 동료 라이브러리)를 설치하지 않아 실행하지 못한 기능은 "검사하지 않음"으로 기록한다. 예시는 같은 버전의 실제 starter 코드에서 가져와 패키지에 함께 담는다. 링크로 읽고 조립 방식만 참고한다. 예제만 따로 실행하는 용도는 아니다. 이 책임을 어느 파일에 조립하는지(업무 hook은 `features/<도메인>/model/<동작>`, 화면은 `ui/<화면>`)는 [web-kit-structure](../web-kit-structure/SKILL.md)가 정한다. 아래에서 "화면"은 사용자가 보는 화면 단위를 뜻하며, 키트 수명 hook을 부르는 코드는 그 동작의 업무 hook에 둔다.

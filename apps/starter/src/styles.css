@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
+@import '@boosterlab/web-kit/action-cursor.css';
 
 /*
  * shadcn base-nova 기본 테마(neutral). `shadcn init -b base -p nova`(shadcn@4.19.1)가 만든 변수를 그대로 둔다.
