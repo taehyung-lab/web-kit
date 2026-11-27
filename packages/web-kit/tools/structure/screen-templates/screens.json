@@ -1,0 +1,142 @@
+{
+  "list": {
+    "files": [
+      {
+        "path": "{{featureDir}}/model/{{entity}}.ts",
+        "template": "model/entity.ts.tpl",
+        "shared": true
+      },
+      {
+        "path": "{{featureDir}}/api/{{entity}}-list-query.ts",
+        "template": "list/entity-list-query.ts.tpl"
+      },
+      {
+        "path": "{{featureDir}}/model/list/{{entity}}-list-search.ts",
+        "template": "list/entity-list-search.ts.tpl"
+      },
+      {
+        "path": "{{featureDir}}/model/list/use-{{entity}}-list.ts",
+        "template": "list/use-entity-list.ts.tpl"
+      },
+      {
+        "path": "{{featureDir}}/ui/list/{{Entity}}ListPage.tsx",
+        "template": "list/EntityListPage.tsx.tpl"
+      },
+      {
+        "path": "{{routesDir}}/{{routeFile}}",
+        "template": "list/route.tsx.tpl"
+      }
+    ],
+    "exports": [
+      "export { {{Entity}}ListPage } from './ui/list/{{Entity}}ListPage';",
+      "export { {{entityCamel}}ListSearch } from './model/list/{{entity}}-list-search';"
+    ],
+    "next": [
+      "문구(features/{{feature}}/ui/messages.ts와 app의 문구 등록), 메뉴, route 트리 재생성(vite dev·build)"
+    ]
+  },
+  "detail": {
+    "files": [
+      {
+        "path": "{{featureDir}}/model/{{entity}}.ts",
+        "template": "model/entity.ts.tpl",
+        "shared": true
+      },
+      {
+        "path": "{{featureDir}}/api/{{entity}}-detail-query.ts",
+        "template": "api/entity-detail-query.ts.tpl",
+        "shared": true
+      },
+      {
+        "path": "{{featureDir}}/model/detail/use-{{entity}}-detail.ts",
+        "template": "detail/use-entity-detail.ts.tpl"
+      },
+      {
+        "path": "{{featureDir}}/ui/detail/{{Entity}}DetailPage.tsx",
+        "template": "detail/EntityDetailPage.tsx.tpl"
+      },
+      {
+        "path": "{{routesDir}}/{{routeFile}}",
+        "template": "detail/route.tsx.tpl"
+      }
+    ],
+    "exports": [
+      "export { {{Entity}}DetailPage } from './ui/detail/{{Entity}}DetailPage';"
+    ],
+    "next": [
+      "문구(features/{{feature}}/ui/messages.ts와 app의 문구 등록), 메뉴, route 트리 재생성(vite dev·build)"
+    ]
+  },
+  "create": {
+    "files": [
+      {
+        "path": "{{featureDir}}/model/form/{{entity}}-form.ts",
+        "template": "model/form/entity-form.ts.tpl",
+        "shared": true
+      },
+      {
+        "path": "{{featureDir}}/api/{{entity}}-create.ts",
+        "template": "create/entity-create.ts.tpl"
+      },
+      {
+        "path": "{{featureDir}}/model/form/use-{{entity}}-create.ts",
+        "template": "create/use-entity-create.ts.tpl"
+      },
+      {
+        "path": "{{featureDir}}/ui/form/{{Entity}}CreatePage.tsx",
+        "template": "create/EntityCreatePage.tsx.tpl"
+      },
+      {
+        "path": "{{routesDir}}/{{routeFile}}",
+        "template": "create/route.tsx.tpl"
+      }
+    ],
+    "exports": [
+      "export { {{Entity}}CreatePage } from './ui/form/{{Entity}}CreatePage';"
+    ],
+    "next": [
+      "문구(features/{{feature}}/ui/messages.ts와 app의 문구 등록), 메뉴, route 트리 재생성(vite dev·build)"
+    ]
+  },
+  "edit": {
+    "files": [
+      {
+        "path": "{{featureDir}}/model/{{entity}}.ts",
+        "template": "model/entity.ts.tpl",
+        "shared": true
+      },
+      {
+        "path": "{{featureDir}}/api/{{entity}}-detail-query.ts",
+        "template": "api/entity-detail-query.ts.tpl",
+        "shared": true
+      },
+      {
+        "path": "{{featureDir}}/model/form/{{entity}}-form.ts",
+        "template": "model/form/entity-form.ts.tpl",
+        "shared": true
+      },
+      {
+        "path": "{{featureDir}}/api/{{entity}}-update.ts",
+        "template": "edit/entity-update.ts.tpl"
+      },
+      {
+        "path": "{{featureDir}}/model/form/use-{{entity}}-edit.ts",
+        "template": "edit/use-entity-edit.ts.tpl"
+      },
+      {
+        "path": "{{featureDir}}/ui/form/{{Entity}}EditPage.tsx",
+        "template": "edit/EntityEditPage.tsx.tpl"
+      },
+      {
+        "path": "{{routesDir}}/{{routeFile}}",
+        "template": "edit/route.tsx.tpl"
+      }
+    ],
+    "exports": [
+      "export { {{Entity}}EditPage } from './ui/form/{{Entity}}EditPage';"
+    ],
+    "next": [
+      "문구(features/{{feature}}/ui/messages.ts와 app의 문구 등록), 메뉴, route 트리 재생성(vite dev·build)"
+    ]
+  }
+}

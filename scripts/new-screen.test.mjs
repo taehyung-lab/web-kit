@@ -158,3 +158,106 @@ for (const [args, message] of [
   assert.match(result.stderr, message);
   assert.deepEqual(files(dir), before);
 }));
+
+/** 프로젝트가 소유하는 골격 폴더를 쓰고 web-kit.structure.json의 screenTemplates로 연결한다. */
+function useProjectTemplates(dir, manifest, templates) {
+  for (const [name, text] of Object.entries(templates)) {
+    mkdirSync(join(dir, 'screen-templates', name, '..'), { recursive: true });
+    writeFileSync(join(dir, 'screen-templates', name), text);
+  }
+  writeFileSync(join(dir, 'screen-templates/screens.json'), JSON.stringify(manifest));
+  const config = join(dir, 'web-kit.structure.json');
+  writeFileSync(config, JSON.stringify({ ...JSON.parse(readFileSync(config, 'utf8')), screenTemplates: 'screen-templates' }));
+}
+
+const projectList = {
+  list: {
+    files: [
+      { path: '{{featureDir}}/model/list/use-{{entity}}-list.ts', template: 'list/use-list.ts.tpl' },
+      { path: '{{routesDir}}/{{routeFile}}', template: 'list/route.tsx.tpl' },
+    ],
+    exports: ["export { use{{Entity}}List } from './model/list/use-{{entity}}-list';"],
+    next: ['{{url}} 화면을 프로젝트 목록 분류에 더한다'],
+  },
+};
+const projectListTemplates = {
+  'list/use-list.ts.tpl': "// 프로젝트 목록 입구\nexport function use{{Entity}}List() {\n  return {{TODO}}project_list_entry;\n}\n",
+  'list/route.tsx.tpl': "import { createFileRoute } from '@tanstack/react-router';\nexport const Route = createFileRoute('{{routeId}}')({});\n",
+};
+
+test('프로젝트 골격(screenTemplates)이 있으면 그 골격으로 만들고 키트 기본 골격은 쓰지 않는다', () => project(({ dir, cli }) => {
+  useProjectTemplates(dir, projectList, projectListTemplates);
+  const result = cli('--feature', 'order-items', '--kind', 'list', '--url', '/order-items');
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(readFileSync(join(dir, 'src/features/order-items/model/list/use-order-item-list.ts'), 'utf8'),
+    '// 프로젝트 목록 입구\nexport function useOrderItemList() {\n  return TODO_web_kit_new_project_list_entry;\n}\n');
+  assert.match(readFileSync(join(dir, 'src/routes/_app/order-items/index.tsx'), 'utf8'), /createFileRoute\('\/_app\/order-items\/'\)/);
+  assert.match(readFileSync(join(dir, 'src/features/order-items/index.ts'), 'utf8'), /export \{ useOrderItemList \} from '\.\/model\/list\/use-order-item-list';/);
+  assert.equal(existsSync(join(dir, 'src/features/order-items/api/order-item-list-query.ts')), false, '키트 기본 골격 파일을 섞지 않는다');
+  assert.match(result.stdout, /직접 연결할 것:\n  - \/order-items 화면을 프로젝트 목록 분류에 더한다/);
+  assert.match(result.stdout, /미완성 표시 1곳/);
+}));
+
+test('프로젝트 골격에 없는 화면 종류는 키트 기본으로 대신 만들지 않고 실패한다', () => project(({ dir, cli }) => {
+  useProjectTemplates(dir, projectList, projectListTemplates);
+  const before = files(dir);
+  const result = cli('--feature', 'invoices', '--kind', 'detail', '--url', '/invoices/$invoiceId');
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /detail 화면 골격이 없습니다/);
+  assert.deepEqual(files(dir), before);
+}));
+
+for (const [name, change, message] of [
+  ['feature 밖에 쓰는 골격', (m) => { m.list.files[0].path = 'src/shared/{{entity}}.ts'; }, /src\/features\/invoices\/ 안이거나/],
+  ['다른 업무 route에 쓰는 골격', (m) => { m.list.files[0].path = '{{routesDir}}/orders/index.tsx'; m.list.files[0].shared = true; }, /src\/features\/invoices\/ 안이거나/],
+  ['목록 묶음 route를 shared 없이 쓰는 골격', (m) => { m.list.files[0].path = '{{routesDir}}{{collectionUrl}}/route.tsx'; }, /\(shared\)/],
+  ['목록 묶음 route id가 없는 골격', (m, t) => { m.list.files[0] = { path: '{{routesDir}}{{collectionUrl}}/route.tsx', template: 'list/use-list.ts.tpl', shared: true }; t['list/use-list.ts.tpl'] = '{{TODO}}x\n'; }, /목록 묶음 route 파일에 route id/],
+  ['검사 파일을 만드는 골격', (m) => { m.list.files[0].path = '{{featureDir}}/model/list/use-{{entity}}-list.test.ts'; }, /검사 파일은 골격으로 만들지 않습니다/],
+  ['채울 자리가 없는 골격', (m, t) => { t['list/use-list.ts.tpl'] = 'export const done = true;\n'; }, /채울 자리/],
+  ['모르는 자리 이름', (m, t) => { t['list/use-list.ts.tpl'] = '{{TODO}}x {{Entiy}}\n'; }, /알 수 없는 골격 자리 \{\{Entiy\}\}/],
+  ['route id가 없는 route 골격', (m, t) => { t['list/route.tsx.tpl'] = 'export const Route = {};\n'; }, /route id/],
+  ['route 파일이 없는 골격', (m) => { m.list.files.pop(); }, /route 파일/],
+  ['공개 입구를 파일로 쓰는 골격', (m) => { m.list.files[0].path = '{{featureDir}}/index.ts'; }, /exports로 적습니다/],
+]) test('프로젝트 골격 오류는 쓰기 전에 거절한다: ' + name, () => project(({ dir, cli }) => {
+  const manifest = structuredClone(projectList);
+  const templates = { ...projectListTemplates };
+  change(manifest, templates);
+  useProjectTemplates(dir, manifest, templates);
+  const before = files(dir);
+  const result = cli('--feature', 'invoices', '--kind', 'list', '--url', '/invoices');
+  assert.equal(result.status, 1, result.stdout);
+  assert.match(result.stderr, message);
+  assert.deepEqual(files(dir), before);
+}));
+
+test('screenTemplates 폴더에 screens.json이 없으면 설정 오류다', () => project(({ dir, cli }) => {
+  mkdirSync(join(dir, 'empty-templates'));
+  const config = join(dir, 'web-kit.structure.json');
+  writeFileSync(config, JSON.stringify({ ...JSON.parse(readFileSync(config, 'utf8')), screenTemplates: 'empty-templates' }));
+  const result = cli('--feature', 'invoices', '--kind', 'list', '--url', '/invoices');
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /screens\.json이 없습니다/);
+}));
+
+test('골격 자리값: 목록 주소·상세 주소·주소 변수는 화면 종류마다 같은 목록을 가리키고, 목록 묶음 route.tsx는 함께 쓴다', () => project(({ dir, cli }) => {
+  const screen = (mode) => ({
+    files: [
+      { path: '{{featureDir}}/model/{{mode}}-values.ts'.replace('{{mode}}', mode), template: 'values.ts.tpl' },
+      { path: '{{routesDir}}{{collectionUrl}}/route.tsx', template: 'group.tsx.tpl', shared: true },
+      { path: '{{routesDir}}/{{routeFile}}', template: 'route.tsx.tpl' },
+    ],
+  });
+  useProjectTemplates(dir, { list: screen('list'), detail: screen('detail'), create: screen('create'), edit: screen('edit') }, {
+    'values.ts.tpl': "export const values = '{{url}}|{{collectionUrl}}|{{recordUrl}}|{{id}}|{{group}}' as {{TODO}}x;\n",
+    'group.tsx.tpl': "export const Route = createFileRoute('/{{group}}{{collectionUrl}}')({});\n",
+    'route.tsx.tpl': "export const Route = createFileRoute('{{routeId}}')({});\n",
+  });
+  for (const [kind, url] of [['list', '/sales/order-items'], ['detail', '/sales/order-items/$itemId'], ['form', '/sales/order-items/new'], ['form', '/sales/order-items/$itemId/edit']])
+    assert.equal(cli('--feature', 'order-items', '--kind', kind, '--url', url).status, 0);
+  const values = (mode) => readFileSync(join(dir, `src/features/order-items/model/${mode}-values.ts`), 'utf8').match(/'(.*)'/)[1];
+  assert.equal(values('list'), '/sales/order-items|/sales/order-items|/sales/order-items/$orderItemId|orderItemId|_app');
+  assert.equal(values('detail'), '/sales/order-items/$itemId|/sales/order-items|/sales/order-items/$itemId|itemId|_app');
+  assert.equal(values('create'), '/sales/order-items/new|/sales/order-items|/sales/order-items/$orderItemId|orderItemId|_app');
+  assert.equal(values('edit'), '/sales/order-items/$itemId/edit|/sales/order-items|/sales/order-items/$itemId|itemId|_app');
+  assert.equal(readFileSync(join(dir, 'src/routes/_app/sales/order-items/route.tsx'), 'utf8'), "export const Route = createFileRoute('/_app/sales/order-items')({});\n");
+}));
