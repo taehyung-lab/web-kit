@@ -190,8 +190,8 @@ type DateFields<T extends string, D extends DateKeys> = { readonly [_ in D['from
   ? unknown
   : { readonly [_ in D['type']]: RequiredField<T> });
 type FieldsOfKind<N extends string, K, P extends ListSearchPolicy> =
-  K extends KeywordsKind
-    ? { readonly [_ in N]: RequiredField<readonly Keyword[]> }
+  K extends KeywordsKind<infer T>
+    ? { readonly [_ in N]: RequiredField<readonly Keyword<T>[]> }
     : K extends ServerChoicesKind<infer Field> ? { readonly [_ in N]: Field }
     : K extends ChoicesKind<infer T, infer M>
       ? [M] extends [true]

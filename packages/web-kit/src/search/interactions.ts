@@ -1,6 +1,7 @@
 /** 필터·정렬의 공통 값 전이. 날짜는 지정한 시간대의 달력 날짜로 계산한다. */
-export interface Keyword {
-  readonly field: string;
+/** 확정 검색어 하나. field는 검색어 칸이 선언한 대상(keywords targets) 중 하나다. */
+export interface Keyword<T extends string = string> {
+  readonly field: T;
   readonly value: string;
 }
 /** 앞뒤 공백과 같은 필드의 중복을 제거한 키워드를 추가한다. */
