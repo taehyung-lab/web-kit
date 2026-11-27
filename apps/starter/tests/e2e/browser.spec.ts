@@ -78,9 +78,9 @@ test('a failed background refresh keeps the rows and offers a retry', async ({ p
   // mock 서버(이 페이지의 msw)를 내려 같은 조건 재조회를 실패시킨다.
   await page.evaluate(async () => {
     // 개발 서버가 앱과 같은 모듈 인스턴스로 내주는 경로다(브라우저 안에서만 존재).
-    const dbModule = '/src/mocks/db.ts';
-    const { mockDb } = (await import(/* @vite-ignore */ dbModule)) as { mockDb: object };
-    Object.defineProperty(mockDb, 'products', {
+    const dbModule = '/src/mocks/examples/example-db.ts';
+    const { exampleDb } = (await import(/* @vite-ignore */ dbModule)) as { exampleDb: object };
+    Object.defineProperty(exampleDb, 'products', {
       get: () => {
         throw new Error('mock server down');
       },
@@ -186,9 +186,9 @@ test('an edit that fails after the confirmation returns focus to the save button
   await expect(page.locator('[data-slot="blocking-progress"]').getByText('수정 중입니다.')).toBeVisible();
   // 덮개가 열린 동안 mock 서버를 내려 PUT을 500으로 끝낸다(지연 뒤 상품 조회에서 예외).
   await page.evaluate(async () => {
-    const dbModule = '/src/mocks/db.ts';
-    const { mockDb } = (await import(/* @vite-ignore */ dbModule)) as { mockDb: object };
-    Object.defineProperty(mockDb, 'products', {
+    const dbModule = '/src/mocks/examples/example-db.ts';
+    const { exampleDb } = (await import(/* @vite-ignore */ dbModule)) as { exampleDb: object };
+    Object.defineProperty(exampleDb, 'products', {
       get: () => {
         throw new Error('mock server down');
       },
