@@ -25,7 +25,7 @@ const declaration = listSearch({
 type Values = SearchValues<typeof declaration>;
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
 const checks: [
-  Equal<Values['search'], readonly Keyword[]>,
+  Equal<Values['search'], readonly Keyword<'name'>[]>,
   Equal<Values['statuses'], readonly ('active' | 'inactive')[]>,
   Equal<Values['kind'], 'a' | 'b' | undefined>,
   Equal<Values['dateType'], 'createdAt' | 'updatedAt'>,
