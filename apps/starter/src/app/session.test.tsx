@@ -1,4 +1,5 @@
-// 파일 책임: 세션 연결 검사. 401 → 재발급 → 재전송 1회, 재발급 거절 → 세션 종료 → 로그인 이동, 로그인 자격증명 거절 표시를 관찰한다.
+// 파일 책임: 세션 연결 검사. 401 → 재발급 → 재전송 1회, 재발급 거절 → 세션 종료 → 로그인 이동, 로그인 뒤 원래 화면 복귀를 예시 상품 목록으로 관찰한다.
+// 업무 화면이 없어도 되는 로그인 검사는 app/sign-in.test.tsx에 있다.
 import { mockDb } from '@/mocks/db';
 import { renderApp, type SentRequest } from '@/test/app';
 import { screen, waitFor } from '@testing-library/react';
@@ -52,28 +53,4 @@ describe('session', () => {
     expect(session.current()?.credentials.accessToken).toMatch(/^mock-access-/);
   });
 
-  it.each(['/\\evil.example', '//evil.example', 'https://evil.example', '/login?redirect=/products'])(
-    'drops the way back %j that could leave the app or loop to login, and goes to the default page',
-    async (back) => {
-      const user = userEvent.setup();
-      const { router } = renderApp(`/login?redirect=${encodeURIComponent(back)}`, { signedIn: false });
-      expect(router.state.location.search).toEqual({});
-      await user.type(await screen.findByLabelText(/아이디/), 'admin');
-      await user.type(screen.getByLabelText(/비밀번호/), 'password');
-      await user.click(screen.getByRole('button', { name: '로그인' }));
-
-      await waitFor(() => expect(router.state.location.pathname).toBe('/products'));
-    },
-  );
-
-  it('shows an inline message when the credentials are rejected and does not open a session', async () => {
-    const user = userEvent.setup();
-    renderApp('/login', { signedIn: false });
-    await user.type(await screen.findByLabelText(/아이디/), 'admin');
-    await user.type(screen.getByLabelText(/비밀번호/), 'wrong');
-    await user.click(screen.getByRole('button', { name: '로그인' }));
-
-    expect((await screen.findByRole('alert')).textContent).toBe('아이디 또는 비밀번호가 올바르지 않습니다.');
-    expect(session.current()).toBeNull();
-  });
 });

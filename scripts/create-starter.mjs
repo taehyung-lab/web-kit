@@ -40,6 +40,43 @@ function copyStarter(source, destination, tracked) {
   }
 }
 
+/**
+ * 키트 예시 업무 층(scripts/starter/examples.json)을 빼고 앱·인증·실행·검사 기반만 남긴다. 검사 앱(apps/starter)은 그대로 둔다.
+ * 목록과 starter가 어긋나면(없는 경로·남은 참조) 새 프로젝트를 만들지 않는다.
+ */
+export function removeExamples(stage) {
+  const manifest = json(join(templates, 'examples.json'));
+  for (const path of manifest.remove) {
+    if (!existsSync(join(stage, path))) throw new Error(`예시 업무 목록이 starter와 다릅니다(없는 경로): ${path}`);
+    rmSync(join(stage, path), { recursive: true });
+  }
+  for (const [path, source] of Object.entries(manifest.replace)) {
+    if (!existsSync(join(stage, path))) throw new Error(`예시 업무 목록이 starter와 다릅니다(바꿀 파일 없음): ${path}`);
+    copyFileSync(join(templates, source), join(stage, path));
+  }
+  // 서버 명세에서 예시 업무의 endpoint·schema를 뺀다. 생성 코드(api:generate)는 남은 명세와 같아야 한다.
+  const { file, tags, schemas, modelIndex } = manifest.openapi;
+  const spec = json(join(stage, file));
+  const exampleTags = new Set(tags);
+  for (const [path, operations] of Object.entries(spec.paths)) {
+    for (const [method, operation] of Object.entries(operations)) if (operation.tags?.some((tag) => exampleTags.has(tag))) delete operations[method];
+    if (Object.keys(operations).length === 0) delete spec.paths[path];
+  }
+  for (const name of schemas) {
+    if (!(name in spec.components.schemas)) throw new Error(`예시 업무 목록이 서버 명세와 다릅니다(없는 schema): ${name}`);
+    delete spec.components.schemas[name];
+  }
+  if (Array.isArray(spec.tags)) spec.tags = spec.tags.filter((tag) => !exampleTags.has(tag.name));
+  const dangling = [...JSON.stringify(spec).matchAll(/#\/components\/schemas\/([A-Za-z0-9_]+)/g)].map((match) => match[1]).filter((name) => !(name in spec.components.schemas));
+  if (dangling.length > 0) throw new Error(`예시 schema를 뺀 서버 명세에 끊긴 참조가 있습니다: ${[...new Set(dangling)].join(', ')}`);
+  writeJson(join(stage, file), spec);
+  const index = join(stage, modelIndex);
+  writeFileSync(index, readFileSync(index, 'utf8').split('\n').filter((line) => {
+    const model = line.match(/^export \* from '\.\/(.+)';$/)?.[1];
+    return model === undefined || existsSync(join(dirname(index), model + '.ts'));
+  }).join('\n'));
+}
+
 /** 고정 커밋에 붙은 AWK 발행 tag(v로 시작). 고정의 근거는 커밋이고 tag 는 알림용이다. 없으면 null(tag를 받지 않은 checkout). */
 function releaseTag(workflowKit, commit) {
   const tags = git(workflowKit, 'tag', '--points-at', commit, '--list', 'v*', '--sort=-version:refname').split('\n').filter(Boolean);
@@ -98,6 +135,7 @@ export function createStarter(destination, workflowKit) {
   try {
     const tracked = git(root, 'ls-files', '--', 'apps/starter').split('\n').map((path) => path.replace(/^apps\/starter\//, ''));
     copyStarter(starter, stage, tracked);
+    removeExamples(stage);
     execFileSync('bash', [join(workflowKit, 'install.sh'), stage], { stdio: 'pipe' });
     const agents = join(stage, 'AGENTS.md');
     const installed = readFileSync(agents, 'utf8');

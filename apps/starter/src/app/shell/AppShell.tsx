@@ -1,6 +1,7 @@
 // 파일 책임: 로그인 뒤 화면들의 골격(머리글·탐색·언어·로그아웃, 저장·페이지 첫 조회 중 화면 전체 진행 덮개).
 // 진입 판정은 route(routes/_app/route.tsx)가, 로그아웃 뒤 이동은 세션 구독(app/session/SessionNavigation)이 맡는다.
 import { changeLanguage, LANGUAGES } from '@/app/i18n';
+import { menu } from '@/app/screens';
 import { session } from '@/runtime/web-kit';
 import { Button } from '@/shared/ui/button';
 import { FullPageProgress } from '@/shared/ui/web-kit';
@@ -25,31 +26,15 @@ export function AppShell() {
           <div className="mx-auto flex h-14 max-w-6xl items-center gap-8 px-6">
             <span className="text-sm font-semibold tracking-tight text-slate-900">{t('app.title')}</span>
             <nav className="flex gap-1 text-sm">
-              <Link
-                to="/products"
-                className="rounded-md px-3 py-1.5 text-slate-600 hover:bg-slate-100 data-[status=active]:bg-slate-100 data-[status=active]:font-medium data-[status=active]:text-slate-900"
-              >
-                {t('app.nav.products')}
-              </Link>
-              <Link
-                to="/members"
-                className="rounded-md px-3 py-1.5 text-slate-600 hover:bg-slate-100 data-[status=active]:bg-slate-100 data-[status=active]:font-medium data-[status=active]:text-slate-900"
-              >
-                {t('app.nav.members')}
-              </Link>
-              <Link
-                to="/terms/new"
-                className="rounded-md px-3 py-1.5 text-slate-600 hover:bg-slate-100 data-[status=active]:bg-slate-100 data-[status=active]:font-medium data-[status=active]:text-slate-900"
-              >
-                {t('app.nav.terms')}
-              </Link>
-              <Link
-                to="/shows/new"
-                className="rounded-md px-3 py-1.5 text-slate-600 hover:bg-slate-100 data-[status=active]:bg-slate-100 data-[status=active]:font-medium data-[status=active]:text-slate-900"
-              >
-                {t('app.nav.shows')}
-              </Link>
-              <Link to="/form-workflows" className="rounded-md px-3 py-1.5 text-slate-600 hover:bg-slate-100">{t('workflows.title')}</Link>
+              {menu.map((item) => (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className="rounded-md px-3 py-1.5 text-slate-600 hover:bg-slate-100 data-[status=active]:bg-slate-100 data-[status=active]:font-medium data-[status=active]:text-slate-900"
+                >
+                  {t(item.labelKey)}
+                </Link>
+              ))}
             </nav>
             <div className="ml-auto flex items-center gap-2">
               <div role="group" aria-label={t('app.language')} className="flex rounded-md border border-slate-200 p-0.5 text-xs">

@@ -1,6 +1,6 @@
 # 새 프로젝트 시작
 
-내부 `apps/starter`를 실행 가능한 예시 앱으로 복사한다. 기능별 선택 방식은 [소비 안내](../packages/web-kit/docs/consuming.md#기능을-골라-쓰기)를 따른다. 최소 빈 앱이나 프로젝트별 템플릿을 여러 개 만들지 않는다.
+내부 `apps/starter`에서 앱 조립·인증·실행 기반·키트 UI 복사본과 적합성 검사만 복사해 업무 화면 없는 앱을 만든다. starter의 예시 업무(목록·폼·상세 예제, `scripts/starter/examples.json`)는 키트 회귀 검사용으로 starter에만 남고 새 프로젝트로 복사하지 않는다. 첫 업무 화면은 `web-kit-new` 골격과 스킬 계약으로 만든다(다른 업무를 본보기로 복사하지 않는다). 기능별 선택 방식은 [소비 안내](../packages/web-kit/docs/consuming.md#기능을-골라-쓰기)를 따른다. 프로젝트별 템플릿을 여러 개 만들지 않는다. 프로젝트가 자기 입구에 맞춘 화면 골격이 필요하면 그 프로젝트가 `screenTemplates`로 소유한다.
 
 ```sh
 pnpm starter:create ../my-web --workflow-kit /path/to/agent-workflow-kit
@@ -17,6 +17,12 @@ pnpm install --frozen-lockfile
 pnpm exec playwright install chromium
 pnpm check
 pnpm dev:mock
+```
+
+유지보수자는 후보를 바꿀 때 새 프로젝트 수용 검사를 실행한다. 임시 폴더에 새 프로젝트를 만들어 예시 업무가 없는지, 설치·생성 코드·route 트리·`pnpm check`가 통과하는지, 키트 기본 골격으로 첫 업무의 목록·상세·등록·수정을 만들고 채우면 typecheck·lint·화면 검사가 통과하는지 확인한다.
+
+```sh
+pnpm starter:acceptance --workflow-kit /path/to/agent-workflow-kit
 ```
 
 후보의 registry tag가 발행되지 않았다면 복사된 UI로만 로컬 확인한다. 새 항목 설치·갱신은 검증된 tag 발행 뒤 [설치 안내](../packages/web-kit/docs/installing.md)를 따른다. 새 프로젝트의 사용 스킬은 설치 패키지 안의 예제까지 읽을 수 있다.

@@ -3,7 +3,7 @@ export const appResources = {
   ko: {
     app: {
       title: '관리자',
-      nav: { products: '상품', members: '회원', terms: '약관 등록', shows: '공연 예시' },
+      home: { title: '시작', body: '아직 업무 화면이 없습니다. 첫 화면을 만든 뒤 app/screens.ts에 메뉴와 첫 화면을 정하세요.' },
       signOut: '로그아웃',
       language: '언어',
       routeNotFound: '페이지를 찾을 수 없습니다.',
@@ -16,7 +16,7 @@ export const appResources = {
   en: {
     app: {
       title: 'Admin',
-      nav: { products: 'Products', members: 'Members', terms: 'New terms', shows: 'Show example' },
+      home: { title: 'Start', body: 'There are no screens yet. Create the first screen, then set the menu and first screen in app/screens.ts.' },
       signOut: 'Sign out',
       language: 'Language',
       routeNotFound: 'This page does not exist.',

@@ -1,6 +1,6 @@
 // 파일 책임: 회원 일괄 상태 변경(값 하나를 골라 선택 행에 적용) 재현 검사. 값 없이 누름·확인창 문구·실제 반영·성공 뒤 값 유지·
 // 이전 조건 결과 동안 잠금과 앱 기본 문구(ListDefaults)를 실제 앱 조립과 mock 서버 상태로 관찰한다.
-import { mockDb } from '@/mocks/db';
+import { exampleDb as mockDb } from '@/mocks/examples/example-db';
 import { renderApp } from '@/test/app';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';

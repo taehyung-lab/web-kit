@@ -2,8 +2,8 @@
 import { i18n } from '@/app/i18n';
 import { notices } from '@/runtime/notices';
 import { queryClient, session } from '@/runtime/web-kit';
-import { mockDb } from '@/mocks/db';
 import { server } from '@/mocks/server';
+import { mockServerState } from '@/mocks/server-state';
 import { cleanup } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll } from 'vitest';
 
@@ -19,7 +19,7 @@ afterEach(async () => {
   session.end();
   queryClient.clear();
   notices.clear();
-  mockDb.reset();
+  mockServerState.reset();
   localStorage.clear();
   await i18n.changeLanguage('ko');
 });

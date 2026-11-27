@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
-import { mockDb } from '@/mocks/db';
+import { exampleDb as mockDb } from '@/mocks/examples/example-db';
 
 it('원본 삭제 취소·정리와 다른 검증의 임시 저장을 실제 화면과 요청에 연결한다', async () => {
   const user = userEvent.setup();
