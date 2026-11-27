@@ -25,38 +25,40 @@ mock 서버 상태(토큰·데이터)는 실제 서버처럼 새로고침해도 
 ```
 openapi/sample.json          예시 API 명세(Spring 봉투). 실제 명세로 교체한다
 src/
-  app/
+  runtime/
     web-kit.ts               키트 연결의 유일한 진입: 세션·http·QueryClient·결과 코드 표·orval mutator
-    auth.tsx                 로그인·로그아웃 → session.start/end, 세션 종료(by) → 로그인 이동
+    i18n.ts env.ts notices.ts session-idle.ts
+  app/
     App.tsx router.tsx       provider 조립, router 생성
+    screens.ts               업무 문구·머리글 메뉴·첫 화면 등록(새 프로젝트는 빈 목록)
+    session/                 세션 종료(by) → 로그인 이동, 만료 경고
     errors.tsx               route 오류·없는 경로·마지막 오류 경계
-    i18n.ts env.ts notices.ts
   api/generated/             orval 생성물(commit 대상, 직접 고치지 않음)
   features/
-    products/                예시 기능
+    products/ members/ …     키트 예시 업무(새 프로젝트에는 복사하지 않는다)
       api/                   queryOptions·mutation·DTO 변환·무효화 선언
       model/                 검색 선언(defineSearch)·폼 schema·요청 변환
-      screens/               목록·상세·등록·수정 화면과 화면 테스트
+      ui/                    목록·상세·등록·수정 화면과 화면 테스트
     auth/                    로그인 화면·요청
   shared/
     ui/                      설치한 키트 UI의 소비 검사
     lib/                     실패 문구 키·폼 문구 해소
   routes/                    파일 route(validateSearch·beforeLoad·loader 미리 받기)
-  mocks/                     msw handler·메모리 DB(테스트와 dev:mock 공용)
+  mocks/                     msw handler·메모리 DB(테스트와 dev:mock 공용). 인증은 handlers.ts·db.ts, 예시 업무는 examples/(feature-mocks.ts가 잇는다)
   test/                      테스트 준비·앱 렌더 도우미
 docs/product/                제품 정책 문서 자리(비어 있음)
 vendor/                      검사·배포에 사용하는 web-kit tarball(커밋 대상)
 .agents/skills/              web-kit-*(node_modules로 가는 링크)
 ```
 
-`src/shared`는 `app`·`features`·`api`·`routes`를 import하지 않는다(ESLint로 검사). `features`는 `routes`를 모른다. 화면(`screens/`)은 모양과 연결만 두고 폼 schema는 `model/`에서 import하며(화면의 `zod` import 금지), 버튼·입력·선택은 맨 HTML 대신 shadcn 기본 부품(`@/shared/ui/button`·`input`·`select`·`textarea`)을, 폼 안에서는 `Form` 칸을 쓴다(둘 다 ESLint로 검사).
+`src/shared`는 `app`·`features`·`api`·`routes`를 import하지 않는다(ESLint로 검사). `features`는 `routes`를 모른다. 화면(`ui/`)은 모양과 연결만 두고 폼 schema는 `model/`에서 import하며(화면의 `zod` import 금지), 버튼·입력·선택은 맨 HTML 대신 shadcn 기본 부품(`@/shared/ui/button`·`input`·`select`·`textarea`)을, 폼 안에서는 `Form` 칸을 쓴다(둘 다 ESLint로 검사).
 
 ### 예시가 보여 주는 것
 
 | 위치 | 보여 주는 키트 사용 |
 |---|---|
-| `app/web-kit.ts` | `createBrowserSessionStore`(key·schema·읽기 불가 정책 선언), 공개 요청으로 재발급, `isPublic`·`prepare`(Accept-Language)·axios 기본값, QueryClient retry·staleTime·`notify` 예시, 예시 결과 코드 행 |
-| `app/auth.tsx` | 캡처한 토큰으로 로그아웃, `ended`의 `by`(local·other-tab·server)별 이동 |
+| `runtime/web-kit.ts` | `createBrowserSessionStore`(key·schema·읽기 불가 정책 선언), 공개 요청으로 재발급, `isPublic`·`prepare`(Accept-Language)·axios 기본값, QueryClient retry·staleTime·`notify` 예시, 예시 결과 코드 행 |
+| `app/session/SessionNavigation.tsx` | 캡처한 토큰으로 로그아웃, `ended`의 `by`(local·other-tab·server)별 이동 |
 | 상품 목록 | `defineSearch`(쉼표 목록 `encode`, 기간 묶음 `valid`, `view` key, 고정 목록은 `z.enum`·서버 선택지(분류)는 `check` — 없는 값은 그 필드만 기본값), route `validateSearch` + `beforeLoad`, `useList` + `ListView` 필터·표·페이지 이동·일괄 확인, `/api` 반복 키 직렬화 |
 | 상품 상세 | `useRecord(options, id)`, loader는 미리 받기만, `Detail`·`Detail.Fields`·`Detail.Field` |
 | 등록·수정 | `useSaveForm` + `<Form editor>`와 `Form.of<Values>()` 부품으로 오류·선택지 상태·배열 입력을 선언(필수 표시는 schema에서 나온다). 수정은 `confirm` + `<Form confirm>`(켜면 필수), 완료 후 이동은 `onSaved`. 폼·대화창 기본 문구는 `app/AppCopyDefaults` 한 곳, 이탈 보호는 루트의 `FormGuard` 한 곳 |
@@ -78,4 +80,4 @@ vendor/                      검사·배포에 사용하는 web-kit tarball(커�
 
 ## 화면 추가하기
 
-이 저장소 안에서는 근거를 찾는 순서와 필요한 단계를 저장소 루트 `AGENTS.md`가 정한다. `src/features/products/`의 `api/` · `model/` · `screens/`가 화면 연결 예시다.
+이 저장소 안에서는 근거를 찾는 순서와 필요한 단계를 저장소 루트 `AGENTS.md`가 정한다. 새 화면은 `pnpm exec web-kit-new`의 골격과 각 스킬의 계약으로 만든다. 이 앱의 예시 업무는 키트 회귀 검사용이며 새 화면의 본보기가 아니다.

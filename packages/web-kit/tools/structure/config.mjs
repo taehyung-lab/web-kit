@@ -44,7 +44,7 @@ export function loadStructureConfig(root, file = CONFIG_FILE) {
   if (!existsSync(path)) throw new Error(`구조 설정이 없습니다: ${path}`);
   const raw = JSON.parse(readFileSync(path, 'utf8'));
   const projectRoot = dirname(path);
-  const known = new Set(['src', 'alias', 'tsconfig', 'routes', 'screenGroup', 'generated', 'generatedModels', 'support', 'exceptions']);
+  const known = new Set(['src', 'alias', 'tsconfig', 'routes', 'screenGroup', 'screenTemplates', 'generated', 'generatedModels', 'support', 'exceptions']);
   for (const key of Object.keys(raw)) if (!known.has(key)) throw new Error(`${CONFIG_FILE}: 알 수 없는 설정 ${key}`);
   const src = projectRelative(projectRoot, raw.src ?? 'src', 'src');
   const routes = projectRelative(projectRoot, raw.routes ?? `${src}/routes`, 'routes');
@@ -57,6 +57,10 @@ export function loadStructureConfig(root, file = CONFIG_FILE) {
   const screenGroup = raw.screenGroup;
   if (screenGroup !== undefined && (typeof screenGroup !== 'string' || !/^_[a-z][a-z0-9-]*$/.test(screenGroup)))
     throw new Error(`${CONFIG_FILE}: screenGroup은 _로 시작하는 route 묶음 이름이어야 합니다(예: "_authenticated")`);
+  // 새 화면 골격의 모양. 프로젝트가 자기 입구(요청·목록·단건 연결)에 맞춘 골격 폴더(screens.json이 있는 곳)를 넘긴다. 없으면 키트 기본 골격을 쓴다. 생성기만 쓴다.
+  const screenTemplates = raw.screenTemplates === undefined ? undefined : projectRelative(projectRoot, raw.screenTemplates, 'screenTemplates');
+  if (screenTemplates !== undefined && !existsSync(join(projectRoot, screenTemplates, 'screens.json')))
+    throw new Error(`${CONFIG_FILE}: screenTemplates 폴더에 screens.json이 없습니다: ${screenTemplates}`);
   const exceptions = (raw.exceptions ?? []).map((entry, index) => {
     const where = `${CONFIG_FILE}: exceptions[${index}]`;
     if (typeof entry !== 'object' || entry === null) throw new Error(`${where}는 객체여야 합니다`);
@@ -73,6 +77,7 @@ export function loadStructureConfig(root, file = CONFIG_FILE) {
     tsconfig,
     routes,
     screenGroup,
+    screenTemplates,
     generated: pathList(projectRoot, raw.generated, 'generated'),
     generatedModels: pathList(projectRoot, raw.generatedModels, 'generatedModels'),
     support: pathList(projectRoot, raw.support, 'support'),

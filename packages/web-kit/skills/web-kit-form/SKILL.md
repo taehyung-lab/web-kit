@@ -17,9 +17,7 @@ description: 등록·수정·대화창 폼의 저장·저장 뒤 추가 작업·
 
 ## registry 폼 UI
 
-실제 조립 예: [apps/starter/src/features/products/ui/form/ProductForm.tsx](../../references/apps/starter/src/features/products/ui/form/ProductForm.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
-
-앱 맨 위 한 곳에 registry `dialog`의 `DialogDefaults labels`와 registry `form`의 `FormDefaults`(`messages`·선택 `formatError`·`renderFailure`)를 두고, `FormGuard messages`를 앱(Router 안)에 한 번 둔다(아래 「앱 기본 문구」). 복사본은 `/form`의 `useFormGuardBinding`과 `FormGuardProvider`, `useFormRootBinding`과 `FormBindingProvider`로 연결한다. 화면의 flow가 `const editor = useSaveForm({...})`를 만들어 돌려주고([등록 flow](../../references/apps/starter/src/features/products/model/form/use-product-create.ts.txt)), 화면은 `<Form editor={editor}>` 안에 부품을 원하는 배치로 둔다. 각 부품은 같은 편집 상태를 context로 읽어서, 칸·버튼·오류 줄의 위치를 바꿔도 저장·검증·focus 연결을 다시 쓰지 않는다. 칸 이름을 값 타입으로 좁히려면 `const F = Form.of<Values>()`로 같은 부품을 쓴다.
+앱 맨 위 한 곳에 registry `dialog`의 `DialogDefaults labels`와 registry `form`의 `FormDefaults`(`messages`·선택 `formatError`·`renderFailure`)를 두고, `FormGuard messages`를 앱(Router 안)에 한 번 둔다(아래 「앱 기본 문구」). 복사본은 `/form`의 `useFormGuardBinding`과 `FormGuardProvider`, `useFormRootBinding`과 `FormBindingProvider`로 연결한다. 화면의 flow가 `const editor = useSaveForm({...})`를 만들어 돌려주고, 화면은 `<Form editor={editor}>` 안에 부품을 원하는 배치로 둔다. 각 부품은 같은 편집 상태를 context로 읽어서, 칸·버튼·오류 줄의 위치를 바꿔도 저장·검증·focus 연결을 다시 쓰지 않는다. 칸 이름을 값 타입으로 좁히려면 `const F = Form.of<Values>()`로 같은 부품을 쓴다.
 
 - 칸: `Form.Text`·`TextArea`·`Select`·`Checkbox`·`File`·`Array`. 입력을 프로젝트 부품으로 바꿀 때는 `Form.Field`의 render 함수가 받는 `control`(id·aria·value·change·blur)을 그 입력에 건다. 값·검증·오류 표시·첫 오류 focus는 그대로 남는다.
 - 필수 표시(별표·`aria-required`)의 출처는 schema 하나다. 칸마다 `required`를 적지 않는다. 키트는 지금 값에서 그 칸만 비운 값(문자열 '', 목록 [], 체크 false, 파일 비어 있음)을 schema로 검증해 그 칸에 오류가 나면 필수로 본다(`editor.isRequired`). 그래서 다른 칸 값에 따른 조건부 필수도 같은 규칙에서 나온다. 단, 그런 규칙은 다른 칸 오류가 있어도 돌게 쓴다(zod 4: 객체 `superRefine(fn, { when: () => true })`). 기본값이면 다른 칸이 비어 있는 동안 규칙이 건너뛰어져 별표가 빠진다.
@@ -83,8 +81,6 @@ headless는 화면 배치 없이 상태와 연결 함수만 쓰는 방식이다.
 
 ## 화면 선언
 
-실제 조립 예: [apps/starter/src/features/products/model/form/use-product-create.ts](../../references/apps/starter/src/features/products/model/form/use-product-create.ts.txt)(아래 선언을 두는 flow)와 [apps/starter/src/features/products/ui/form/ProductCreatePage.tsx](../../references/apps/starter/src/features/products/ui/form/ProductCreatePage.tsx.txt)(그 결과를 그리는 화면). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
-
 - schema: 동기 Standard Schema(zod 4). 비동기 검증은 받지 않는다. 폼 값의 File·Blob은 복사되지 않고 그대로 저장 함수까지 간다.
 - `source { id, values }`: 원본을 폼 값으로 바꾼 것. 등록 화면이면 기본값이다.
 - `save(values, submitted)`: 서버가 저장 결과를 주면 폼 값으로 바꿔 `{ saved }`로 돌려준다. 요청 전에 화면 절차가 거절하면(먼저 조회가 필요한 검사·업로드 실패·확인창 취소) `throw new FormRejection(칸 목록 [{ field, message }], root?)`. 서버가 칸 정보(필드 오류) 없이 업무 거절로 답한 실패를 칸으로 보이는 일은 `save` 안의 try/catch가 아니라 아래 `rejectedField`로 선언한다. 저장이 일부라도 반영됐을 수 있는 실패에는 쓰지 않는다. 키트가 서버 필드 오류와 같은 길로 처리하므로(아래 「실패」) 화면이 칸에 오류를 직접 붙이거나 구역을 열거나 포커스를 예약하지 않는다.
@@ -99,19 +95,15 @@ headless는 화면 배치 없이 상태와 연결 함수만 쓰는 방식이다.
 - 입력 control의 id는 `fieldId(name)`을 쓰고, 같은 id를 `FieldFrame`에 넘긴다. 체크 트리(`CheckboxTree`)는 그 id를 `id`로 받으며, 검증 오류의 focus가 그 그룹으로 온다.
 - 줄을 추가·삭제하는 입력은 아래 「줄 추가·삭제 입력」을 따른다.
 
-## 선택과 추가 행동의 예제
+## 선택과 추가 행동
 
-조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
-
-보호 제외는 [로그인 화면](../../references/apps/starter/src/features/auth/ui/login/LoginPage.tsx.txt), 저장(요청·응답 반환)과 완료(세션 시작·이동) 분리는 [로그인 flow](../../references/apps/starter/src/features/auth/model/login/use-login-flow.ts.txt), 저장 후 추가 조회와 완료 실패 재시도는 [작성 예제 flow](../../references/apps/starter/src/features/form-workflows/model/form/use-workflow-form.ts.txt), 완료 확인 뒤 이동은 [약관 등록 flow](../../references/apps/starter/src/features/terms/model/form/use-terms-create.ts.txt)를 참고한다. 저장 뒤 효과(세션 시작·이동·후속 조회)는 `save`에 넣지 않고 `onSaved`에 둔다. schema·서버 요청·후속 업무는 프로젝트가 정하고 저장 상태 기계를 새로 만들지 않는다. primary와 secondary의 완료 선언은 각 동작에 따로 준다.
+보호 제외는 입력이 남아도 떠날 때 묻지 않는 화면(로그인 등)에 `<Form protect={false}>`로 선언한다. 저장(요청·응답 반환)과 완료(세션 시작·이동)는 `save`가 응답만 돌려주고 `onSaved`가 세션 시작·이동을 하는 것으로 나눈다. 저장 후 추가 조회는 `onSaved`가 하고, 그 조회가 실패하면 키트가 완료 단계만 다시 시도한다(저장 요청은 다시 보내지 않는다). 완료 확인(`acknowledge`)을 켜면 확인 창을 닫은 뒤 `onSaved`의 이동이 실행된다. 저장 뒤 효과(세션 시작·이동·후속 조회)는 `save`에 넣지 않고 `onSaved`에 둔다. schema·서버 요청·후속 업무는 프로젝트가 정하고 저장 상태 기계를 새로 만들지 않는다. primary와 secondary의 완료 선언은 각 동작에 따로 준다.
 
 폼과 `blocking-progress` 또는 `checkbox-tree`를 함께 설치하면 registry 검사 연결이 `/testing/unit/combinations`로 자기 UI 복사본의 조합 검사도 등록한다. 둘 중 하나만 설치한 프로젝트에는 그 조합을 요구하지 않는다. 덮개와 폼의 서버 오류 초점 브라우저 화면은 `/testing/fixtures/combinations`를 쓴다.
 
 폼만 채택한 소비 검사는 `/testing/unit/form`과 registry가 연결한 의존 검사 입구를 쓴다. 작은 검사 입구와 실제 최소 소비의 기준은 [소비 안내](../../docs/checking.md)를 따른다.
 
 ## 줄 추가·삭제·이동 입력
-
-실제 조립 예: [apps/starter/src/features/shows/ui/form/ShowCreatePage.tsx](../../references/apps/starter/src/features/shows/ui/form/ShowCreatePage.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 연락처·회차처럼 줄을 늘렸다 줄이는 입력은 항상 `Form.Array`(부품 없이 쓰면 `FormArrayField`)로 만든다. 폼 라이브러리의 배열 필드(`mode="array"`)를 직접 조립하지 않는다.
 
@@ -126,8 +118,6 @@ headless는 화면 배치 없이 상태와 연결 함수만 쓰는 방식이다.
 - 프로젝트가 정하는 것: 빈 줄의 값, 최소·최대 줄 수(`minItems`·`maxItems`), 줄의 모양과 문구.
 
 ## 키트 보장
-
-실제 조립 예: [apps/starter/src/features/products/ui/form/ProductEditPage.test.tsx](../../references/apps/starter/src/features/products/ui/form/ProductEditPage.test.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 - 제출 흐름:
   - 제출은 `submit()` 하나다. 이미 떠 있는 blur 오류가 있어도 전체 검증을 다시 돌린다. 검증에 실패하면 저장과 확인창이 0건이고, 화면 순서상 첫 오류 입력으로 focus한다. 칸을 떠날 때의 검증은 TanStack 필드 `validators.onBlur`로 둔다.
@@ -154,8 +144,6 @@ headless는 화면 배치 없이 상태와 연결 함수만 쓰는 방식이다.
 - 실행 수명을 연결한 앱(web-kit-http 「실행 수명」)에서는 방문이 바뀐 경우도 같다. 저장 실패는 앱의 `onFailure`에 `action`으로 먼저 알리고, `'handled'`면 폼에 실패 줄을 만들지 않는다(입력은 그대로, 다시 저장할 수 있다). `FormRejection`은 요청 실패가 아니라 알리지 않는다. 저장 함수의 `step.isCurrent()`는 이 저장이 아직 현재 제출이고 시작한 화면에 있는지 답한다: 사전 조회 뒤에 쓰기를 보내는 저장(아이디 확인 → 등록)은 거짓이면 쓰기를 시작하지 않는다. 방문이 끝났는데(앱이 `leave`를 부른 순간) 같은 폼이 남아 있으면 확인 대기·저장 중·완료 확인·완료 처리 중을 모두 풀고 안내와 서버 칸 오류를 지운다(입력은 둔다). `onSaved` 안의 `step.isCurrent()`도 거짓이 된다. 저장한 로그인이 바뀐 뒤에는 완료 확인을 눌러도 `onSaved`를 실행하지 않는다. 확인창(`useConfirmationState`)도 같다: 방문이 끝나면 열린 확인·진행·완료 기록을 버려 새 방문이 바로 새 확인을 열 수 있다. 완료 처리만 다시 시도하는 보장은 방문이 그대로인 경우(주소를 바꾸기 전에 이동이 실패)의 것이다.
 
 ## 프로젝트 연결
-
-실제 조립 예: [apps/starter/src/features/products/ui/form/ProductEditPage.tsx](../../references/apps/starter/src/features/products/ui/form/ProductEditPage.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 - headless 화면도 패키지 hook·Provider의 확인창·이탈 판정을 표현에 연결한다(이탈은 `useLeave`·`FormGuard`의 판정). registry 폼을 쓰는 화면에는 별도 보호를 겹치지 않는다. `onSaved`가 불리는 순간 화면은 이미 저장 결과를 반영한다(저장 중 입력이 그대로면 clean, 바뀌었으면 입력을 보존한 dirty). 그러므로 저장 직후 이동에서 이탈 보호를 우회하지 않는다.
 - 오류 문구는 `createFormMessages(prefix)`로 번역 참조를 저장하고, 렌더할 때 해소한다.
@@ -185,8 +173,6 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 
 ## 공용 선택과 읽기 쉬운 연결
 
-실제 조립 예: [apps/starter/src/features/products/ui/form/ProductForm.tsx](../../references/apps/starter/src/features/products/ui/form/ProductForm.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
-
 `Form.Choice`는 같은 필드 검증·별표·오류 초점에 registry `choice`의 `Choice`를 연결한다. 공통 선택·검색 수명은 `/choice`의 `useChoiceBinding`이 맡는다. 값은 단일 leaf ID 또는 다중 leaf ID 배열이며 가지는 값이 아니다. 전체 선택지를 `nodes`로 받는 칸은 준비된 선택지 밖 값을 표시·검증·제출에서 뺀다. 폼 원본 값은 유지하고 표시·제출 값을 계산하므로 이 정리만으로 사용자 변경이나 이탈 보호가 생기지 않는다. `Form.Select`와 같은 `status`(`ready`·`loading`·`{ failure }`)·`onRetry`로 선택지 상태를 연결한다. 생략 시 `ready`인 고정 선택지로 간주하므로 서버 선택지는 상태를 반드시 넘긴다. 로딩·실패 중에는 저장값을 유지하며 칸 자리에 불러오는 중·실패·재시도를 보인다. `search` 함수로 일부 결과만 받는 서버 검색 모양은 결과 밖 기존 선택을 유지한다. 다른 칸의 편집과 명시적 폼 참조 검증은 그대로 지킨다. `nodes`에 트리, `appearance`에 vertical/horizontal/dropdown/menu/search를 준다. 단일 menu에서 가지는 탐색만, 다중 트리에서 가지는 전체·일부·없음을 구분한다. `search(text, signal)`을 주면 기본 250ms 입력 정지 후 서버를 조회하며 늦은 이전 결과는 버린다. 서버 코드·선택지 내용·표시 문구는 프로젝트가 제공한다.
 
 저장 요청 변환과 후속 처리는 `saveProduct`처럼 책임을 드러내는 이름 있는 함수로 연결한다. 한 줄 값 선택·인자 전달까지 별도 함수로 만들지는 않는다. 화면 배치, 업무 연결, 반복 UI는 책임에 따라 분리하고 파일 개수를 강제하지 않는다.
@@ -195,13 +181,9 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 
 ## 같은 폼의 두 번째 저장
 
-실제 조립 예: [apps/starter/src/features/form-workflows/ui/FormWorkflowPage.tsx](../../references/apps/starter/src/features/form-workflows/ui/FormWorkflowPage.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
-
 `useSaveForm({ schema, save, secondary: { schema: draftSchema, save: saveDraft, onSaved } })`로 임시저장처럼 다른 검증을 선언하고 `<Form.Submit mode="secondary">임시 저장</Form.Submit>`으로 실행한다. `secondary`의 schema 출력 타입은 해당 save에 추론된다. 두 저장은 제출 잠금·오류 처리·기준선·이탈 보호를 공유한다. 기본 저장의 필수 오류가 남아 있어도 두 번째 검증이 통과하면 저장할 수 있다. 두 번째 동작의 `confirm`·`acknowledge`·`onSaved`는 기본 동작에서 상속하지 않는다. 확인창·완료 확인창 내용은 같은 `<Form>`의 `confirm`·`saved` prop으로 준다(두 저장 중 하나라도 켜면 필수). 실제 필수 칸·요청·성공 뒤 이동은 프로젝트 서버 계약으로 정한다.
 
 ## 폼 안 원본과 참조
-
-실제 조립 예: [apps/starter/src/features/form-workflows/model/form/workflow-form.ts](../../references/apps/starter/src/features/form-workflows/model/form/workflow-form.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 `references`에 `{ source: values => 원본ID목록, fields: values => 참조필드경로목록, onRemove, message }`를 선언한다. 참조 칸 값은 문자열 ID 또는 ID 배열이며 빈 문자열은 참조 없음이다. 원본 이름은 현재 원본에서 표시하고 이름을 ID로 삼지 않는다. 원본 칸 값 자체가 참조 기준이면 그 값을 ID로 선언한다.
 
@@ -215,8 +197,6 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 
 
 ## 조건부로 숨기는 칸
-
-실제 조립 예: [작성 예제의 폼 정의](../../references/apps/starter/src/features/form-workflows/model/form/workflow-form.ts.txt)와 [화면](../../references/apps/starter/src/features/form-workflows/ui/FormWorkflowPage.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 `useSaveForm`의 `conditionalFields(values)`에 현재 칸마다 `{ field, visible, emptyValue }`를 돌려준다. 칸 경로와 빈 값은 입력 타입으로 검사한다. `visible`은 현재 값으로 계산하고, 숨긴 칸도 선언 목록에 유지한다. 배열 줄은 ``values.rows.map((row, index) => ({ field: `rows[${index}].detail`, visible: showDetail(row), emptyValue: '' }))``처럼 줄마다 선언한다. 폼 칸은 이 선언을 읽어 그리지 않으므로 화면에서 조건을 다시 쓰지 않는다. 직접 만든 표현은 `editor.isVisible(name)` 또는 `useFormFieldBinding`의 `visible`을 읽는다. `Form.Section` 접기는 칸·값·검증을 유지하는 별개 동작이다.
 

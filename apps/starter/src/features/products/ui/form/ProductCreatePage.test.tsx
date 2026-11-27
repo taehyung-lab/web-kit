@@ -1,5 +1,5 @@
 // 파일 책임: 상품 등록 화면 검사. 저장 한 번 뒤 onSaved가 받은 새 id의 상세로 이동하는지, 옵션 줄(FormArrayField)의 추가·삭제·Enter를 관찰한다.
-import { mockDb } from '@/mocks/db';
+import { exampleDb as mockDb } from '@/mocks/examples/example-db';
 import { renderApp } from '@/test/app';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';

@@ -44,6 +44,25 @@ function fixture(run) {
     write(join(repo, 'registry.json'), JSON.stringify({ items: [{ name: 'inputs', files: [{ path: sourceFile, target: '~/' + installedFile }] }] }));
     const digest = (file) => createHash('sha256').update(readFileSync(file)).digest('hex');
     write(join(starter, 'registry-installation.json'), JSON.stringify({ version: '0.0.0-test', sourceRef: 'v0.0.0-test', sourceCommit: 'source', componentsHash: digest(join(starter, 'components.json')), items: [{ name: 'inputs', artifactHash: digest(join(repo, 'public/r/inputs.json')), files: [{ source: sourceFile, installed: 'apps/starter/' + installedFile, sourceHash: digest(join(repo, sourceFile)), installedHash: digest(join(starter, installedFile)) }] }] }));
+    // 예시 업무 층: 새 프로젝트에서 빠지는 업무 폴더·route·생성 코드와, 빈 연결로 바뀌는 앱 파일, 명세에서 빠지는 endpoint·schema.
+    write(join(starter, 'src/features/auth/index.ts'), 'export const auth = true;\n');
+    write(join(starter, 'src/features/demo/index.ts'), 'export const demo = true;\n');
+    write(join(starter, 'src/routes/_app/demo/index.tsx'), 'export const Route = 1;\n');
+    write(join(starter, 'src/app/screens.ts'), "export * from '@/features/demo';\n");
+    write(join(starter, 'src/api/generated/models/demo.ts'), 'export type Demo = string;\n');
+    write(join(starter, 'src/api/generated/models/token.ts'), 'export type Token = string;\n');
+    write(join(starter, 'src/api/generated/models/index.ts'), "export * from './demo';\nexport * from './token';\n");
+    write(join(starter, 'openapi/sample.json'), JSON.stringify({
+      tags: [{ name: 'auth' }, { name: 'demo' }],
+      paths: { '/api/auth': { post: { tags: ['auth'], responses: { 200: { $ref: '#/components/schemas/Token' } } } }, '/api/demo': { get: { tags: ['demo'], responses: { 200: { $ref: '#/components/schemas/Demo' } } } } },
+      components: { schemas: { Token: { type: 'string' }, Demo: { type: 'string' } } },
+    }));
+    write(join(repo, 'scripts/starter/without-examples/src/app/screens.ts'), 'export const menu = [];\n');
+    write(join(repo, 'scripts/starter/examples.json'), JSON.stringify({
+      remove: ['src/features/demo', 'src/routes/_app/demo', 'src/api/generated/models/demo.ts'],
+      replace: { 'src/app/screens.ts': 'without-examples/src/app/screens.ts' },
+      openapi: { file: 'openapi/sample.json', tags: ['demo'], schemas: ['Demo'], modelIndex: 'src/api/generated/models/index.ts' },
+    }));
     write(join(starter, '.env.example'), 'KEY=\n');
     write(join(starter, '.env.mock'), 'MODE=mock\n');
     mkdirSync(join(starter, '.agents/skills'), { recursive: true });
@@ -72,7 +91,7 @@ test('새 프로젝트는 고정 버전·스킬 링크·CI를 갖고 로컬 비�
   for (const path of ['.env.local', '.git', 'dist', 'private-note.txt', 'node_modules', '.web-kit-results']) assert.equal(existsSync(join(destination, path)), false, path);
   assert.ok(existsSync(join(destination, '.env.example')));
   assert.match(readFileSync(join(destination, '.agents/agent-workflow-kit.version'), 'utf8'), /^[a-f0-9]{40}\n$/);
-  assert.match(readFileSync(join(destination, 'AGENTS.md'), 'utf8'), /src\/app\/web-kit.ts/);
+  assert.match(readFileSync(join(destination, 'AGENTS.md'), 'utf8'), /src\/runtime\/web-kit.ts/);
   assert.match(readFileSync(join(destination, '.github/workflows/check.yml'), 'utf8'), /pnpm check/);
   assert.doesNotMatch(readFileSync(join(destination, 'package.json'), 'utf8'), /strict-fingerprints/);
   assert.match(readFileSync(join(starter, 'package.json'), 'utf8'), /strict-fingerprints/);
@@ -139,5 +158,37 @@ test('설치 항목을 비워 생성 검사를 피할 수 없다', () => fixture
   record.items = [];
   write(path, JSON.stringify(record));
   assert.equal(create().status, 1);
+  assert.equal(existsSync(destination), false);
+}));
+
+test('새 프로젝트는 예시 업무 없이 앱·인증 기반만 갖고, 검사 앱의 예시는 그대로 둔다', () => fixture(({ destination, create, starter }) => {
+  const result = create();
+  assert.equal(result.status, 0, result.stderr);
+  for (const path of ['src/features/demo', 'src/routes/_app/demo', 'src/api/generated/models/demo.ts']) assert.equal(existsSync(join(destination, path)), false, path);
+  assert.ok(existsSync(join(destination, 'src/features/auth/index.ts')));
+  assert.equal(readFileSync(join(destination, 'src/app/screens.ts'), 'utf8'), 'export const menu = [];\n');
+  assert.equal(readFileSync(join(destination, 'src/api/generated/models/index.ts'), 'utf8'), "export * from './token';\n");
+  const spec = JSON.parse(readFileSync(join(destination, 'openapi/sample.json'), 'utf8'));
+  assert.deepEqual(Object.keys(spec.paths), ['/api/auth']);
+  assert.deepEqual(Object.keys(spec.components.schemas), ['Token']);
+  assert.deepEqual(spec.tags, [{ name: 'auth' }]);
+  assert.ok(existsSync(join(starter, 'src/features/demo/index.ts')), '검사 앱의 예시 업무는 남는다');
+  assert.equal(readFileSync(join(starter, 'src/app/screens.ts'), 'utf8'), "export * from '@/features/demo';\n");
+}));
+
+for (const [name, change, message] of [
+  ['목록에 있는 경로가 starter에 없으면', (manifest) => manifest.remove.push('src/features/gone'), /\(없는 경로\): src\/features\/gone/],
+  ['명세에 없는 schema를 빼라고 하면', (manifest) => manifest.openapi.schemas.push('Gone'), /\(없는 schema\): Gone/],
+  ['남은 endpoint가 뺀 schema를 가리키면', (manifest) => manifest.openapi.schemas.push('Token'), /끊긴 참조가 있습니다: Token/],
+]) test('예시 업무 목록이 starter와 어긋나면 새 프로젝트를 만들지 않는다: ' + name, () => fixture(({ repo, destination, write, git }) => {
+  const path = join(repo, 'scripts/starter/examples.json');
+  const manifest = JSON.parse(readFileSync(path, 'utf8'));
+  change(manifest);
+  write(path, JSON.stringify(manifest));
+  git(repo, 'add', '.');
+  git(repo, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-m', 'manifest');
+  const result = spawnSync(process.execPath, [join(repo, 'scripts/create-starter.mjs'), destination, '--workflow-kit', join(dirname(repo), 'workflow')], { cwd: repo, encoding: 'utf8' });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, message);
   assert.equal(existsSync(destination), false);
 }));

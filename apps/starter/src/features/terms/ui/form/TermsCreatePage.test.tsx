@@ -1,5 +1,5 @@
 // 파일 책임: 약관 등록 예시 검사. 필수 검증 → 저장 확인 → 저장 한 번 → 저장 완료 확인 → 상세, 서버 필드 오류 위치를 관찰한다.
-import { mockDb } from '@/mocks/db';
+import { exampleDb as mockDb } from '@/mocks/examples/example-db';
 import { renderApp } from '@/test/app';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';

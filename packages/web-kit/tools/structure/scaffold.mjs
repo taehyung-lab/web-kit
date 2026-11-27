@@ -1,8 +1,9 @@
 // 파일 책임: 새 화면의 구조 골격(ui·model·api·index·route)을 web-kit-structure 자리에 만든다.
 // 완료처럼 보이는 것을 만들지 않는다: 서버 endpoint·필드·화면 배치·저장 뒤 목적지는 선언되지 않은 TODO_web_kit_new_* 이름으로 남겨
 // 채우기 전에는 typecheck가 실패한다. 성공을 지어낸 API, 건너뛴 검사, 통과용 검사 파일은 만들지 않는다.
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { loadStructureConfig, VAGUE_NAMES } from './config.mjs';
 import { TODO_MARKER } from './markers.mjs';
@@ -70,292 +71,230 @@ function routeOf(kind, url, group) {
   const dir = fileName ? segments.slice(0, -1) : segments;
   const file = [...dir, `${fileName ?? 'index'}.tsx`].join('/');
   const id = `/${group}/${segments.join('/')}${fileName ? '' : '/'}`;
-  return { file, id, mode: kind === 'form' ? (last === 'edit' ? 'edit' : 'create') : kind, param: params.at(-1) };
+  const mode = kind === 'form' ? (last === 'edit' ? 'edit' : 'create') : kind;
+  // 목록 주소: 목록은 자기 주소, 상세(/$id)·등록(/new)은 마지막 조각을, 수정(/$id/edit)은 마지막 두 조각을 뺀 주소다.
+  const collection = segments.slice(0, segments.length - { list: 0, detail: 1, create: 1, edit: 2 }[mode]);
+  return { file, id, mode, param: params.at(-1), collectionUrl: collection.length > 0 ? '/' + collection.join('/') : null };
 }
 
-/** 화면 종류별 파일 목록. shared는 같은 feature의 다른 화면과 함께 쓰는 파일이라 이미 있으면 그대로 둔다. */
-function plan({ config, feature, entity, kind, url, group }) {
-  const A = config.alias;
-  const F = `${config.src}/features/${feature}`;
-  const E = pascal(entity);
-  const e = camel(entity);
-  const route = routeOf(kind, url, group);
-  const id = route.param ?? 'id';
-  const work = ['create', 'edit'].includes(route.mode) ? 'form' : route.mode;
-  const head = (text) => `// 파일 책임: ${text} web-kit-new가 만든 골격이다.\n`;
-  const model = {
-    path: `${F}/model/${entity}.ts`, shared: true, content: `${head(`${E} 화면이 쓰는 앱 모델(서버 DTO와 분리).`)}
-/** TODO(web-kit-new): 서버 명세에서 화면이 쓰는 값만 옮긴다. 채우기 전에는 typecheck가 실패한다. */
-export interface ${E} {
-  readonly id: string;
-  readonly fields: ${TODO_MARKER}model_fields;
-}
-` };
-  const detailQuery = {
-    path: `${F}/api/${entity}-detail-query.ts`, shared: true, content: `${head(`${E} 단건 조회 query 정의.`)}import { queryOptions } from '@tanstack/react-query';
-import type { ${E} } from '${A}features/${feature}/model/${entity}';
+const SCREENS = ['list', 'detail', 'create', 'edit'];
+const TOKENS = ['feature', 'featureCamel', 'entity', 'Entity', 'entityCamel', 'ENTITY', 'id', 'alias', 'featureDir', 'group', 'routesDir', 'routeFile', 'routeId', 'url', 'collectionUrl', 'recordUrl', 'TODO'];
+const DEFAULT_TEMPLATES = fileURLToPath(new URL('./screen-templates/', import.meta.url));
 
-/** 상세·수정 원본이 같은 query(같은 캐시)를 쓴다. */
-export function ${e}DetailQuery(id: string) {
-  return queryOptions({
-    queryKey: ['${feature}', 'detail', id] as const,
-    // TODO(web-kit-new): 생성 endpoint를 호출하고 DTO를 앱 모델로 바꾼다. 응답을 지어내지 않는다. 채우기 전에는 typecheck가 실패한다.
-    queryFn: ({ signal }): Promise<${E}> => ${TODO_MARKER}detail_endpoint(id, signal),
+/**
+ * {{이름}} 자리를 값으로 바꾼다. 모르는 이름은 골격 오류다(빈 값으로 넘기지 않는다).
+ * 이름은 영문자로 시작하는 한 단어라서 JSX의 객체 값 `{{ a: 1 }}`은 자리로 읽지 않는다.
+ */
+function render(text, values, where) {
+  return text.replace(/\{\{([A-Za-z][A-Za-z0-9]*)\}\}/g, (_, name) => {
+    if (!Object.hasOwn(values, name)) throw new Error(`${where}: 알 수 없는 골격 자리 {{${name}}} (쓸 수 있는 것: ${TOKENS.join('·')})`);
+    return values[name];
   });
 }
-` };
-  const form = {
-    path: `${F}/model/form/${entity}-form.ts`, shared: true, content: `${head(`${E} 폼의 값 모양·검증(순수).`)}import { z } from 'zod';
 
-// TODO(web-kit-new): 서버 명세의 필드·제약을 옮긴다(필수 표시도 이 schema가 정한다). 채우기 전에는 typecheck가 실패한다.
-export const ${e}FormSchema = z.object(${TODO_MARKER}form_fields);
-export type ${E}FormInput = z.input<typeof ${e}FormSchema>;
-export type ${E}FormOutput = z.output<typeof ${e}FormSchema>;
-` };
-  const files = [];
-  const routeHead = (text) => `${head(text)}import { createFileRoute } from '@tanstack/react-router';\n`;
-  if (route.mode === 'list') {
-    files.push(model, {
-      path: `${F}/api/${entity}-list-query.ts`, content: `${head(`${E} 목록 조회 query 정의(요청·응답 변환).`)}import type { ListPage } from '@boosterlab/web-kit/list';
-import { queryOptions } from '@tanstack/react-query';
-import type { ${E} } from '${A}features/${feature}/model/${entity}';
-
-/** 목록 요청(서버 계약). TODO(web-kit-new): 서버 명세의 요청 이름·형식으로 바꾼다. */
-export interface ${E}ListParams {
-  readonly page: number;
+/**
+ * 골격 폴더(screens.json + 템플릿 파일)를 읽는다. 프로젝트가 screenTemplates로 넘긴 폴더가 있으면 그것을, 없으면 키트 기본 골격을 쓴다.
+ * screens.json: { "<list|detail|create|edit>": { files: [{ path, template, shared? }], exports?: [줄], next?: [줄] } }
+ */
+function loadTemplates(config) {
+  const dir = config.screenTemplates === undefined ? DEFAULT_TEMPLATES : join(config.root, config.screenTemplates);
+  const where = config.screenTemplates === undefined ? '키트 기본 골격' : config.screenTemplates;
+  const manifest = JSON.parse(readFileSync(join(dir, 'screens.json'), 'utf8'));
+  for (const key of Object.keys(manifest)) if (!SCREENS.includes(key)) throw new Error(`${where}/screens.json: 알 수 없는 화면 종류 ${key} (${SCREENS.join('·')})`);
+  return { dir, where, manifest };
 }
 
-export function ${e}ListQuery(params: ${E}ListParams) {
-  return queryOptions({
-    queryKey: ['${feature}', 'list', params] as const,
-    // TODO(web-kit-new): 생성 endpoint를 호출하고 응답을 { rows, total }로 바꾼다. 응답을 지어내지 않는다. 채우기 전에는 typecheck가 실패한다.
-    queryFn: ({ signal }): Promise<ListPage<${E}>> => ${TODO_MARKER}list_endpoint(params, signal),
+/** 같은 범위에서 이름이 겹친다는 TypeScript 진단: 중복 식별자·재선언·중복 함수 구현·import와 지역 선언 충돌. */
+const DUPLICATE_NAME_CODES = new Set([2300, 2451, 2393, 2440]);
+
+/** route 파일이 실제 import 문으로 그 업무 입구를 가져오는지(따옴표·주석·문자열과 구별해 TypeScript로 읽는다). */
+function importsFeature(text, specifier) {
+  const ts = require('typescript');
+  const source = ts.createSourceFile('route.tsx', text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  return source.statements.some((statement) => ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier) && statement.moduleSpecifier.text === specifier);
+}
+
+/**
+ * route 파일의 주소와 역할. 묶음 폴더(_이름)와 `index`는 주소에 나타나지 않는다.
+ * `x/index.tsx`는 화면, `x/route.tsx`는 그 주소의 진입 판정·골격, `x.tsx`는 둘 다를 맡을 수 있다. 검사 파일·`__root`·`$.tsx`(없는 주소)는 뺀다.
+ */
+function routeAddress(relativePath) {
+  const parts = relativePath.split('/');
+  const last = parts.pop();
+  if (!last.endsWith('.tsx') || /\.(?:test|spec)\./.test(last) || last.startsWith('__') || last === '$.tsx') return null;
+  const kind = last === 'index.tsx' ? 'screen' : last === 'route.tsx' ? 'layout' : 'both';
+  const segments = [...parts, ...(kind === 'both' ? [last.slice(0, -4)] : [])].filter((part) => !part.startsWith('_'));
+  return { address: '/' + segments.join('/'), kind };
+}
+
+/** 프로젝트 routes 아래 이미 있는 route 파일(프로젝트 상대 경로). */
+function listRouteFiles(config) {
+  const dir = join(config.root, config.routes);
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => relative(config.root, join(entry.parentPath, entry.name)).split('\\').join('/'));
+}
+
+/** 만들 route 파일과 같은 주소·겹치는 역할을 이미 맡은 다른 route 파일. 없으면 undefined. */
+function sameAddressRoute(routeFiles, routesRoot, path, full) {
+  const mine = routeAddress(path.slice(routesRoot.length + 1));
+  if (mine === null) return undefined;
+  return routeFiles.find((other) => {
+    if (other === path || !other.startsWith(routesRoot + '/')) return false;
+    const theirs = routeAddress(other.slice(routesRoot.length + 1));
+    return theirs !== null && theirs.address === mine.address && (theirs.kind === mine.kind || theirs.kind === 'both' || mine.kind === 'both') && other !== full;
   });
 }
-` }, {
-      path: `${F}/model/list/${entity}-list-search.ts`, content: `${head(`${E} 목록 URL 검색 선언과 확정 검색 → 요청 변환.`)}import { defineSearch, type FullSearch } from '@boosterlab/web-kit/search';
-import { z } from 'zod';
-import type { ${E}ListParams } from '${A}features/${feature}/api/${entity}-list-query';
 
-// TODO(web-kit-new): 제품이 정한 검색 필드·기본값·검색을 눌러야 조회(gated) 여부를 더한다(web-kit-list 스킬).
-export const ${e}ListSearch = defineSearch({
-  fields: {
-    page: { schema: z.number().int().min(1), default: 1 },
-  },
-});
-
-export type ${E}ListSearch = FullSearch<typeof ${e}ListSearch.fields>;
-
-/** 확정 검색 → 서버 요청. */
-export function to${E}ListParams(search: ${E}ListSearch): ${E}ListParams {
-  return { page: search.page - 1 };
-}
-` }, {
-      path: `${F}/model/${work}/use-${entity}-list.ts`, content: `${head(`${E} 목록 흐름. URL 검색·조회를 조립하고 화면이 쓸 목록 상태를 돌려준다.`)}import { useList } from '@boosterlab/web-kit/list';
-import type { UrlSearch } from '@boosterlab/web-kit/search';
-import { ${e}ListQuery } from '${A}features/${feature}/api/${entity}-list-query';
-import { ${e}ListSearch, to${E}ListParams } from '${A}features/${feature}/model/list/${entity}-list-search';
-
-/** urlSearch(주소 검색값)·navigate는 route가 URL에서 읽어 넘긴다. */
-export function use${E}List({
-  urlSearch,
-  navigate,
-}: {
-  readonly urlSearch: UrlSearch;
-  readonly navigate: (next: UrlSearch, options: { readonly replace: boolean }) => void;
-}) {
-  const list = useList({
-    definition: ${e}ListSearch,
-    urlSearch,
-    navigate,
-    progress: 'page',
-    query: (full) => ${e}ListQuery(to${E}ListParams(full)),
-    rowId: (row) => row.id,
-  });
-  return { list };
-}
-` }, {
-      path: `${F}/ui/${work}/${E}ListPage.tsx`, content: `${head(`${E} 목록 화면. 목록 상태는 목록 flow가 조립한다.`)}import type { UrlSearch } from '@boosterlab/web-kit/search';
-import { use${E}List } from '${A}features/${feature}/model/${work}/use-${entity}-list';
-
-export function ${E}ListPage({
-  urlSearch,
-  navigate,
-}: {
-  readonly urlSearch: UrlSearch;
-  readonly navigate: (next: UrlSearch, options: { readonly replace: boolean }) => void;
-}) {
-  const { list } = use${E}List({ urlSearch, navigate });
-  // TODO(web-kit-new): 제목·필터·결과 표·페이지 이동을 registry list로 배치한다(web-kit-list 「registry 표시」). 채우기 전에는 typecheck가 실패한다.
-  return <${TODO_MARKER}list_layout list={list} />;
-}
-` }, {
-      path: `${config.routes}/${group}/${route.file}`, content: `${routeHead(`${url} 목록 경로. URL 검색을 검증하고 화면에 넘긴다.`)}import { ${E}ListPage } from '${A}features/${feature}';
-import { ${e}ListSearch } from '${A}features/${feature}';
-
-export const Route = createFileRoute('${route.id}')({
-  validateSearch: ${e}ListSearch.validateSearch,
-  beforeLoad: ${e}ListSearch.beforeLoad,
-  component: ${E}ListRoute,
-});
-
-function ${E}ListRoute() {
-  const navigate = Route.useNavigate();
-  return <${E}ListPage urlSearch={Route.useSearch()} navigate={(next, { replace }) => void navigate({ search: next, replace })} />;
-}
-` });
-  } else if (route.mode === 'detail') {
-    files.push(model, detailQuery, {
-      path: `${F}/model/${work}/use-${entity}-detail.ts`, content: `${head(`${E} 상세 흐름. 단건 상태 판정(useRecord)을 이 한 곳에서 한다.`)}import { useRecord } from '@boosterlab/web-kit/record';
-import { ${e}DetailQuery } from '${A}features/${feature}/api/${entity}-detail-query';
-
-export function use${E}Detail(${id}: string) {
-  return useRecord(${e}DetailQuery(${id}), ${id}, { progress: 'page' });
-}
-` }, {
-      path: `${F}/ui/${work}/${E}DetailPage.tsx`, content: `${head(`${E} 상세 화면. 단건 상태는 상세 flow가 판정한다.`)}import { use${E}Detail } from '${A}features/${feature}/model/${work}/use-${entity}-detail';
-
-export function ${E}DetailPage({ ${id} }: { readonly ${id}: string }) {
-  const state = use${E}Detail(${id});
-  // TODO(web-kit-new): registry record의 Detail로 대기·없음·실패·내용을 그린다(web-kit-record). 채우기 전에는 typecheck가 실패한다.
-  return <${TODO_MARKER}detail_layout state={state} />;
-}
-` }, {
-      path: `${config.routes}/${group}/${route.file}`, content: `${routeHead(`${url} 상세 경로. URL의 식별자만 화면에 넘긴다.`)}import { ${E}DetailPage } from '${A}features/${feature}';
-
-export const Route = createFileRoute('${route.id}')({
-  component: ${E}DetailRoute,
-});
-
-function ${E}DetailRoute() {
-  const { ${id} } = Route.useParams();
-  return <${E}DetailPage ${id}={${id}} />;
-}
-` });
-  } else if (route.mode === 'create') {
-    files.push(form, {
-      path: `${F}/api/${entity}-create.ts`, content: `${head(`${E} 등록 요청.`)}import { useMutation } from '@tanstack/react-query';
-import type { ${E}FormOutput } from '${A}features/${feature}/model/form/${entity}-form';
-
-export function useCreate${E}() {
-  return useMutation({
-    // TODO(web-kit-new): 폼 결과를 서버 요청으로 바꿔 생성 endpoint를 호출하고 새 대상의 id를 돌려준다. 무효화할 목록 key는 meta.invalidates로 선언한다(web-kit-http). 채우기 전에는 typecheck가 실패한다.
-    mutationFn: (output: ${E}FormOutput): Promise<{ readonly id: string }> => ${TODO_MARKER}create_endpoint(output),
-  });
-}
-` }, {
-      path: `${F}/model/${work}/use-${entity}-create.ts`, content: `${head(`${E} 등록 흐름. 저장은 요청 결과를 돌려주고, 완료(onSaved)에서 다음 화면으로 간다.`)}import { useSaveForm } from '@boosterlab/web-kit/form';
-import { useCreate${E} } from '${A}features/${feature}/api/${entity}-create';
-import { ${e}FormSchema, type ${E}FormInput, type ${E}FormOutput } from '${A}features/${feature}/model/form/${entity}-form';
-
-// TODO(web-kit-new): 등록 화면의 첫 값을 제품 결정대로 정해 model의 폼 파일에 둔다. 채우기 전에는 typecheck가 실패한다.
-const SOURCE: { readonly id: string; readonly values: ${E}FormInput } = { id: 'new', values: ${TODO_MARKER}form_empty_values };
-
-export function use${E}Create() {
-  const create = useCreate${E}();
-  const editor = useSaveForm({
-    schema: ${e}FormSchema,
-    source: SOURCE,
-    progress: 'create',
-    save: (output: ${E}FormOutput) => create.mutateAsync(output),
-    // TODO(web-kit-new): 저장 뒤 갈 곳(제품 결정)으로 이동한다(useNavigate). 저장(save)과 완료(onSaved)를 섞지 않는다. 채우기 전에는 typecheck가 실패한다.
-    onSaved: ${TODO_MARKER}after_save,
-  });
-  return { editor };
-}
-` }, {
-      path: `${F}/ui/${work}/${E}CreatePage.tsx`, content: `${head(`${E} 등록 화면. 저장 흐름은 등록 flow가 맡는다.`)}import { use${E}Create } from '${A}features/${feature}/model/${work}/use-${entity}-create';
-
-export function ${E}CreatePage() {
-  const { editor } = use${E}Create();
-  // TODO(web-kit-new): registry form/form의 Form·칸으로 필드를 배치한다(web-kit-form). 채우기 전에는 typecheck가 실패한다.
-  return <${TODO_MARKER}form_layout editor={editor} />;
-}
-` }, {
-      path: `${config.routes}/${group}/${route.file}`, content: `${routeHead(`${url} 등록 경로.`)}import { ${E}CreatePage } from '${A}features/${feature}';
-
-export const Route = createFileRoute('${route.id}')({
-  component: ${E}CreatePage,
-});
-` });
-  } else {
-    files.push(model, detailQuery, form, {
-      path: `${F}/api/${entity}-update.ts`, content: `${head(`${E} 수정 요청.`)}import { useMutation } from '@tanstack/react-query';
-import type { ${E}FormOutput } from '${A}features/${feature}/model/form/${entity}-form';
-
-export function useUpdate${E}(id: string) {
-  return useMutation({
-    // TODO(web-kit-new): 폼 결과를 서버 요청으로 바꿔 수정 endpoint를 호출한다. 무효화할 key는 meta.invalidates로 선언한다(web-kit-http). 채우기 전에는 typecheck가 실패한다.
-    mutationFn: (output: ${E}FormOutput): Promise<void> => ${TODO_MARKER}update_endpoint(id, output),
-  });
-}
-` }, {
-      path: `${F}/model/${work}/use-${entity}-edit.ts`, content: `${head(`${E} 수정 흐름. 원본 단건 상태와, 준비된 원본으로 만든 저장 폼을 나눠 돌려준다.`)}import { useSaveForm } from '@boosterlab/web-kit/form';
-import { useRecord } from '@boosterlab/web-kit/record';
-import { ${e}DetailQuery } from '${A}features/${feature}/api/${entity}-detail-query';
-import { useUpdate${E} } from '${A}features/${feature}/api/${entity}-update';
-import { ${e}FormSchema, type ${E}FormOutput } from '${A}features/${feature}/model/form/${entity}-form';
-import type { ${E} } from '${A}features/${feature}/model/${entity}';
-
-/** 수정 원본의 단건 상태. */
-export function use${E}EditSource(${id}: string) {
-  return useRecord(${e}DetailQuery(${id}), ${id}, { progress: 'page' });
-}
-
-/** 준비된 원본의 수정 폼. */
-export function use${E}Edit(record: ${E}) {
-  const update = useUpdate${E}(record.id);
-  const editor = useSaveForm({
-    schema: ${e}FormSchema,
-    // TODO(web-kit-new): 원본 → 폼 값 변환을 model의 폼 파일에 두고 여기서 쓴다. 채우기 전에는 typecheck가 실패한다.
-    source: { id: record.id, values: ${TODO_MARKER}form_values(record) },
-    progress: 'edit',
-    save: async (output: ${E}FormOutput) => {
-      await update.mutateAsync(output);
-    },
-    // TODO(web-kit-new): 저장 뒤 갈 곳(제품 결정)으로 이동한다. 채우기 전에는 typecheck가 실패한다.
-    onSaved: ${TODO_MARKER}after_save,
-  });
-  return { editor };
-}
-` }, {
-      path: `${F}/ui/${work}/${E}EditPage.tsx`, content: `${head(`${E} 수정 화면. 원본 조회·저장은 수정 flow가 맡는다.`)}import { use${E}Edit, use${E}EditSource } from '${A}features/${feature}/model/${work}/use-${entity}-edit';
-import type { ${E} } from '${A}features/${feature}/model/${entity}';
-
-export function ${E}EditPage({ ${id} }: { readonly ${id}: string }) {
-  const state = use${E}EditSource(${id});
-  // TODO(web-kit-new): registry record의 Detail로 원본 상태를 그리고 준비되면 수정 폼을 그린다(web-kit-record·web-kit-form). 채우기 전에는 typecheck가 실패한다.
-  return <${TODO_MARKER}edit_layout state={state} renderForm={(record: ${E}) => <${E}EditForm record={record} />} />;
-}
-
-function ${E}EditForm({ record }: { readonly record: ${E} }) {
-  const { editor } = use${E}Edit(record);
-  // TODO(web-kit-new): registry form/form의 Form·칸으로 필드를 배치한다(web-kit-form). 채우기 전에는 typecheck가 실패한다.
-  return <${TODO_MARKER}form_layout editor={editor} />;
-}
-` }, {
-      path: `${config.routes}/${group}/${route.file}`, content: `${routeHead(`${url} 수정 경로. URL의 식별자만 화면에 넘긴다.`)}import { ${E}EditPage } from '${A}features/${feature}';
-
-export const Route = createFileRoute('${route.id}')({
-  component: ${E}EditRoute,
-});
-
-function ${E}EditRoute() {
-  const { ${id} } = Route.useParams();
-  return <${E}EditPage ${id}={${id}} />;
-}
-` });
+/** 파일 맨 위에서 같은 공간(값·타입)에 두 번 선언된 이름. import 이름도 센다. */
+function duplicateTopLevelNames(ts, file) {
+  const seen = { value: new Set(), type: new Set() };
+  const duplicates = [];
+  const add = (space, identifier) => {
+    if (!identifier || !ts.isIdentifier(identifier)) return;
+    if (seen[space].has(identifier.text)) duplicates.push(identifier.text);
+    seen[space].add(identifier.text);
+  };
+  for (const statement of file.statements) {
+    if (ts.isImportDeclaration(statement) && statement.importClause) {
+      const clause = statement.importClause;
+      const spaces = clause.isTypeOnly ? ['type'] : ['value', 'type'];
+      if (clause.name) for (const space of spaces) add(space, clause.name);
+      const bindings = clause.namedBindings;
+      if (bindings && ts.isNamespaceImport(bindings)) for (const space of spaces) add(space, bindings.name);
+      if (bindings && ts.isNamedImports(bindings))
+        for (const element of bindings.elements) for (const space of element.isTypeOnly ? ['type'] : spaces) add(space, element.name);
+    } else if (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement) || ts.isEnumDeclaration(statement)) add('value', statement.name);
+    else if (ts.isVariableStatement(statement)) for (const declaration of statement.declarationList.declarations) add('value', declaration.name);
+    else if (ts.isInterfaceDeclaration(statement) || ts.isTypeAliasDeclaration(statement)) add('type', statement.name);
   }
-  const page = `${E}${{ list: 'List', detail: 'Detail', create: 'Create', edit: 'Edit' }[route.mode]}Page`;
-  const exports = [`export { ${page} } from './ui/${work}/${page}';`];
-  if (route.mode === 'list') exports.push(`export { ${e}ListSearch } from './model/list/${entity}-list-search';`);
-  files.push({ path: `${F}/index.ts`, exports });
-  return files;
+  return duplicates;
+}
+
+/**
+ * 채울 자리(TODO) 말고는 그대로 읽히는 골격인지, 쓰기 전에 렌더한 모든 .ts·.tsx를 TypeScript로 읽어 확인한다.
+ * 업무·이름·주소 변수 조합에 따라 골격의 이름끼리 겹치면(예: 업무 이름이 골격의 함수 이름과 같아짐) 문법 오류나 중복 선언이 생긴다.
+ * 그런 조합은 채워도 빌드되지 않으므로 아무것도 쓰지 않고 이름을 바꾸라고 알린다. import 대상은 읽지 않는다(TODO 이름 없음은 의도한 실패다).
+ */
+function checkRenderedSources(files, where) {
+  const ts = require('typescript');
+  const sources = new Map(files.filter((file) => /\.tsx?$/.test(file.path)).map((file) => ['/' + file.path, file.content]));
+  if (sources.size === 0) return;
+  const options = { noEmit: true, noResolve: true, noLib: true, types: [], jsx: ts.JsxEmit.Preserve, target: ts.ScriptTarget.Latest, allowJs: false };
+  const host = ts.createCompilerHost(options);
+  host.getSourceFile = (name, version) => sources.has(name)
+    ? ts.createSourceFile(name, sources.get(name), version, true, name.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS)
+    : undefined;
+  host.fileExists = (name) => sources.has(name);
+  host.readFile = (name) => sources.get(name);
+  const program = ts.createProgram([...sources.keys()], options, host);
+  const problems = [];
+  for (const name of sources.keys()) {
+    const file = program.getSourceFile(name);
+    const found = [...program.getSyntacticDiagnostics(file), ...program.getSemanticDiagnostics(file).filter((item) => DUPLICATE_NAME_CODES.has(item.code))];
+    for (const item of found) problems.push(`${name.slice(1)}: ${ts.flattenDiagnosticMessageText(item.messageText, ' ')}`);
+    // import 대상을 읽지 않으면 TypeScript는 "import와 지역 선언 충돌"을 알리지 않는다. 맨 위 이름은 직접 센다(값 이름·타입 이름 따로).
+    for (const duplicate of duplicateTopLevelNames(ts, file)) problems.push(`${name.slice(1)}: ${duplicate}이(가) 맨 위에서 두 번 선언된다`);
+  }
+  if (problems.length > 0)
+    throw new Error(`${where}: 이 이름 조합으로 만든 골격은 채워도 읽히지 않습니다(이름이 겹치거나 문법 오류). --entity·--feature 이름을 바꾸세요.\n  ${problems.join('\n  ')}`);
+}
+
+/**
+ * 이 목록의 상세 주소 변수 이름. 네 화면이 같은 이름으로 같은 상세 주소를 가리켜야 한다.
+ * 목록 주소 폴더에 이미 `$<변수>` 폴더(상세 route)가 있으면 그 이름, 없으면 상세·수정은 요청 URL의 변수, 목록·등록은 `<entity>Id`다.
+ * 상세·수정이 이미 있는 다른 상세(다른 업무일 수 있다)와 다른 변수를 쓰거나, 이미 만든 목록·등록이 다른 상세 주소를 가리키면 충돌이다.
+ */
+function recordParam({ config, routesDir, route, feature, entity }) {
+  const fallback = `${camel(entity)}Id`;
+  if (route.collectionUrl === null) return route.param ?? fallback;
+  const collectionDir = join(config.root, routesDir + route.collectionUrl);
+  const existing = existsSync(collectionDir) ? readdirSync(collectionDir).filter((name) => name.startsWith('$') && name !== '$.tsx').map((name) => name.slice(1)) : [];
+  if (existing.length > 1) throw new Error(`${routesDir}${route.collectionUrl}에 상세 주소 폴더가 여럿 있습니다(${existing.map((name) => '$' + name).join('·')}). 한 목록의 상세는 하나다`);
+  const wanted = route.mode === 'detail' || route.mode === 'edit' ? route.param : existing[0] ?? fallback;
+  if (existing.length === 1 && existing[0] !== wanted)
+    throw new Error(`${routesDir}${route.collectionUrl}의 상세 주소는 이미 $${existing[0]}입니다(요청 $${wanted}). 같은 주소에 다른 상세를 두지 않는다`);
+  // 같은 목록의 목록·등록 route가 이미 다른 상세 주소를 가리키면, 상세를 그 이름으로 만들어야 이동이 맞는다.
+  for (const file of ['index.tsx', 'new.tsx']) {
+    const path = join(collectionDir, file);
+    if (!existsSync(path)) continue;
+    const pointed = readFileSync(path, 'utf8').match(new RegExp(`'${route.collectionUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/\\$([A-Za-z][A-Za-z0-9]*)'`))?.[1];
+    if (pointed !== undefined && pointed !== wanted)
+      throw new Error(`${routesDir}${route.collectionUrl}/${file}이 상세 주소 $${pointed}를 가리킵니다(요청 $${wanted}). 상세·수정 주소를 $${pointed}로 맞추세요`);
+  }
+  return wanted;
+}
+
+/** 화면 종류별 파일 목록을 골격 폴더에서 만든다. shared는 같은 feature의 다른 화면과 함께 쓰는 파일이라 이미 있으면 그대로 둔다. */
+function plan({ config, feature, entity, kind, url, group }) {
+  const route = routeOf(kind, url, group);
+  const { dir, where, manifest } = loadTemplates(config);
+  const screen = manifest[route.mode];
+  if (screen === undefined) throw new Error(`${where}/screens.json에 ${route.mode} 화면 골격이 없습니다`);
+  const featureDir = `${config.src}/features/${feature}`;
+  const routesDir = `${config.routes}/${group}`;
+  const id = recordParam({ config, routesDir, route, feature, entity });
+  const values = {
+    feature, featureCamel: camel(feature), entity, Entity: pascal(entity), entityCamel: camel(entity), ENTITY: entity.toUpperCase().replaceAll('-', '_'), id, alias: config.alias,
+    featureDir, group, routesDir, routeFile: route.file, routeId: route.id, url,
+    collectionUrl: route.collectionUrl ?? '', recordUrl: `${route.collectionUrl ?? ''}/$${id}`, TODO: TODO_MARKER,
+  };
+  const routePath = `${routesDir}/${route.file}`;
+  // 요청한 URL이 쓰는 route 파일은 둘뿐이다: 이 화면의 route 파일과, 목록 주소 묶음의 route.tsx(같은 목록의 화면들이 함께 쓰는 진입 판정).
+  const collectionRoute = route.collectionUrl === null ? null : `${routesDir}${route.collectionUrl}/route.tsx`;
+  const files = (screen.files ?? []).map((entry, index) => {
+    const at = `${where}/screens.json ${route.mode}.files[${index}]`;
+    if (typeof entry?.path !== 'string' || typeof entry?.template !== 'string') throw new Error(`${at}: path와 template을 적으세요`);
+    const path = render(entry.path, values, at);
+    // 문자열 앞부분만 보지 않도록 경로 조각을 먼저 검사한다. `..`·`.`·빈 조각·절대 경로는 업무 폴더 밖을 가리킬 수 있다.
+    if (path.startsWith('/') || path.split('/').some((part) => part === '' || part === '.' || part === '..'))
+      throw new Error(`${at}: ${path}는 상대 조각(.·..) 없이 프로젝트 안 경로여야 합니다`);
+    // 골격은 요청한 업무 폴더와 요청한 URL의 route 파일에만 쓴다. 다른 업무·다른 주소의 route는 건드리지 않는다.
+    // 목록 묶음 route.tsx는 같은 목록의 여러 화면이 함께 쓰므로 shared(이미 있으면 그대로 둔다)로만 받는다.
+    // 이 화면의 route는 shared일 수 없다: 이미 다른 화면이 그 주소를 쓰면 재사용이 아니라 충돌이다.
+    if (path === routePath && entry.shared === true) throw new Error(`${at}: 이 화면의 route 파일(${routePath})은 shared로 둘 수 없습니다(같은 주소의 다른 화면은 충돌이다)`);
+    const allowedRoute = path === routePath || (path === collectionRoute && entry.shared === true);
+    if (!allowedRoute && !path.startsWith(featureDir + '/'))
+      throw new Error(`${at}: ${path}는 ${featureDir}/ 안이거나 ${routePath}${collectionRoute ? `·${collectionRoute}(shared)` : ''}여야 합니다`);
+    if (/\.(?:test|spec)\.[cm]?[jt]sx?$/.test(path)) throw new Error(`${at}: 검사 파일은 골격으로 만들지 않습니다: ${path}`);
+    if (path === `${featureDir}/index.ts`) throw new Error(`${at}: 공개 입구(index.ts)는 exports로 적습니다`);
+    const content = render(readFileSync(join(dir, entry.template), 'utf8'), values, `${where}/${entry.template}`);
+    if (path === routePath && !content.includes(`'${route.id}'`)) throw new Error(`${where}/${entry.template}: route 파일에 이 화면의 route id {{routeId}}가 없습니다`);
+    if (path === collectionRoute && !content.includes(`'/${group}${route.collectionUrl}'`))
+      throw new Error(`${where}/${entry.template}: 목록 묶음 route 파일에 route id '/{{group}}{{collectionUrl}}'가 없습니다`);
+    return { path, content, ...(entry.shared === true ? { shared: true } : {}) };
+  });
+  if (!files.some((file) => file.path === routePath)) throw new Error(`${where}/screens.json ${route.mode}: route 파일({{routesDir}}/{{routeFile}})이 없습니다`);
+  // 골격 자체에 채울 자리가 있어야 한다. 화면 전용 파일이 공유 파일(폼 schema 등)만 채우면 되는 화면도 있어 공유 파일까지 본다.
+  if (!files.some((file) => file.content.includes(TODO_MARKER)))
+    throw new Error(`${where}/screens.json ${route.mode}: 채울 자리({{TODO}}…)가 없는 골격은 완료처럼 보이므로 만들지 않습니다`);
+  checkRenderedSources(files, `${where} ${route.mode}`);
+  const exports = (screen.exports ?? []).map((line) => render(line, values, `${where}/screens.json ${route.mode}.exports`));
+  files.push({ path: `${featureDir}/index.ts`, exports });
+  return { files, collectionRoute, next: (screen.next ?? []).map((line) => render(line, values, `${where}/screens.json ${route.mode}.next`)) };
+}
+
+/**
+ * 적힌 경로에 쓰면 다른 파일까지 바뀌는 이유. 없으면 null.
+ * 경로 조각(파일이나 상위 폴더)이 심볼릭 링크이거나, 이미 있는 파일이 다른 이름과 내용을 나누는 하드 링크(링크 수 2 이상)면 쓰지 않는다.
+ */
+function sharedTarget(root, path) {
+  let current = root;
+  const parts = path.split('/');
+  for (const [index, part] of parts.entries()) {
+    current = join(current, part);
+    let stat;
+    try { stat = lstatSync(current); } catch { return null; }
+    if (stat.isSymbolicLink()) return `${parts.slice(0, index + 1).join('/')}가 심볼릭 링크라 실제 쓰는 위치가 다르다`;
+    if (index === parts.length - 1 && stat.isFile() && stat.nlink > 1) return `${path}가 다른 파일과 내용을 나누는 하드 링크라 그 파일도 바뀐다`;
+  }
+  return null;
 }
 
 /**
  * 골격을 만든다. 같은 내용의 파일은 그대로 두고(다시 실행해도 같다), 다른 내용의 화면 파일이 있으면 아무것도 쓰지 않고 실패한다.
- * 반환: { created, reused, unchanged, conflicts, markers, dryRun }
+ * 반환: { created, updated, reused, unchanged, conflicts, markers, dryRun, next(골격이 적은 직접 연결할 것) }
  */
 export function scaffoldScreen({ root, configFile, feature, kind, url, entity, group: groupOption, dryRun = false }) {
   const config = loadStructureConfig(root, configFile);
@@ -371,10 +310,38 @@ export function scaffoldScreen({ root, configFile, feature, kind, url, entity, g
   // 묶음의 진입 판정·골격은 그 묶음의 route.tsx에 있다. 없는 묶음에 화면을 만들면 진입 판정 없는 화면이 생기므로 거절한다.
   if (!existsSync(join(config.root, config.routes, group, 'route.tsx')))
     throw new Error(`route 묶음 ${group}이 없습니다: 진입 판정·골격을 둔 ${config.routes}/${group}/route.tsx가 있는 묶음에만 화면을 만듭니다`);
-  const files = plan({ config, feature, entity: name, kind, url, group });
-  const result = { created: [], updated: [], reused: [], unchanged: [], conflicts: [], markers: 0, dryRun };
+  const { files, next, collectionRoute } = plan({ config, feature, entity: name, kind, url, group });
+  const routeFiles = listRouteFiles(config);
+  const result = { created: [], updated: [], reused: [], unchanged: [], conflicts: [], markers: 0, dryRun, next };
   for (const file of files) {
     const full = join(config.root, file.path);
+    // 쓰는 곳은 적힌 경로 그대로여야 한다. 그 파일이나 상위 폴더가 링크(심볼릭·하드)면 다른 업무·route를 고칠 수 있으므로 충돌로 둔다.
+    const shared = sharedTarget(config.root, file.path);
+    if (shared !== null) { result.conflicts.push({ ...file, reason: shared }); continue; }
+    // 목록 묶음의 진입 판정(route.tsx)은 그 주소 아래 모든 화면에 걸린다. 다른 업무의 것을 재사용하거나, 이미 다른 화면이 있는 주소에 새로 걸지 않는다.
+    if (file.path === collectionRoute) {
+      if (existsSync(full) && !importsFeature(readFileSync(full, 'utf8'), `${config.alias}features/${feature}`)) {
+        result.conflicts.push({ ...file, reason: '다른 업무의 진입 판정이라 이 업무 화면의 묶음으로 쓰지 않는다' });
+        continue;
+      }
+      const dir = dirname(full);
+      if (!existsSync(full) && existsSync(dir)) {
+        // 폴더 아래 이미 있는 route 파일(하위 폴더 포함) 가운데 이번에 만들 파일이 아닌 것이 하나라도 있으면, 새 진입 판정이 그 화면에도 걸린다.
+        const planned = new Set(files.map((item) => join(config.root, item.path)));
+        const others = readdirSync(dir, { recursive: true, withFileTypes: true })
+          .filter((entry) => !entry.isDirectory())
+          .map((entry) => join(entry.parentPath, entry.name))
+          .filter((path) => !planned.has(path))
+          .map((path) => relative(dir, path));
+        if (others.length > 0) { result.conflicts.push({ ...file, reason: `이미 다른 화면(${others.join('·')})이 있는 주소에 새 진입 판정을 걸지 않는다` }); continue; }
+      }
+    }
+    // 같은 주소를 이미 쓰는 다른 route 파일이 있으면 같은 주소에 화면·진입 판정이 둘이 된다. route 묶음(_이름)은 주소에 나타나지 않으므로
+    // 다른 묶음의 파일(예: _public/login/index.tsx와 _app/login/index.tsx)과 같은 주소의 다른 파일 모양(a/new.tsx ↔ a/new/index.tsx)도 같은 주소다.
+    if (file.path.startsWith(`${config.routes}/`)) {
+      const twin = sameAddressRoute(routeFiles, config.routes, file.path, join(config.root, file.path));
+      if (twin !== undefined) { result.conflicts.push({ ...file, reason: `같은 주소의 route ${twin}가 이미 있다` }); continue; }
+    }
     if (file.exports) {
       const existing = existsSync(full) ? readFileSync(full, 'utf8') : '';
       file.content = extendPublicEntry(existing, file.exports);
@@ -402,10 +369,10 @@ export function formatScaffold(result, { feature, kind, url }) {
   for (const file of result.updated) lines.push(`  ${result.dryRun ? '공개 연결 추가 예정' : '공개 연결 추가'} ${file.path}`);
   for (const file of result.reused) lines.push(`  기존 파일 사용 ${file.path} (같은 feature의 공유 파일이라 덮어쓰지 않음)`);
   for (const file of result.unchanged) lines.push(`  변경 없음 ${file.path}`);
-  for (const file of result.conflicts) lines.push(`  충돌 ${file.path}: 내용이 다른 파일이 이미 있어 아무 파일도 쓰지 않았다`);
+  for (const file of result.conflicts) lines.push(`  충돌 ${file.path}: ${file.reason ?? '내용이 다른 파일이 이미 있어'} 아무 파일도 쓰지 않았다`);
   if (result.conflicts.length > 0) return lines.join('\n');
   lines.push(`이 화면 골격에 남은 미완성 표시 ${result.markers}곳(${TODO_MARKER}…, 공유 파일 중 이미 고친 것은 세지 않음): 선언되지 않은 이름이라 채우기 전에는 typecheck가 실패한다.`);
   lines.push('생성한 파일 수는 완료한 화면 수가 아니다. 검사 파일은 만들지 않았다: 화면 행동·서버 요청을 확인하는 제품 검사를 직접 작성하고 따로 집계한다.');
-  lines.push(`직접 연결할 것: 문구(features/${feature}/ui/messages.ts와 app의 문구 등록), 메뉴, route 트리 재생성(vite dev·build).`);
+  if (result.next.length > 0) lines.push('직접 연결할 것:', ...result.next.map((line) => `  - ${line}`));
   return lines.join('\n');
 }

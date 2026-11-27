@@ -11,8 +11,6 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
 
 ## 화면 선언
 
-실제 조립 예: [apps/starter/src/features/products/api/products.ts](../../references/apps/starter/src/features/products/api/products.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
-
 - 화면은 생성 endpoint 함수나 queryOptions를 쓰고, 전송 예외를 직접 해석하지 않는다. 받는 실패는 `RequestFailure`(12종 `kind`)다.
 - 쓰기 뒤 다시 읽을 조회는 mutation `meta: { invalidates: [key, …] }`로 선언한다. 성공했을 때와 `resultUnknown`일 때 실행된다.
 - 비밀번호처럼 보관하면 안 되는 입력값이 든 쓰기는 `meta: { sensitive: true }`로 선언한다. 성공이든 실패든 끝나면 요청 보관소의 기록이 지워진다(화면이 쓰기를 지켜보는 중이어도). 오류 전달과 다시 시도는 그대로다.
@@ -20,8 +18,6 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
 - 같은 결과 코드 안에서 이유를 나누는 서버 값은 `detailCode`(프로젝트 세부 코드)로 받는다. 키트는 그 값을 운반만 하고 뜻·문구·종류를 정하지 않는다. 같은 값이라도 프로젝트마다 뜻이 다를 수 있고, 프로젝트가 선언하지 않은 값일 수도 있다. 실패가 무엇인지는 `code`(결과 코드)와 `detailCode`로 묻고, 화면 문구 키(`messageKey`)를 비교해 실패를 알아보지 않는다. 세부 코드의 뜻과 화면 처리는 그 코드를 쓰는 업무가 선언하고, 선언하지 않은 값은 결과 코드의 기본 처리를 따른다.
 
 ## 키트 보장
-
-실제 조립 예: [apps/starter/src/app/session.test.tsx](../../references/apps/starter/src/app/session.test.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 - **실패:** 필수 `ResponseContract`가 서버 응답의 성공 데이터·실패 종류·문구 키·세션 종료를 정한다. 파일로 받는 요청(`responseType: 'blob'`)도 응답이 JSON이면 본문을 JSON으로 읽어 계약에 넘긴다. 취소는 `cancelled`이고 화면 상태·알림에 들어가지 않는다.
 - **세션 수명** 한 곳이 세대를 판정한다.
@@ -92,7 +88,7 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
 - `isPublic`: 로그인 전·재발급·로그아웃 경로. 공개 요청에는 토큰이 실리지 않고, 세션도 건드리지 않는다.
 - `prepare`: 언어·메뉴 같은 운영 헤더.
 - 서버 로그아웃은 `createSession({ signOut })`에 넘긴다. 받은 자격증명의 토큰을 헤더에 직접 실어 공개 요청으로 보낸다. 로그아웃 버튼은 `session.end()`만 부른다. 그 뒤 로그인 이동은 앱 안 이동(router navigate)으로 한다. `window.location`으로 문서를 다시 읽으면 브라우저가 진행 중인 `signOut` 요청을 끊어 서버 세션이 남는다.
-- 로그인 요청 응답으로 세션을 여는 일(`session.start`)은 로그인 flow의 완료 단계(`onSaved`)에서 한다([로그인 flow](../../references/apps/starter/src/features/auth/model/login/use-login-flow.ts.txt)). 로그인 요청 함수는 응답만 돌려준다.
+- 로그인 요청 응답으로 세션을 여는 일(`session.start`)은 로그인 flow의 완료 단계(`onSaved`)에서 한다. 로그인 요청 함수는 응답만 돌려준다.
 - `session.subscribe`의 `ended`에서 로그인 이동·안내를 한다. 구독은 앱 조립(`app/`)에 둔다([세션 이동](../../references/apps/starter/src/app/session/SessionNavigation.tsx.txt)). `by`로 이 탭의 로그아웃(local), 다른 탭(other-tab), 서버 인증 계약(server)을 구별한다. 토큰 저장 위치는 프로젝트 정책이다.
 - 로그인 뒤 돌아갈 곳처럼 URL·state로 받은 이동 주소는 루트 `.`의 `safeAppPath(value, { exclude? })`로 거른 값만 쓴다. 같은 앱 경로(`/`로 시작)면 원문을, 아니면 undefined를 돌려준다. 절대 주소·`//host`·역슬래시(`/\host`)·제어 문자(`/\t/host`처럼 브라우저가 지워 `//`가 되는 것)·원문 공백·잘못된 퍼센트 인코딩을 거절하고, 인코딩을 한 번 푼 값에도 `//` 시작·역슬래시·제어 문자 규칙을 적용한다(`%5C`·`%2F%2F` 거절, `%20` 허용). `exclude`의 경로와 같거나 그 아래(`/login`, `/login/otp`)는 거절하고 이름만 이어진 경로(`/login-help`)는 통과한다. 로그인 경로 같은 제외 대상과 기본 목적지는 프로젝트가 정한다. 목록 복귀(`captureListReturn`)도 같은 판정을 쓴다.
 - 유휴 마감은 프로젝트의 세션 시작과 명시 마감 전달을 같은 연결에서 조립한다. 어떤 응답의 마감을 받을지·임시 마감 계기·경고 길이·0초 선택·재개 유예 길이·활동 부품 부착과 화면 닫음 상태는 프로젝트가 정한다. 서버 형식은 `ServerTimeSample`로 해석해 넘긴다. HTTP `Date` 응답 헤더의 시계 차이는 `/session/idle`의 `clockOffsetFromDate(date, receivedAt)`로 잰다. `Date`가 초 단위라 받은 시각을 초로 내려 비교하며, 헤더가 없거나 읽을 수 없으면 undefined이므로 `clockOffsetMs`를 생략한다(0으로 채우지 않는다). 마감 헤더의 이름·형식은 프로젝트 서버 계약이다.
@@ -103,8 +99,6 @@ description: API 호출·응답 봉투·실패 처리·세션 저장과 탭 동�
 - `notify`에서 어떤 실패를 어디에 보일지 출처로 고른다(예: 활성 조회의 forbidden만 모달). 화면이 이미 보이는 쓰기 실패와 겹치지 않게 한다.
 
 ## 확인 방법
-
-실제 조립 예: [apps/starter/src/app/session.test.tsx](../../references/apps/starter/src/app/session.test.tsx.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 단위·브라우저 CI에서 실행하고 `web-kit-check`를 필수 단계로 둔다. starter 통과로 대신하지 않는다. 실제 사용 UI와 검사 대상의 일치는 별도 검토로 판정한다. 설치·결과 파일 연결은 [소비 안내](../../docs/checking.md)를 따른다.
 
@@ -118,8 +112,6 @@ registry 항목을 채택하면 함께 설치한 검사 연결 파일을 자기 
 - mock 통과나 HTTP 200만으로 서버 계약을 확인했다고 하지 않는다.
 
 ## 미확인 외부 계약
-
-실제 조립 예: [apps/starter/src/features/auth/api/auth.ts](../../references/apps/starter/src/features/auth/api/auth.ts.txt). 조립 방식만 참고한다. 필드·기본값·문구·권한은 예시 값이며 프로젝트의 원문·결정으로 정한다.
 
 E1(401이 업무 실행 전인가), E2(일반·재발급 요청의 status·resultCode 의미), E3(동시 재발급, 이전 refresh 토큰 재사용, 늦은 응답의 쿠키 변경)는 설치된 web-kit 패키지의 [결정 기록 0003의 미확인 외부 계약](../../references/docs/decisions/0003-request-response-failure.md#미확인-외부-계약)이 기준이다. E1은 프로젝트가 확인해 `authRejectsBeforeExecution`으로 넘긴다. E2·E3은 확인되기 전까지 해당 부분을 보류한다.
 

@@ -46,6 +46,12 @@ jobs:
       - run: pnpm starter:check
       # 전체 starter의 peer 설치가 가리지 않는 실제 선택 소비도 같은 후보로 실행한다.
       - run: pnpm consumer:minimal --report-dir work/form-flexibility/minimal-consumption
+      # 새 프로젝트(starter:create)가 예시 업무 없이 설치·검사를 통과하고, 기본 골격으로 첫 업무 네 화면을 만들 수 있는지 본다.
+      - name: 새 프로젝트 수용 검사
+        run: |
+          git clone --quiet https://github.com/taehyung-lab/agent-workflow-kit "$RUNNER_TEMP/agent-workflow-kit"
+          git -C "$RUNNER_TEMP/agent-workflow-kit" checkout --quiet "$(cat scripts/starter/agent-workflow-kit.version)"
+          pnpm starter:acceptance --workflow-kit "$RUNNER_TEMP/agent-workflow-kit"
       - name: 검증한 commit과 산출물 기록
         run: node scripts/write-verification.mjs packages/web-kit dist
       - uses: actions/upload-artifact@v4

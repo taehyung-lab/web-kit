@@ -1,4 +1,4 @@
-// 파일 책임: jsdom으로 볼 수 없는 키트 보장을 실제 브라우저에서 관찰한다 — 여러 탭의 세션, 진입 주소 정규화와 요청 순서, 결과가 있을 때의 재조회 실패, 저장 직후 이동과 이탈 질문,
+// 파일 책임: jsdom으로 볼 수 없는 키트 보장을 예시 업무 화면에서 실제 브라우저로 관찰한다(업무 없는 앱 골격 검사는 app.spec.ts) — 진입 주소 정규화와 요청 순서, 결과가 있을 때의 재조회 실패, 저장 직후 이동과 이탈 질문,
 // 저장·페이지 첫 조회 중 화면 전체 덮개(실제 inert 클릭·Tab 차단).
 import { expect, test, type Page, type Request } from '@playwright/test';
 
@@ -44,19 +44,6 @@ test('활성 버튼·체크박스·선택 항목에는 손 모양 커서가 보�
   await expect(page.getByRole('textbox').first()).not.toHaveCSS('cursor', 'pointer');
 });
 
-test('signing out in one tab ends the session in the other tab', async ({ context }) => {
-  const first = await context.newPage();
-  await signIn(first);
-  const second = await context.newPage();
-  await second.goto('/products');
-  await expect(second.getByRole('cell', { name: 'Mouse Pad' })).toBeVisible();
-
-  await first.getByRole('button', { name: '로그아웃' }).click();
-
-  await expect(second).toHaveURL(/\/login\?reason=other-tab/);
-  await expect(second.getByText('다른 탭에서 로그아웃했습니다.')).toBeVisible();
-});
-
 test('an entry URL with unknown values is replaced and the list waits for the options', async ({ page }) => {
   await signIn(page);
   const events = recordApi(page);
@@ -78,9 +65,9 @@ test('a failed background refresh keeps the rows and offers a retry', async ({ p
   // mock 서버(이 페이지의 msw)를 내려 같은 조건 재조회를 실패시킨다.
   await page.evaluate(async () => {
     // 개발 서버가 앱과 같은 모듈 인스턴스로 내주는 경로다(브라우저 안에서만 존재).
-    const dbModule = '/src/mocks/db.ts';
-    const { mockDb } = (await import(/* @vite-ignore */ dbModule)) as { mockDb: object };
-    Object.defineProperty(mockDb, 'products', {
+    const dbModule = '/src/mocks/examples/example-db.ts';
+    const { exampleDb } = (await import(/* @vite-ignore */ dbModule)) as { exampleDb: object };
+    Object.defineProperty(exampleDb, 'products', {
       get: () => {
         throw new Error('mock server down');
       },
@@ -186,9 +173,9 @@ test('an edit that fails after the confirmation returns focus to the save button
   await expect(page.locator('[data-slot="blocking-progress"]').getByText('수정 중입니다.')).toBeVisible();
   // 덮개가 열린 동안 mock 서버를 내려 PUT을 500으로 끝낸다(지연 뒤 상품 조회에서 예외).
   await page.evaluate(async () => {
-    const dbModule = '/src/mocks/db.ts';
-    const { mockDb } = (await import(/* @vite-ignore */ dbModule)) as { mockDb: object };
-    Object.defineProperty(mockDb, 'products', {
+    const dbModule = '/src/mocks/examples/example-db.ts';
+    const { exampleDb } = (await import(/* @vite-ignore */ dbModule)) as { exampleDb: object };
+    Object.defineProperty(exampleDb, 'products', {
       get: () => {
         throw new Error('mock server down');
       },
@@ -296,16 +283,6 @@ test('choice filters keep selected values in the URL and restore their labels', 
   await page.reload();
   await expect(page.getByRole('button', { name: '분류', exact: true })).toHaveText('Stationery');
   await expect(page.getByRole('cell', { name: 'Notebook A5' })).toBeVisible();
-});
-
-test('the login form leaves without a dirty-input question', async ({ page }) => {
-  await page.goto('/login');
-  await page.getByLabel('아이디').fill('작성 중인 아이디');
-  let questions = 0;
-  page.on('dialog', async (dialog) => { questions += 1; await dialog.accept(); });
-  await page.reload();
-  await expect(page.getByLabel('아이디')).toHaveValue('');
-  expect(questions).toBe(0);
 });
 
 // 같은 URL에서도 사용자 검색의 체크 수명과 실제 disabled 상태를 관찰한다.
