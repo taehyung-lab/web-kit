@@ -126,6 +126,9 @@ function plan({ config, feature, entity, kind, url, group }) {
     const at = `${where}/screens.json ${route.mode}.files[${index}]`;
     if (typeof entry?.path !== 'string' || typeof entry?.template !== 'string') throw new Error(`${at}: path와 template을 적으세요`);
     const path = render(entry.path, values, at);
+    // 문자열 앞부분만 보지 않도록 경로 조각을 먼저 검사한다. `..`·`.`·빈 조각·절대 경로는 업무 폴더 밖을 가리킬 수 있다.
+    if (path.startsWith('/') || path.split('/').some((part) => part === '' || part === '.' || part === '..'))
+      throw new Error(`${at}: ${path}는 상대 조각(.·..) 없이 프로젝트 안 경로여야 합니다`);
     // 골격은 요청한 업무 폴더와 요청한 URL의 route 파일에만 쓴다. 다른 업무·다른 주소의 route는 건드리지 않는다.
     // 목록 묶음 route.tsx는 같은 목록의 여러 화면이 함께 쓰므로 shared(이미 있으면 그대로 둔다)로만 받는다.
     const allowedRoute = path === routePath || (path === collectionRoute && entry.shared === true);

@@ -209,6 +209,8 @@ test('프로젝트 골격에 없는 화면 종류는 키트 기본으로 대신 
 
 for (const [name, change, message] of [
   ['feature 밖에 쓰는 골격', (m) => { m.list.files[0].path = 'src/shared/{{entity}}.ts'; }, /src\/features\/invoices\/ 안이거나/],
+  ['업무 폴더 뒤 .. 로 다른 업무 route에 쓰는 골격', (m) => { m.list.files[0].path = '{{featureDir}}/../../routes/_app/orders/index.tsx'; }, /상대 조각/],
+  ['업무 폴더 뒤 . 조각을 쓰는 골격', (m) => { m.list.files[0].path = '{{featureDir}}/./model/x.ts'; }, /상대 조각/],
   ['다른 업무 route에 쓰는 골격', (m) => { m.list.files[0].path = '{{routesDir}}/orders/index.tsx'; m.list.files[0].shared = true; }, /src\/features\/invoices\/ 안이거나/],
   ['목록 묶음 route를 shared 없이 쓰는 골격', (m) => { m.list.files[0].path = '{{routesDir}}{{collectionUrl}}/route.tsx'; }, /\(shared\)/],
   ['목록 묶음 route id가 없는 골격', (m, t) => { m.list.files[0] = { path: '{{routesDir}}{{collectionUrl}}/route.tsx', template: 'list/use-list.ts.tpl', shared: true }; t['list/use-list.ts.tpl'] = '{{TODO}}x\n'; }, /목록 묶음 route 파일에 route id/],
