@@ -450,6 +450,13 @@ test('다른 업무 화면과 같은 주소를 쓰거나 그 화면에 새 진�
   assert.match(twin.stderr, /같은 주소의 route src\/routes\/_app\/venues\/new\.tsx가 이미 있다/);
   rmSync(join(dir, 'src/routes/_app/venues/new.tsx'));
   assert.deepEqual(files(dir), before);
+  // route 묶음(_이름)은 주소에 나타나지 않는다: 다른 묶음의 로그인 화면(/login)과 같은 주소의 목록도 같은 주소다.
+  mkdirSync(join(dir, 'src/routes/_public/login'), { recursive: true });
+  writeFileSync(join(dir, 'src/routes/_public/login/index.tsx'), 'export const Route = 1;\n');
+  const login = cli('--feature', 'probes', '--entity', 'probe', '--kind', 'list', '--url', '/login');
+  assert.equal(login.status, 1);
+  assert.match(login.stderr, /같은 주소의 route src\/routes\/_public\/login\/index\.tsx가 이미 있다/);
+  assert.equal(existsSync(join(dir, 'src/routes/_app/login')), false);
   // 업무 소유는 import 문으로 판정한다: 따옴표 모양이 달라도 같은 업무, 주석·문자열에만 있으면 다른 업무.
   mkdirSync(join(dir, 'src/routes/_app/tickets'), { recursive: true });
   writeFileSync(join(dir, 'src/routes/_app/tickets/route.tsx'), 'import { permission } from "@/features/tickets";\n');

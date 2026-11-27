@@ -114,12 +114,37 @@ function importsFeature(text, specifier) {
   return source.statements.some((statement) => ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier) && statement.moduleSpecifier.text === specifier);
 }
 
-/** 같은 주소를 뜻하는 다른 route 파일 모양. `x/index.tsx`·`x/route.tsx` ↔ `x.tsx`, `x.tsx` ↔ `x/index.tsx`·`x/route.tsx`. */
-function sameAddressRoutes(path) {
-  const folder = path.match(/^(.*)\/(?:index|route)\.tsx$/)?.[1];
-  if (folder !== undefined) return [`${folder}.tsx`];
-  const flat = path.match(/^(.*)\.tsx$/)?.[1];
-  return flat === undefined ? [] : [`${flat}/index.tsx`, `${flat}/route.tsx`];
+/**
+ * route 파일의 주소와 역할. 묶음 폴더(_이름)와 `index`는 주소에 나타나지 않는다.
+ * `x/index.tsx`는 화면, `x/route.tsx`는 그 주소의 진입 판정·골격, `x.tsx`는 둘 다를 맡을 수 있다. 검사 파일·`__root`·`$.tsx`(없는 주소)는 뺀다.
+ */
+function routeAddress(relativePath) {
+  const parts = relativePath.split('/');
+  const last = parts.pop();
+  if (!last.endsWith('.tsx') || /\.(?:test|spec)\./.test(last) || last.startsWith('__') || last === '$.tsx') return null;
+  const kind = last === 'index.tsx' ? 'screen' : last === 'route.tsx' ? 'layout' : 'both';
+  const segments = [...parts, ...(kind === 'both' ? [last.slice(0, -4)] : [])].filter((part) => !part.startsWith('_'));
+  return { address: '/' + segments.join('/'), kind };
+}
+
+/** 프로젝트 routes 아래 이미 있는 route 파일(프로젝트 상대 경로). */
+function listRouteFiles(config) {
+  const dir = join(config.root, config.routes);
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => relative(config.root, join(entry.parentPath, entry.name)).split('\\').join('/'));
+}
+
+/** 만들 route 파일과 같은 주소·겹치는 역할을 이미 맡은 다른 route 파일. 없으면 undefined. */
+function sameAddressRoute(routeFiles, routesRoot, path, full) {
+  const mine = routeAddress(path.slice(routesRoot.length + 1));
+  if (mine === null) return undefined;
+  return routeFiles.find((other) => {
+    if (other === path || !other.startsWith(routesRoot + '/')) return false;
+    const theirs = routeAddress(other.slice(routesRoot.length + 1));
+    return theirs !== null && theirs.address === mine.address && (theirs.kind === mine.kind || theirs.kind === 'both' || mine.kind === 'both') && other !== full;
+  });
 }
 
 /** 파일 맨 위에서 같은 공간(값·타입)에 두 번 선언된 이름. import 이름도 센다. */
@@ -286,6 +311,7 @@ export function scaffoldScreen({ root, configFile, feature, kind, url, entity, g
   if (!existsSync(join(config.root, config.routes, group, 'route.tsx')))
     throw new Error(`route 묶음 ${group}이 없습니다: 진입 판정·골격을 둔 ${config.routes}/${group}/route.tsx가 있는 묶음에만 화면을 만듭니다`);
   const { files, next, collectionRoute } = plan({ config, feature, entity: name, kind, url, group });
+  const routeFiles = listRouteFiles(config);
   const result = { created: [], updated: [], reused: [], unchanged: [], conflicts: [], markers: 0, dryRun, next };
   for (const file of files) {
     const full = join(config.root, file.path);
@@ -310,9 +336,10 @@ export function scaffoldScreen({ root, configFile, feature, kind, url, entity, g
         if (others.length > 0) { result.conflicts.push({ ...file, reason: `이미 다른 화면(${others.join('·')})이 있는 주소에 새 진입 판정을 걸지 않는다` }); continue; }
       }
     }
-    // 같은 주소를 다른 파일 모양으로 이미 쓰는 route(예: a/new.tsx ↔ a/new/index.tsx·a/new/route.tsx)가 있으면 같은 주소에 화면·진입 판정이 둘이 된다.
-    if (file.path === collectionRoute || file.path.startsWith(`${config.routes}/`)) {
-      const twin = sameAddressRoutes(file.path).find((path) => existsSync(join(config.root, path)));
+    // 같은 주소를 이미 쓰는 다른 route 파일이 있으면 같은 주소에 화면·진입 판정이 둘이 된다. route 묶음(_이름)은 주소에 나타나지 않으므로
+    // 다른 묶음의 파일(예: _public/login/index.tsx와 _app/login/index.tsx)과 같은 주소의 다른 파일 모양(a/new.tsx ↔ a/new/index.tsx)도 같은 주소다.
+    if (file.path.startsWith(`${config.routes}/`)) {
+      const twin = sameAddressRoute(routeFiles, config.routes, file.path, join(config.root, file.path));
       if (twin !== undefined) { result.conflicts.push({ ...file, reason: `같은 주소의 route ${twin}가 이미 있다` }); continue; }
     }
     if (file.exports) {
